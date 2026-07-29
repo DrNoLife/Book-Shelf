@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="LnShelf.Api.Tests/LnShelf.Api.Tests.csproj" />
+  <Project Path="LnShelf.Api/LnShelf.Api.csproj" />
+  <Project Path="LnShelf.Client/LnShelf.Client.csproj" />
+  <Project Path="LnShelf.Shared/LnShelf.Shared.csproj" />
+</Solution>

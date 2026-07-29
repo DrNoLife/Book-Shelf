@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- TargetFramework, nullable and warnings-as-errors come from Directory.Build.props.
+       No Microsoft.AspNetCore.OpenApi: nothing in scope needs a schema document, and
+       the package pulls a Microsoft.OpenApi build with a published advisory (NU1903),
+       which warnings-as-errors would rightly fail on. -->
+
+  <ItemGroup>
+    <!-- Referenced explicitly, not just transitively through Npgsql: this project
+         uses EF Core directly, and pinning it here keeps one EF version across the
+         solution (Npgsql 10.0.3 would otherwise pull 10.0.4 into the test project
+         while Design pulled 10.0.10). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LnShelf.Shared\LnShelf.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

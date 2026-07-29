@@ -1,0 +1,36 @@
+namespace LnShelf.Api.Features.Shelf.Data;
+
+public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
+{
+    public void Configure(EntityTypeBuilder<Series> builder)
+    {
+        builder.ToTable("series");
+        builder.HasKey(series => series.Id);
+
+        // Enums are stored as text: a hobby database gets read in psql, and text
+        // survives reordering the enum members.
+        builder.Property(series => series.Format).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(series => series.PublicationStatus).HasConversion<string>().HasMaxLength(32).IsRequired();
+
+        builder.Property(series => series.TitleEnglish).HasMaxLength(400).IsRequired();
+        builder.Property(series => series.TitleRomaji).HasMaxLength(400);
+        builder.Property(series => series.TitleNative).HasMaxLength(400);
+        builder.Property(series => series.Publisher).HasMaxLength(200);
+        builder.Property(series => series.Author).HasMaxLength(200);
+        builder.Property(series => series.Illustrator).HasMaxLength(200);
+
+        // Matching and sync key on the external ids constantly (data-access.md).
+        builder.HasIndex(series => series.AniListId).IsUnique();
+        builder.HasIndex(series => series.MangaUpdatesId).IsUnique();
+
+        builder.HasMany(series => series.Volumes)
+            .WithOne()
+            .HasForeignKey(volume => volume.SeriesId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(series => series.UserState)
+            .WithOne()
+            .HasForeignKey<SeriesUserState>(state => state.SeriesId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

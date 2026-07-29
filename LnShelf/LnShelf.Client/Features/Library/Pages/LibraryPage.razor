@@ -1,0 +1,55 @@
+@page "/"
+@inject HttpClient HttpClient
+
+<h1>Library</h1>
+
+@if (_loadFailed)
+{
+    <p>Could not reach the API.</p>
+}
+else if (_cards is null)
+{
+    <p>Loading…</p>
+}
+else if (_cards.Count == 0)
+{
+    <p>No series yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var card in _cards)
+        {
+            <li>
+                <strong>@card.TitleEnglish</strong>
+                — @card.Format · @card.PublicationStatus · @card.TrackingStatus
+                <ul>
+                    <li>read @card.Read · owned @card.Owned · published @card.Published · tracked @card.Tracked</li>
+                    <li>to buy @card.ToBuy · backlog @card.Backlog · behind @card.Behind</li>
+                    @if (card.NextToBuyNumber is int nextToBuy)
+                    {
+                        <li>next to buy: vol @nextToBuy</li>
+                    }
+                </ul>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private IReadOnlyList<LibraryCardResponse>? _cards;
+    private bool _loadFailed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _cards = await HttpClient.GetFromJsonAsync<IReadOnlyList<LibraryCardResponse>>("api/library");
+        }
+        catch (HttpRequestException)
+        {
+            // Rendering a message is handling it; there is nothing else this page can do.
+            _loadFailed = true;
+        }
+    }
+}

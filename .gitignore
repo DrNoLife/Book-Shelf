@@ -1,0 +1,68 @@
+# LnShelf — .gitignore
+# Kept deliberately short: this repo holds a .NET solution, a Blazor WASM
+# client, and a compose file. Migrations under Features/**/Migrations are
+# source and are committed — never ignore them.
+
+# ---- Build output ----
+[Bb]in/
+[Oo]bj/
+artifacts/
+publish/
+*.binlog
+msbuild.log
+
+# ---- Test & benchmark output ----
+TestResults/
+*.trx
+coverage*.json
+coverage*.xml
+*.coverage
+BenchmarkDotNet.Artifacts/
+
+# ---- NuGet ----
+*.nupkg
+*.snupkg
+packages/
+
+# ---- Local config & secrets ----
+# Secrets live in user-secrets locally and environment variables in the
+# container (CLAUDE.md). Nothing secret belongs in appsettings.json, so
+# appsettings.json / appsettings.Development.json stay committed — these
+# patterns are the escape hatch for machine-local overrides only.
+*.local.json
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+
+# ---- Local container data ----
+# Compose uses named volumes (feature-spec §9); this covers ad-hoc bind mounts
+# for Postgres, MinIO, or a local-disk ICoverStore implementation.
+.data/
+
+# ---- Personal data dropped in the repo during import work ----
+# StoryGraph exports are real reading history — never commit them. Test
+# fixtures live in Fixtures/ folders inside the test project and are deeper
+# than root, so this root-only pattern leaves them alone.
+/*.csv
+
+# ---- IDE & editor ----
+.vs/
+.idea/
+.fleet/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# ---- Claude Code ----
+# CLAUDE.md and .claude/rules/ are checked in — the local permission file is
+# machine-specific.
+.claude/settings.local.json
+
+# ---- OS junk ----
+.DS_Store
+Thumbs.db
+desktop.ini
