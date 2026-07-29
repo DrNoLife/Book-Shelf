@@ -1,0 +1,168 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surf);
+}
+
+/* The attention treatment, matching the sidebar's one tinted shelf: a series
+   waiting on a decision is the only thing on this page that is work. */
+.group--waiting {
+  border-color: var(--line-2);
+  background: linear-gradient(var(--acc-wash), var(--acc-wash)), var(--surf);
+}
+
+.group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 20px;
+}
+
+.group__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.group__title {
+  font-size: 20px;
+  line-height: 1.15;
+  text-wrap: pretty;
+}
+
+.group__books {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.group__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.group__status {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.group__status--waiting { color: var(--acc-soft); }
+.group__status--settled { color: var(--faint); }
+.group__status--quiet { color: var(--faint); opacity: 0.7; }
+
+.group__reason {
+  max-width: 40ch;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.group__candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.group__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- controls, to design.md's button specs --- */
+
+.primary {
+  padding: 8px 13px;
+  border-radius: 7px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.primary:disabled { opacity: 0.45; cursor: default; }
+
+.secondary,
+.toggle {
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  background: none;
+}
+
+.secondary:hover:not(:disabled),
+.toggle:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
+
+.secondary:disabled,
+.toggle:disabled { opacity: 0.45; cursor: default; }
+
+/* The chip treatment reused rather than a new checkbox style invented. */
+.toggle--on {
+  border-color: transparent;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-weight: 600;
+}
+
+.toggle--on:hover:not(:disabled) { color: var(--on-acc); border-color: transparent; }
+
+.group__search {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search__icon {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  margin-right: -32px;
+  padding-left: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.search__input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 12px 8px 32px;
+  background: var(--surf);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.search__input:focus { border-color: var(--line-3); outline-offset: 1px; }
+
+.group__note {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+@media (max-width: 620px) {
+  .group__state { align-items: flex-start; text-align: left; }
+}

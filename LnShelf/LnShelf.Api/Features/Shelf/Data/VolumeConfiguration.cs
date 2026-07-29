@@ -7,6 +7,11 @@ public sealed class VolumeConfiguration : IEntityTypeConfiguration<Volume>
         builder.ToTable("volume");
         builder.HasKey(volume => volume.Id);
 
+        // Assigned by the application, never by the store. This is the one that bit:
+        // sync and import both add volumes to a series that is already tracked, and
+        // a generated-key convention marks such a child Modified rather than Added.
+        builder.Property(volume => volume.Id).ValueGeneratedNever();
+
         builder.Property(volume => volume.ExternalId).HasMaxLength(100);
         builder.Property(volume => volume.CoverObjectKey).HasMaxLength(300);
 

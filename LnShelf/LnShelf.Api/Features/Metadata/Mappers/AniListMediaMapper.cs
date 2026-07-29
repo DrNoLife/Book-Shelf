@@ -30,6 +30,7 @@ public static class AniListMediaMapper
             PublicationStatus = ToPublicationStatus(media.Status),
             VolumeCount = media.Volumes,
             StartYear = media.StartDate?.Year,
+            CoverImageUrl = NullIfBlank(media.CoverImage?.Large),
         };
     }
 
@@ -52,6 +53,7 @@ public static class AniListMediaMapper
             Format = format,
             PublicationStatus = ToPublicationStatus(media.Status),
             StartYear = media.StartDate?.Year,
+            CoverImageUrl = NullIfBlank(media.CoverImage?.Large),
             Genres = media.Genres?.ToArray() ?? [],
             Author = AniListStaffMapper.FindAuthor(media.Staff),
             Illustrator = AniListStaffMapper.FindIllustrator(media.Staff),

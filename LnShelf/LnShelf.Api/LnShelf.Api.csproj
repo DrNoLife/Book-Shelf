@@ -15,6 +15,15 @@
     <!-- HybridCache. 10.8.0 depends on Microsoft.Extensions.* 10.0.10, which is
          the version EF Core already pulls, so the graph stays on one set. -->
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
+
+    <!-- CsvHelper for the StoryGraph export: quoted fields with embedded commas
+         are exactly the thing not to hand-roll. No dependencies of its own. -->
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+
+    <!-- MinIO is ICoverStore's first implementation (feature-spec §3). It is the
+         one dependency here that drags transitives (System.Reactive among them);
+         the seam is what makes swapping it a config-and-class change. -->
+    <PackageReference Include="Minio" Version="6.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

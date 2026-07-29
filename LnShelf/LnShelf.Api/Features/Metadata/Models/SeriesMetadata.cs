@@ -19,6 +19,13 @@ public sealed record SeriesMetadata
     public required PublicationStatus PublicationStatus { get; init; }
 
     public int? StartYear { get; init; }
+
+    /// <summary>
+    /// The source's CDN URL. Server-side only — the cover cache fetches it once
+    /// and the browser only ever sees the local cover route (design.md).
+    /// </summary>
+    public string? CoverImageUrl { get; init; }
+
     public IReadOnlyList<string> Genres { get; init; } = [];
     public string? Author { get; init; }
     public string? Illustrator { get; init; }

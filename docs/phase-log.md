@@ -6,6 +6,266 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 2.x — release source, sync, honest published counts (2026-07-29)
+
+**Goal:** dates make the shelf honest — the imported library reported
+`published=0` on every card while owning 74 volumes.
+
+**The headline finding, first, because it changes the plan: MangaUpdates does not
+publish per-volume release dates.** Not in the series record, not anywhere. Its
+`/v1/releases/search` returns *scanlation-group chapter postings* — records like
+`{volume: "1", chapter: "10", release_date: "2022-09-25", groups: ["Orsted
+Corporation"]}` — and its `series_id` filter is silently ignored (the same 7 098
+hits come back with or without it). What a series record does carry is a
+free-text status: `"23 LN Volumes (Complete)"`. So feature-spec §4.2's line —
+"`IReleaseSource` — MangaUpdates implementation: per-volume release dates,
+upcoming/announced volumes" — describes an API that does not exist. **§4.2 needs
+correcting; it has not been edited here** because the spec is a design document,
+not a build artefact.
+
+Probed properly before concluding: four of this shelf's series, up to 50 release
+records each — **187 records, of which zero were publisher volumes.** Every one
+was a scanlation group (Silver Wings Scans, /ak/ Scans, Hellping) or MANGA Plus,
+which serialises chapters rather than publishing books.
+
+What MangaUpdates *does* state is a **count**: `"16 Volumes (Ongoing)"`, and per
+publisher `"Yen On — 16 Volumes; Ongoing"`. That is a sourced fact about how many
+volumes exist, and it turns out to be enough — see `Volume.IsReleased` below.
+**No date is anywhere in the shelf, and none is invented.**
+
+### What exists
+
+**Metadata slice** gained the release source and the sync:
+
+```
+Abstractions/IReleaseSource.cs             <- the seam, promising what MU actually has
+           IReleaseSourceMatcher.cs
+           ISeriesSyncService.cs / ISyncQueryService.cs
+Models/    ReleaseSeriesInfo, ReleaseSeriesCandidate, ReleaseSourceMatch
+           MangaUpdatesOptions, SyncOptions
+           SyncRun, SyncDiscrepancy                    <- feature-spec §5's tables
+Models/MangaUpdates/MangaUpdatesMessages.cs             <- dirty wire models
+Data/SyncConfigurations.cs
+Mappers/   MangaUpdatesSeriesMapper, SyncSummaryMapper
+Services/  MangaUpdatesClient, MangaUpdatesRateLimiter, MangaUpdatesRateLimitHandler
+           MangaUpdatesVolumeCountParser               <- prose -> a number
+           MangaUpdatesReleaseSource, ReleaseSourceMatcher
+           SeriesSyncService, SyncQueryService
+           NightlySyncBackgroundService                <- off by default
+Controllers/SyncController.cs                          <- POST /api/sync, GET /api/sync/latest
+```
+
+`Matching/TitleNormalizer.cs` and `Matching/TitleSimilarityScorer.cs` moved out
+of `Features/Import/Services/` to the project root: they now have two consumers,
+and a cross-cutting utility in a feature slice is a slice two features depend on.
+
+**Shelf.** `Volume.IsReleased` — the release source's word that a volume is in
+print, without a date — and `LibraryCardProjection` now counts a volume as
+published on any of three grounds: dated in the past, marked in print, or owned.
+*To buy* uses the first two, never ownership. **Sidebar** footer renders the real
+latest `SyncRun` instead of the "Nightly refresh arrives in phase 2" placeholder.
+
+### Verified, not assumed
+
+1. `dotnet build LnShelf/LnShelf.slnx` — **0 warnings, 0 errors**.
+2. `dotnet test LnShelf/LnShelf.slnx` — **278 passed, 0 failed** (69 new).
+3. `POST /api/sync` against the real 8-series shelf: **8 refreshed, 6 linked to
+   MangaUpdates, 4 volumes discovered, 84 volumes confirmed in print, 0
+   failures**.
+4. `GET /api/library` — `published` went from **0 to 90**, `toBuy` from 0 to
+   **16**, and the **Behind shelf from 0 to 5 series**. `published >= owned`
+   holds on every card, asserted over the whole matrix rather than eyeballed.
+   The default library view — Behind — now shows: Slime next vol 17 (7 to buy),
+   Hero Laughs vol 5 (4), 86 vol 12 (3), Overlord vol 16 (1), Tanya vol 14 (1).
+5. **Still zero dated volumes** in Postgres (`WHERE ReleaseDate IS NOT NULL` = 0
+   for all eight series). Everything above comes from counts, not dates.
+6. The counts are believed only as far as the source states them: **Overlord's
+   volumes 17–18 and Torture Princess's volume 10 are tracked from AniList but
+   not to-buy**, because MangaUpdates counts 16 and 9. Torture Princess is
+   consequently up to date at 9 of 10.
+6. Per-series failure isolation proved itself on real data: MangaUpdates returned
+   a **503** mid-run for one of 86―EIGHTY-SIX's candidate fetches. That series was
+   counted as one failure, the other seven refreshed, and it linked on the next
+   run.
+
+### Decisions taken
+
+- **`Series.MangaUpdatesId` widened from `int?` to `long?`** — MangaUpdates ids
+  are eleven digits (`45348350266`) and overflow an Int32. The column has existed
+  since 1.1 and would have thrown the first time anything wrote to it.
+- **Matching scores the shelf's titles against MangaUpdates' *associated*
+  titles**, which means a detail fetch per candidate. Search returns primary
+  titles only, and the primary title is routinely not the recognisable one:
+  MangaUpdates files 86―EIGHTY-SIX under the title **"86"**, which scores 50
+  against the shelf's name and 100 against its own alternative titles.
+- **Search is filtered by MangaUpdates' own type vocabulary** (`["Novel"]`).
+  Unfiltered, "Mushoku Tensei" returns 5 872 hits led by doujinshi; filtered, 172
+  with the real series on page one.
+- **Every candidate the search returns is scored** **[flagged]**. There was a
+  second, smaller `CandidateDetailLimit` of 3, and it silently lost the correct
+  match for 86―EIGHTY-SIX, which MangaUpdates returns fourth — reported as
+  low-confidence against an unrelated Chinese novel. The option is gone rather
+  than raised; a knob whose wrong setting produces a plausible wrong answer is
+  worse than no knob.
+- **A volume-count disagreement is recorded and resolved in AniList's favour**,
+  per CLAUDE.md's conflict rule (MangaUpdates wins dates, AniList everything
+  else). Nothing is deleted: Overlord stays at 18 tracked volumes with a
+  discrepancy row saying MangaUpdates counts 16.
+- **Volumes MangaUpdates knows about and the shelf does not are created, with no
+  date.** That they exist is a fact from the release source; when they came out
+  is not. This is what added Tanya's volume 14 and 86's volumes 12–14.
+- **An unmatched series is recorded as a `SyncDiscrepancy` with
+  `Field = SeriesLink` and `ResolvedWith = null`** **[flagged]**. §5's field enum
+  lists only VolumeCount/ReleaseDate/Status; "the two sources do not agree on
+  which series this is" is the same kind of disagreement, needs the same human
+  resolution, and putting it in the same table makes the review list one query.
+- **The nightly `BackgroundService` exists and is off by default**
+  (`Sync:Enabled`). A job that hits two community APIs every time the app starts
+  in development is not a polite job; `POST /api/sync` is the same code path.
+- **`Volume.IsReleased`: a stored flag, with the justification CLAUDE.md demands**
+  **[flagged]**. It is *not* a derived state, so it is not covered by "derived
+  states are computed, never stored" — it is source metadata sitting beside
+  `ReleaseDate` for exactly the same reason `ReleaseDate` exists. The alternative
+  was writing a fabricated date into `ReleaseDate` to make the existing rule fire,
+  which is inventing user-facing data, or leaving *to buy* permanently zero. It
+  exceeds this session's stated scope ("one expression in LibraryCardProjection")
+  and is the one decision here most worth a veto.
+- **`ToBuy` repeats two of `Published`'s three grounds rather than reusing it.**
+  Ownership is a valid ground for "published" and never a ground for "to buy", so
+  the two expressions genuinely differ; reusing one for the other would make every
+  owned volume its own shopping-list entry.
+- **Volumes beyond the source's count are left unmarked.** AniList tracks 18
+  Overlord volumes and MangaUpdates counts 16, so 17 and 18 are known to exist and
+  not known to be out. They stay off the to-buy pile.
+- **The sync summary says what it cannot do.** Every run's footer line ends "counts
+  only — MangaUpdates publishes no dates", because a shelf that knows what is in
+  print but not when should not imply otherwise.
+
+### Defects found and fixed
+
+- **EF treated every application-assigned Guid key as an existing row.** Adding a
+  volume to an already-tracked series marked the child `Modified` instead of
+  `Added`, and `SaveChanges` threw "attempted to update or delete an entity that
+  does not exist in the store". Fixed at the cause — `ValueGeneratedNever()` on
+  every key the application assigns — rather than by calling `Add()` at each site.
+  **This was a live bug in phase 4's import commit**: re-importing an export
+  containing a volume beyond what the series already had would have crashed. It
+  only escaped notice because the import path adds whole new graphs, where `Add()`
+  marks everything Added regardless.
+- **MangaUpdates speaks snake_case.** On the Web serializer defaults every field
+  deserialized to its default and the client returned a series with id 0. Caught
+  by the captured-response fixture test, which is the entire argument for
+  testing.md #4.
+- **`ThreeSegmentBar`'s clamps are no longer load-bearing.** They were hiding the
+  real fault: `Published - Owned` went negative whenever a volume was owned with
+  no date, and the bar then spanned nothing. The invariant is now enforced in the
+  projection and asserted across the whole matrix; the clamps stay as a seatbelt
+  with a comment saying so.
+
+### What is still not there
+
+**Release dates, and nothing substitutes for them.** `SyncRun.DatesMoved` is
+structurally 0 and will stay 0 until a source with dates exists. The shelf can now
+say *"volume 17 is out and you don't own it"* but not *"volume 17 came out on
+12 September"*, so these remain impossible:
+
+- the **Upcoming view** (phase 5) — it groups by "this month / next 3 months", and
+  there is nothing to group by;
+- **release-date-moved notifications** — "Vol 15 moved from 5 Sep to 12 Sep" is
+  design.md's own example of the sync voice, and it cannot be written;
+- the **unreleased and announced volume tiles** — design.md specifies a date as
+  their second channel, and undated-but-not-in-print volumes (Overlord 17–18) have
+  no date to print.
+
+Phase 5 needs a date source. Candidates worth a session of investigation:
+Google Books, Open Library, or the publishers' own feeds (Yen On, J-Novel Club),
+none of which has been looked at.
+
+**feature-spec §4.2 is wrong** and has not been edited: it promises
+`IReleaseSource` will supply "per-volume release dates, upcoming/announced
+volumes". Correcting a design document is the owner's call, not the build's.
+
+### Phase-log backfill
+
+Asked for 3.2, 2 and 4. **Only phase 4 was missing — 3.2 and phase 2 as
+originally scoped were never built**, so there is nothing to backfill for them:
+there is no series-detail page and no `VolumeTile` (3.2), and phase 2's cover
+cache landed inside phase 4 while its sync landed here. Phase 4's entry is below.
+
+---
+
+## Phase 4 — StoryGraph import: the real library (2026-07-29)
+
+**Goal:** the real StoryGraph export imported — the shelf becomes the user's.
+
+Written after the fact: the session ended at its hand-over point (the review
+queue) and the log entry and commit were never made.
+
+### What exists
+
+**Import slice** (`LnShelf.Api/Features/Import/`): `IShelfImporter` seam with a
+StoryGraph CSV implementation, `ImportBatch` / `ImportGroup` / `ImportRow` /
+`ImportCandidate` staging, `AniListSeriesMatcher`, `ImportShelfWriter`, and
+`POST /api/import`, `GET /api/import/{id}/queue`, `PUT /api/import/groups/{id}`,
+`POST /api/import/{id}/commit`, `GET /api/import/candidates`.
+
+**Covers slice** (`Features/Covers/`) — phase 2 work pulled forward because the
+review queue is unusable without cover art: `ICoverStore` seam, MinIO
+implementation, a cache-through keyed on AniList media id, `GET /api/covers/{key}`,
+and `Series.CoverObjectKey`.
+
+**Client**: `Features/Import/` — upload, batch summary, and a review queue of
+group cards showing candidates side by side with covers, format badges,
+publication dots and match scores.
+
+**Errors/**: the central `IExceptionHandler` CLAUDE.md's error rule assumes,
+mapping `InvalidInputException` to 400 and `ConflictException` to 409.
+
+### Verified, not assumed
+
+1. Build 0 warnings; `dotnet test` **209 passed**.
+2. The real 76-row export: **76 books → 11 series → 11 AniList searches**, 26
+   covers cached, 12.5s. **2 auto-matched, 9 needing review.**
+3. Screenshot of the review queue with all 11 groups and 32 candidate covers.
+4. The user resolved the queue and committed: **8 series, 74 volumes read and
+   owned.**
+
+### Decisions taken
+
+- **The unit of matching and review is the series group, not the CSV row.**
+  feature-spec §5's flat `ImportRow` with its own `MatchedAniListId` cannot
+  express §4.4's own requirement that per-volume books collapse into one series —
+  13 Slime rows would each carry a copy of one decision.
+- **Format ambiguity is never guessed.** Every light novel in the export has a
+  manga adaptation with an identical AniList title, and nothing in a StoryGraph
+  row says which medium was read. Those 8 groups went to review with
+  `FormatAmbiguous`, which is why only 2 auto-matched.
+- **"Part N" belongs to the series identity.** AniList publishes "Ascendance of a
+  Bookworm: Part 1" as its own series, so `Part 2 Volume 3` parses to that series
+  and volume 3 — no cumulative-offset arithmetic, and the two parts stay separate
+  shelf entries.
+- **Read implies owned, per §4.4, and is switchable per group.** The real export
+  says `Owned? No` on all 76 rows, so without the rule nothing would be owned.
+- **Commit is additive**: read status and ownership are raised, never lowered, so
+  re-importing is a no-op and a volume the user has since edited by hand is not
+  reverted.
+- **The 24-series development fixture was retired** behind
+  `Shelf:SeedDevelopmentFixture` (default false). It shared titles with the real
+  library — a second Overlord, a second Mushoku Tensei, with invented counts.
+- **Japanese and English titles of one series merge on commit.** The export lists
+  Slime and Overlord under both, resolving to one AniList id each; Slime volume 15
+  appears in both groups and merges to one volume state.
+
+### Environment notes
+
+- Screenshots are driven with headless **Edge** over CDP (Chrome is not installed
+  on this machine): `msedge --headless=new --remote-allow-origins=*` plus
+  `websocket-client` from Python. The origins flag is not optional — the
+  WebSocket handshake is rejected 403 without it.
+- `dotnet format` must be run before committing; several new files needed it.
+
+---
+
 ## Phase 1.2 — AniList search + add series (2026-07-29)
 
 **Goal:** a series can be searched on AniList and added to the shelf — real

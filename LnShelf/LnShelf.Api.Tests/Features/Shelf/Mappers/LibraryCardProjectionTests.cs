@@ -31,11 +31,13 @@ public sealed class LibraryCardProjectionTests
         { ReadStatus.Unread,  false, 30,      0,    0,     0,         0,     0,       false },
         { ReadStatus.Unread,  false, null,    0,    0,     0,         0,     0,       false },
 
-        // Unread, owned — backlog, whether or not it is even out yet
-        // (a pre-order can be owned before release).
+        // Unread, owned — backlog, and published whatever the date says, because a
+        // volume in your hands is out. The last two rows are the ones an imported
+        // library is made of: 74 owned volumes with no date anywhere, which used to
+        // report published=0 and gave every progress bar a width of nothing.
         { ReadStatus.Unread,  true,  -1,      0,    1,     1,         0,     1,       true },
-        { ReadStatus.Unread,  true,  30,      0,    1,     0,         0,     1,       true },
-        { ReadStatus.Unread,  true,  null,    0,    1,     0,         0,     1,       true },
+        { ReadStatus.Unread,  true,  30,      0,    1,     1,         0,     1,       true },
+        { ReadStatus.Unread,  true,  null,    0,    1,     1,         0,     1,       true },
 
         // Reading, not owned — borrowed and in progress; still to buy.
         { ReadStatus.Reading, false, -1,      0,    0,     1,         1,     0,       true },
@@ -44,18 +46,20 @@ public sealed class LibraryCardProjectionTests
 
         // Reading, owned — in hand, not finished, so still backlog.
         { ReadStatus.Reading, true,  -1,      0,    1,     1,         0,     1,       true },
-        { ReadStatus.Reading, true,  30,      0,    1,     0,         0,     1,       true },
-        { ReadStatus.Reading, true,  null,    0,    1,     0,         0,     1,       true },
+        { ReadStatus.Reading, true,  30,      0,    1,     1,         0,     1,       true },
+        { ReadStatus.Reading, true,  null,    0,    1,     1,         0,     1,       true },
 
         // Read, not owned — read it, do not own it, so it is still to buy.
         { ReadStatus.Read,    false, -1,      1,    0,     1,         1,     0,       true },
         { ReadStatus.Read,    false, 30,      1,    0,     0,         0,     0,       false },
         { ReadStatus.Read,    false, null,    1,    0,     0,         0,     0,       false },
 
-        // Read and owned — the only combination that is settled.
+        // Read and owned — the only combination that is settled, and published on
+        // every row for the same reason: you cannot have read a volume you do not
+        // have.
         { ReadStatus.Read,    true,  -1,      1,    1,     1,         0,     0,       false },
-        { ReadStatus.Read,    true,  30,      1,    1,     0,         0,     0,       false },
-        { ReadStatus.Read,    true,  null,    1,    1,     0,         0,     0,       false },
+        { ReadStatus.Read,    true,  30,      1,    1,     1,         0,     0,       false },
+        { ReadStatus.Read,    true,  null,    1,    1,     1,         0,     0,       false },
     };
 
     [Theory]
@@ -155,6 +159,156 @@ public sealed class LibraryCardProjectionTests
 
     /// <param name="readStatus">Null creates no volume-user-state row at all.</param>
     /// <param name="releaseDaysFromToday">Null leaves the volume announced with no date.</param>
+    [Theory]
+    [MemberData(nameof(VolumeStateMatrix))]
+    public void ToCard_AnyVolumeState_NeverReportsFewerPublishedThanOwned(
+        ReadStatus? readStatus,
+        bool owned,
+        int? releaseDaysFromToday,
+        int expectedRead,
+        int expectedOwned,
+        int expectedPublished,
+        int expectedToBuy,
+        int expectedBacklog,
+        bool expectedBehind)
+    {
+        // The invariant the three-segment bar depends on. Its unowned segment is
+        // Published - Owned, and a negative one made the whole bar span nothing;
+        // the clamp in the component hid that rather than fixing it. Enforced here
+        // instead, across every combination the matrix covers.
+        var card = ToCard(CreateSeriesWithOneVolume(readStatus, owned, releaseDaysFromToday));
+
+        // Published >= Owned only. Owned >= Read is deliberately *not* asserted: the
+        // matrix has read-but-not-owned rows on purpose, because a borrowed volume is
+        // a real thing.
+        card.Published.ShouldBeGreaterThanOrEqualTo(card.Owned);
+
+        // Named so xUnit does not warn about unused theory parameters, and asserted
+        // so this test fails loudly if the matrix and the expectations drift apart.
+        (expectedRead, expectedOwned, expectedPublished, expectedToBuy, expectedBacklog, expectedBehind)
+            .ShouldBe((card.Read, card.Owned, card.Published, card.ToBuy, card.Backlog, card.Behind));
+    }
+
+    /// <summary>
+    /// The third ground for "published": the release source says a volume is in
+    /// print, without saying when. This is the only thing that makes a to-buy pile
+    /// possible, because no source publishes per-volume dates.
+    /// </summary>
+    public static TheoryData<bool, bool, int, int, int, bool> ReleasedWithoutDateMatrix => new()
+    {
+        // isReleased  owned  published  toBuy  backlog  behind
+        //
+        // Confirmed in print and not owned: this is the to-buy case, and it cannot
+        // be expressed by a date because there is no date to be had.
+        { true,        false, 1,         1,     0,       true },
+
+        // Confirmed in print and owned: published on two grounds, to buy on neither.
+        { true,        true,  1,         0,     1,       true },
+
+        // Not confirmed and not owned: nothing is known, so nothing is claimed.
+        { false,       false, 0,         0,     0,       false },
+
+        // Not confirmed but owned: owning it is its own proof of publication.
+        { false,       true,  1,         0,     1,       true },
+    };
+
+    [Theory]
+    [MemberData(nameof(ReleasedWithoutDateMatrix))]
+    public void ToCard_AVolumeWithNoDate_UsesTheReleaseSourcesWord(
+        bool isReleased,
+        bool owned,
+        int expectedPublished,
+        int expectedToBuy,
+        int expectedBacklog,
+        bool expectedBehind)
+    {
+        var series = CreateSeriesWithOneVolume(
+            owned ? ReadStatus.Unread : null, owned, releaseDaysFromToday: null);
+        series.Volumes.Single().IsReleased = isReleased;
+
+        var card = ToCard(series);
+
+        card.Published.ShouldBe(expectedPublished);
+        card.ToBuy.ShouldBe(expectedToBuy);
+        card.Backlog.ShouldBe(expectedBacklog);
+        card.Behind.ShouldBe(expectedBehind);
+        card.Published.ShouldBeGreaterThanOrEqualTo(card.Owned);
+    }
+
+    [Fact]
+    public void ToCard_VolumesBeyondTheReleaseSourcesCount_AreNotToBuy()
+    {
+        // The real Overlord shape: AniList tracks 18 volumes, MangaUpdates counts 16,
+        // 15 are owned. Volume 16 is to buy; 17 and 18 are not out yet.
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+            UserState = new SeriesUserState { TrackingStatus = TrackingStatus.Reading },
+        };
+
+        foreach (var number in Enumerable.Range(1, 18))
+        {
+            series.Volumes.Add(new Volume
+            {
+                Id = Guid.CreateVersion7(),
+                Number = number,
+                ReleaseDate = null,
+                IsReleased = number <= 16,
+                UserState = number <= 15
+                    ? new VolumeUserState { ReadStatus = ReadStatus.Read, Owned = true }
+                    : null,
+            });
+        }
+
+        var card = ToCard(series);
+
+        card.Owned.ShouldBe(15);
+        card.Published.ShouldBe(16);
+        card.ToBuy.ShouldBe(1);
+        card.NextToBuyNumber.ShouldBe(16);
+        card.Tracked.ShouldBe(18);
+        card.Behind.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ToCard_AnImportedSeriesWithNoDatesAtAll_IsFullyPublished()
+    {
+        // The real shape of an imported library: every volume owned and read, not one
+        // release date anywhere, because neither AniList nor MangaUpdates publishes
+        // per-volume dates.
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            TitleEnglish = "Imported Series",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Completed,
+            UserState = new SeriesUserState { TrackingStatus = TrackingStatus.Reading },
+        };
+
+        foreach (var number in Enumerable.Range(1, 9))
+        {
+            series.Volumes.Add(new Volume
+            {
+                Id = Guid.CreateVersion7(),
+                Number = number,
+                ReleaseDate = null,
+                UserState = new VolumeUserState { ReadStatus = ReadStatus.Read, Owned = true },
+            });
+        }
+
+        var card = ToCard(series);
+
+        card.Read.ShouldBe(9);
+        card.Owned.ShouldBe(9);
+        card.Published.ShouldBe(9);
+        card.ToBuy.ShouldBe(0);
+        card.Backlog.ShouldBe(0);
+        card.Behind.ShouldBeFalse();
+    }
+
     private static Series CreateSeriesWithOneVolume(ReadStatus? readStatus, bool owned, int? releaseDaysFromToday)
     {
         var series = new Series

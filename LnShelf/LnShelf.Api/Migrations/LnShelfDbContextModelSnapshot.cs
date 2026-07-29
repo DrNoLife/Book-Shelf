@@ -22,10 +22,274 @@ namespace LnShelf.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CommittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("import_batch", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AniListId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CoverObjectKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("ImportGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PublicationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StartYear")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TitleEnglish")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("TitleNative")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("TitleRomaji")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<int?>("VolumeCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportGroupId", "Rank");
+
+                    b.ToTable("import_candidate", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ImportBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MatchScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MatchedAniListId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SeriesKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("SeriesTitle")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("TreatReadAsOwned")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportBatchId", "SeriesKey")
+                        .IsUnique();
+
+                    b.ToTable("import_group", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Author")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("ImportGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Isbn")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OwnedFormat")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("OwnedInExport")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RawTitle")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<DateOnly?>("ReadAt")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReadStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("VolumeNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportGroupId");
+
+                    b.ToTable("import_row", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AniListValue")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("Field")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("MangaUpdatesValue")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ResolvedWith")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SeriesTitle")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("SyncRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("VolumeNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("SyncRunId");
+
+                    b.ToTable("sync_discrepancy", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DatesMoved")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Failures")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("NewVolumes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SeriesLinked")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SeriesRefreshed")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("VolumesMarkedReleased")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartedAt");
+
+                    b.ToTable("sync_run", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<int?>("AniListId")
@@ -34,6 +298,10 @@ namespace LnShelf.Api.Migrations
                     b.Property<string>("Author")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CoverObjectKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("Format")
                         .IsRequired()
@@ -51,8 +319,8 @@ namespace LnShelf.Api.Migrations
                     b.Property<DateTimeOffset?>("LastSyncedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("MangaUpdatesId")
-                        .HasColumnType("integer");
+                    b.Property<long?>("MangaUpdatesId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("PublicationStatus")
                         .IsRequired()
@@ -135,7 +403,6 @@ namespace LnShelf.Api.Migrations
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Volume", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("CoverObjectKey")
@@ -147,6 +414,9 @@ namespace LnShelf.Api.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<bool>("IsLocalOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReleased")
                         .HasColumnType("boolean");
 
                     b.Property<int>("Number")
@@ -202,6 +472,42 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("volume_user_state", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportCandidate", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Import.Models.ImportGroup", null)
+                        .WithMany("Candidates")
+                        .HasForeignKey("ImportGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportGroup", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Import.Models.ImportBatch", null)
+                        .WithMany("Groups")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportRow", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Import.Models.ImportGroup", null)
+                        .WithMany("Rows")
+                        .HasForeignKey("ImportGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Metadata.Models.SyncRun", null)
+                        .WithMany("Discrepancies")
+                        .HasForeignKey("SyncRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.SeriesUserState", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", null)
@@ -227,6 +533,23 @@ namespace LnShelf.Api.Migrations
                         .HasForeignKey("LnShelf.Api.Features.Shelf.Models.VolumeUserState", "VolumeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
+                {
+                    b.Navigation("Groups");
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportGroup", b =>
+                {
+                    b.Navigation("Candidates");
+
+                    b.Navigation("Rows");
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncRun", b =>
+                {
+                    b.Navigation("Discrepancies");
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>

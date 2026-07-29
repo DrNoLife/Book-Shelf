@@ -1,0 +1,15 @@
+namespace LnShelf.Client;
+
+/// <summary>
+/// Builds absolute URLs for API-served bytes — images, which the browser fetches
+/// itself rather than through <c>HttpClient</c>.
+/// </summary>
+// It exists because an <img src> cannot use HttpClient.BaseAddress. In production
+// the client and API share one origin and this resolves to a relative-looking
+// same-origin URL; in development the WASM dev server is a separate origin, so
+// the configured API base is the only thing that works.
+public sealed class ApiUrlBuilder(HttpClient httpClient)
+{
+    public string Cover(string objectKey) =>
+        new Uri(httpClient.BaseAddress!, $"api/covers/{objectKey}").ToString();
+}

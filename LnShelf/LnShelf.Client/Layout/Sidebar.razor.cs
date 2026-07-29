@@ -1,4 +1,6 @@
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Sync;
+using LnShelf.Shared.Metadata;
 using LnShelf.Shared.Shelf;
 using Microsoft.AspNetCore.Components;
 
@@ -8,6 +10,21 @@ public partial class Sidebar : IDisposable
 {
     [Inject]
     public required LibraryState LibraryState { get; set; }
+
+    [Inject]
+    public required SyncState SyncState { get; set; }
+
+    private SyncSummaryResponse? LatestSync => SyncState.Latest;
+
+    /// <summary>
+    /// The run's own summary, one line per clause.
+    /// </summary>
+    // The server writes it as a single "·"-joined sentence, which is right for a log
+    // and wrong for a 224px column. Splitting it is presentation, so it happens here.
+    private IReadOnlyList<string> SummaryLines =>
+        LatestSync is null
+            ? []
+            : [.. LatestSync.Summary.Split(" · ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
 
     /// <summary>
     /// One row per shelf, in the order the design lists them. "Behind on buying"
@@ -34,11 +51,24 @@ public partial class Sidebar : IDisposable
         }
     }
 
-    protected override void OnInitialized() =>
+    protected override async Task OnInitializedAsync()
+    {
         LibraryState.Changed += OnLibraryStateChanged;
+        SyncState.Changed += OnLibraryStateChanged;
 
-    public void Dispose() =>
+        // The shell owns this fetch: the footer shows on every page, including ones
+        // that never load a library.
+        if (!SyncState.HasLoaded)
+        {
+            await SyncState.LoadAsync();
+        }
+    }
+
+    public void Dispose()
+    {
         LibraryState.Changed -= OnLibraryStateChanged;
+        SyncState.Changed -= OnLibraryStateChanged;
+    }
 
     private void OnLibraryStateChanged() => InvokeAsync(StateHasChanged);
 

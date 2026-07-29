@@ -22,4 +22,10 @@ public sealed record SeriesSearchResult
     public int? VolumeCount { get; init; }
 
     public int? StartYear { get; init; }
+
+    /// <summary>
+    /// The source's CDN URL. Server-side only — it exists so the cover cache can
+    /// fetch the image once; the browser never sees it (design.md).
+    /// </summary>
+    public string? CoverImageUrl { get; init; }
 }

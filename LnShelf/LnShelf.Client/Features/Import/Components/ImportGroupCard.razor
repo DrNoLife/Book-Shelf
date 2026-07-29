@@ -1,0 +1,99 @@
+@* One series' worth of books, and the decision it needs. The reason is printed,
+   not implied: "review this" without saying what is uncertain is not a question
+   anyone can answer. *@
+
+<article class="group @(Group.Status == ImportGroupStatus.NeedsReview ? "group--waiting" : null)">
+
+    <div class="group__head">
+        <div class="group__identity">
+            <h3 class="group__title">@Group.SeriesTitle</h3>
+            <p class="group__books tabular">
+                @Group.RowCount books · vols @Group.VolumeSummary · @Group.ReadCount read
+            </p>
+        </div>
+
+        <p class="group__state">
+            <span class="group__status @StatusClass">@StatusLabel</span>
+            @if (ReasonLine is not null)
+            {
+                <span class="group__reason">@ReasonLine</span>
+            }
+        </p>
+    </div>
+
+    @if (Group.Candidates.Count > 0)
+    {
+        <div class="group__candidates">
+            @foreach (var candidate in Group.Candidates)
+            {
+                <ImportCandidateTile Candidate="candidate"
+                                     IsSelected="candidate.AniListId == Group.MatchedAniListId"
+                                     IsDisabled="IsCommitted || IsBusy"
+                                     Selected="OnCandidateSelectedAsync"
+                                     @key="candidate.AniListId" />
+            }
+        </div>
+    }
+
+    <div class="group__actions">
+        @* StoryGraph records no ownership at all, so this rule is doing real work
+           and has to be visible and reversible where it applies. *@
+        <button type="button"
+                class="toggle @(Group.TreatReadAsOwned ? "toggle--on" : null)"
+                aria-pressed="@Group.TreatReadAsOwned"
+                disabled="@(IsCommitted || IsBusy)"
+                @onclick="OnOwnershipToggledAsync">
+            @(Group.TreatReadAsOwned ? "Read means owned" : "Read only, not owned")
+        </button>
+
+        <button type="button"
+                class="secondary"
+                disabled="@(IsCommitted || IsBusy || Group.Status == ImportGroupStatus.Skipped)"
+                @onclick="OnSkippedAsync">
+            Leave off the shelf
+        </button>
+
+        <button type="button" class="secondary" disabled="@(IsCommitted || IsBusy)" @onclick="ToggleManualSearch">
+            @(IsSearchOpen ? "Close search" : "Search AniList")
+        </button>
+    </div>
+
+    @if (IsSearchOpen)
+    {
+        <div class="group__search">
+            <form class="search" @onsubmit="RunSearchAsync" @onsubmit:preventDefault>
+                <span class="search__icon"><Icon Name="IconName.MagnifyingGlass" Size="13" /></span>
+                <input class="search__input"
+                       type="search"
+                       placeholder="Find the right series…"
+                       aria-label="Search AniList for @Group.SeriesTitle"
+                       value="@SearchQuery"
+                       @oninput="OnSearchInput" />
+                <button type="submit" class="primary" disabled="@IsSearching">Search</button>
+            </form>
+
+            @if (IsSearching)
+            {
+                <p class="group__note">Searching…</p>
+            }
+            else if (SearchResults.Count > 0)
+            {
+                <div class="group__candidates">
+                    @foreach (var result in SearchResults)
+                    {
+                        <ImportCandidateTile Candidate="result"
+                                             IsSelected="result.AniListId == Group.MatchedAniListId"
+                                             IsDisabled="IsBusy"
+                                             Selected="OnCandidateSelectedAsync"
+                                             @key="result.AniListId" />
+                    }
+                </div>
+            }
+            else if (HasSearched)
+            {
+                <p class="group__note">AniList knows nothing by that name either.</p>
+            }
+        </div>
+    }
+
+</article>

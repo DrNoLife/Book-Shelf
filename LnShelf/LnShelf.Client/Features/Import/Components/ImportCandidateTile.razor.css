@@ -1,0 +1,73 @@
+.candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 116px;
+  text-align: left;
+  padding: 0;
+}
+
+.candidate:disabled { cursor: default; }
+
+.candidate__cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* Hover raises the ring only — no size or layout change (design.md). */
+.candidate:hover:not(:disabled) .candidate__cover {
+  box-shadow: 0 0 0 1px var(--line-3);
+}
+
+/* Chosen: persimmon ring, plus the check mark the markup adds. */
+.candidate--selected .candidate__cover {
+  box-shadow: 0 0 0 1.5px var(--acc);
+}
+
+.candidate__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.candidate__badge { position: absolute; top: 6px; left: 6px; }
+.candidate__dot { position: absolute; top: 10px; right: 8px; }
+
+.candidate__check {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.candidate__title {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.18;
+  text-wrap: pretty;
+  color: var(--text);
+}
+
+.candidate__meta {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.candidate__score {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.candidate--selected .candidate__score { color: var(--acc-soft); }

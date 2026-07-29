@@ -1,0 +1,42 @@
+@* The upload step. Says plainly what will happen and what will not: nothing
+   reaches the shelf until the queue is resolved and committed. *@
+
+<section class="upload">
+    <p class="eyebrow">StoryGraph export</p>
+
+    <div class="upload__row">
+        <label class="upload__button">
+            <Icon Name="IconName.FileArrowUp" Size="14" />
+            <span>@(HasFile ? FileName : "Choose a CSV")</span>
+            <InputFile class="upload__input" OnChange="OnFileChangedAsync" accept=".csv,text/csv" />
+        </label>
+
+        <button type="button" class="primary" disabled="@(!HasFile || IsBusy)" @onclick="OnReadAsync">
+            Read it
+        </button>
+    </div>
+
+    <p class="upload__note">
+        Every series is looked up on AniList once — a few hundred books is a handful
+        of requests, not a few hundred. Nothing is written to the shelf yet.
+    </p>
+</section>
+
+@code {
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<IBrowserFile> Submitted { get; set; }
+
+    private IBrowserFile? SelectedFile { get; set; }
+
+    private bool HasFile => SelectedFile is not null;
+
+    private string FileName => SelectedFile?.Name ?? string.Empty;
+
+    private void OnFileChangedAsync(InputFileChangeEventArgs args) => SelectedFile = args.File;
+
+    private Task OnReadAsync() =>
+        SelectedFile is null ? Task.CompletedTask : Submitted.InvokeAsync(SelectedFile);
+}

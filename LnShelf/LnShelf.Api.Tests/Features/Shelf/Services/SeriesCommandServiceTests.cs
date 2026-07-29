@@ -18,6 +18,8 @@ public sealed class SeriesCommandServiceTests
     /// <summary>AniList's media id for the Mushoku Tensei light novel.</summary>
     private const int AniListId = 85470;
 
+    private const string CoverObjectKey = "anilist/85470.jpg";
+
     private static readonly DateOnly Today = new(2026, 7, 29);
 
     [Fact]
@@ -44,6 +46,10 @@ public sealed class SeriesCommandServiceTests
         series.PublicationStatus.ShouldBe(PublicationStatus.Completed);
         series.Author.ShouldBe("Rifujin na Magonote");
         series.LastSyncedAt.ShouldNotBeNull();
+
+        // The cover is fetched when the series is added, not on first render: the
+        // shelf has to work with the AniList CDN down.
+        series.CoverObjectKey.ShouldBe(CoverObjectKey);
 
         series.Volumes.Count.ShouldBe(26);
         series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 26));
@@ -146,7 +152,18 @@ public sealed class SeriesCommandServiceTests
     private static SeriesCommandService CreateService(
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource) =>
-        new(dbContext, metadataSource, TimeProvider.System, NullLogger<SeriesCommandService>.Instance);
+        new(dbContext, metadataSource, CreateCoverCache(), TimeProvider.System,
+            NullLogger<SeriesCommandService>.Instance);
+
+    /// <summary>Pretends the cover was cached, so the stored key can be asserted.</summary>
+    private static ICoverCache CreateCoverCache()
+    {
+        var coverCache = Substitute.For<ICoverCache>();
+        coverCache.EnsureCachedAsync(AniListId, Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(CoverObjectKey);
+
+        return coverCache;
+    }
 
     private static ISeriesMetadataSource CreateMetadataSource()
     {

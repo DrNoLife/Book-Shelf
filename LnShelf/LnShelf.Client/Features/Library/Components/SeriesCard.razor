@@ -1,12 +1,24 @@
 @* Covers do the talking: the card adds a badge, a dot and the bar, and nothing
-   else. Until covers are cached (phase 2) the placeholder names the volume. *@
+   else. A series with no cached cover falls back to naming the volume. *@
+@inject ApiUrlBuilder ApiUrl
 
 <article class="card @(Card.HasNewVolume ? "card--new" : null)">
 
     <div class="cover">
+        @if (Card.CoverObjectKey is { } coverObjectKey)
+        {
+            @* Always the local cover route, never the AniList CDN (design.md).
+               alt is empty on purpose: the title sits right below in the DOM, so
+               announcing it twice is noise to a screen reader. *@
+            <img class="cover__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="cover__label tabular">Vol @CoverVolumeNumber</span>
+        }
+
         <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
         <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
-        <span class="cover__label tabular">Vol @CoverVolumeNumber</span>
     </div>
 
     <ThreeSegmentBar Read="Card.Read" Owned="Card.Owned" Published="Card.Published" />

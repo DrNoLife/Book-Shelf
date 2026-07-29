@@ -14,6 +14,12 @@ public sealed record LibraryCardResponse
     public required TrackingStatus TrackingStatus { get; init; }
     public required bool HasNewVolume { get; init; }
 
+    /// <summary>
+    /// Key for <c>/api/covers/{objectKey}</c>. Null renders the placeholder; the
+    /// client never builds a URL to an external CDN (design.md).
+    /// </summary>
+    public string? CoverObjectKey { get; init; }
+
     /// <summary>Volumes marked read.</summary>
     public required int Read { get; init; }
 

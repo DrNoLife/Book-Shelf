@@ -26,6 +26,7 @@ internal static class AniListQueries
               volumes
               startDate { year }
               title { english romaji native }
+              coverImage { large }
             }
           }
         }
@@ -46,6 +47,7 @@ internal static class AniListQueries
             volumes
             startDate { year }
             title { english romaji native }
+            coverImage { large }
             genres
             staff(perPage: 12) {
               edges {

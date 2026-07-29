@@ -32,8 +32,12 @@
     /// <summary>The series-hero size. Default is the library-card size.</summary>
     [Parameter] public bool Large { get; set; }
 
-    // Clamped so odd data (owning an unreleased volume) cannot produce a
-    // negative segment and silently break the layout.
+    // The clamps are a seatbelt, not a fix. They used to be load-bearing: owning a
+    // volume with no release date made Published smaller than Owned, so the last
+    // segment went negative and the bar spanned nothing at all. That is now
+    // impossible at the source — LibraryCardProjection counts an owned volume as
+    // published, because you cannot own an unreleased volume — and there is a test
+    // asserting Published >= Owned for every combination.
     private int ReadSegment => Math.Max(0, Read);
     private int OwnedUnreadSegment => Math.Max(0, Owned - Read);
     private int UnownedSegment => Math.Max(0, Published - Owned);

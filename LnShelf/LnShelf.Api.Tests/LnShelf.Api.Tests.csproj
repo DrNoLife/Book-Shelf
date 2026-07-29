@@ -25,6 +25,15 @@
     <Content Include="Features\Metadata\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The real StoryGraph export, linked rather than copied so docs/ stays the
+       single source and the fixture cannot drift from the file that was imported.
+       Every parsing oddity asserted in the import tests came out of this file. -->
+  <ItemGroup>
+    <Content Include="..\..\docs\story-graph-export.csv"
+             Link="Features\Import\Fixtures\story-graph-export.csv"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LnShelf.Api\LnShelf.Api.csproj" />
   </ItemGroup>

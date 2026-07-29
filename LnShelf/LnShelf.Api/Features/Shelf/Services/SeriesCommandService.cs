@@ -4,6 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class SeriesCommandService(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
+    ICoverCache coverCache,
     TimeProvider timeProvider,
     ILogger<SeriesCommandService> logger) : ISeriesCommandService
 {
@@ -43,7 +44,13 @@ public sealed class SeriesCommandService(
                 metadata.Format);
         }
 
-        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, timeProvider.GetUtcNow());
+        // Fetched now rather than on first render: the shelf has to work with the
+        // AniList CDN down, which means the bytes must already be local.
+        var coverObjectKey = await coverCache.EnsureCachedAsync(
+            metadata.ExternalId, metadata.CoverImageUrl, cancellationToken);
+
+        var series = SeriesMetadataMapper.ToTrackedSeries(
+            metadata, timeProvider.GetUtcNow(), coverObjectKey);
 
         dbContext.Series.Add(series);
         await dbContext.SaveChangesAsync(cancellationToken);

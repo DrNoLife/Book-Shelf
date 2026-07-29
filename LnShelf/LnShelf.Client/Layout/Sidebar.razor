@@ -13,6 +13,13 @@
             <span>Library</span>
         </NavLink>
 
+        @* Not in the v2 mockup's nav, which predates the import flow existing.
+           It is a real page with a real route, so it gets a real row. *@
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="import">
+            <Icon Name="IconName.FileArrowUp" Size="15" />
+            <span>Import</span>
+        </NavLink>
+
         @* The rest of the shell exists in the design but not yet in the app. Shown
            dimmed rather than hidden so the nav does not change shape when they
            land. No tooltip: hover-only information is exactly what design.md
@@ -49,11 +56,21 @@
 
     <div class="sync">
         <p class="eyebrow">Sync</p>
-        @* Placeholder. The real line ("Synced 04:12 · 6 release dates moved")
-           needs the nightly job, so inventing numbers here would be the one
-           thing design.md's voice rules forbid. *@
-        <p class="sync__line">Not synced yet</p>
-        <p class="sync__line">Nightly refresh arrives in phase 2</p>
+        @* Transparent, not magical (design.md): every line here is a number the run
+           actually produced, including the line about what it could not do. *@
+        @if (LatestSync is { } latest)
+        {
+            <p class="sync__line">Synced @latest.SyncedAtLabel</p>
+            @foreach (var line in SummaryLines)
+            {
+                <p class="sync__line">@line</p>
+            }
+        }
+        else
+        {
+            <p class="sync__line">Not synced yet</p>
+            <p class="sync__line">Nothing has been refreshed against a release source</p>
+        }
     </div>
 
 </aside>

@@ -1,0 +1,59 @@
+@* One candidate series, side by side with its neighbours: cover, format badge,
+   publication dot, volume count, score. Everything needed to tell a light novel
+   from its manga adaptation at a glance, which is the decision being asked. *@
+@inject ApiUrlBuilder ApiUrl
+
+<button type="button"
+        class="candidate @(IsSelected ? "candidate--selected" : null)"
+        aria-pressed="@IsSelected"
+        disabled="@IsDisabled"
+        @onclick="OnSelected">
+
+    <span class="candidate__cover">
+        @if (Candidate.CoverObjectKey is { } coverObjectKey)
+        {
+            <img class="candidate__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+        }
+        <span class="candidate__badge"><FormatBadge Value="Candidate.Format" /></span>
+        <span class="candidate__dot"><StatusDot Value="Candidate.PublicationStatus" /></span>
+
+        @* The chosen candidate carries a check as well as the ring: state is never
+           colour alone (design.md). *@
+        @if (IsSelected)
+        {
+            <span class="candidate__check"><Icon Name="IconName.Check" Size="12" /></span>
+        }
+    </span>
+
+    <span class="candidate__title">@Candidate.TitleEnglish</span>
+
+    <span class="candidate__meta tabular">
+        @VolumeLabel · @Candidate.PublicationStatus.ToString().ToLowerInvariant()
+        @if (Candidate.StartYear is { } startYear)
+        {
+            @($" · {startYear}")
+        }
+    </span>
+
+    <span class="candidate__score tabular">match @Candidate.Score</span>
+</button>
+
+@code {
+    [Parameter]
+    public required ImportCandidateResponse Candidate { get; set; }
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
+    [Parameter]
+    public EventCallback<int> Selected { get; set; }
+
+    /// <summary>AniList publishes no total for most ongoing series; say so.</summary>
+    private string VolumeLabel =>
+        Candidate.VolumeCount is { } volumeCount ? $"{volumeCount} vols" : "vols unknown";
+
+    private Task OnSelected() => Selected.InvokeAsync(Candidate.AniListId);
+}

@@ -1,0 +1,70 @@
+.upload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upload__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* A label wrapping the file input: the real input is hidden, so the control can
+   be styled to design.md's secondary-button spec instead of the browser's. */
+.upload__button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 32ch;
+}
+
+.upload__button:hover { border-color: var(--line-3); color: var(--text); }
+
+.upload__button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Kept in the layout and focusable — hiding it with display:none would take it
+   out of the tab order.
+
+   ::deep is not optional: InputFile is a child component, and scoped CSS does not
+   reach a child's rendered element. Without it the browser's own file control is
+   drawn on top of the styled label, in the browser's UI language. */
+.upload__button ::deep .upload__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.primary {
+  padding: 8px 13px;
+  border-radius: 7px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.primary:disabled { opacity: 0.45; cursor: default; }
+
+.upload__note {
+  max-width: 52ch;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--faint);
+}

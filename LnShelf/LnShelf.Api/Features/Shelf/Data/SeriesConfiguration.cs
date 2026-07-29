@@ -7,6 +7,13 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         builder.ToTable("series");
         builder.HasKey(series => series.Id);
 
+        // The application assigns every id (Guid.CreateVersion7, for sortable keys),
+        // so EF must not treat a pre-set key as evidence the row already exists.
+        // Left on the convention, a volume added to an already-tracked series is
+        // discovered as Modified and SaveChanges throws "attempted to update an
+        // entity that does not exist" (see VolumeConfiguration for the same reason).
+        builder.Property(series => series.Id).ValueGeneratedNever();
+
         // Enums are stored as text: a hobby database gets read in psql, and text
         // survives reordering the enum members.
         builder.Property(series => series.Format).HasConversion<string>().HasMaxLength(32).IsRequired();
@@ -18,6 +25,7 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         builder.Property(series => series.Publisher).HasMaxLength(200);
         builder.Property(series => series.Author).HasMaxLength(200);
         builder.Property(series => series.Illustrator).HasMaxLength(200);
+        builder.Property(series => series.CoverObjectKey).HasMaxLength(300);
 
         // Matching and sync key on the external ids constantly (data-access.md).
         builder.HasIndex(series => series.AniListId).IsUnique();

@@ -1,0 +1,117 @@
+/* Same shell as the library: the sidebar names the page on desktop, the h1 takes
+   over below 861px. */
+.import__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.import {
+  display: flex;
+  flex-direction: column;
+}
+
+.import__top {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 26px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.import__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 26px 26px;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notice {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* A refusal from the API. Persimmon as text weight, never as a fill — a warning
+   is not an action (design.md's colour discipline). */
+.notice--warning { color: var(--acc-soft); }
+
+.commit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.primary {
+  padding: 8px 13px;
+  border-radius: 7px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.primary:disabled { opacity: 0.45; cursor: default; }
+
+.commit__note {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.batches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.batches__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.batches__open {
+  color: var(--acc-soft);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.batches__open:hover { color: var(--acc); }
+
+.batches__meta {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+@media (max-width: 860px) {
+  .import__title {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    padding: 18px 16px 0;
+    font-size: 30px;
+  }
+
+  .import__top { padding: 14px 16px; }
+  .import__body { padding: 16px 16px 22px; }
+}

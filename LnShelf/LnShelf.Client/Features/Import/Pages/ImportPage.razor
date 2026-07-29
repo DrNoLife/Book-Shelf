@@ -1,0 +1,99 @@
+@page "/import"
+@using LnShelf.Client.Features.Import.Components
+
+<h1 class="import__title">Import</h1>
+
+<div class="import">
+
+    <div class="import__top">
+        <ImportUploadPanel IsBusy="ImportState.IsBusy" Submitted="OnFileSubmittedAsync" />
+
+        @if (Batch is not null)
+        {
+            <ImportBatchSummary Batch="Batch" />
+        }
+    </div>
+
+    <div class="import__body">
+
+        @if (ImportState.Message is { } message)
+        {
+            <p class="notice notice--warning">@message</p>
+        }
+
+        @if (ImportState.IsMatching)
+        {
+            <p class="notice">Reading the file and matching every series against AniList — this takes a moment.</p>
+        }
+
+        @if (CommitResult is { } commit)
+        {
+            <p class="notice">
+                @commit.SeriesCreated added, @commit.SeriesUpdated already tracked,
+                @commit.VolumeStatesWritten volumes recorded@(commit.LocalOnlyVolumesCreated > 0
+                    ? $", {commit.LocalOnlyVolumesCreated} of them AniList had never heard of" : "").
+            </p>
+        }
+
+        @if (Queue is null)
+        {
+            @if (ImportState.RecentBatches.Count > 0)
+            {
+                <p class="eyebrow">Earlier uploads</p>
+                <ul class="batches">
+                    @foreach (var batch in ImportState.RecentBatches)
+                    {
+                        <li class="batches__row" @key="batch.BatchId">
+                            <button type="button" class="batches__open" @onclick="() => OnOpenBatchAsync(batch.BatchId)">
+                                @batch.FileName
+                            </button>
+                            <span class="batches__meta tabular">
+                                @batch.RowCount books · @batch.GroupCount series ·
+                                @(batch.CommittedAt is null ? $"{batch.NeedsReview} to review" : "applied")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (!ImportState.IsBusy)
+            {
+                <p class="notice">
+                    Nothing imported yet. StoryGraph exports from
+                    <em>Manage Account → Export StoryGraph Library</em>.
+                </p>
+            }
+        }
+        else
+        {
+            <div class="groups">
+                @foreach (var group in Queue.Groups)
+                {
+                    <ImportGroupCard Group="group"
+                                     IsBusy="ImportState.IsBusy"
+                                     Decided="OnDecidedAsync"
+                                     @key="group.GroupId" />
+                }
+            </div>
+
+            @if (Batch is { CommittedAt: null })
+            {
+                <div class="commit">
+                    <button type="button"
+                            class="primary"
+                            disabled="@(!Batch.IsReadyToCommit || ImportState.IsBusy)"
+                            @onclick="OnCommitAsync">
+                        @CommitLabel
+                    </button>
+
+                    <p class="commit__note">
+                        @(Batch.NeedsReview > 0
+                            ? $"{Batch.NeedsReview} still to decide."
+                            : "Read volumes become owned unless you said otherwise.")
+                    </p>
+                </div>
+            }
+        }
+
+    </div>
+
+</div>

@@ -21,8 +21,19 @@ public sealed class AniListMedia
 
     public AniListMediaTitle? Title { get; set; }
     public AniListFuzzyDate? StartDate { get; set; }
+    public AniListCoverImage? CoverImage { get; set; }
     public List<string>? Genres { get; set; }
     public AniListStaffConnection? Staff { get; set; }
+}
+
+/// <inheritdoc cref="AniListMedia"/>
+public sealed class AniListCoverImage
+{
+    /// <summary>
+    /// AniList's own field name; the URL it returns is a CDN path, which the
+    /// cover cache downloads once and never hands to the browser.
+    /// </summary>
+    public string? Large { get; set; }
 }
 
 /// <inheritdoc cref="AniListMedia"/>

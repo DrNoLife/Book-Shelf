@@ -28,19 +28,33 @@ public static class LibraryCardProjection
                 : TrackingStatus.PlanToStart,
             HasNewVolume = series.UserState != null && series.UserState.HasNewVolume,
 
+            // The series cover. design.md's "latest volume, or first by setting"
+            // needs per-volume art to choose between, which arrives with
+            // MangaUpdates in phase 2; until then there is exactly one cover.
+            CoverObjectKey = series.CoverObjectKey,
+
             Read = series.Volumes.Count(volume =>
                 volume.UserState != null && volume.UserState.ReadStatus == ReadStatus.Read),
 
             Owned = series.Volumes.Count(volume =>
                 volume.UserState != null && volume.UserState.Owned),
 
+            // Published on any of three grounds, because no single source is enough:
+            //   a date in the past          — the ideal, and rare: no source has them
+            //   the release source says so  — Volume.IsReleased, a sourced count
+            //   the user owns it            — you cannot own an unreleased volume
+            // Without the last two an imported library reports published=0 while
+            // owning 74 volumes, and every progress bar spans zero.
             Published = series.Volumes.Count(volume =>
-                volume.ReleaseDate != null && volume.ReleaseDate <= today),
+                (volume.ReleaseDate != null && volume.ReleaseDate <= today)
+                || volume.IsReleased
+                || (volume.UserState != null && volume.UserState.Owned)),
 
-            // To buy = released and not owned.
+            // To buy = out and not owned. Ownership is the one ground for "published"
+            // that cannot count here, by definition — which is why this repeats the
+            // other two rather than reusing Published.
             ToBuy = series.Volumes.Count(volume =>
-                volume.ReleaseDate != null
-                && volume.ReleaseDate <= today
+                ((volume.ReleaseDate != null && volume.ReleaseDate <= today) || volume.IsReleased)
                 && (volume.UserState == null || !volume.UserState.Owned)),
 
             // Backlog = owned and not read. "Reading" still counts as backlog.
@@ -53,8 +67,7 @@ public static class LibraryCardProjection
 
             NextToBuyNumber = series.Volumes
                 .Where(volume =>
-                    volume.ReleaseDate != null
-                    && volume.ReleaseDate <= today
+                    ((volume.ReleaseDate != null && volume.ReleaseDate <= today) || volume.IsReleased)
                     && (volume.UserState == null || !volume.UserState.Owned))
                 .OrderBy(volume => volume.Number)
                 .Select(volume => (int?)volume.Number)

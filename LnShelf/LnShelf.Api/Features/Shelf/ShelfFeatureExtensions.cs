@@ -7,8 +7,10 @@ public static class ShelfFeatureExtensions
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddShelf()
+        public IServiceCollection AddShelf(IConfiguration configuration)
         {
+            services.Configure<ShelfOptions>(configuration.GetSection(ShelfOptions.SectionName));
+
             services.AddScoped<ILibraryQueryService, LibraryQueryService>();
             services.AddScoped<ISeriesCommandService, SeriesCommandService>();
             services.AddScoped<ShelfSeeder>();

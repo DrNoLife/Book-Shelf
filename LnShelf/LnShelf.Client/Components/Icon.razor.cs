@@ -13,6 +13,8 @@ public enum IconName
     MagnifyingGlass,
     ChartBar,
     Close,
+    FileArrowUp,
+    Check,
 }
 
 public partial class Icon
@@ -32,6 +34,8 @@ public partial class Icon
         IconName.MagnifyingGlass => MagnifyingGlassPath,
         IconName.ChartBar => ChartBarPath,
         IconName.Close => ClosePath,
+        IconName.FileArrowUp => FileArrowUpPath,
+        IconName.Check => CheckPath,
         _ => throw new ArgumentOutOfRangeException(nameof(Name), Name, "Unknown icon."),
     };
 
@@ -59,4 +63,13 @@ public partial class Icon
     private const string ClosePath =
         "M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34," +
         "61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z";
+
+    private const string FileArrowUpPath =
+        "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8," +
+        "8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0," +
+        "0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z";
+
+    private const string CheckPath =
+        "M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1," +
+        "11.32,11.32Z";
 }

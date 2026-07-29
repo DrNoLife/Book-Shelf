@@ -12,6 +12,14 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options)
     public DbSet<SeriesUserState> SeriesUserStates => Set<SeriesUserState>();
     public DbSet<VolumeUserState> VolumeUserStates => Set<VolumeUserState>();
 
+    public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
+    public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
+
+    public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+    public DbSet<ImportGroup> ImportGroups => Set<ImportGroup>();
+    public DbSet<ImportRow> ImportRows => Set<ImportRow>();
+    public DbSet<ImportCandidate> ImportCandidates => Set<ImportCandidate>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(LnShelfDbContext).Assembly);
 }

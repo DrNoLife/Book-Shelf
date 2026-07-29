@@ -1,0 +1,47 @@
+@* Numbers first, in the user's terms — the same treatment as the library header,
+   because this is the same kind of statement. *@
+
+<header class="summary">
+    <p class="eyebrow">@Batch.FileName · @Batch.GroupCount series</p>
+
+    <div class="summary__row">
+        <div class="stats">
+            <p class="stat">
+                <span class="stat__value tabular">@Batch.RowCount</span>
+                <span class="stat__label">books</span>
+            </p>
+            <p class="stat">
+                <span class="stat__value tabular">@Batch.AutoMatched</span>
+                <span class="stat__label">matched</span>
+            </p>
+            <p class="stat">
+                @* The one figure that is work: it carries the text-weight accent,
+                   the way "read" does on the library header. *@
+                <span class="stat__value stat__value--accent tabular">@Batch.NeedsReview</span>
+                <span class="stat__label">need you</span>
+            </p>
+            <p class="stat">
+                <span class="stat__value tabular">@Batch.Skipped</span>
+                <span class="stat__label">left off</span>
+            </p>
+        </div>
+
+        <p class="summary__prose">@ProseLine</p>
+    </div>
+</header>
+
+@code {
+    [Parameter]
+    public required ImportBatchResponse Batch { get; set; }
+
+    /// <summary>
+    /// Counts honestly and says what to do next. No wry line here: this one is a
+    /// work instruction, and design.md keeps the wry line out of anything a user
+    /// has to act on.
+    /// </summary>
+    private string ProseLine => Batch.CommittedAt is not null
+        ? $"{Batch.Committed} series on the shelf. This export has been applied."
+        : Batch.NeedsReview > 0
+            ? $"{Batch.NeedsReview} series need a decision before anything is written."
+            : $"{Batch.AutoMatched + Batch.Resolved} series ready. Nothing is on the shelf until you say so.";
+}

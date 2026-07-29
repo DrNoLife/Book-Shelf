@@ -5,7 +5,10 @@ namespace LnShelf.Api.Features.Shelf.Data;
 /// Idempotent: an existing shelf is left completely alone, so re-running the app
 /// never touches user state. To reseed, drop the volume (<c>docker compose down -v</c>).
 /// </summary>
-public sealed class ShelfSeeder(LnShelfDbContext dbContext, ILogger<ShelfSeeder> logger)
+public sealed class ShelfSeeder(
+    LnShelfDbContext dbContext,
+    IOptions<ShelfOptions> options,
+    ILogger<ShelfSeeder> logger)
 {
     /// <summary>
     /// docs/seed-library.json, embedded as a link so the file in <c>docs/</c>
@@ -17,6 +20,13 @@ public sealed class ShelfSeeder(LnShelfDbContext dbContext, ILogger<ShelfSeeder>
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
+        if (!options.Value.SeedDevelopmentFixture)
+        {
+            logger.LogInformation(
+                "The development fixture is switched off; the shelf is whatever has been imported.");
+            return;
+        }
+
         if (await dbContext.Series.AnyAsync(cancellationToken))
         {
             logger.LogInformation("Shelf already contains series; seed skipped.");

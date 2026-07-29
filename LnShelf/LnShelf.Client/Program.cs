@@ -1,6 +1,8 @@
 using LnShelf.Client;
+using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
 using LnShelf.Client.Features.Search;
+using LnShelf.Client.Features.Sync;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -15,8 +17,14 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? builder.HostEnvironment.BaseAddress;
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
+builder.Services.AddScoped<ApiUrlBuilder>();
+
 // The grid and the sidebar render from one library fetch.
 builder.Services.AddScoped<LibraryState>();
 builder.Services.AddScoped<SeriesSearchState>();
+builder.Services.AddScoped<ImportState>();
+
+// The shell's sync footer, on every page.
+builder.Services.AddScoped<SyncState>();
 
 await builder.Build().RunAsync();
