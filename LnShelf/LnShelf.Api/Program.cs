@@ -1,3 +1,4 @@
+using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Shelf;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,6 +7,7 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddLnShelfData(builder.Configuration);
 builder.Services.AddShelf();
+builder.Services.AddMetadata(builder.Configuration);
 
 // Development only. In production nginx serves the client and proxies /api/*, so
 // browser and API share one origin and no CORS policy exists (feature-spec §2).

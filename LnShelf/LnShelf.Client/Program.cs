@@ -1,5 +1,6 @@
 using LnShelf.Client;
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Search;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -16,5 +17,6 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseAd
 
 // The grid and the sidebar render from one library fetch.
 builder.Services.AddScoped<LibraryState>();
+builder.Services.AddScoped<SeriesSearchState>();
 
 await builder.Build().RunAsync();

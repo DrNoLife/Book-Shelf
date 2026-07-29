@@ -1,3 +1,9 @@
+global using LnShelf.Api.Features.Metadata.Abstractions;
+global using LnShelf.Api.Features.Metadata.Mappers;
+global using LnShelf.Api.Features.Metadata.Models;
+global using LnShelf.Api.Features.Metadata.Models.AniList;
+global using LnShelf.Api.Features.Metadata.Services;
+global using LnShelf.Api.Features.Shelf.Abstractions;
 global using LnShelf.Api.Features.Shelf.Data;
 global using LnShelf.Api.Features.Shelf.Mappers;
 global using LnShelf.Api.Features.Shelf.Services;

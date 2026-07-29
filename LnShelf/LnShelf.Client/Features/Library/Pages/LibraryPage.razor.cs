@@ -38,6 +38,9 @@ public partial class LibraryPage : IDisposable
 
     private void OnLibraryStateChanged() => InvokeAsync(StateHasChanged);
 
+    /// <summary>A series that was just added has to appear without a page reload.</summary>
+    private Task OnSeriesAddedAsync() => LibraryState.LoadAsync();
+
     private Task OnFormatSelectedAsync(Format? format) => LibraryState.SelectFormatAsync(format);
 
     private Task OnFilterSelectedAsync(LibraryFilter filter) => LibraryState.SelectFilterAsync(filter);

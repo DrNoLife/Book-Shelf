@@ -1,5 +1,6 @@
 @page "/"
 @using LnShelf.Client.Features.Library.Components
+@using LnShelf.Client.Features.Search.Components
 
 @* Visible only where the sidebar is not — narrow viewports need the orientation,
    the desktop shell already provides it. *@
@@ -8,6 +9,8 @@
 <div class="library">
 
     <div class="library__top">
+        <AddSeriesPanel OnSeriesAdded="OnSeriesAddedAsync" />
+
         @if (Library is not null)
         {
             <LibraryHeader Totals="Library.Totals" />

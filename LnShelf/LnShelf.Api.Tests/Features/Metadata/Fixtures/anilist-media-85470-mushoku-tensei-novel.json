@@ -1,0 +1,108 @@
+{
+  "data": {
+    "Media": {
+      "id": 85470,
+      "format": "NOVEL",
+      "status": "FINISHED",
+      "volumes": 26,
+      "startDate": {
+        "year": 2014
+      },
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation",
+        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+        "native": "\u7121\u8077\u8ee2\u751f \uff5e\u7570\u4e16\u754c\u884c\u3063\u305f\u3089\u672c\u6c17\u3060\u3059\uff5e"
+      },
+      "genres": [
+        "Adventure",
+        "Drama",
+        "Ecchi",
+        "Fantasy"
+      ],
+      "staff": {
+        "edges": [
+          {
+            "role": "Story ",
+            "node": {
+              "name": {
+                "full": "Rifujin na Magonote"
+              }
+            }
+          },
+          {
+            "role": "Illustration",
+            "node": {
+              "name": {
+                "full": "Sirotaka"
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 2, 4, 6-8, 10, 12, 14, 16, 18, 19, 23)",
+            "node": {
+              "name": {
+                "full": "Alyssa Orton-Niioka"
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vol 1)",
+            "node": {
+              "name": {
+                "full": "Kevin Frane"
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 1, 3, 5, 7, 9, 11, 13, 15, 17, 19)",
+            "node": {
+              "name": {
+                "full": "Paul Cuneo"
+              }
+            }
+          },
+          {
+            "role": "Translator (Thai)",
+            "node": {
+              "name": {
+                "full": "Soraphong Kitbunchaporn"
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 20, 23)",
+            "node": {
+              "name": {
+                "full": "airco"
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 21, 24-26)",
+            "node": {
+              "name": {
+                "full": "Sylvia Gallagher"
+              }
+            }
+          },
+          {
+            "role": "Editing (German)",
+            "node": {
+              "name": {
+                "full": "Melanie H\u00f6pfler"
+              }
+            }
+          },
+          {
+            "role": "Translator (German)",
+            "node": {
+              "name": {
+                "full": "Anemone Bauer"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

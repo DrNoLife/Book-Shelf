@@ -4,14 +4,25 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- xUnit + Shouldly per testing.md. NSubstitute is not referenced because
-       nothing here needs a mock yet — the derived-state rules are pure. -->
+  <!-- xUnit + Shouldly + NSubstitute per testing.md. NSubstitute arrived with the
+       first collaborator worth faking: ISeriesMetadataSource, so the add-series
+       idempotency test never touches the network. The in-memory EF provider gives
+       that test a database without Postgres; it is a test double for the store,
+       not a second supported provider. -->
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <!-- Captured AniList responses (testing.md #4). Copied rather than embedded so
+       the files stay browsable next to the tests that read them. -->
+  <ItemGroup>
+    <Content Include="Features\Metadata\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

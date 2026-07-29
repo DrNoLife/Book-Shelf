@@ -12,6 +12,9 @@
          while Design pulled 10.0.10). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <!-- HybridCache. 10.8.0 depends on Microsoft.Extensions.* 10.0.10, which is
+         the version EF Core already pulls, so the graph stays on one set. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

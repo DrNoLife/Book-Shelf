@@ -6,6 +6,208 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 1.2 — AniList search + add series (2026-07-29)
+
+**Goal:** a series can be searched on AniList and added to the shelf — real
+metadata, real volumes.
+
+Built after phase 3.1 rather than before it: 1.2 was abandoned in an earlier
+session on the belief that the network blocked `graphql.anilist.co`. That belief
+was wrong. `curl` to the endpoint returns 200 from this machine, and every number
+below came out of the live API.
+
+### What exists
+
+**Metadata slice** (`LnShelf.Api/Features/Metadata/`) — the first slice besides
+Shelf, and the home of the `ISeriesMetadataSource` seam:
+
+```
+Abstractions/ISeriesMetadataSource.cs      <- the seam: search + series detail + volume list
+Models/            SeriesSearchResult, SeriesMetadata, VolumeMetadata (clean records)
+                   AniListOptions
+Models/AniList/    AniListGraphQlMessages, AniListMedia, AniListQueryData (dirty classes)
+Mappers/           AniListMediaMapper      <- the dirty→clean edge
+                   AniListStaffMapper      <- author/illustrator out of freeform role text
+                   SeriesSearchResultMapper <- clean → wire contract
+Services/          AniListQueries          <- the two GraphQL documents
+                   AniListGraphQlClient    <- typed HttpClient, one POST, one envelope
+                   AniListRateLimiter      <- singleton permit pool, 90/min sliding window
+                   AniListRateLimitHandler <- DelegatingHandler: permit, then honour 429
+                   AniListSeriesQueryService <- ISeriesMetadataSource + HybridCache
+Controllers/SearchController.cs            <- GET /api/search?q=&format=
+MetadataFeatureExtensions.cs               <- AddMetadata()
+```
+
+**Shelf slice** gained its write side, which did not exist at all before:
+`ISeriesCommandService` / `SeriesCommandService`, `SeriesMetadataMapper`
+(metadata → a tracked series graph), and `SeriesController` for
+`POST /api/series`.
+
+**Client** gained `Features/Search/`: `SeriesSearchState` (state container, same
+shape as `LibraryState`) and `AddSeriesPanel` (`.razor` + `.razor.cs`), rendered
+at the top of the library page. It has no stylesheet — see the deviations.
+
+No migration: nothing about the schema changed. The unique index on `AniListId`
+has been there since 1.1 and is now actually load-bearing.
+
+### Verified, not assumed
+
+1. `dotnet build LnShelf/LnShelf.slnx` — **0 warnings, 0 errors**.
+2. `dotnet test LnShelf/LnShelf.slnx` — **85 passed, 0 failed** (60 from earlier
+   phases plus 25 new: 12 mapping tests against captured AniList responses, 5
+   add-series tests, and the theories inside them).
+3. `GET /api/search?q=mushoku` returns the light novel and the manga as two
+   results with the same title and different formats — AniList 85470
+   `LightNovel / Completed / volumeCount 26` and 85564 `Manga / Ongoing /
+   volumeCount null`.
+4. `POST /api/series { aniListId: 85470, format: LightNovel }` → **201**, then
+   `GET /api/library?filter=All` shows 25 series (24 seeded + the new one) with
+   `tracked: 26` — AniList's real volume count — and `read/owned/published/toBuy/
+   backlog` all 0, `behind: false`, `trackingStatus: PlanToStart`.
+5. The same POST again → **200** with `alreadyTracked: true` and the *same*
+   `seriesId`; the library still reports 25. `psql` confirms one row for
+   AniList 85470 and 26 volume rows.
+6. The browser did the whole loop too: typed `mushoku`, clicked Search, clicked
+   Add on the *manga* row → "Added … (Manga) with 0 volumes", grid went 25 → 26
+   without a reload; clicking Add on the same row again → "was already on the
+   shelf … nothing added", still 26. `psql` shows exactly one row per AniList id
+   (85470 LightNovel, 85564 Manga).
+7. **The cache and the pre-read really do spare AniList.** Five search requests
+   and four adds across the session produced **four** AniList calls total: two
+   searches (the repeat of `q=mushoku` was an L1 hit; `&format=LightNovel` is a
+   different key) and two detail fetches. Confirmed from the API log.
+
+### Decisions taken
+
+- **Search sorts by `POPULARITY_DESC`, not `SEARCH_MATCH`.** Measured, not
+  guessed: under `SEARCH_MATCH`, `q=mushoku` returns *Yuusha Mushoku*, *Mushoku
+  Toumei*, *Mushoku Kyousei Shuuyoujo*, *Shiro to Kujira*, *Mushoku no Kaibutsu
+  Player* and *34-sai Mushoku-san* before either series a human means — every one
+  of them matches the substring equally well. Popularity within the search filter
+  puts the light novel and the manga at rows 1 and 2.
+- **AniList publishes a volume *count*, not volume entities** — there are no
+  per-volume ids and no per-volume dates anywhere in its schema. Volumes 1..count
+  are materialised with `ReleaseDate = null`, and MangaUpdates supplies dates in
+  phase 2 (it wins on dates by the conflict rule anyway).
+- **`Volume.ExternalId` is null for AniList-derived volumes, with
+  `IsLocalOnly = false`** **[flagged]**. That contradicts feature-spec §5's
+  "ExternalId nullable — null exactly when IsLocalOnly". The invariant cannot
+  hold: AniList has no id to store. The alternative was a synthetic
+  `anilist:85470:v3` that pretends to be an external key, which is worse. The
+  semantics that actually matter are unchanged — `IsLocalOnly` means *the user
+  created this volume, sync must not own it* — and volume identity is
+  `(SeriesId, Number)`, which already has its unique index. §5's wording needs
+  amending, or say the word and the synthetic id goes in.
+- **A newly added series is not "Behind", so the default library filter hides
+  it** **[flagged]**. With no release dates, nothing counts as published, so
+  nothing is to-buy and nothing is backlog: the series lands on *All*, *Plan to
+  start* and *Up to date*. The screenshots use the All shelf for exactly this
+  reason. It is arithmetically correct and a genuine wart — you add a series and
+  the grid does not change. Phase 2's dates fix it for real; if it needs fixing
+  before then, the honest lever is a "recently added" shelf, not a fake date.
+- **An ongoing series with no published total tracks zero volumes.** The Mushoku
+  Tensei *manga* is exactly this case (`volumes: null`), and it was added with 0
+  volumes rather than an invented volume 1. Also flushed out a small existing
+  bug — see deviations.
+- **The request's `format` is a declaration, not the authority.** The AniList id
+  already determines the format, so the source's value is stored and a
+  disagreement is logged as a warning **[flagged]**. A 400 was the alternative;
+  it would only punish a client working from stale search results for something
+  the server can resolve correctly. The response always reports what was stored.
+- **Idempotency is a read, not a caught conflict.** `AddFromAniListAsync` looks
+  the `AniListId` up first and returns the existing series; the unique index is
+  the backstop that should never fire. The pre-read also means adding an
+  already-tracked series costs AniList nothing.
+- **200 vs 201 is the idempotency signal**, and there is deliberately no
+  `Location` header — `GET /api/series/{id}` is phase 3, and pointing a header at
+  a route that does not exist is a lie in a header.
+- **Only search is cached.** §8 also lists series detail, but that entry is about
+  the import review queue re-rendering candidates (phase 4); an add happens once
+  per series. `HybridCache` is L1-only *explicitly*, via
+  `HybridCacheEntryFlags.DisableDistributedCache`, rather than by relying on no
+  `IDistributedCache` being registered.
+- **Rate limiting is a sliding window, not a fixed one.** A fixed 90/minute
+  window permits 90 requests in its last second and 90 more in the next window's
+  first second — 180 in two seconds, from AniList's point of view. Six segments
+  smooth it. The queue is bounded at one window's worth; a 429 is honoured once,
+  with `Retry-After` capped at 60s.
+- **`NOT_YET_RELEASED` maps to `Ongoing`.** The shelf has no *Announced*
+  publication status, and adding one to carry a distinction the UI never draws
+  would be a data-model change, not a mapping. An absent status maps there too.
+- **`TitleEnglish` falls back to romaji, then native.** AniList leaves `english`
+  null for a large share of entries — 12 of the 20 in the captured page — and the
+  card renders the English title, so the alternative is a blank card.
+- **Staff roles are matched by prefix, not equality.** The real payload carries
+  `"Story "` with a trailing space, ten `"Translator (English: vols 2, 4, 6-8…)"`
+  edges, and credits a single mangaka once as `"Story & Art"` — which is why that
+  one name is correctly returned as both author and illustrator.
+- **`Publisher` stays null.** AniList's media payload has no publisher field at
+  all; MangaUpdates carries it (phase 2).
+- **The test project gained NSubstitute and the EF in-memory provider.**
+  `ISeriesMetadataSource` is the first collaborator worth faking, and the
+  idempotency test needs a store without needing Postgres. The in-memory provider
+  is a test double, not a second supported provider.
+
+### Deviations and known limits
+
+1. **The client panel is unstyled on purpose.** design.md puts search in the
+   header beside "+ Add series"; this is plumbing so the flow can be used from a
+   browser, and it carries no `.razor.css` so there is nothing to unpick when
+   phase 3 builds the real surface. It is labelled "provisional, unstyled" on
+   screen so it cannot be mistaken for a design.
+2. **A zero-volume series renders "Vol 1" on its cover placeholder.**
+   `SeriesCard.CoverVolumeNumber` is `Published > 0 ? Published : Math.Max(1,
+   Tracked)`, so `Tracked = 0` prints Vol 1. Pre-existing, only reachable now
+   that a series can be added with no volumes, and visible in the last card of
+   the 26-series screenshot. Not fixed here — it is a design-component change and
+   this session had no business in `SeriesCard`.
+3. **No exception middleware, so an AniList outage surfaces as a 500** from
+   `/api/search`. CLAUDE.md sanctions a central handler; nothing in this session's
+   scope needed one, and `IExceptionHandler` + `AddProblemDetails` is a ~30-line
+   addition whenever the first real error contract is wanted. The client renders
+   its own "Search failed: …" line either way.
+4. **Search is submit-driven, not search-as-you-type.** The rate limiter and the
+   1-hour cache exist to make typing safe, but nothing debounces yet, so the
+   button is the trigger. Queries under two characters never leave the process.
+5. **`format=WebNovel` returns an empty list without a request.** AniList has no
+   web-novel format and WN is manual-only (§4.2).
+6. **The goal's "exactly two series" reads as 24 → 25 → 26 here.** That wording
+   predates phase 3.1's 24-series seed; the invariant it is really about — one row
+   per AniList id, no duplicate on a second add — is what was verified.
+
+### Environment deviations you will trip over
+
+- **`docker compose up -d` fails on this machine; use
+  `docker compose up -d postgres`.** MinIO's published ports 9000/9001 are taken
+  by another project's container (`hearth-minio-1`). Nothing in phases 1–2 needs
+  MinIO yet, and the collision is worth resolving before covers land in phase 3.
+- Postgres is still on host port **5433** (5432 belongs to another container).
+- Screenshots were driven with **headless Edge over CDP** (Chrome is not
+  installed here; `msedge --headless=new --remote-allow-origins=*` plus
+  `websocket-client` from Python). The `--remote-allow-origins` flag is not
+  optional — the WebSocket handshake is rejected 403 without it.
+
+### What the next session needs to know
+
+The shelf now holds 26 series: the 24-series fixture plus the Mushoku Tensei
+light novel (AniList 85470, 26 volumes) and manga (85564, 0 volumes) added
+through this flow. `docker compose down -v` resets to the fixture alone.
+
+**Next in line (phase 2):** MangaUpdates behind `IReleaseSource`, the nightly
+`BackgroundService`, and the cover cache behind `ICoverStore`. Two things in this
+session are waiting on it specifically:
+
+- **Release dates.** Every AniList-derived volume has none, which is why an added
+  series is *Up to date* rather than *Behind*. Dates are what make the volume
+  grid and the upcoming view mean anything.
+- **Volume counts for ongoing series.** AniList's `volumes` is null for most of
+  them, so a tracked manga can sit at 0 volumes until MangaUpdates fills it.
+
+Also still open, unchanged from 3.1: the `VolumeTile` focus-visible channel and
+the undrawn multi-select state.
+
+---
+
 ## Phase 3.1 — design tokens, shell, library grid (2026-07-29)
 
 **Goal:** the app shell and library grid, matching `docs/design.md`, over the

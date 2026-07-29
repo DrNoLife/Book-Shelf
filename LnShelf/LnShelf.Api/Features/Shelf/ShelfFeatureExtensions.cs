@@ -10,6 +10,7 @@ public static class ShelfFeatureExtensions
         public IServiceCollection AddShelf()
         {
             services.AddScoped<ILibraryQueryService, LibraryQueryService>();
+            services.AddScoped<ISeriesCommandService, SeriesCommandService>();
             services.AddScoped<ShelfSeeder>();
             return services;
         }
