@@ -2,8 +2,37 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 
 [ApiController]
 [Route("api/series")]
-public sealed class SeriesController(ISeriesCommandService seriesCommandService) : ControllerBase
+public sealed class SeriesController(
+    ISeriesCommandService seriesCommandService,
+    ISeriesDetailQueryService seriesDetailQueryService,
+    IVolumeCommandService volumeCommandService) : ControllerBase
 {
+    /// <summary>
+    /// Everything the series-detail page renders, in one round trip (feature-spec §6).
+    /// </summary>
+    [HttpGet("{seriesId:guid}")]
+    public async Task<ActionResult<SeriesDetailResponse>> GetAsync(
+        Guid seriesId,
+        CancellationToken cancellationToken)
+    {
+        var detail = await seriesDetailQueryService.GetAsync(seriesId, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
+    /// "Mark 1–8 read" / "Mark 1–11 owned". Returns the refreshed series so the page
+    /// updates from one response rather than re-fetching.
+    /// </summary>
+    [HttpPost("{seriesId:guid}/volumes/bulk")]
+    public async Task<ActionResult<SeriesDetailResponse>> SetBulkAsync(
+        Guid seriesId,
+        [FromBody] BulkVolumeStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var detail = await volumeCommandService.SetBulkAsync(seriesId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
     /// <summary>
     /// Adds an AniList series to the shelf, with its volumes and a default
     /// user-state row (feature-spec §6).

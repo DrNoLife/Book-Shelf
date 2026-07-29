@@ -28,6 +28,10 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+
+    <!-- The volume grid's two unavoidable interop calls: reading the rendered column
+         count, and moving focus between tiles. -->
+    <script src="js/lnshelf.js"></script>
 </body>
 
 </html>

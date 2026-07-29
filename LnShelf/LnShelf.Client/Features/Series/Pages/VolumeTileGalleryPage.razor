@@ -1,0 +1,55 @@
+@page "/dev/tiles"
+@using LnShelf.Client.Features.Series.Components
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@inject IWebAssemblyHostEnvironment HostEnvironment
+
+@* A design harness, not a feature: one tile per state, so every state can be checked
+   — and grayscale-checked — including the two the real shelf cannot currently produce.
+   No source publishes per-volume dates, so nothing on the shelf is "unreleased with a
+   date"; and nothing is announced-with-no-date either. The volumes here are synthetic
+   and belong to no series; the route is development-only. *@
+
+@if (!HostEnvironment.IsDevelopment())
+{
+    <p class="notice">Not available.</p>
+}
+else
+{
+    <div class="gallery">
+        <h1 class="gallery__title">Volume tile states</h1>
+        <p class="gallery__note">
+            Synthetic volumes, development only. Every state carries two channels, so all
+            of this survives the grayscale filter below.
+        </p>
+
+        <div class="row">
+            @foreach (var sample in Samples)
+            {
+                <div class="sample" @key="sample.Label">
+                    <div class="sample__tile">
+                        <VolumeTile Volume="sample.Volume"
+                                    IsSelectMode="sample.IsSelectMode"
+                                    IsSelected="sample.IsSelected" />
+                    </div>
+                    <p class="sample__label">@sample.Label</p>
+                </div>
+            }
+        </div>
+
+        <p class="eyebrow">Same tiles, grayscale — no state may vanish</p>
+
+        <div class="row row--grayscale">
+            @foreach (var sample in Samples)
+            {
+                <div class="sample" @key="sample.Label">
+                    <div class="sample__tile">
+                        <VolumeTile Volume="sample.Volume"
+                                    IsSelectMode="sample.IsSelectMode"
+                                    IsSelected="sample.IsSelected" />
+                    </div>
+                    <p class="sample__label">@sample.Label</p>
+                </div>
+            }
+        </div>
+    </div>
+}

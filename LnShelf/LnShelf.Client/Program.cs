@@ -2,6 +2,7 @@ using LnShelf.Client;
 using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
 using LnShelf.Client.Features.Search;
+using LnShelf.Client.Features.Series;
 using LnShelf.Client.Features.Sync;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -26,5 +27,8 @@ builder.Services.AddScoped<ImportState>();
 
 // The shell's sync footer, on every page.
 builder.Services.AddScoped<SyncState>();
+
+// The series-detail page's own state: one fetch, then per-volume writes.
+builder.Services.AddScoped<SeriesState>();
 
 await builder.Build().RunAsync();

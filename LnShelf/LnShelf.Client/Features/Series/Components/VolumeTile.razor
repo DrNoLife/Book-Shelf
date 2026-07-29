@@ -1,0 +1,63 @@
+@* The signature component. Every state is two channels — never colour alone — so it
+   survives grayscale and real cover art (docs/design.md). *@
+@inject ApiUrlBuilder ApiUrl
+
+<div class="tile-wrap">
+    <button type="button"
+            class="tile @StateClass @(IsSelected ? "tile--selected" : null)"
+            role="checkbox"
+            aria-checked="@(Volume.ReadStatus == ReadStatus.Read)"
+            aria-label="@AccessibleLabel"
+            data-volume="@Volume.Number"
+            disabled="@(!IsInteractive)"
+            @onclick="OnClickAsync"
+            @onkeydown="OnKeyDownAsync"
+            @oncontextmenu="OnContextMenuAsync"
+            @oncontextmenu:preventDefault>
+
+        <span class="tile__art">
+            @if (Volume.CoverObjectKey is { } coverObjectKey)
+            {
+                <img class="tile__image" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+            }
+        </span>
+
+        @* The hatch is a fill, not a colour: it is what makes "not out" survive
+           grayscale. *@
+        @if (State is VolumeTileState.Unreleased)
+        {
+            <span class="tile__hatch"></span>
+        }
+
+        <span class="tile__number tabular">@Volume.Number</span>
+
+        @* --- second channels, per state --- *@
+        @if (State is VolumeTileState.Read)
+        {
+            <span class="tile__mark"><Icon Name="IconName.Check" Size="11" /></span>
+        }
+        else if (State is VolumeTileState.Reading)
+        {
+            <span class="tile__mark tile__mark--reading"><Icon Name="IconName.BookOpen" Size="12" /></span>
+        }
+
+        @* Select mode's chip sits top-LEFT, per the ruling, so it never collides with
+           the read check or the reading mark on the right. *@
+        @if (IsSelectMode)
+        {
+            <span class="tile__chip @(IsSelected ? "tile__chip--on" : null)">
+                @if (IsSelected)
+                {
+                    <Icon Name="IconName.Check" Size="10" />
+                }
+            </span>
+        }
+
+        <span class="tile__strip"></span>
+    </button>
+
+    @if (Label is { } label)
+    {
+        <span class="tile__label">@label</span>
+    }
+</div>

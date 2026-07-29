@@ -15,6 +15,9 @@ public enum IconName
     Close,
     FileArrowUp,
     Check,
+    BookOpen,
+    ArrowUpRight,
+    CaretLeft,
 }
 
 public partial class Icon
@@ -36,6 +39,9 @@ public partial class Icon
         IconName.Close => ClosePath,
         IconName.FileArrowUp => FileArrowUpPath,
         IconName.Check => CheckPath,
+        IconName.BookOpen => BookOpenPath,
+        IconName.ArrowUpRight => ArrowUpRightPath,
+        IconName.CaretLeft => CaretLeftPath,
         _ => throw new ArgumentOutOfRangeException(nameof(Name), Name, "Unknown icon."),
     };
 
@@ -68,6 +74,17 @@ public partial class Icon
         "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8," +
         "8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0," +
         "0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z";
+
+    private const string BookOpenPath =
+        "M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8," +
+        "8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A" +
+        "39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z";
+
+    private const string ArrowUpRightPath =
+        "M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z";
+
+    private const string CaretLeftPath =
+        "M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z";
 
     private const string CheckPath =
         "M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1," +

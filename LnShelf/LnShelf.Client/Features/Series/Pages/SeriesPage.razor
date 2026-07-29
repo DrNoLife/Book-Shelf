@@ -1,0 +1,62 @@
+@page "/series/{SeriesId:guid}"
+@using LnShelf.Client.Features.Series.Components
+
+<div class="series">
+
+    <div class="series__top">
+        <NavLink class="back" href="">
+            <Icon Name="IconName.CaretLeft" Size="13" />
+            <span>Back to library</span>
+        </NavLink>
+
+        @if (Series is not null)
+        {
+            <SeriesHero Series="Series" />
+        }
+    </div>
+
+    <div class="series__body">
+        @if (SeriesState.LoadFailed)
+        {
+            <p class="notice">Could not reach the API.</p>
+        }
+        else if (Series is null)
+        {
+            <p class="notice">Loading the series…</p>
+        }
+        else
+        {
+            @if (SeriesState.Message is { } message)
+            {
+                <p class="notice notice--warning">@message</p>
+            }
+
+            <VolumeGrid Series="Series" />
+
+            @* NOTES left, SYNC right, as the mockup lays out the foot of the page. *@
+            <div class="series__foot">
+                <section class="notes">
+                    <p class="eyebrow">Notes</p>
+                    @if (Series.Notes is { } notes)
+                    {
+                        <p class="notes__body">@notes</p>
+                    }
+                    else
+                    {
+                        @* The one wry line per view, in fine print, never in a control. *@
+                        <p class="notes__empty">Nothing written down. The shelf is not judging.</p>
+                    }
+                </section>
+
+                <aside class="sync">
+                    <p class="eyebrow">Sync</p>
+                    @foreach (var line in SyncLines)
+                    {
+                        <p class="sync__line">@line</p>
+                    }
+                </aside>
+            </div>
+        }
+    </div>
+
+</div>

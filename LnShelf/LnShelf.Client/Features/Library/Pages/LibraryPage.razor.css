@@ -34,12 +34,14 @@
 
 .library__body { padding: 22px 26px 26px; }
 
-/* Six columns, pinned rather than fluid: the design fixes the count so cover
-   proportions stay constant instead of drifting with viewport width. */
+/* Auto-fill with a capped card width, left-aligned: a wide viewport gains columns
+   rather than stretching six cards to fill it. The cap is what keeps cover
+   proportions constant, which is what pinning six columns was protecting. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(172px, 230px));
   gap: 26px 18px;
+  justify-content: start;
 }
 
 .notice {
@@ -70,9 +72,10 @@
   .library__top { padding: 14px 16px 14px; }
   .library__body { padding: 16px 16px 22px; }
 
-  /* Three, as the phone mock pins it. */
+  /* Three at phone width, as the mock pins it — a minimum small enough to fit
+     three, with the cap removed so they share the width evenly. */
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
     gap: 14px 13px;
   }
 }

@@ -6,6 +6,157 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.2 — series detail page + VolumeTile (2026-07-29)
+
+**Goal:** the page StoryGraph fundamentally cannot do — series detail with the
+volume grid as its centrepiece.
+
+### What exists
+
+**Api — Shelf slice.** `GET /api/series/{id}` returns the whole page in one round
+trip (`SeriesDetailResponse`: identity, counts, spend, relation, and one row per
+volume). Writes per feature-spec §6: `PUT /api/volumes/{id}/read`,
+`PUT /api/volumes/{id}/owned`, `POST /api/series/{id}/volumes/bulk`. New
+`SeriesDetailProjection`, `SeriesDetailQueryService`, `VolumeCommandService`.
+
+**Client — `Features/Series/`.** `SeriesPage` at `/series/{id}`, `SeriesHero`,
+`VolumeGrid`, and `VolumeTile` with `VolumeTileStateMap`. Plus
+`wwwroot/js/lnshelf.js` — the client's only JavaScript, for the two things C#
+cannot do: read a rendered grid's column count and move focus between tiles.
+
+**Library.** Cards are `<a>` links to the detail route and have regained a hover
+response (phase 3.1 deviation #8 closed — the hover now has a tap equivalent,
+namely following the link). The grid moved from six pinned columns to
+`repeat(auto-fill, minmax(172px, 230px))`, left-aligned.
+
+### Verified, not assumed
+
+1. `dotnet build` — **0 warnings, 0 errors**; `dotnet format` clean.
+2. `dotnet test` — **304 passed, 0 failed** (35 new: detail projection incl. a test
+   asserting its counts equal `LibraryCardProjection`'s for the same series, and the
+   volume command service).
+3. The interaction loop, driven through the real UI on Tanya's volume 14:
+   click → `tile--reading`; shift-click → owned (13→14, CTA disappears); bulk
+   "Mark 1–14 read" → 14 read. Library totals moved 74→75 read, 74→75 owned,
+   to-buy 16→15, Behind shelf 5→4, Up to date 3→4.
+   **The shelf was then restored** to 13/13 and Behind 5 — the loop was a
+   demonstration, not a data edit.
+4. Keyboard: focusing tile 9 and pressing ArrowRight moved focus to tile 10, with
+   the column count read from the rendered layout rather than assumed.
+5. Wide viewport (2400px): **8 columns, card width capped at 230px**, cards
+   confirmed to be anchors with `/series/{id}` hrefs.
+6. All eight tile samples — the six states plus focused and selected — survive a
+   `grayscale(1)` filter.
+
+### Decisions taken
+
+- **The read cycle lives in the client; the endpoint sets an explicit status.** That
+  keeps `PUT /read` idempotent and testable, and puts
+  Unread → Reading → Read → Unread where the user is clicking.
+- **The server decides "is this volume out", the client decides how it looks.**
+  `VolumeResponse.IsOut` carries the same three grounds as the library card's
+  `Published`, so a tile and the card above it cannot disagree; a test asserts the
+  two projections agree.
+- **Focus stacks by geometry, not colour** (per the ruling): a 2px `--acc-soft`
+  outline at 2px offset sits outside the Reading state's ring and glow, reading as
+  a separate lighter stroke with a visible gap. Verified in a magnified capture,
+  because "distinguishable" is not a claim to make from the CSS alone.
+- **Select mode's chip is top-left** (per the ruling), which is exactly what keeps
+  it from colliding with the read check and the reading mark — both of which live
+  top-right. The selection ring is `inset`, so a selected Reading tile still shows
+  its own outer ring.
+- **Bulk over an arbitrary selection is expressed as "through the highest selected
+  volume"**, because that is what the endpoint takes. The "Mark 1–N" labels compute
+  N from actual progress and are capped at what is in print — offering
+  "Mark 1–18 owned" on a series with 16 volumes out would offer to own something
+  that does not exist.
+- **`/dev/tiles` is a development-only design harness** **[flagged]**. Two tile
+  states cannot be produced from the real shelf — nothing has a release date, so
+  nothing is "unreleased, dated", and nothing is announced either — and writing
+  fake volumes into the shelf to photograph them would have been worse. It is
+  gated on `IWebAssemblyHostEnvironment.IsDevelopment()` and is the one addition
+  here that no design asked for.
+- **The spend block is absent, not zeroed.** `SeriesDetailResponse.Spend` is null
+  when no volume carries a price, and the average is taken over priced volumes
+  rather than owned ones.
+
+### Deviations from the v2 mockup's "02 — Series detail"
+
+Established by rendering the mockup's own bundled HTML at 1440 and comparing it
+against the build at the same width. **This was a structural and content
+comparison, not the pixel-metric audit phase 3.1 did** — fine differences in type
+sizes and paddings of a few pixels were not sampled, and that is itself a
+limitation of this list.
+
+**a. Data the shelf does not have**
+
+1. 14 volumes, not 17 — AniList and MangaUpdates both count 14 for this series.
+2. **No dated and no announced tiles.** The mockup shows vols 15 and 16 with dates
+   and 17 as announced; no source publishes per-volume dates, so the count line
+   reads "14 tracked — 14 out" with the ", 2 dated, 1 announced" clauses omitted.
+3. **No Reading tile and no owned-unread tiles** in the resting state — every owned
+   volume in the imported library is read. Both states exist and were photographed
+   during the interaction loop and in the harness.
+4. Two genre tags (Action, Fantasy), not five — that is what AniList returns.
+5. No publisher in the facts line: "2013 – · 14 volumes out" against the mockup's
+   "Kadokawa · 2013 – · 14 volumes out". AniList has no publisher field.
+6. **No RELATIONS panel.** `RelatedSeriesId` is null for every series; AniList
+   relations are unbuilt. The seam renders nothing rather than being absent.
+7. **No spend line** ("11 volumes owned · 1 428 kr · avg 130 kr") — no volume has a
+   price, and rendering "0 kr" was explicitly forbidden.
+8. Notes shows an empty-state line, not the mockup's bordered panel of text.
+9. Bulk buttons read "Mark 1–14 read/owned" against "Mark 1–8" / "Mark 1–11".
+10. The stat block has one fine-print line, not two: "Vol 14 dropped 4 days ago ·
+    Vol 15 due 12 Sep 2026" needs dates.
+11. The SYNC panel reports the real run, ending "counts only — MangaUpdates
+    publishes no dates", where the mockup says "Vol 15 moved from 5 Sep to 12 Sep."
+12. The prose line reads "1 to buy." against "3 sitting unread. 3 to buy."
+
+**b. Deliberate design differences**
+
+13. **The sidebar keeps the full app nav.** The mockup's detail screen replaces it
+    with a back link and a breadcrumb; here the shell is constant and "Back to
+    library" sits at the top of the content instead.
+14. **No breadcrumb** ("Library / Behind / Light novels") — nothing tracks which
+    shelf you arrived from.
+15. **Sync appears twice** — the shell's sidebar panel and the page's own foot
+    panel. The mockup's detail screen has only the latter.
+16. "Back to library" is a plain caret-and-text link, not the mockup's tinted row.
+17. With no relations or spend, the hero's stat panel spans the full width instead
+    of sharing the row with a side panel.
+18. **"To buy" desaturation is invisible** — design.md's channel is "dimmed and
+    desaturated", and with no per-volume cover art there is nothing to desaturate.
+    The dimming and the "To buy" label carry the state on their own.
+19. **Owned-unread is the weakest state in grayscale.** Its only positive channel is
+    the `--acc-deep` strip, which greys down to nearly the tile background; it is
+    then distinguished by the *absence* of a check (vs read) and of a label (vs to
+    buy). design.md accepts the recessed strip as the second channel, so this is
+    within spec and still the state most worth revisiting.
+20. Volume tiles carry no cover art. The mockup's are blank too, so this matches by
+    circumstance rather than by intent — per-volume covers need a source that has
+    them.
+
+**c. Present here, absent from the mockup**
+
+21. Tile focus rings, and the select-mode chip and ring — both from the rulings;
+    the mockup draws neither.
+22. `role="checkbox"`, `aria-checked` and a spoken state per tile ("Volume 14, to
+    buy"), because the visual channels mean nothing to a screen reader.
+23. The `/dev/tiles` harness route.
+
+### What the next session needs to know
+
+- **Per-volume covers** are the biggest remaining visual gap: every tile is a
+  placeholder, which also disables the to-buy desaturation channel.
+- **AniList relations** are the missing hero panel; the seam and the contract are
+  in place and `RelatedSeriesId` just needs populating during add or sync.
+- Notes are read-only on the page — `PUT /api/series/{id}/state` (feature-spec §6)
+  is still unbuilt, so there is no way to write one from the UI.
+- The volume grid's keyboard support covers arrows and space; there is no
+  shift-arrow range select, and select mode is pointer-and-space only.
+
+---
+
 ## Phase 2.x — release source, sync, honest published counts (2026-07-29)
 
 **Goal:** dates make the shelf honest — the imported library reported

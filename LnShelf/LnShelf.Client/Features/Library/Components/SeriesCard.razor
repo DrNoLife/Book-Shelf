@@ -1,8 +1,10 @@
 @* Covers do the talking: the card adds a badge, a dot and the bar, and nothing
-   else. A series with no cached cover falls back to naming the volume. *@
+   else. A card is a link now that the series-detail route exists — which is also
+   what finally lets it have a hover response, since the hover has a tap
+   equivalent (following the link). *@
 @inject ApiUrlBuilder ApiUrl
 
-<article class="card @(Card.HasNewVolume ? "card--new" : null)">
+<a class="card @(Card.HasNewVolume ? "card--new" : null)" href="@($"/series/{Card.SeriesId}")">
 
     <div class="cover">
         @if (Card.CoverObjectKey is { } coverObjectKey)
@@ -31,7 +33,7 @@
         <p class="card__counts tabular">@Card.Read / @Card.Owned / @Card.Published</p>
     </div>
 
-</article>
+</a>
 
 @code {
     [Parameter] public required LibraryCardResponse Card { get; set; }

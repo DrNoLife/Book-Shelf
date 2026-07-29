@@ -1,0 +1,124 @@
+.volumes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.volumes__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 24px;
+}
+
+.volumes__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* design.md fixes section headings at 26px serif. */
+.volumes__title {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.volumes__count {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.volumes__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.volumes__hint {
+  font-size: 11px;
+  color: var(--faint);
+  margin-right: 4px;
+}
+
+/* design.md's secondary button. */
+.control {
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.control:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
+.control:disabled { opacity: 0.45; cursor: default; }
+
+/* Select mode active: the chip treatment, reused rather than invented. */
+.control--on {
+  border-color: transparent;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-weight: 600;
+}
+
+.control--on:hover { color: var(--on-acc); border-color: transparent; }
+
+/* Tiles are small and numerous, so the grid fills rather than pinning a count. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 106px));
+  gap: 18px 12px;
+  justify-content: start;
+}
+
+/* --- legend ------------------------------------------------------------------ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 14px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--track);
+}
+
+.swatch--read { background: var(--acc); }
+.swatch--owned { background: var(--acc-deep); }
+
+.swatch--reading {
+  background: transparent;
+  box-shadow: 0 0 0 1.5px var(--acc);
+  height: 8px;
+  width: 8px;
+  border-radius: 2px;
+}
+
+.swatch--tobuy { background: var(--track); opacity: 0.5; }
+
+.swatch--unreleased {
+  background: repeating-linear-gradient(135deg, #221d2b 0 3px, transparent 3px 6px);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  height: 8px;
+  width: 12px;
+}
+
+@media (max-width: 860px) {
+  .volumes__hint { display: none; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(72px, 96px)); }
+}

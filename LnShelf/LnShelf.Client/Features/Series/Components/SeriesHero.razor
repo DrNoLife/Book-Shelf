@@ -1,0 +1,138 @@
+@* The hero, per the v2 mockup: cover left, identity and numbers right, relations and
+   spend in a side panel when there is anything to say. *@
+@inject ApiUrlBuilder ApiUrl
+
+<header class="hero">
+
+    <div class="hero__cover">
+        <div class="cover">
+            @if (Series.CoverObjectKey is { } coverObjectKey)
+            {
+                <img class="cover__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" />
+            }
+            else
+            {
+                <span class="cover__label tabular">Vol @Series.Counts.Tracked</span>
+            }
+        </div>
+        <p class="hero__caption">Cover shows latest volume</p>
+    </div>
+
+    <div class="hero__body">
+
+        <div class="hero__meta">
+            <FormatBadge Value="Series.Format" />
+            <span class="hero__status">
+                <StatusDot Value="Series.PublicationStatus" />
+                <span>@Series.PublicationStatus</span>
+            </span>
+            <span class="hero__facts">@FactsLine</span>
+
+            <span class="hero__links">
+                @if (Series.AniListId is { } aniListId)
+                {
+                    <a class="link" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
+                        AniList <Icon Name="IconName.ArrowUpRight" Size="11" />
+                    </a>
+                }
+                @if (Series.MangaUpdatesId is { } mangaUpdatesId)
+                {
+                    <a class="link" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
+                        MangaUpdates <Icon Name="IconName.ArrowUpRight" Size="11" />
+                    </a>
+                }
+                @* The CTA names the volume you actually need next (design.md). *@
+                @if (Series.Counts.NextToBuyNumber is { } nextToBuy)
+                {
+                    <a class="link link--primary" href="@SaxoSearchUrl(nextToBuy)" target="_blank" rel="noopener noreferrer">
+                        Vol @nextToBuy on Saxo <Icon Name="IconName.ArrowUpRight" Size="11" />
+                    </a>
+                }
+            </span>
+        </div>
+
+        <h1 class="hero__title">@Series.TitleEnglish</h1>
+        <p class="hero__subtitle">@SubtitleLine</p>
+
+        @if (Series.Genres.Count > 0)
+        {
+            <div class="tags">
+                @foreach (var genre in Series.Genres)
+                {
+                    <span class="tag" @key="genre">@genre</span>
+                }
+            </div>
+        }
+
+        <div class="hero__panels">
+            <div class="stats">
+                <div class="stats__row">
+                    <div class="stats__numbers">
+                        <p class="stat">
+                            <span class="stat__value stat__value--accent tabular">@Series.Counts.Read</span>
+                            <span class="stat__label">read</span>
+                        </p>
+                        <p class="stat">
+                            <span class="stat__value tabular">@Series.Counts.Owned</span>
+                            <span class="stat__label">owned</span>
+                        </p>
+                        <p class="stat">
+                            <span class="stat__value tabular">@Series.Counts.Published</span>
+                            <span class="stat__label">published</span>
+                        </p>
+                    </div>
+                    <p class="stats__prose">@ProseLine</p>
+                </div>
+
+                <ThreeSegmentBar Read="Series.Counts.Read"
+                                 Owned="Series.Counts.Owned"
+                                 Published="Series.Counts.Published"
+                                 Large="true" />
+
+                @* The mockup's first fine-print line here is "Vol 14 dropped 4 days ago ·
+                   Vol 15 due 12 Sep 2026", which needs per-volume dates no source
+                   publishes. The sync facts that *can* be stated live in the SYNC panel
+                   at the foot of the page, so they are not said twice. *@
+                @if (ReadingLine is { } readingLine)
+                {
+                    <div class="stats__notes">
+                        <p class="stats__note">@readingLine</p>
+                    </div>
+                }
+            </div>
+
+            @if (Series.Relation is not null || Series.Spend is not null)
+            {
+                <aside class="side">
+                    @if (Series.Relation is { } relation)
+                    {
+                        <p class="eyebrow">Relations</p>
+                        <p class="side__relation">
+                            <FormatBadge Value="relation.Format" />
+                            <a class="side__link" href="@($"/series/{relation.SeriesId}")">
+                                @RelationLabel(relation) <Icon Name="IconName.ArrowUpRight" Size="11" />
+                            </a>
+                        </p>
+                        <p class="side__fine">
+                            Tracked separately · @relation.Published out,
+                            @(relation.Owned == 0 ? "none owned" : $"{relation.Owned} owned")
+                        </p>
+                    }
+
+                    @* Only when prices exist. An imported library has none, and
+                       "0 kr · avg 0 kr" would be a claim about money that was never
+                       recorded. *@
+                    @if (Series.Spend is { } spend)
+                    {
+                        <p class="side__fine">
+                            @spend.PricedCount volumes priced · @spend.Total.ToString("0", CultureInfo.InvariantCulture) kr ·
+                            avg @spend.Average.ToString("0", CultureInfo.InvariantCulture) kr
+                        </p>
+                    }
+                </aside>
+            }
+        </div>
+
+    </div>
+
+</header>
