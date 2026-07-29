@@ -1,5 +1,6 @@
 using LnShelf.Shared.Shelf;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
 namespace LnShelf.Client.Features.Series.Components;
@@ -17,7 +18,20 @@ public partial class VolumeGrid
 
     private ElementReference _gridElement;
 
+    /// <summary>
+    /// One reference per tile, so the menu's "Set cover" can reach into the tile that
+    /// owns the file input rather than the grid duplicating one.
+    /// </summary>
+    private readonly Dictionary<Guid, VolumeTile> _tiles = [];
+
+    private PopoverPlacement? _placement;
+
     private bool HasSelection => SeriesState.SelectedVolumeIds.Count > 0;
+
+    private VolumeResponse? OpenVolume =>
+        SeriesState.OpenMenuVolumeId is { } openId
+            ? Series.Volumes.FirstOrDefault(volume => volume.VolumeId == openId)
+            : null;
 
     /// <summary>
     /// "17 tracked — 14 out, 2 dated, 1 announced", in the mockup's own phrasing, with
@@ -83,6 +97,68 @@ public partial class VolumeGrid
 
         return run >= out0.Count ? null : out0[run].Number;
     }
+
+    /// <summary>
+    /// Measures the tile, then opens the menu. The measurement happens before the open
+    /// so the menu is drawn in its final position on its first frame — a menu that
+    /// jumps after appearing reads as broken.
+    /// </summary>
+    private async Task OnMenuRequestedAsync(VolumeResponse volume)
+    {
+        if (SeriesState.OpenMenuVolumeId == volume.VolumeId)
+        {
+            SeriesState.CloseMenu();
+            return;
+        }
+
+        var rect = await JavaScript.InvokeAsync<TileRect?>(
+            "lnshelf.tileRect", _gridElement, volume.Number);
+
+        if (rect is null)
+        {
+            return;
+        }
+
+        _placement = PopoverPlacer.For(rect, VolumePopover.Width, VolumePopover.Height);
+        SeriesState.OpenMenu(volume);
+    }
+
+    private async Task OnMenuClosedAsync()
+    {
+        var closing = SeriesState.OpenMenuVolumeId;
+        SeriesState.CloseMenu();
+
+        // Focus goes back where it came from, or it would land on the document body and
+        // the arrow keys would stop working.
+        if (closing is not null && OpenVolumeNumber(closing.Value) is { } number)
+        {
+            await JavaScript.InvokeVoidAsync("lnshelf.focusVolumeTile", _gridElement, number);
+        }
+    }
+
+    private int? OpenVolumeNumber(Guid volumeId) =>
+        Series.Volumes.FirstOrDefault(volume => volume.VolumeId == volumeId)?.Number;
+
+    private async Task OnCoverPickRequestedAsync(VolumeResponse volume)
+    {
+        if (_tiles.TryGetValue(volume.VolumeId, out var tile))
+        {
+            await tile.OpenCoverPickerAsync();
+        }
+    }
+
+    private async Task OnCoverSelectedAsync((VolumeResponse Volume, IBrowserFile File) selection)
+    {
+        SeriesState.CloseMenu();
+
+        // The stream is capped at the endpoint's own limit; a larger file is refused
+        // there rather than being read into the browser's memory first.
+        await using var content = selection.File.OpenReadStream(CoverUploadLimitBytes);
+        await SeriesState.SetCoverAsync(selection.Volume, content, selection.File.Name);
+    }
+
+    /// <summary>Matches the API's cap (CoverStoreOptions.MaximumUploadBytes).</summary>
+    private const long CoverUploadLimitBytes = 8 * 1024 * 1024;
 
     private Task OnReadCycledAsync(VolumeResponse volume) => SeriesState.CycleReadAsync(volume);
 

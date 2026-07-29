@@ -1,0 +1,66 @@
+@page "/search"
+@using LnShelf.Client.Features.Search.Components
+
+@* Search & add, as a real page. The provisional panel this replaces lived on the
+   library page and was deliberately unstyled; nothing of it survives. *@
+
+<h1 class="search__title">Search &amp; add</h1>
+
+<div class="search">
+
+    <div class="search__top">
+        <p class="eyebrow">Add a series</p>
+
+        <form class="field" @onsubmit="OnSubmitAsync" @onsubmit:preventDefault>
+            <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="14" /></span>
+            <input class="field__input"
+                   type="search"
+                   placeholder="Search AniList by title…"
+                   aria-label="Search AniList by title"
+                   value="@SearchState.Query"
+                   @oninput="OnQueryInput" />
+            <button type="submit" class="primary" disabled="@SearchState.IsBusy">Search</button>
+        </form>
+
+        <p class="search__note">
+            The light novel and the manga of one title are separate series here, and they
+            arrive as separate results — the badge is what tells them apart.
+        </p>
+    </div>
+
+    <div class="search__body">
+        @if (SearchState.Message is { } message)
+        {
+            <p class="notice notice--message">@message</p>
+        }
+
+        @if (SearchState.IsBusy)
+        {
+            <p class="notice">Searching AniList…</p>
+        }
+        else if (SearchState.Results.Count > 0)
+        {
+            <ul class="results">
+                @foreach (var result in SearchState.Results)
+                {
+                    <SearchResultRow Result="result"
+                                     IsBusy="SearchState.IsBusy"
+                                     Added="OnAddedAsync"
+                                     @key="result.AniListId" />
+                }
+            </ul>
+        }
+        else if (SearchState.HasSearched)
+        {
+            <p class="notice">AniList knows nothing by that name.</p>
+        }
+        else
+        {
+            @* The one wry line per view, in fine print. *@
+            <p class="notice notice--quiet">
+                Nothing searched yet. Type a title — the shelf will not judge the taste.
+            </p>
+        }
+    </div>
+
+</div>

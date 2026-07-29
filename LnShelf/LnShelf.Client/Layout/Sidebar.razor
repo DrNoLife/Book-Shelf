@@ -15,22 +15,23 @@
 
         @* Not in the v2 mockup's nav, which predates the import flow existing.
            It is a real page with a real route, so it gets a real row. *@
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="search">
+            <Icon Name="IconName.MagnifyingGlass" Size="15" />
+            <span>Search &amp; add</span>
+        </NavLink>
+
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="import">
             <Icon Name="IconName.FileArrowUp" Size="15" />
             <span>Import</span>
         </NavLink>
 
-        @* The rest of the shell exists in the design but not yet in the app. Shown
+        @* Upcoming and Stats exist in the design but not yet in the app. Shown
            dimmed rather than hidden so the nav does not change shape when they
            land. No tooltip: hover-only information is exactly what design.md
            forbids, and the dimming is the visible channel. *@
         <span class="nav__row nav__row--pending" aria-disabled="true">
             <Icon Name="IconName.CalendarBlank" Size="15" />
             <span>Upcoming</span>
-        </span>
-        <span class="nav__row nav__row--pending" aria-disabled="true">
-            <Icon Name="IconName.MagnifyingGlass" Size="15" />
-            <span>Search &amp; add</span>
         </span>
         <span class="nav__row nav__row--pending" aria-disabled="true">
             <Icon Name="IconName.ChartBar" Size="15" />

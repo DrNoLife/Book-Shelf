@@ -287,6 +287,31 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("sync_run", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefaultLibraryFilter")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("GridDensity")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("LibrarySort")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("user_preferences", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>
                 {
                     b.Property<Guid>("Id")

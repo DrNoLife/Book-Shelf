@@ -1,0 +1,88 @@
+@* The volume's state menu. Fixed-positioned from a measured tile rect, so it escapes
+   every ancestor's overflow and never reflows the grid it sits over. *@
+
+<div class="menu @(Placement.FlippedVertically ? "menu--above" : null)"
+     style="left: @(Placement.Left.ToString("0.##", CultureInfo.InvariantCulture))px; top: @(Placement.Top.ToString("0.##", CultureInfo.InvariantCulture))px;"
+     role="menu"
+     aria-label="@($"Volume {Volume.Number} state")"
+     @ref="_menuElement"
+     @onkeydown="OnKeyDownAsync"
+     @onfocusout="OnFocusOutAsync">
+
+    <p class="menu__head">
+        <span>Vol @Volume.Number</span>
+        @if (Volume.ReleaseDate is { } releaseDate)
+        {
+            <span class="menu__date tabular">@releaseDate.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span>
+        }
+    </p>
+
+    @* Read status: three outright choices, not a cycle — the swatch on the current one
+       is the second channel next to the words. *@
+    @foreach (var choice in ReadChoices)
+    {
+        <button type="button"
+                role="menuitemradio"
+                aria-checked="@(Volume.ReadStatus == choice.Status)"
+                class="item @(Volume.ReadStatus == choice.Status ? "item--on" : null)"
+                disabled="@IsBusy"
+                @onclick="() => OnReadAsync(choice.Status)">
+            <span class="item__swatch @choice.SwatchClass"></span>
+            <span class="item__label">@choice.Label</span>
+            @if (Volume.ReadStatus == choice.Status)
+            {
+                <span class="item__check"><Icon Name="IconName.Check" Size="11" /></span>
+            }
+        </button>
+    }
+
+    <div class="hairline"></div>
+
+    <button type="button"
+            role="menuitemcheckbox"
+            aria-checked="@Volume.Owned"
+            class="item @(Volume.Owned ? "item--on" : null)"
+            disabled="@IsBusy"
+            @onclick="OnOwnedToggleAsync">
+        <span class="item__swatch swatch--owned"></span>
+        <span class="item__label">@(Volume.Owned ? "Owned" : "Not owned")</span>
+        @if (Volume.Owned)
+        {
+            <span class="item__check"><Icon Name="IconName.Check" Size="11" /></span>
+        }
+    </button>
+
+    @* The edition only exists on an owned volume, so the row only exists then. *@
+    @if (Volume.Owned)
+    {
+        <div class="editions" role="group" aria-label="Edition">
+            @foreach (var edition in Editions)
+            {
+                <button type="button"
+                        class="edition @(Volume.OwnedFormat == edition ? "edition--on" : null)"
+                        aria-pressed="@(Volume.OwnedFormat == edition)"
+                        disabled="@IsBusy"
+                        @onclick="() => OnEditionAsync(edition)">
+                    @edition
+                </button>
+            }
+        </div>
+    }
+
+    <div class="hairline"></div>
+
+    <button type="button" role="menuitem" class="item" disabled="@IsBusy" @onclick="OnPickCoverAsync">
+        <span class="item__swatch item__swatch--icon"><Icon Name="IconName.ImageSquare" Size="12" /></span>
+        <span class="item__label">@(Volume.HasCoverOverride ? "Replace cover…" : "Set cover…")</span>
+    </button>
+
+    @if (Volume.HasCoverOverride)
+    {
+        <button type="button" role="menuitem" class="item" disabled="@IsBusy" @onclick="OnRemoveCoverAsync">
+            <span class="item__swatch item__swatch--icon"><Icon Name="IconName.Close" Size="11" /></span>
+            <span class="item__label">Remove cover</span>
+        </button>
+    }
+
+    <p class="menu__foot">Or drop an image straight onto the tile.</p>
+</div>

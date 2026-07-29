@@ -6,6 +6,154 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.3 — search page, header furniture, volume menu, covers (2026-07-29)
+
+**Goal:** retire the last provisional surface and make the shelf directly
+manipulable — a real Search & add page, working header furniture, a per-volume
+state menu, and manual covers.
+
+### What exists
+
+**Search & add is a page** (`Features/Search/Pages/SearchPage.razor`, route
+`/search`). Styled field with a leading magnifier; result rows carry the locally
+cached cover, `FormatBadge`, `StatusDot` plus publication status, volume count,
+start year, and an Add button. **The provisional `AddSeriesPanel` is deleted** —
+all of it — and the library page no longer renders it. The sidebar's dimmed
+"Search & add" span is now a real `NavLink`.
+
+Search results gained cover art, which required
+`SeriesSearchResultResponse.CoverObjectKey` and a new
+`SeriesSearchPresentationService` in the Metadata slice: it calls the seam,
+caches each result's cover through `ICoverCache`, then maps. The caching sits in
+a presentation service rather than in `ISeriesMetadataSource` because a sync job
+matching titles has no use for the bytes. It is affordable because the search
+itself is `HybridCache`d for an hour, so a given query fetches its covers once.
+
+**Header furniture** (`Features/Library/Components/LibraryToolbar.razor`):
+type-to-filter input, sort dropdown, density toggle, "+ Add series". Filter and
+sort are applied in the browser (`LibraryState.VisibleCards`) because the whole
+format scope is already loaded — a keystroke must not cost a round trip. Sorting
+by "Recently synced" and "Last read" needed `LastSyncedAt` and `LastReadAt` on
+`LibraryCardResponse`, supplied by `LibraryCardProjection`. "Most behind" is left
+as the server's own ordering rather than re-derived in the client.
+
+**Preferences are a slice** (`Features/Preferences`, table `user_preferences`,
+one singleton row). `GridDensity` and `LibrarySort` persist through
+`GET/PUT /api/preferences`; the client's `PreferencesState` applies a change
+locally first and then saves, and says so when a save fails. Deliberately not
+query/command-split: one row with one getter and one partial setter.
+
+**The volume state menu** (`Features/Series/Components/VolumePopover.razor`).
+Plain click on a tile now opens it; **shift-click still toggles owned and space
+still cycles read**, so nothing became slower. It carries the three read statuses
+outright (not a cycle) with a state swatch on each, a hairline, the owned row,
+the **Physical | Digital edition row** — `OwnedFormat` already existed on the
+entity and the wire contract per feature-spec §249 and had no surface until now —
+then "Set cover…" / "Remove cover". `--raise` fill, 1px `--line-2`, radius 8, the
+shared popover shadow. No new tokens, no raw hex.
+
+It is `position: fixed` from a measured tile rect, which is what makes it escape
+every ancestor's overflow **and** never reflow the grid (verified: grid box
+372x1140 identical with the menu open and closed). Edge behaviour lives in
+`PopoverPlacer`, a pure class, so the flips are asserted in `PopoverPlacerTests`
+without a browser. Keyboard: arrows wrap through the items, Escape closes and
+returns focus to the tile it came from.
+
+**Manual per-volume covers.** `PUT/DELETE /api/volumes/{id}/cover`, multipart,
+8 MB cap. `CoverNormalizer` implements feature-spec §4.3 for the first time:
+re-encode to webp at quality 82, cap the long edge at 1000px with
+`ResizeMode.Max` so aspect survives, strip Exif/Iptc/Xmp. `Image.LoadAsync`
+doubles as validation — a non-image is refused, never stored. Overrides are keyed
+`override/volume/{id}.webp`, a **separate prefix from synced art**, which is what
+makes "sync never replaces an override" structurally true rather than a promise:
+the sync path cannot name the key. Added `SixLabors.ImageSharp` (Six Labors Split
+License; `System.Drawing` is Windows-only and this ships in Linux containers).
+**[flagged]**
+
+Every tile is a drop target, and drop and picker share one code path: the drop
+listener hands the file to the tile's own hidden `<input type=file>` and raises
+its change event, so Blazor's `InputFile` sees both routes identically.
+
+### What was proven, not assumed
+
+- 313 tests pass, 0 warnings. `PopoverPlacerTests` covers mid-grid, right-edge
+  flip, bottom flip, both-axes-at-once, and the nowhere-to-flip pin.
+- Searching "overlord" returns **Overlord (LN, Ongoing, 18 vols, 2012)** and
+  **Overlord (Manga, Completed, 19 vols, 2014)** as separate rows with separate
+  badges — format disambiguation is visible, not inferred.
+- Type-to-filter "tanya" narrows 8 cards to 1 and the footer reads
+  "1 of 8 shown · sorted A–Z" — it names the order it is actually in.
+- Density and sort persist: the row became
+  `{"gridDensity":"Compact","librarySort":"Alphabetical"}` and a full page reload
+  came back compact and A–Z.
+- Menu at a mid-grid tile: menuLeft 604 = tileLeft 604, menuTop 490 = tileBottom
+  484 + 6. At the right-edge tile it flips to menuRight 1402 inside a 1416
+  viewport. In a 620px-tall viewport it flips above the tile.
+- Applying "Reading" from the menu moved vol 9 `Read -> Reading` in the database;
+  the edition row moved vol 1 `Physical -> Digital`. Both read back from
+  `GET /api/series/{id}`.
+- Escape closed the menu and focus returned to the tile (`activeElement` back to
+  `data-volume="2"`).
+- Covers: vol 16 went `hasCoverOverride false -> true` from a real `DragEvent`
+  carrying a real `File`; vol 17 went true through the menu item, which was
+  confirmed to open the tile's own file input. Both stored as
+  `override/volume/{id}.webp`.
+- **A sync run left both overrides untouched** — same keys, still true — across
+  `POST /api/sync` refreshing 8 series.
+
+### Two defects the screenshots caught, both one root cause
+
+Scoped CSS cannot reach an element rendered by a child component without
+`::deep`. It bit twice more here:
+
+1. `InputFile`'s rendered `<input>` ignored `.tile__file`, so **the browser's
+   native "Choose file" button appeared under all 18 tiles** — in the operating
+   system's language ("Vælg fil"), which is precisely the failure the
+   native-control sweep exists to prevent.
+2. `NavLink`'s rendered `<a>` ignored `.bar__add`, so "+ Add series" rendered as
+   bare text instead of a persimmon pill.
+
+A third, unrelated one, also caught only by looking: a **`string` component
+parameter passed without `@` is a literal**, so
+`TextFilter="LibraryState.TextFilter"` handed the toolbar those words as its
+value and the filter field displayed them instead of its placeholder. The
+filtering itself worked, which is why nothing failed - only the field's own
+contents were wrong.
+
+Worse than either bug: **the sweep audit skipped `type="file"` inputs outright,
+so it reported zero offenders while eighteen native buttons were on screen.** The
+audit now asserts file inputs are genuinely invisible. An automated check with an
+exemption in it proves nothing about the exempted case; the screenshot caught
+what the check was written to ignore.
+
+### Native-control sweep
+
+Global resets in `app.css` rather than per component, so a control added later
+cannot ship the OS look by omission: `appearance: none` on input/textarea/select,
+`color-scheme: dark`, the webkit search-cancel and number-spinner pseudo-elements
+removed, `accent-color`, the autofill-yellow override, and a thin warm scrollbar.
+The `Dropdown` component exists at all because a native `<select>`'s popup list
+is drawn by the OS and no stylesheet can reach it. Audited on `/`, `/search`,
+`/import` and `/series/{id}`: **0 offenders on all four**, `color-scheme: dark`
+confirmed.
+
+### What the next session needs to know
+
+- **Per-volume covers are still empty for real data.** Overlord's 18 volumes have
+  no synced volume art, so tiles render placeholders; the manual override path is
+  the only one that fills them. The automatic path (the Google Books / MangaDex
+  spike) stays parked and was out of scope here.
+- **A To-buy tile is grayscale by design**, so a cover dropped onto one renders
+  grey. That is the specified state channel winning over the art, not a bug — but
+  it makes To-buy the worst tile to demonstrate a cover on.
+- The test project now references `LnShelf.Client` so the client's pure logic can
+  be asserted without a browser. The arrow points inward; the client's own
+  reference boundary (Shared only) is untouched.
+- Demonstration state was restored: vol 9 back to Read, vol 1 back to Physical,
+  both test covers deleted, preferences back to Comfortable / Most behind.
+
+---
+
 ## Phase 3.2 — series detail page + VolumeTile (2026-07-29)
 
 **Goal:** the page StoryGraph fundamentally cannot do — series detail with the

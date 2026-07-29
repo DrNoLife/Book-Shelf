@@ -1,6 +1,8 @@
 using LnShelf.Shared.Shelf;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace LnShelf.Client.Features.Series.Components;
 
@@ -19,11 +21,22 @@ public partial class VolumeTile
     [Parameter]
     public bool IsInteractive { get; set; } = true;
 
-    /// <summary>Plain click: advance the read cycle.</summary>
+    /// <summary>
+    /// Bumped whenever a cover override is written. An override reuses one object key,
+    /// so without this the browser would keep serving the cover it already cached.
+    /// </summary>
+    [Parameter]
+    public int CoverVersion { get; set; }
+
+    /// <summary>Plain click: open the state menu.</summary>
+    [Parameter]
+    public EventCallback<VolumeResponse> MenuRequested { get; set; }
+
+    /// <summary>Space: advance the read cycle, which stays the fastest keyboard route.</summary>
     [Parameter]
     public EventCallback<VolumeResponse> ReadCycled { get; set; }
 
-    /// <summary>Shift-click, right-click or long-press: toggle ownership.</summary>
+    /// <summary>Shift-click, right-click or shift-space: toggle ownership.</summary>
     [Parameter]
     public EventCallback<VolumeResponse> OwnedToggled { get; set; }
 
@@ -35,9 +48,37 @@ public partial class VolumeTile
     [Parameter]
     public EventCallback<(VolumeResponse Volume, string Key)> Navigated { get; set; }
 
+    /// <summary>A cover arrived, by drop or by picker.</summary>
+    [Parameter]
+    public EventCallback<(VolumeResponse Volume, IBrowserFile File)> CoverSelected { get; set; }
+
+    [Inject]
+    public required IJSRuntime JavaScript { get; set; }
+
+    private ElementReference _wrapElement;
+    private InputFile? _inputFile;
+
     private VolumeTileState State => VolumeTileStateMap.For(Volume);
 
     private string? Label => VolumeTileStateMap.LabelFor(Volume, State);
+
+    /// <summary>
+    /// The override already arrives as the volume's cover key (the projection prefers
+    /// it), so the tile only has to defeat the browser cache when there is one.
+    /// </summary>
+    private string? CoverUrl
+    {
+        get
+        {
+            if (Volume.CoverObjectKey is not { } coverObjectKey)
+            {
+                return null;
+            }
+
+            var url = ApiUrl.Cover(coverObjectKey);
+            return Volume.HasCoverOverride ? $"{url}?v={CoverVersion}" : url;
+        }
+    }
 
     private string StateClass => State switch
     {
@@ -73,6 +114,23 @@ public partial class VolumeTile
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _inputFile?.Element is { } input)
+        {
+            await JavaScript.InvokeVoidAsync("lnshelf.registerCoverDrop", _wrapElement, input);
+        }
+    }
+
+    /// <summary>Opens the tile's own file input — the menu asks the tile to do this.</summary>
+    public async Task OpenCoverPickerAsync()
+    {
+        if (_inputFile?.Element is { } input)
+        {
+            await JavaScript.InvokeVoidAsync("lnshelf.clickElement", input);
+        }
+    }
+
     private Task OnClickAsync(MouseEventArgs args)
     {
         if (IsSelectMode)
@@ -80,11 +138,11 @@ public partial class VolumeTile
             return SelectionToggled.InvokeAsync(Volume);
         }
 
-        // Shift-click is the pointer route to ownership; the tile also accepts a
-        // right-click, and the grid offers the same thing from the keyboard.
+        // Shift-click stays the one-gesture route to ownership; a plain click now opens
+        // the menu, which is the only place the edition and the cover can be reached.
         return args.ShiftKey
             ? OwnedToggled.InvokeAsync(Volume)
-            : ReadCycled.InvokeAsync(Volume);
+            : MenuRequested.InvokeAsync(Volume);
     }
 
     private Task OnContextMenuAsync(MouseEventArgs args) => OwnedToggled.InvokeAsync(Volume);
@@ -96,8 +154,8 @@ public partial class VolumeTile
             case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown":
                 return Navigated.InvokeAsync((Volume, args.Key));
 
-            // Space cycles read; shift-space toggles owned, mirroring the pointer.
-            case " " or "Spacebar" or "Enter":
+            // Space still cycles read; shift-space toggles owned, mirroring the pointer.
+            case " " or "Spacebar":
                 if (IsSelectMode)
                 {
                     return SelectionToggled.InvokeAsync(Volume);
@@ -107,8 +165,17 @@ public partial class VolumeTile
                     ? OwnedToggled.InvokeAsync(Volume)
                     : ReadCycled.InvokeAsync(Volume);
 
+            // Enter is the keyboard's "open the menu", matching the pointer's click.
+            case "Enter":
+                return IsSelectMode
+                    ? SelectionToggled.InvokeAsync(Volume)
+                    : MenuRequested.InvokeAsync(Volume);
+
             default:
                 return Task.CompletedTask;
         }
     }
+
+    private Task OnFileSelectedAsync(InputFileChangeEventArgs args) =>
+        CoverSelected.InvokeAsync((Volume, args.File));
 }

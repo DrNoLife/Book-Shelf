@@ -70,7 +70,11 @@ public static class SeriesDetailProjection
             OwnedFormat = owned ? state?.OwnedFormat : null,
             ReadAt = state?.ReadAt,
             PurchasePrice = state?.PurchasePrice,
-            CoverObjectKey = volume.CoverObjectKey,
+
+            // A user-supplied cover always wins over synced art, and sync never
+            // replaces it (CLAUDE.md — Cover overrides are user data).
+            CoverObjectKey = state?.CoverOverrideObjectKey ?? volume.CoverObjectKey,
+            HasCoverOverride = state?.CoverOverrideObjectKey is not null,
             IsLocalOnly = volume.IsLocalOnly,
         };
     }

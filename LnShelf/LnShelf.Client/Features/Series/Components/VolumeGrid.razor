@@ -12,7 +12,7 @@
         <div class="volumes__controls">
             @* Printed, not hovered: design.md forbids hover-only information, and
                these are the only clues that a tile is interactive. *@
-            <p class="volumes__hint">Click cycles read · shift-click toggles owned · ←↑↓→ + space</p>
+            <p class="volumes__hint">Click opens the menu · shift-click toggles owned · ←↑↓→ + space cycles read</p>
 
             <button type="button"
                     class="control @(SeriesState.IsSelectMode ? "control--on" : null)"
@@ -51,17 +51,30 @@
     <div class="grid" @ref="_gridElement">
         @foreach (var volume in Series.Volumes)
         {
-            <VolumeTile Volume="volume"
+            <VolumeTile @ref="_tiles[volume.VolumeId]"
+                        Volume="volume"
                         IsSelectMode="SeriesState.IsSelectMode"
                         IsSelected="SeriesState.SelectedVolumeIds.Contains(volume.VolumeId)"
                         IsInteractive="!SeriesState.IsSaving"
+                        CoverVersion="SeriesState.CoverVersion"
+                        MenuRequested="OnMenuRequestedAsync"
                         ReadCycled="OnReadCycledAsync"
                         OwnedToggled="OnOwnedToggledAsync"
                         SelectionToggled="OnSelectionToggled"
                         Navigated="OnNavigatedAsync"
+                        CoverSelected="OnCoverSelectedAsync"
                         @key="volume.VolumeId" />
         }
     </div>
+
+    @if (OpenVolume is { } openVolume && _placement is { } placement)
+    {
+        <VolumePopover Volume="openVolume"
+                       Placement="placement"
+                       IsBusy="SeriesState.IsSaving"
+                       Closed="OnMenuClosedAsync"
+                       CoverPickRequested="OnCoverPickRequestedAsync" />
+    }
 
     @* The legend names every state in words, which is the channel that survives both
        grayscale and a screen reader. *@

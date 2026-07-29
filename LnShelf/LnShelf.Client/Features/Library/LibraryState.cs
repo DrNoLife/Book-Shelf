@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using LnShelf.Shared.Preferences;
 using LnShelf.Shared.Shelf;
 
 namespace LnShelf.Client.Features.Library;
@@ -17,11 +18,87 @@ public sealed class LibraryState(HttpClient httpClient)
     /// <summary>Behind is the opinionated default (feature-spec §4.6).</summary>
     public LibraryFilter SelectedFilter { get; private set; } = LibraryFilter.Behind;
 
+    /// <summary>
+    /// Type-to-filter text. Applied in the browser, not on the server: the whole
+    /// format scope is already loaded, so narrowing it is a local operation and a
+    /// keystroke should not cost a round trip.
+    /// </summary>
+    public string TextFilter { get; private set; } = string.Empty;
+
+    public LibrarySort Sort { get; private set; } = LibrarySort.MostBehind;
+
     public LibraryResponse? Library { get; private set; }
     public bool IsLoading { get; private set; }
     public bool LoadFailed { get; private set; }
 
     public event Action? Changed;
+
+    /// <summary>
+    /// What the grid actually renders: the server's filtered set, narrowed by the
+    /// filter text and ordered by the chosen sort.
+    /// </summary>
+    public IReadOnlyList<LibraryCardResponse> VisibleCards
+    {
+        get
+        {
+            if (Library is null)
+            {
+                return [];
+            }
+
+            IEnumerable<LibraryCardResponse> cards = Library.Cards;
+
+            if (!string.IsNullOrWhiteSpace(TextFilter))
+            {
+                var needle = TextFilter.Trim();
+                cards = cards.Where(card => Matches(card, needle));
+            }
+
+            // MostBehind is the server's own ordering, so it is left alone rather than
+            // re-derived here from a number the client would have to recompute.
+            return
+            [
+                .. Sort switch
+                {
+                    LibrarySort.Alphabetical => cards.OrderBy(card => card.TitleEnglish, StringComparer.OrdinalIgnoreCase),
+                    LibrarySort.RecentlyUpdated => cards.OrderByDescending(card => card.LastSyncedAt ?? DateTimeOffset.MinValue),
+                    LibrarySort.LastRead => cards.OrderByDescending(card => card.LastReadAt ?? DateOnly.MinValue),
+                    _ => cards,
+                },
+            ];
+        }
+    }
+
+    /// <summary>
+    /// Matches the romaji title too, so typing "Yakumo" finds a series whose English
+    /// title is something else entirely.
+    /// </summary>
+    private static bool Matches(LibraryCardResponse card, string needle) =>
+        card.TitleEnglish.Contains(needle, StringComparison.OrdinalIgnoreCase)
+        || (card.TitleRomaji?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false);
+
+    public void SetTextFilter(string? text)
+    {
+        var value = text ?? string.Empty;
+        if (value == TextFilter)
+        {
+            return;
+        }
+
+        TextFilter = value;
+        Changed?.Invoke();
+    }
+
+    public void SetSort(LibrarySort sort)
+    {
+        if (sort == Sort)
+        {
+            return;
+        }
+
+        Sort = sort;
+        Changed?.Invoke();
+    }
 
     public Task LoadAsync(CancellationToken cancellationToken = default) =>
         ReloadAsync(cancellationToken);

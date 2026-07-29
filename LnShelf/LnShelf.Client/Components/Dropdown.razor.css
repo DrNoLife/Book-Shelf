@@ -1,0 +1,76 @@
+.dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+/* design.md's secondary control, with a caret. */
+.dropdown__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  background: var(--surf);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.dropdown__button:hover { border-color: var(--line-3); color: var(--text); }
+
+.dropdown__caret {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+
+  /* The caret icon points left; rotating it is cheaper than a second icon. */
+  transform: rotate(-90deg);
+  transition: transform 120ms ease;
+}
+
+.dropdown__caret--open { transform: rotate(90deg); }
+
+/* --- the list ---------------------------------------------------------------- */
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 100%;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+
+  /* The popover treatment: raised surface, interactive hairline, radius 8, shadow. */
+  background: var(--raise);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(8, 7, 11, 0.55);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menu__item:hover { background: var(--surf); color: var(--text); }
+
+.menu__item--on { color: var(--acc-soft); }
+
+/* Reserved so choosing an option does not shift the labels. */
+.menu__check {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  flex: none;
+}

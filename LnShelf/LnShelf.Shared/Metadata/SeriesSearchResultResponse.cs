@@ -31,4 +31,10 @@ public sealed record SeriesSearchResultResponse
     public int? VolumeCount { get; init; }
 
     public int? StartYear { get; init; }
+
+    /// <summary>
+    /// Locally cached cover, or null when caching it failed. The browser never sees
+    /// an external CDN URL (design.md).
+    /// </summary>
+    public string? CoverObjectKey { get; init; }
 }

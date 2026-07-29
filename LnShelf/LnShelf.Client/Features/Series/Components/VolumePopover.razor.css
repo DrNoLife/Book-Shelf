@@ -1,0 +1,124 @@
+/* The popover treatment from design.md, shared with Dropdown: raised fill, one
+   hairline border, radius 8, a shadow deep enough to read as lifted off the page. */
+.menu {
+  position: fixed;
+  z-index: 40;
+  width: 208px;
+  padding: 6px;
+  background: var(--raise);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(8, 7, 11, 0.55);
+}
+
+.menu__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px 7px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.menu__date { text-transform: none; letter-spacing: 0; }
+
+.menu__foot {
+  padding: 6px 8px 3px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--faint);
+}
+
+.hairline {
+  height: 1px;
+  margin: 5px 2px;
+  background: var(--line);
+}
+
+/* --- rows --- */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: left;
+  background: transparent;
+}
+
+.item:hover:not(:disabled) { background: var(--surf); color: var(--text); }
+
+.item:disabled { opacity: 0.45; cursor: default; }
+
+.item--on { color: var(--text); }
+
+.item__label { flex: 1 1 auto; min-width: 0; }
+
+.item__check { display: grid; place-items: center; color: var(--acc-soft); }
+
+/* The swatch is the state's own colour, so a row is never words alone. */
+.item__swatch {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.item__swatch--icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--faint);
+  display: grid;
+  place-items: center;
+}
+
+.swatch--unread { background: var(--surf); }
+.swatch--reading { background: var(--acc); box-shadow: none; }
+.swatch--read { background: var(--acc-deep); box-shadow: none; }
+.swatch--owned { background: var(--line-3); box-shadow: none; }
+
+/* --- edition --- */
+
+.editions {
+  display: flex;
+  gap: 4px;
+  padding: 2px 8px 4px 26px;
+}
+
+.edition {
+  flex: 1 1 0;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.edition:hover:not(:disabled) { color: var(--muted); border-color: var(--line-3); }
+
+.edition--on {
+  background: var(--surf);
+  border-color: var(--line-3);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.edition:disabled { opacity: 0.45; cursor: default; }
+
+/* Focus is visible inside the menu too — same 2px --acc-soft outline as the tiles. */
+.item:focus-visible,
+.edition:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 1px;
+}

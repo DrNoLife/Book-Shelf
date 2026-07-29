@@ -12,6 +12,8 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options)
     public DbSet<SeriesUserState> SeriesUserStates => Set<SeriesUserState>();
     public DbSet<VolumeUserState> VolumeUserStates => Set<VolumeUserState>();
 
+    public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
+
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
 

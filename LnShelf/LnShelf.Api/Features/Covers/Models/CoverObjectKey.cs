@@ -13,6 +13,16 @@ public static class CoverObjectKey
     public static string ForAniList(int aniListId, string extension) =>
         $"anilist/{aniListId}{extension}";
 
+    /// <summary>
+    /// A user-supplied cover for one volume. Keyed on the volume, so an override
+    /// replaces itself rather than accumulating files.
+    /// </summary>
+    // A separate prefix from the synced art on purpose: "overrides always win and are
+    // never replaced by sync" (CLAUDE.md) is easier to keep true when sync cannot even
+    // name the key.
+    public static string ForVolumeOverride(Guid volumeId, string extension) =>
+        $"override/volume/{volumeId}{extension}";
+
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     /// <summary>The extension of a source URL, defaulting to jpeg — AniList's usual.</summary>

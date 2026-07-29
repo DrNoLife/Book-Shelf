@@ -30,4 +30,18 @@ public interface IVolumeCommandService
         Guid seriesId,
         BulkVolumeStateRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stores a user-supplied cover for one volume. It is normalized on ingest and
+    /// wins over synced art for good (feature-spec §4.3).
+    /// </summary>
+    /// <returns>Null when there is no such volume.</returns>
+    Task<VolumeResponse?> SetCoverAsync(
+        Guid volumeId,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken);
+
+    /// <summary>Drops the override, falling back to whatever sync provides.</summary>
+    /// <returns>Null when there is no such volume.</returns>
+    Task<VolumeResponse?> RemoveCoverAsync(Guid volumeId, CancellationToken cancellationToken);
 }

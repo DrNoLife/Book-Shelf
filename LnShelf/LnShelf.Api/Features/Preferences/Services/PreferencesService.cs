@@ -1,0 +1,54 @@
+namespace LnShelf.Api.Features.Preferences.Services;
+
+/// <inheritdoc />
+public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<PreferencesService> logger)
+    : IPreferencesService
+{
+    public async Task<PreferencesResponse> GetAsync(CancellationToken cancellationToken)
+    {
+        var preferences = await dbContext.UserPreferences
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.Id == UserPreferences.SingletonId, cancellationToken);
+
+        // Absent means "never changed anything", which is the defaults — not an error
+        // and not a reason to write a row before the user has an opinion.
+        return ToResponse(preferences ?? new UserPreferences());
+    }
+
+    public async Task<PreferencesResponse> UpdateAsync(
+        UpdatePreferencesRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var preferences = await dbContext.UserPreferences
+            .FirstOrDefaultAsync(row => row.Id == UserPreferences.SingletonId, cancellationToken);
+
+        if (preferences is null)
+        {
+            preferences = new UserPreferences();
+            dbContext.UserPreferences.Add(preferences);
+        }
+
+        // Every null leaves that setting alone, so the density toggle does not have to
+        // send the sort order back just to avoid clobbering it.
+        preferences.GridDensity = request.GridDensity ?? preferences.GridDensity;
+        preferences.LibrarySort = request.LibrarySort ?? preferences.LibrarySort;
+        preferences.DefaultLibraryFilter = request.DefaultLibraryFilter ?? preferences.DefaultLibraryFilter;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Preferences saved: density {GridDensity}, sort {LibrarySort}, default filter {DefaultLibraryFilter}",
+            preferences.GridDensity, preferences.LibrarySort, preferences.DefaultLibraryFilter);
+
+        return ToResponse(preferences);
+    }
+
+    private static PreferencesResponse ToResponse(UserPreferences preferences) => new()
+    {
+        GridDensity = preferences.GridDensity,
+        LibrarySort = preferences.LibrarySort,
+        DefaultLibraryFilter = preferences.DefaultLibraryFilter,
+    };
+}

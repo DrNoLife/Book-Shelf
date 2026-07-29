@@ -31,6 +31,9 @@ public static class CoversFeatureExtensions
             // request.
             services.AddSingleton<ICoverStore, MinioCoverStore>();
 
+            // Stateless; the options it reads are the only thing it holds.
+            services.AddSingleton<CoverNormalizer>();
+
             // A plain client on its own: cover bytes come from AniList's CDN, not
             // its GraphQL API, so they must not spend the 90-per-minute query
             // budget the rate-limit handler protects.

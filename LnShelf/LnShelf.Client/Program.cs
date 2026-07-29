@@ -1,6 +1,7 @@
 using LnShelf.Client;
 using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Preferences;
 using LnShelf.Client.Features.Search;
 using LnShelf.Client.Features.Series;
 using LnShelf.Client.Features.Sync;
@@ -23,6 +24,7 @@ builder.Services.AddScoped<ApiUrlBuilder>();
 // The grid and the sidebar render from one library fetch.
 builder.Services.AddScoped<LibraryState>();
 builder.Services.AddScoped<SeriesSearchState>();
+builder.Services.AddScoped<PreferencesState>();
 builder.Services.AddScoped<ImportState>();
 
 // The shell's sync footer, on every page.

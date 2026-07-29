@@ -44,6 +44,13 @@
   justify-content: start;
 }
 
+/* Compact narrows the cap and tightens the gutters. The card itself is untouched —
+   it already scales, so density is a grid setting rather than a second card. */
+.grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(132px, 168px));
+  gap: 18px 12px;
+}
+
 .notice {
   padding: 8px 0;
   font-size: 12.5px;

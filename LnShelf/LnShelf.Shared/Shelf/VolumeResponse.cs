@@ -26,7 +26,17 @@ public sealed record VolumeResponse
 
     public decimal? PurchasePrice { get; init; }
 
+    /// <summary>
+    /// The cover to render: the user's override when there is one, otherwise
+    /// whatever a source supplied.
+    /// </summary>
     public string? CoverObjectKey { get; init; }
+
+    /// <summary>
+    /// True when <see cref="CoverObjectKey"/> is a user-supplied override, so the UI
+    /// can offer to remove it and say that sync will not touch it.
+    /// </summary>
+    public bool HasCoverOverride { get; init; }
 
     /// <summary>Added by hand or by an import, not by a metadata source.</summary>
     public required bool IsLocalOnly { get; init; }

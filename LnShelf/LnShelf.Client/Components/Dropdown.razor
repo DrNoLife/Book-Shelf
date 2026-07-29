@@ -1,0 +1,41 @@
+@* A dropdown drawn entirely from the tokens. A native <select> cannot be: its popup
+   list is drawn by the operating system, so it arrives with system fonts, system
+   colours and a white background no stylesheet can reach. *@
+
+<div class="dropdown" @onfocusout="OnFocusOutAsync">
+    <button type="button"
+            class="dropdown__button"
+            aria-haspopup="listbox"
+            aria-expanded="@IsOpen"
+            aria-label="@AriaLabel"
+            @onclick="Toggle"
+            @onkeydown="OnButtonKeyDown">
+        <span class="dropdown__label">@SelectedLabel</span>
+        <span class="dropdown__caret @(IsOpen ? "dropdown__caret--open" : null)">
+            <Icon Name="IconName.CaretLeft" Size="11" />
+        </span>
+    </button>
+
+    @if (IsOpen)
+    {
+        <ul class="menu" role="listbox">
+            @foreach (var option in Options)
+            {
+                var isSelected = option.Value == Value;
+                <li role="option" aria-selected="@isSelected" @key="option.Value">
+                    <button type="button"
+                            class="menu__item @(isSelected ? "menu__item--on" : null)"
+                            @onclick="() => SelectAsync(option.Value)">
+                        <span class="menu__check">
+                            @if (isSelected)
+                            {
+                                <Icon Name="IconName.Check" Size="11" />
+                            }
+                        </span>
+                        <span>@option.Label</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>

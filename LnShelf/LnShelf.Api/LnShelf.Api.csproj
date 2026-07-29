@@ -20,6 +20,12 @@
          are exactly the thing not to hand-roll. No dependencies of its own. -->
     <PackageReference Include="CsvHelper" Version="33.1.0" />
 
+    <!-- Cover normalization (feature-spec §4.3: cap dimensions, re-encode to webp,
+         strip metadata). ImageSharp is under the Six Labors Split License, which is
+         free for this project's use; it is the only practical option, since
+         System.Drawing is Windows-only and the app ships in Linux containers. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+
     <!-- MinIO is ICoverStore's first implementation (feature-spec §3). It is the
          one dependency here that drags transitives (System.Reactive among them);
          the seam is what makes swapping it a config-and-class change. -->

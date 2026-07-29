@@ -1,0 +1,62 @@
+@using LnShelf.Shared.Metadata
+@* One result row: cover, badge, publication dot, volume count, Add. The badge and
+   the dot are the shared components, never restyled here. *@
+@inject ApiUrlBuilder ApiUrl
+
+<li class="row">
+    <div class="row__cover">
+        @if (Result.CoverObjectKey is { } coverObjectKey)
+        {
+            <img class="row__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+        }
+    </div>
+
+    <div class="row__identity">
+        <p class="row__title">@Result.TitleEnglish</p>
+        @if (SubtitleLine is { } subtitle)
+        {
+            <p class="row__subtitle">@subtitle</p>
+        }
+    </div>
+
+    <div class="row__facts">
+        <FormatBadge Value="Result.Format" />
+        <span class="row__status">
+            <StatusDot Value="Result.PublicationStatus" />
+            <span>@Result.PublicationStatus</span>
+        </span>
+        <span class="row__volumes tabular">@VolumeLabel</span>
+        @if (Result.StartYear is { } startYear)
+        {
+            <span class="row__year tabular">@startYear</span>
+        }
+    </div>
+
+    <button type="button" class="primary" disabled="@IsBusy" @onclick="OnAddAsync">Add</button>
+</li>
+
+@code {
+    [Parameter] public required SeriesSearchResultResponse Result { get; set; }
+
+    [Parameter] public bool IsBusy { get; set; }
+
+    [Parameter] public EventCallback<SeriesSearchResultResponse> Added { get; set; }
+
+    private string? SubtitleLine
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Result.TitleRomaji)) parts.Add(Result.TitleRomaji);
+            if (!string.IsNullOrWhiteSpace(Result.TitleNative)) parts.Add(Result.TitleNative);
+
+            return parts.Count == 0 ? null : string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>AniList publishes no total for most ongoing series; say so plainly.</summary>
+    private string VolumeLabel =>
+        Result.VolumeCount is { } volumeCount ? $"{volumeCount} vols" : "vols unknown";
+
+    private Task OnAddAsync() => Added.InvokeAsync(Result);
+}

@@ -53,6 +53,7 @@ public static class MetadataFeatureExtensions
                 .AddHttpMessageHandler<AniListRateLimitHandler>();
 
             services.AddScoped<ISeriesMetadataSource, AniListSeriesQueryService>();
+            services.AddScoped<SeriesSearchPresentationService>();
 
             return services;
         }

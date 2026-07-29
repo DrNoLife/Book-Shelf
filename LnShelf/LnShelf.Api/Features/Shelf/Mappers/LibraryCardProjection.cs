@@ -65,6 +65,9 @@ public static class LibraryCardProjection
 
             Tracked = series.Volumes.Count,
 
+            LastReadAt = series.UserState != null ? series.UserState.LastReadAt : null,
+            LastSyncedAt = series.LastSyncedAt,
+
             NextToBuyNumber = series.Volumes
                 .Where(volume =>
                     ((volume.ReleaseDate != null && volume.ReleaseDate <= today) || volume.IsReleased)

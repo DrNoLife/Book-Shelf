@@ -93,6 +93,10 @@ p { margin: 0; }
 a { color: var(--acc-soft); text-decoration: none; }
 a:hover { color: var(--acc); }
 
+/* Tells the browser to draw its own remaining chrome — scrollbars, focus rings on
+   things it owns, form controls in other engines — from the dark palette. */
+:root { color-scheme: dark; }
+
 ::selection { background: rgba(255, 90, 54, 0.3); }
 ::placeholder { color: var(--faint); }
 
@@ -104,6 +108,56 @@ button {
   border: 0;
   padding: 0;
   cursor: pointer;
+}
+
+/* --- native widget chrome, removed once and centrally ---
+
+   Anything the operating system draws arrives with system fonts, system colours
+   and a light background no token can reach. These resets are global rather than
+   per-component so a control added later cannot quietly ship the OS look; the
+   controls that genuinely need the OS to draw them (Dropdown's list, the volume
+   menu) are drawn in HTML instead — see Components/Dropdown.razor. */
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: var(--surf);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Chrome's search clear button and the number spinners are drawn by the browser in
+   its own colours and cannot be restyled, only removed. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Checkboxes and radios, if one is ever needed, tint from the accent instead of
+   the OS blue. */
+input[type="checkbox"],
+input[type="radio"] { accent-color: var(--acc); }
+
+/* Chrome paints autofilled fields a solid pale yellow. An inset shadow the size of
+   the field is the only way to cover it. */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: inset 0 0 0 100px var(--surf);
+}
+
+/* The scrollbar is the last piece of OS chrome on the page. */
+* {
+  scrollbar-color: var(--line-3) transparent;
+  scrollbar-width: thin;
 }
 
 /* Every control gets a visible keyboard ring. Deliberately --acc-soft as a

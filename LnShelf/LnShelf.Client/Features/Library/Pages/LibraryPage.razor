@@ -1,6 +1,5 @@
 @page "/"
 @using LnShelf.Client.Features.Library.Components
-@using LnShelf.Client.Features.Search.Components
 
 @* Visible only where the sidebar is not — narrow viewports need the orientation,
    the desktop shell already provides it. *@
@@ -9,12 +8,17 @@
 <div class="library">
 
     <div class="library__top">
-        <AddSeriesPanel OnSeriesAdded="OnSeriesAddedAsync" />
-
         @if (Library is not null)
         {
             <LibraryHeader Totals="Library.Totals" />
         }
+
+        <LibraryToolbar TextFilter="@LibraryState.TextFilter"
+                        TextFilterChanged="OnTextFilterChanged"
+                        Sort="LibraryState.Sort"
+                        SortChanged="OnSortChangedAsync"
+                        Density="Preferences.GridDensity"
+                        DensityChanged="OnDensityChangedAsync" />
 
         <div class="controls">
             <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
@@ -33,16 +37,23 @@
         {
             <p class="notice">Loading the shelf…</p>
         }
-        else if (Library.Cards.Count == 0)
+        else if (Cards.Count == 0)
         {
             <p class="notice">
-                Nothing on this shelf — and nothing hidden by a filter menu you forgot about.
+                @if (!string.IsNullOrWhiteSpace(LibraryState.TextFilter))
+                {
+                    @($"Nothing here matches “{LibraryState.TextFilter}”.")
+                }
+                else
+                {
+                    @("Nothing on this shelf — and nothing hidden by a filter menu you forgot about.")
+                }
             </p>
         }
         else
         {
-            <div class="grid">
-                @foreach (var card in Library.Cards)
+            <div class="@GridDensityClass">
+                @foreach (var card in Cards)
                 {
                     <SeriesCard Card="card" @key="card.SeriesId" />
                 }
@@ -51,7 +62,7 @@
             @* Counts honestly: when a filter is narrowing the view, the line says
                what is hidden rather than quietly reporting a smaller number. *@
             <p class="library__footer">
-                @FooterCount shown · sorted by how far behind you are
+                @FooterCount shown · @SortLabel
             </p>
         }
     </div>

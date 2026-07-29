@@ -1,13 +1,15 @@
 @* The signature component. Every state is two channels — never colour alone — so it
-   survives grayscale and real cover art (docs/design.md). *@
+   survives grayscale and real cover art (docs/design.md). Every tile is also a drop
+   target for its own cover. *@
 @inject ApiUrlBuilder ApiUrl
 
-<div class="tile-wrap">
+<div class="tile-wrap" @ref="_wrapElement">
     <button type="button"
             class="tile @StateClass @(IsSelected ? "tile--selected" : null)"
             role="checkbox"
             aria-checked="@(Volume.ReadStatus == ReadStatus.Read)"
             aria-label="@AccessibleLabel"
+            aria-haspopup="@(IsSelectMode ? null : "menu")"
             data-volume="@Volume.Number"
             disabled="@(!IsInteractive)"
             @onclick="OnClickAsync"
@@ -16,9 +18,9 @@
             @oncontextmenu:preventDefault>
 
         <span class="tile__art">
-            @if (Volume.CoverObjectKey is { } coverObjectKey)
+            @if (CoverUrl is { } coverUrl)
             {
-                <img class="tile__image" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                <img class="tile__image" src="@coverUrl" alt="" loading="lazy" />
             }
         </span>
 
@@ -55,6 +57,10 @@
 
         <span class="tile__strip"></span>
     </button>
+
+    @* Hidden, but the one path a cover arrives by: the picker opens it, and a dropped
+       file is handed to it by script so both routes upload identically. *@
+    <InputFile class="tile__file" @ref="_inputFile" OnChange="OnFileSelectedAsync" accept="image/*" tabindex="-1" aria-hidden="true" />
 
     @if (Label is { } label)
     {

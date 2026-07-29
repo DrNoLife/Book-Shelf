@@ -36,6 +36,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LnShelf.Api\LnShelf.Api.csproj" />
+
+    <!-- The client is referenced only so its pure logic (popover placement) can be
+         asserted without a browser. This does not weaken the client's own boundary:
+         the arrow points inward, so nothing is added to the browser bundle. -->
+    <ProjectReference Include="..\LnShelf.Client\LnShelf.Client.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@ namespace LnShelf.Api.Features.Metadata.Controllers;
 
 [ApiController]
 [Route("api/search")]
-public sealed class SearchController(ISeriesMetadataSource metadataSource) : ControllerBase
+public sealed class SearchController(SeriesSearchPresentationService searchService) : ControllerBase
 {
     /// <summary>
     /// Searches the metadata source for series to add. Cached for an hour on
@@ -22,7 +22,6 @@ public sealed class SearchController(ISeriesMetadataSource metadataSource) : Con
         [FromQuery] Format? format,
         CancellationToken cancellationToken)
     {
-        var results = await metadataSource.SearchAsync(query, format, cancellationToken);
-        return Ok(results.ToResponses());
+        return Ok(await searchService.SearchAsync(query, format, cancellationToken));
     }
 }

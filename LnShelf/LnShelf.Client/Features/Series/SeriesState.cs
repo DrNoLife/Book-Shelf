@@ -18,6 +18,18 @@ public sealed class SeriesState(HttpClient httpClient)
 
     public string? Message { get; private set; }
 
+    /// <summary>
+    /// Incremented on every cover write. The override object key never changes, so
+    /// this is what tells the browser the bytes behind it did.
+    /// </summary>
+    public int CoverVersion { get; private set; }
+
+    /// <summary>
+    /// The volume whose state menu is open, or null. Held here rather than on a tile
+    /// so only one can be open, and so opening one closes the last.
+    /// </summary>
+    public Guid? OpenMenuVolumeId { get; private set; }
+
     /// <summary>Select mode and its selection, which live with the page, not a tile.</summary>
     public bool IsSelectMode { get; private set; }
 
@@ -131,9 +143,163 @@ public sealed class SeriesState(HttpClient httpClient)
         }
     }
 
+    public void OpenMenu(VolumeResponse volume)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        OpenMenuVolumeId = volume.VolumeId;
+        Changed?.Invoke();
+    }
+
+    public void CloseMenu()
+    {
+        if (OpenMenuVolumeId is null)
+        {
+            return;
+        }
+
+        OpenMenuVolumeId = null;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Sets a read status outright — what the menu does, as against the cycle.</summary>
+    public Task SetReadAsync(
+        VolumeResponse volume,
+        ReadStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        return WriteVolumeAsync(
+            $"api/volumes/{volume.VolumeId}/read",
+            new SetVolumeReadRequest { Status = status },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Sets ownership outright, optionally with the edition. Passing a format on an
+    /// owned volume is how the menu switches physical to digital without a second call.
+    /// </summary>
+    public Task SetOwnedAsync(
+        VolumeResponse volume,
+        bool owned,
+        OwnedFormat? format = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        return WriteVolumeAsync(
+            $"api/volumes/{volume.VolumeId}/owned",
+            new SetVolumeOwnedRequest { Owned = owned, Format = format },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Uploads a cover override. Multipart rather than JSON because the payload is
+    /// image bytes, and the endpoint caps the size (feature-spec §4.3).
+    /// </summary>
+    public async Task SetCoverAsync(
+        VolumeResponse volume,
+        Stream content,
+        string fileName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (Series is null)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            using var form = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(content);
+            form.Add(streamContent, "file", fileName);
+
+            using var response = await httpClient.PutAsync(
+                $"api/volumes/{volume.VolumeId}/cover", form, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Message = response.StatusCode is System.Net.HttpStatusCode.BadRequest
+                    ? "That file is not an image the shelf can read."
+                    : $"Could not set that cover: {(int)response.StatusCode} {response.StatusCode}.";
+                return;
+            }
+
+            var updated = await response.Content.ReadFromJsonAsync<VolumeResponse>(cancellationToken);
+            if (updated is not null)
+            {
+                CoverVersion++;
+                Series = Replace(Series, updated);
+                Message = $"Cover set for volume {updated.Number}.";
+            }
+        }
+        catch (HttpRequestException exception)
+        {
+            Message = exception.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+            Changed?.Invoke();
+        }
+    }
+
+    public async Task RemoveCoverAsync(VolumeResponse volume, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        if (Series is null)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            using var response = await httpClient.DeleteAsync(
+                $"api/volumes/{volume.VolumeId}/cover", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Message = $"Could not remove that cover: {(int)response.StatusCode} {response.StatusCode}.";
+                return;
+            }
+
+            var updated = await response.Content.ReadFromJsonAsync<VolumeResponse>(cancellationToken);
+            if (updated is not null)
+            {
+                Series = Replace(Series, updated);
+            }
+        }
+        catch (HttpRequestException exception)
+        {
+            Message = exception.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+            Changed?.Invoke();
+        }
+    }
+
     public void ToggleSelectMode()
     {
         IsSelectMode = !IsSelectMode;
+
+        // A menu belonging to a tile that is about to become a checkbox has to go.
+        OpenMenuVolumeId = null;
+
         if (!IsSelectMode)
         {
             _selected.Clear();

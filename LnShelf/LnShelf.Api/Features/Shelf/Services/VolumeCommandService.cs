@@ -5,6 +5,8 @@ namespace LnShelf.Api.Features.Shelf.Services;
 /// <inheritdoc />
 public sealed class VolumeCommandService(
     LnShelfDbContext dbContext,
+    ICoverStore coverStore,
+    CoverNormalizer coverNormalizer,
     TimeProvider timeProvider,
     ILogger<VolumeCommandService> logger) : IVolumeCommandService
 {
@@ -140,6 +142,68 @@ public sealed class VolumeCommandService(
             seriesId, request.ThroughNumber, affected.Count, series.Volumes.Count, request.Read, request.Owned);
 
         return SeriesDetailProjection.ToDetail(series, Today());
+    }
+
+    public async Task<VolumeResponse?> SetCoverAsync(
+        Guid volumeId,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken)
+    {
+        if (content.Length == 0)
+        {
+            throw new InvalidInputException("That file is empty.");
+        }
+
+        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
+        if (volume is null)
+        {
+            return null;
+        }
+
+        // Normalized before anything is stored, so an upload that is not a decodable
+        // image is refused rather than served back as one later.
+        var normalized = await coverNormalizer.NormalizeAsync(content, cancellationToken)
+            ?? throw new InvalidInputException("That file is not an image the shelf can read.");
+
+        var objectKey = CoverObjectKey.ForVolumeOverride(volume.Id, CoverNormalizer.Extension);
+        await coverStore.SaveAsync(objectKey, normalized, CoverNormalizer.ContentType, cancellationToken);
+
+        // The key lands on user state, not on the volume: it is user data, and sync
+        // writes the volume but never the state (CLAUDE.md).
+        var state = EnsureState(volume);
+        state.CoverOverrideObjectKey = objectKey;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Volume {VolumeNumber} of {SeriesId} has a cover override at {ObjectKey}",
+            volume.Number, volume.SeriesId, objectKey);
+
+        return SeriesDetailProjection.ToVolume(volume, Today());
+    }
+
+    public async Task<VolumeResponse?> RemoveCoverAsync(Guid volumeId, CancellationToken cancellationToken)
+    {
+        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
+        if (volume is null)
+        {
+            return null;
+        }
+
+        // The stored object is left in place: dropping the reference is what "revert to
+        // synced art" means, and keeping the bytes makes an accidental removal
+        // recoverable rather than final.
+        if (volume.UserState is { } state)
+        {
+            state.CoverOverrideObjectKey = null;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        logger.LogInformation(
+            "Volume {VolumeNumber} of {SeriesId} is back to its synced cover",
+            volume.Number, volume.SeriesId);
+
+        return SeriesDetailProjection.ToVolume(volume, Today());
     }
 
     /// <summary>

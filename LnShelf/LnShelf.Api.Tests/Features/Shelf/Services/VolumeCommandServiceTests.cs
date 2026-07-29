@@ -1,6 +1,10 @@
 using LnShelf.Api.Data;
 using LnShelf.Api.Errors;
+using LnShelf.Api.Features.Covers.Models;
+using LnShelf.Api.Features.Covers.Services;
 using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace LnShelf.Api.Tests.Features.Shelf.Services;
 
@@ -227,8 +231,109 @@ public sealed class VolumeCommandServiceTests
             .ShouldBeNull();
     }
 
-    private static VolumeCommandService CreateService(LnShelfDbContext dbContext) =>
-        new(dbContext, TimeProvider.System, NullLogger<VolumeCommandService>.Instance);
+    private static VolumeCommandService CreateService(
+        LnShelfDbContext dbContext,
+        ICoverStore? coverStore = null) =>
+        new(dbContext,
+            coverStore ?? Substitute.For<ICoverStore>(),
+            new CoverNormalizer(
+                Options.Create(new CoverStoreOptions()),
+                NullLogger<CoverNormalizer>.Instance),
+            TimeProvider.System,
+            NullLogger<VolumeCommandService>.Instance);
+
+    [Fact]
+    public async Task SetCoverAsync_ARealImage_IsNormalizedToWebpAndWins()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 2);
+        var volume = series.Volumes.Single(candidate => candidate.Number == 1);
+
+        // The volume already has synced art, so this proves the override outranks it.
+        volume.CoverObjectKey = "anilist/94846.jpg";
+        await dbContext.SaveChangesAsync();
+
+        var coverStore = Substitute.For<ICoverStore>();
+        var response = await CreateService(dbContext, coverStore).SetCoverAsync(
+            volume.Id, CreatePng(600, 900), CancellationToken.None);
+
+        response.ShouldNotBeNull();
+        response.HasCoverOverride.ShouldBeTrue();
+        response.CoverObjectKey.ShouldBe($"override/volume/{volume.Id}.webp");
+
+        await coverStore.Received(1).SaveAsync(
+            $"override/volume/{volume.Id}.webp",
+            Arg.Any<ReadOnlyMemory<byte>>(),
+            "image/webp",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SetCoverAsync_AnOversizedImage_IsCappedOnTheLongEdge()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        var coverStore = Substitute.For<ICoverStore>();
+        byte[]? stored = null;
+        await coverStore.SaveAsync(
+            Arg.Any<string>(),
+            Arg.Do<ReadOnlyMemory<byte>>(bytes => stored = bytes.ToArray()),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+
+        await CreateService(dbContext, coverStore).SetCoverAsync(
+            series.Volumes.Single().Id, CreatePng(2400, 3600), CancellationToken.None);
+
+        stored.ShouldNotBeNull();
+        using var image = Image.Load(stored);
+
+        // 1000 is the configured cap, and the aspect ratio is preserved rather than
+        // cropped — a cover's proportions are part of the artwork.
+        image.Width.ShouldBeLessThanOrEqualTo(1000);
+        image.Height.ShouldBeLessThanOrEqualTo(1000);
+        image.Height.ShouldBe(1000);
+    }
+
+    [Fact]
+    public async Task SetCoverAsync_SomethingThatIsNotAnImage_IsRefused()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        var act = async () => await CreateService(dbContext).SetCoverAsync(
+            series.Volumes.Single().Id, Encoding.UTF8.GetBytes("this is not a png"), CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+    }
+
+    [Fact]
+    public async Task RemoveCoverAsync_AnOverriddenVolume_FallsBackToSyncedArt()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+        var volume = series.Volumes.Single();
+        volume.CoverObjectKey = "anilist/94846.jpg";
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext, Substitute.For<ICoverStore>());
+        await service.SetCoverAsync(volume.Id, CreatePng(400, 600), CancellationToken.None);
+
+        var response = await service.RemoveCoverAsync(volume.Id, CancellationToken.None);
+
+        response.ShouldNotBeNull();
+        response.HasCoverOverride.ShouldBeFalse();
+        response.CoverObjectKey.ShouldBe("anilist/94846.jpg");
+    }
+
+    /// <summary>A real PNG, because the normalizer decodes what it is given.</summary>
+    private static byte[] CreatePng(int width, int height)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        using var stream = new MemoryStream();
+        image.Save(stream, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+        return stream.ToArray();
+    }
 
     private static async Task<Series> SeedAsync(LnShelfDbContext dbContext, int volumeCount)
     {

@@ -41,6 +41,15 @@ public sealed record LibraryCardResponse
     /// <summary>Lowest to-buy volume number — feeds the "Vol 12 on Saxo" CTA. Null when caught up.</summary>
     public int? NextToBuyNumber { get; init; }
 
+    /// <summary>
+    /// Carried so the client can sort by them without a second round trip.
+    /// </summary>
+    // The library is one response holding every card, so sorting is a client
+    // concern; these are the two orderings that need data the counts do not have.
+    public DateOnly? LastReadAt { get; init; }
+
+    public DateTimeOffset? LastSyncedAt { get; init; }
+
     // Derived from the counts, never stored (CLAUDE.md). Computed here rather
     // than in SQL so the projection doesn't repeat both count subqueries a
     // third time; it is still nowhere near the database.

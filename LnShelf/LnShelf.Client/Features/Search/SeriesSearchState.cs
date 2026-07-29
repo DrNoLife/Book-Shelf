@@ -8,10 +8,9 @@ namespace LnShelf.Client.Features.Search;
 /// <summary>
 /// The add-series flow's state container: one AniList search, one add call.
 /// </summary>
-// Deliberately provisional. design.md puts search in the header beside an
-// "+ Add series" button; this session ships the plumbing so a series can be
-// added from the browser, and phase 3 gives it the real surface. The component
-// stays presentational (blazor.md) — everything non-visual lives here.
+// Behind the Search & add page. The page stays presentational (blazor.md) —
+// everything non-visual lives here, which is why the provisional panel this
+// replaced could be deleted without touching a line of it.
 public sealed class SeriesSearchState(HttpClient httpClient)
 {
     public string Query { get; set; } = string.Empty;
@@ -20,7 +19,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
 
     public bool IsBusy { get; private set; }
 
-    /// <summary>What just happened, in one line, for the panel to print.</summary>
+    /// <summary>What just happened, in one line, for the page to print.</summary>
     public string? Message { get; private set; }
 
     public bool HasSearched { get; private set; }
@@ -66,7 +65,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         }
     }
 
-    /// <returns>Null when the add failed; the panel reads <see cref="Message"/> then.</returns>
+    /// <returns>Null when the add failed; the page reads <see cref="Message"/> then.</returns>
     public async Task<AddSeriesResponse?> AddAsync(
         SeriesSearchResultResponse result,
         CancellationToken cancellationToken = default)

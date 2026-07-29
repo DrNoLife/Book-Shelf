@@ -21,4 +21,15 @@ public sealed class CoverStoreOptions
     public string Bucket { get; set; } = "lnshelf-covers";
 
     public TimeSpan FetchTimeout { get; set; } = TimeSpan.FromSeconds(20);
+
+    /// <summary>Longest edge a stored cover may have (feature-spec §4.3).</summary>
+    // 1000px is about three times the largest size the UI renders, which leaves room
+    // for a denser grid later without storing originals.
+    public int MaximumCoverEdge { get; set; } = 1000;
+
+    /// <summary>Webp quality, 1-100.</summary>
+    public int CoverQuality { get; set; } = 82;
+
+    /// <summary>Largest upload accepted for a cover override.</summary>
+    public long MaximumUploadBytes { get; set; } = 8 * 1024 * 1024;
 }
