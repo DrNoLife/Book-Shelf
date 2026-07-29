@@ -1,0 +1,34 @@
+@* One shared badge with a fixed colour mapping — never restyled per usage site.
+   LN is the loudest on purpose: it is the app's namesake. *@
+
+<span class="badge @ModifierClass" title="@Title">@Label</span>
+
+@code {
+    /// <summary>The series format this badge names.</summary>
+    [Parameter]
+    public required Format Value { get; set; }
+
+    private string Label => Value switch
+    {
+        Format.LightNovel => "LN",
+        Format.Manga => "Manga",
+        Format.WebNovel => "WN",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown format."),
+    };
+
+    private string Title => Value switch
+    {
+        Format.LightNovel => "Light novel",
+        Format.Manga => "Manga",
+        Format.WebNovel => "Web novel",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown format."),
+    };
+
+    private string ModifierClass => Value switch
+    {
+        Format.LightNovel => "badge--ln",
+        Format.Manga => "badge--manga",
+        Format.WebNovel => "badge--wn",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown format."),
+    };
+}

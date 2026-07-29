@@ -1,0 +1,24 @@
+/* A fixed-height frame with the content column as the only scroller, so the
+   sidebar is persistent chrome. Without this the sidebar stretches to the height
+   of the whole document and its bottom-packed sync note ends up a thousand
+   pixels below the shelves. */
+.app {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+/* Flush against the sidebar, filling the rest of the viewport. The sidebar's
+   right hairline is the only separation — the mockup has no gutter and no
+   rounded panel here. */
+.main {
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+}

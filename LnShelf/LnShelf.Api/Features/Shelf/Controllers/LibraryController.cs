@@ -4,12 +4,16 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 [Route("api/library")]
 public sealed class LibraryController(ILibraryQueryService libraryQueryService) : ControllerBase
 {
-    /// <summary>Every card the library grid renders, in one round trip.</summary>
+    /// <summary>Everything the library view renders, in one round trip.</summary>
+    /// <param name="format">Omit for the "All" tab.</param>
+    /// <param name="filter">Defaults to Behind — the opinionated default (§4.6).</param>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<LibraryCardResponse>>> GetLibraryAsync(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<LibraryResponse>> GetLibraryAsync(
+        [FromQuery] Format? format,
+        [FromQuery] LibraryFilter filter = LibraryFilter.Behind,
+        CancellationToken cancellationToken = default)
     {
-        var cards = await libraryQueryService.GetLibraryAsync(cancellationToken);
-        return Ok(cards);
+        var library = await libraryQueryService.GetLibraryAsync(format, filter, cancellationToken);
+        return Ok(library);
     }
 }

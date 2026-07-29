@@ -1,0 +1,22 @@
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  /* The halo is what makes the dot legible over cover art. */
+  box-shadow: 0 0 0 2px var(--dot-halo);
+}
+
+/* --ok green appears here and nowhere else in the system. Its scarcity is what
+   makes "Ongoing" scannable. */
+.dot--ongoing { background: var(--ok); }
+
+.dot--completed { background: var(--dot-completed); }
+
+/* Hollow: shape is the second channel, so status survives grayscale. */
+.dot--hiatus {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--dot-halo), inset 0 0 0 1.5px var(--dot-hiatus-ring);
+}
+
+.dot--cancelled { background: var(--dot-cancelled); }

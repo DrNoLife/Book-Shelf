@@ -1,0 +1,28 @@
+@* Format is a first-class dimension, so it gets one tap, never a filter menu. *@
+
+<div class="tabs" role="group" aria-label="Format">
+    @foreach (var option in Options)
+    {
+        <button type="button"
+                class="tab @(Selected == option.Value ? "tab--active" : null)"
+                aria-pressed="@(Selected == option.Value)"
+                @onclick="() => SelectedChanged.InvokeAsync(option.Value)">
+            @option.Label
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>Null is "All".</summary>
+    [Parameter] public Format? Selected { get; set; }
+
+    [Parameter] public EventCallback<Format?> SelectedChanged { get; set; }
+
+    private static readonly (Format? Value, string Label)[] Options =
+    [
+        (null, "All"),
+        (Format.LightNovel, "LN"),
+        (Format.Manga, "Manga"),
+        (Format.WebNovel, "WN"),
+    ];
+}

@@ -1,0 +1,33 @@
+{
+  "comment": "Seed library extracted from LN_Shelf_v2.html mock data. Counts are read/owned/published. newVolume drives the card-edge glow. Volume-level detail is only specified for Tanya (the series-detail reference); for other series, generate volumes 1..published with states derived from the counts (1..read = Read, read+1..owned = Owned, owned+1..published = released-not-owned) and give the last 2-3 series some unreleased/announced volumes for ghost-tile testing.",
+  "series": [
+    { "titleEnglish": "The Saga of Tanya the Evil", "titleRomaji": "Yōjo Senki", "titleNative": "幼女戦記", "format": "LightNovel", "status": "Ongoing", "read": 8, "owned": 11, "published": 14, "newVolume": true,
+      "volumes": "1-8 Read; 9 Reading; 10-11 Owned; 12-14 released not owned; 15 unreleased 2026-09-12; 16 unreleased 2026-12-05; 17 announced no date",
+      "notes": "Wait for vol 16 — current arc is mid. Vols 1–3 are hardcover, rest paperback.",
+      "author": "Carlo Zen", "illustrator": "Shinobu Shinotsuki", "publisher": "Kadokawa", "startYear": 2013,
+      "genres": ["Military", "Isekai", "Fantasy", "Drama", "Historical"] },
+    { "titleEnglish": "Classroom of the Elite", "titleRomaji": "Youkoso Jitsuryoku Shijou Shugi", "titleNative": "ようこそ実力至上主義の教室へ", "format": "LightNovel", "status": "Ongoing", "read": 11, "owned": 13, "published": 14, "newVolume": true },
+    { "titleEnglish": "That Time I Got Reincarnated as a Slime", "titleRomaji": "Tensei Shitara Slime Datta Ken", "titleNative": "転生したらスライムだった件", "format": "LightNovel", "status": "Ongoing", "read": 18, "owned": 20, "published": 22, "newVolume": true },
+    { "titleEnglish": "Frieren: Beyond Journey's End", "titleRomaji": "Sousou no Frieren", "titleNative": "葬送のフリーレン", "format": "Manga", "status": "Ongoing", "read": 8, "owned": 10, "published": 13, "newVolume": true },
+    { "titleEnglish": "86 —Eighty-Six—", "titleRomaji": "86—Eightysix", "titleNative": "エイティシックス", "format": "LightNovel", "status": "Ongoing", "read": 9, "owned": 12, "published": 13, "newVolume": false },
+    { "titleEnglish": "Overlord", "titleRomaji": "Overlord", "titleNative": "オーバーロード", "format": "LightNovel", "status": "Ongoing", "read": 14, "owned": 16, "published": 17, "newVolume": false },
+    { "titleEnglish": "Torture Princess: Fremd Torturchen", "titleRomaji": "Isekai Goumon-hime", "titleNative": "異世界拷問姫", "format": "LightNovel", "status": "Completed", "read": 7, "owned": 7, "published": 8, "newVolume": false },
+    { "titleEnglish": "Chainsaw Man", "titleRomaji": "Chainsaw Man", "titleNative": "チェンソーマン", "format": "Manga", "status": "Ongoing", "read": 11, "owned": 13, "published": 17, "newVolume": false },
+    { "titleEnglish": "Made in Abyss", "titleRomaji": "Made in Abyss", "titleNative": "メイドインアビス", "format": "Manga", "status": "Ongoing", "read": 7, "owned": 9, "published": 13, "newVolume": false },
+    { "titleEnglish": "Re:ZERO", "titleRomaji": "Re:Zero kara Hajimeru Isekai Seikatsu", "titleNative": "リゼロ", "format": "LightNovel", "status": "Ongoing", "read": 22, "owned": 24, "published": 38, "newVolume": false },
+    { "titleEnglish": "The Apothecary Diaries", "titleRomaji": "Kusuriya no Hitorigoto", "titleNative": "薬屋のひとりごと", "format": "LightNovel", "status": "Ongoing", "read": 5, "owned": 6, "published": 14, "newVolume": false },
+    { "titleEnglish": "Ascendance of a Bookworm", "titleRomaji": "Honzuki no Gekokujou", "titleNative": "本好きの下剋上", "format": "LightNovel", "status": "Ongoing", "read": 11, "owned": 15, "published": 33, "newVolume": false },
+    { "titleEnglish": "Blue Lock", "titleRomaji": "Blue Lock", "titleNative": "ブルーロック", "format": "Manga", "status": "Ongoing", "read": 14, "owned": 18, "published": 32, "newVolume": false },
+    { "titleEnglish": "Oshi no Ko", "titleRomaji": "Oshi no Ko", "titleNative": "推しの子", "format": "Manga", "status": "Completed", "read": 10, "owned": 12, "published": 16, "newVolume": false },
+    { "titleEnglish": "Spice and Wolf", "titleRomaji": "Ookami to Koushinryou", "titleNative": "狼と香辛料", "format": "LightNovel", "status": "Ongoing", "read": 17, "owned": 17, "published": 24, "newVolume": false },
+    { "titleEnglish": "Solo Leveling", "titleRomaji": "Na Honjaman Level Up", "titleNative": "나 혼자만 레벨업", "format": "Manga", "status": "Ongoing", "read": 4, "owned": 6, "published": 12, "newVolume": false },
+    { "titleEnglish": "Goblin Slayer", "titleRomaji": "Goblin Slayer", "titleNative": "ゴブリンスレイヤー", "format": "LightNovel", "status": "Ongoing", "read": 9, "owned": 9, "published": 16, "newVolume": false },
+    { "titleEnglish": "Vinland Saga", "titleRomaji": "Vinland Saga", "titleNative": "ヴィンランド・サガ", "format": "Manga", "status": "Completed", "read": 12, "owned": 14, "published": 27, "newVolume": false },
+    { "titleEnglish": "Berserk", "titleRomaji": "Berserk", "titleNative": "ベルセルク", "format": "Manga", "status": "Hiatus", "read": 22, "owned": 22, "published": 42, "newVolume": false },
+    { "titleEnglish": "Mushoku Tensei", "titleRomaji": "Mushoku Tensei", "titleNative": "無職転生", "format": "LightNovel", "status": "Completed", "read": 8, "owned": 11, "published": 26, "newVolume": false },
+    { "titleEnglish": "Vagabond", "titleRomaji": "Vagabond", "titleNative": "バガボンド", "format": "Manga", "status": "Hiatus", "read": 9, "owned": 12, "published": 37, "newVolume": false },
+    { "titleEnglish": "Grimgar of Fantasy and Ash", "titleRomaji": "Hai to Gensou no Grimgar", "titleNative": "灰と幻想のグリムガル", "format": "LightNovel", "status": "Ongoing", "read": 6, "owned": 6, "published": 19, "newVolume": false },
+    { "titleEnglish": "Konosuba", "titleRomaji": "Kono Subarashii Sekai ni Shukufuku wo!", "titleNative": "この素晴らしい世界に祝福を!", "format": "LightNovel", "status": "Completed", "read": 12, "owned": 14, "published": 17, "newVolume": false },
+    { "titleEnglish": "Omniscient Reader's Viewpoint", "titleRomaji": "Jeonjijeok Dokja Sijeom", "titleNative": "전지적 독자 시점", "format": "WebNovel", "status": "Ongoing", "read": 2, "owned": 2, "published": 5, "newVolume": false }
+  ]
+}

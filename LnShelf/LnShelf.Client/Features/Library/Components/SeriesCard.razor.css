@@ -1,0 +1,67 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Title and counts read as one pair under the bar. */
+.card__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* --- cover --- */
+
+.cover {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  background: var(--cover-placeholder);
+  /* The ring, not a border, so the tile never changes size. */
+  box-shadow: 0 0 0 1px var(--line);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* No hover response yet, deliberately: the card is not interactive until the
+   series-detail route exists, and design.md forbids a hover affordance with no
+   tap or keyboard equivalent. It returns as a link next session. */
+
+.cover__badge { position: absolute; top: 7px; left: 7px; }
+.cover__dot { position: absolute; top: 11px; right: 9px; }
+
+.cover__label {
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* --- the new-volume signal --- */
+
+/* An unowned volume has come out: persimmon edge plus glow. The quiet
+   counterpart is the sidebar's sync note. */
+.card--new .cover {
+  box-shadow: 0 0 0 1px var(--acc), 0 0 12px var(--glow-new);
+}
+
+/* --- counts and title --- */
+
+.card__counts {
+  font-size: 11px;
+  color: var(--faint);
+  /* Desktop leans on the bar; the printed counts are for narrow viewports. */
+  display: none;
+}
+
+.card__title {
+  font-size: 16px;
+  line-height: 1.18;
+  text-wrap: pretty;
+  color: var(--text);
+}
+
+@media (max-width: 860px) {
+  .card__counts { display: block; }
+}

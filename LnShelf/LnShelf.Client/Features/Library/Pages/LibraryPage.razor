@@ -1,55 +1,56 @@
 @page "/"
-@inject HttpClient HttpClient
+@using LnShelf.Client.Features.Library.Components
 
-<h1>Library</h1>
+@* Visible only where the sidebar is not — narrow viewports need the orientation,
+   the desktop shell already provides it. *@
+<h1 class="library__title">Library</h1>
 
-@if (_loadFailed)
-{
-    <p>Could not reach the API.</p>
-}
-else if (_cards is null)
-{
-    <p>Loading…</p>
-}
-else if (_cards.Count == 0)
-{
-    <p>No series yet.</p>
-}
-else
-{
-    <ul>
-        @foreach (var card in _cards)
+<div class="library">
+
+    <div class="library__top">
+        @if (Library is not null)
         {
-            <li>
-                <strong>@card.TitleEnglish</strong>
-                — @card.Format · @card.PublicationStatus · @card.TrackingStatus
-                <ul>
-                    <li>read @card.Read · owned @card.Owned · published @card.Published · tracked @card.Tracked</li>
-                    <li>to buy @card.ToBuy · backlog @card.Backlog · behind @card.Behind</li>
-                    @if (card.NextToBuyNumber is int nextToBuy)
-                    {
-                        <li>next to buy: vol @nextToBuy</li>
-                    }
-                </ul>
-            </li>
+            <LibraryHeader Totals="Library.Totals" />
         }
-    </ul>
-}
 
-@code {
-    private IReadOnlyList<LibraryCardResponse>? _cards;
-    private bool _loadFailed;
+        <div class="controls">
+            <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
+            <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
+        </div>
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
+        <GridLegend />
+    </div>
+
+    <div class="library__body">
+        @if (LibraryState.LoadFailed)
         {
-            _cards = await HttpClient.GetFromJsonAsync<IReadOnlyList<LibraryCardResponse>>("api/library");
+            <p class="notice">Could not reach the API.</p>
         }
-        catch (HttpRequestException)
+        else if (Library is null)
         {
-            // Rendering a message is handling it; there is nothing else this page can do.
-            _loadFailed = true;
+            <p class="notice">Loading the shelf…</p>
         }
-    }
-}
+        else if (Library.Cards.Count == 0)
+        {
+            <p class="notice">
+                Nothing on this shelf — and nothing hidden by a filter menu you forgot about.
+            </p>
+        }
+        else
+        {
+            <div class="grid">
+                @foreach (var card in Library.Cards)
+                {
+                    <SeriesCard Card="card" @key="card.SeriesId" />
+                }
+            </div>
+
+            @* Counts honestly: when a filter is narrowing the view, the line says
+               what is hidden rather than quietly reporting a smaller number. *@
+            <p class="library__footer">
+                @FooterCount shown · sorted by how far behind you are
+            </p>
+        }
+    </div>
+
+</div>

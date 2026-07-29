@@ -1,0 +1,59 @@
+@using LnShelf.Client.Features.Library
+
+<aside class="sidebar">
+
+    <div class="brand">
+        <span class="brand__mark"><Icon Name="IconName.Books" Size="12" /></span>
+        <span class="brand__name">LN Shelf</span>
+    </div>
+
+    <nav class="nav">
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="" Match="NavLinkMatch.All">
+            <Icon Name="IconName.Books" Size="15" />
+            <span>Library</span>
+        </NavLink>
+
+        @* The rest of the shell exists in the design but not yet in the app. Shown
+           dimmed rather than hidden so the nav does not change shape when they
+           land. No tooltip: hover-only information is exactly what design.md
+           forbids, and the dimming is the visible channel. *@
+        <span class="nav__row nav__row--pending" aria-disabled="true">
+            <Icon Name="IconName.CalendarBlank" Size="15" />
+            <span>Upcoming</span>
+        </span>
+        <span class="nav__row nav__row--pending" aria-disabled="true">
+            <Icon Name="IconName.MagnifyingGlass" Size="15" />
+            <span>Search &amp; add</span>
+        </span>
+        <span class="nav__row nav__row--pending" aria-disabled="true">
+            <Icon Name="IconName.ChartBar" Size="15" />
+            <span>Stats</span>
+        </span>
+    </nav>
+
+    <div class="shelves">
+        <p class="eyebrow">Shelves</p>
+        @if (Shelves is not null)
+        {
+            @foreach (var shelf in Shelves)
+            {
+                <button type="button"
+                        class="shelf @(LibraryState.SelectedFilter == shelf.Filter ? "shelf--active" : null) @(shelf.IsAttention ? "shelf--attention" : null)"
+                        @onclick="() => LibraryState.SelectFilterAsync(shelf.Filter)">
+                    <span class="shelf__label">@shelf.Label</span>
+                    <span class="shelf__count tabular">@shelf.Count@(shelf.CountSuffix)</span>
+                </button>
+            }
+        }
+    </div>
+
+    <div class="sync">
+        <p class="eyebrow">Sync</p>
+        @* Placeholder. The real line ("Synced 04:12 · 6 release dates moved")
+           needs the nightly job, so inventing numbers here would be the one
+           thing design.md's voice rules forbid. *@
+        <p class="sync__line">Not synced yet</p>
+        <p class="sync__line">Nightly refresh arrives in phase 2</p>
+    </div>
+
+</aside>

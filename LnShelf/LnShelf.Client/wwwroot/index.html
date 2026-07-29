@@ -8,16 +8,19 @@
     <base href="/" />
     <link rel="preload" id="webassembly" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <!-- Fonts are vendored into wwwroot/fonts; nothing is fetched from a CDN. -->
+    <link rel="preload" href="fonts/manrope-400-700-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/instrument-serif-400-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="LnShelf.Client.styles.css" />
     <script type="importmap"></script>
-    <!-- The only styling in the client: Blazor's error banner has to start
-         hidden or it shows on every page. Real styling lands in phase 3. -->
-    <style>
-        #blazor-error-ui { display: none; position: fixed; bottom: 0; left: 0; right: 0; padding: 0.6rem 1rem; background: #ffe9e9; }
-    </style>
 </head>
 
 <body>
-    <div id="app">Loading…</div>
+    <div id="app">
+        <div class="boot">Loading the shelf…</div>
+    </div>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.

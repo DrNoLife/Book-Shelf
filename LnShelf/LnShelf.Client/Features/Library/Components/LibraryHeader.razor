@@ -1,0 +1,35 @@
+@* Numbers first, in the user's terms. The serif carries the figures; the prose
+   line says what they mean without a single piece of jargon. *@
+
+<header class="header">
+    <p class="eyebrow">Library · @Totals.SeriesCount series</p>
+
+    <div class="header__row">
+        <div class="stats">
+            @* Read is the one figure the mockup tints: it is the number the whole
+               progress story is about, so it carries the text-weight accent. *@
+            <p class="stat">
+                <span class="stat__value stat__value--accent tabular">@Totals.Read</span>
+                <span class="stat__label">read</span>
+            </p>
+            <p class="stat">
+                <span class="stat__value tabular">@Totals.Owned</span>
+                <span class="stat__label">owned</span>
+            </p>
+            <p class="stat">
+                <span class="stat__value tabular">@Totals.Published</span>
+                <span class="stat__label">published</span>
+            </p>
+        </div>
+
+        <p class="header__prose">
+            @Totals.Backlog bought and unread. @Totals.ToBuy out there you haven't bought.
+        </p>
+    </div>
+</header>
+
+@code {
+    /// <summary>Totals across the current format scope, not the filtered subset.</summary>
+    [Parameter]
+    public required LibraryTotals Totals { get; set; }
+}

@@ -1,0 +1,138 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 224px;
+  padding: 18px 14px;
+  background: linear-gradient(180deg, var(--sidebar-top) 0%, var(--sidebar-bottom) 100%);
+  border-right: 1px solid var(--line);
+}
+
+/* --- brand --- */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 6px;
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.brand__name {
+  font-family: var(--serif);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+/* --- nav --- */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* NavLink renders its own <a>, which scoped CSS cannot reach without ::deep
+   (.claude/rules/blazor.md). Both selectors are listed so the rendered link and
+   the plain rows are styled by one rule. */
+.nav__row,
+.nav ::deep .nav__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  /* Reserve the border on every row so activating one never reflows the nav. */
+  border: 1px solid transparent;
+}
+
+.nav__row:hover,
+.nav ::deep .nav__row:hover { background: var(--raise); color: var(--text); }
+
+.nav__row--active,
+.nav ::deep .nav__row--active {
+  color: var(--acc);
+  background: var(--acc-wash);
+  border-color: var(--line-2);
+}
+
+.nav ::deep .nav__row--active:hover {
+  color: var(--acc);
+  background: var(--acc-wash);
+}
+
+.nav__row--pending { color: var(--faint); cursor: default; }
+.nav__row--pending:hover { background: none; color: var(--faint); }
+
+/* --- shelves --- */
+
+.shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.shelves .eyebrow { padding: 0 8px 7px; }
+
+.shelf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.shelf:hover { background: var(--raise); color: var(--text); }
+
+.shelf__count { color: var(--faint); font-size: 11.5px; }
+
+.shelf--active { background: var(--acc-wash); color: var(--acc); }
+.shelf--active .shelf__count { color: var(--acc); }
+
+/* The attention shelf is the only tinted one, and it keeps that softer tint even
+   when it is also the selected filter — which is its normal state, since Behind
+   is the default. Declared after --active, and at higher specificity for the
+   combined case, so the tint is not silently lost. */
+.shelf--attention,
+.shelf--attention.shelf--active { color: var(--acc-soft); }
+
+.shelf--attention .shelf__count,
+.shelf--attention.shelf--active .shelf__count { color: var(--acc-soft); }
+
+/* --- sync footer --- */
+
+.sync {
+  margin-top: auto;
+  padding: 12px 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.sync .eyebrow { padding-bottom: 6px; }
+
+.sync__line {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+@media (max-width: 860px) {
+  .sidebar { display: none; }
+}

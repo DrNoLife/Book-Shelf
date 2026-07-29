@@ -1,7 +1,8 @@
 @inherits LayoutComponentBase
 
-@* Deliberately bare. The design system (docs/design.md) arrives in phase 3;
-   styling anything now would only have to be redone against the real tokens. *@
-<main>
-    @Body
-</main>
+<div class="app">
+    <Sidebar />
+    <main class="main">
+        @Body
+    </main>
+</div>

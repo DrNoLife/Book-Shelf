@@ -1,0 +1,32 @@
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+}
+
+.swatch--read { background: var(--acc); }
+.swatch--owned { background: var(--acc-deep); }
+.swatch--tobuy { background: var(--track); }
+
+.swatch--new {
+  background: var(--acc);
+  box-shadow: 0 0 8px var(--glow-new);
+}

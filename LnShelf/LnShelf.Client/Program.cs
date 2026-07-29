@@ -1,4 +1,5 @@
 using LnShelf.Client;
+using LnShelf.Client.Features.Library;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -12,5 +13,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // separate origins, so wwwroot/appsettings.Development.json points at the API.
 var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? builder.HostEnvironment.BaseAddress;
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
+
+// The grid and the sidebar render from one library fetch.
+builder.Services.AddScoped<LibraryState>();
 
 await builder.Build().RunAsync();

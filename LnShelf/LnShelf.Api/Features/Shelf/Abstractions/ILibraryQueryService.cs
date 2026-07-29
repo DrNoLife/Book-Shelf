@@ -6,5 +6,10 @@ namespace LnShelf.Api.Features.Shelf.Abstractions;
 /// </summary>
 public interface ILibraryQueryService
 {
-    Task<IReadOnlyList<LibraryCardResponse>> GetLibraryAsync(CancellationToken cancellationToken);
+    /// <param name="format">Null means every format — the "All" tab.</param>
+    /// <param name="filter">Narrows the cards; totals and shelves ignore it.</param>
+    Task<LibraryResponse> GetLibraryAsync(
+        Format? format,
+        LibraryFilter filter,
+        CancellationToken cancellationToken);
 }

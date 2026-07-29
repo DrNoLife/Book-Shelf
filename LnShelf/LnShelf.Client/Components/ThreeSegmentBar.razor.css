@@ -1,0 +1,19 @@
+.bar {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  /* The track is the third segment's colour, so an empty bar reads as unowned. */
+  background: var(--track);
+}
+
+.bar--large { height: 10px; border-radius: 5px; }
+
+/* Done. */
+.bar__read { background: var(--acc); }
+
+/* In hand but not done — same hue, visibly receded. This is what keeps the
+   three segments legible against each other. */
+.bar__owned { background: var(--acc-deep); }
+
+.bar__unowned { background: var(--track); }

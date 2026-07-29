@@ -1,0 +1,144 @@
+/* ---------------------------------------------------------------------------
+   Design tokens — the :root block from docs/design.md, verbatim.
+   These names are the vocabulary: components use the variables, never raw hex.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Ground — warm near-blacks, never pure black or neutral gray */
+  --ink:   #08070b;                      /* page ground (behind everything) */
+  --bg:    #131017;                      /* app background */
+  --surf:  #1c1823;                      /* cards, inputs, controls */
+  --raise: #241f2d;                      /* raised/hover surfaces */
+
+  /* Lines — warm off-white at low alpha, not gray borders */
+  --line:   rgba(244, 240, 234, 0.10);   /* default hairline */
+  --line-2: rgba(244, 240, 234, 0.18);   /* interactive borders */
+  --line-3: rgba(244, 240, 234, 0.30);   /* hover on an interactive border */
+
+  /* Text — one hue, three strengths */
+  --text:  #f4f0ea;                      /* warm off-white */
+  --muted: rgba(244, 240, 234, 0.56);    /* secondary */
+  --faint: rgba(244, 240, 234, 0.34);    /* tertiary, labels, fine print */
+
+  /* Accent — persimmon, one family, three values */
+  --acc:      #ff5a36;                   /* primary: read progress, CTAs, LN badge, active */
+  --acc-soft: #ff9d80;                   /* links, "reading" labels, soft highlights */
+  --acc-deep: #83301c;                   /* owned-unread: same hue, receded */
+  --track:    #2b2534;                   /* empty progress track, unowned */
+
+  /* The one cool color in the system */
+  --ok: #6fb6a2;                         /* "Ongoing" publication dot only */
+
+  /* Type */
+  --serif: "Instrument Serif", Georgia, serif;   /* display */
+  --sans:  "Manrope", system-ui, sans-serif;     /* everything else */
+}
+
+/* ---------------------------------------------------------------------------
+   Values that docs/design.md fixes in its component specs but does not put in
+   the token block. Declared here so components still reference variables and
+   never carry a raw hex of their own.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --on-acc:            #1a0c07;                  /* text on any persimmon fill */
+  --cover-placeholder: #1a1620;                  /* coverless tile */
+
+  --badge-manga-bg:    rgba(20, 17, 25, 0.82);
+  --badge-manga-ring:  rgba(244, 240, 234, 0.28);
+  --badge-wn-bg:       rgba(20, 17, 25, 0.7);
+
+  --dot-completed:     rgba(244, 240, 234, 0.34);
+  --dot-hiatus-ring:   rgba(244, 240, 234, 0.55);
+  --dot-cancelled:     rgba(244, 240, 234, 0.16);
+  --dot-halo:          rgba(8, 7, 11, 0.55);     /* so a dot reads on any cover */
+
+  --glow-new:          rgba(255, 90, 54, 0.75);  /* new-volume card edge */
+  --acc-wash:          rgba(255, 90, 54, 0.10);  /* active nav / chip tint */
+
+  --sidebar-top:       #17131e;
+  --sidebar-bottom:    #120f17;
+}
+
+/* --------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The serif is a display face: weight 400 only, hierarchy from size alone.
+   design.md scopes the -0.01em tracking to page titles and stat numbers, so it
+   is applied where those live rather than to every heading. */
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+}
+
+p { margin: 0; }
+
+a { color: var(--acc-soft); text-decoration: none; }
+a:hover { color: var(--acc); }
+
+::selection { background: rgba(255, 90, 54, 0.3); }
+::placeholder { color: var(--faint); }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Every control gets a visible keyboard ring. Deliberately --acc-soft as a
+   stroke, not --acc: the volume tile's "reading" state already owns a persimmon
+   ring plus glow, and focus must not be mistaken for it. */
+:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Counts must line up across cards. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+.boot {
+  padding: 2rem;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  inset: auto 0 0 0;
+  padding: 0.7rem 1rem;
+  background: var(--surf);
+  border-top: 1px solid var(--acc);
+  color: var(--text);
+  font-size: 12.5px;
+}

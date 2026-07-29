@@ -1,0 +1,42 @@
+@* read / owned-unread / unowned, in one bar that always spans *published*, so a
+   caught-up series is a solid persimmon bar. Segment weights are the raw counts. *@
+
+<div class="bar @(Large ? "bar--large" : null)"
+     role="img"
+     aria-label="@AccessibleLabel"
+     title="@AccessibleLabel">
+    @if (ReadSegment > 0)
+    {
+        <span class="bar__read" style="flex: @ReadSegment 1 0"></span>
+    }
+    @if (OwnedUnreadSegment > 0)
+    {
+        <span class="bar__owned" style="flex: @OwnedUnreadSegment 1 0"></span>
+    }
+    @if (UnownedSegment > 0)
+    {
+        <span class="bar__unowned" style="flex: @UnownedSegment 1 0"></span>
+    }
+</div>
+
+@code {
+    /// <summary>Volumes read.</summary>
+    [Parameter] public required int Read { get; set; }
+
+    /// <summary>Volumes owned, read or not.</summary>
+    [Parameter] public required int Owned { get; set; }
+
+    /// <summary>Volumes released — the width the bar spans.</summary>
+    [Parameter] public required int Published { get; set; }
+
+    /// <summary>The series-hero size. Default is the library-card size.</summary>
+    [Parameter] public bool Large { get; set; }
+
+    // Clamped so odd data (owning an unreleased volume) cannot produce a
+    // negative segment and silently break the layout.
+    private int ReadSegment => Math.Max(0, Read);
+    private int OwnedUnreadSegment => Math.Max(0, Owned - Read);
+    private int UnownedSegment => Math.Max(0, Published - Owned);
+
+    private string AccessibleLabel => $"{Read} read, {Owned} owned, {Published} published";
+}

@@ -23,4 +23,10 @@
     <ProjectReference Include="..\LnShelf.Shared\LnShelf.Shared.csproj" />
   </ItemGroup>
 
+  <!-- The development fixture. Embedded as a link rather than copied so
+       docs/seed-library.json stays the single source and cannot drift. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\docs\seed-library.json" LogicalName="LnShelf.Api.seed-library.json" />
+  </ItemGroup>
+
 </Project>

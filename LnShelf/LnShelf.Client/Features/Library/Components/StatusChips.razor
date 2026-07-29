@@ -1,0 +1,42 @@
+@* Outline chips; the active one is filled and carries a dismiss that returns to
+   the whole library. Terminology is fixed — To buy / Backlog / Behind / Up to
+   date are never paraphrased. *@
+
+<div class="chips" role="group" aria-label="Status filter">
+    @foreach (var option in Options)
+    {
+        var isActive = Selected == option.Filter;
+
+        <button type="button"
+                class="chip @(isActive ? "chip--active" : null)"
+                aria-pressed="@isActive"
+                @onclick="() => OnChipClicked(option.Filter, isActive)">
+            <span>@option.Label</span>
+            @if (isActive)
+            {
+                <Icon Name="IconName.Close" Size="9" />
+            }
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public required LibraryFilter Selected { get; set; }
+
+    [Parameter] public EventCallback<LibraryFilter> SelectedChanged { get; set; }
+
+    private static readonly (LibraryFilter Filter, string Label)[] Options =
+    [
+        (LibraryFilter.Behind, "Behind"),
+        (LibraryFilter.Reading, "Reading"),
+        (LibraryFilter.Backlog, "Backlog"),
+        (LibraryFilter.UpToDate, "Up to date"),
+        (LibraryFilter.Completed, "Completed"),
+        (LibraryFilter.PlanToStart, "Plan to start"),
+        (LibraryFilter.Dropped, "Dropped"),
+    ];
+
+    /// <summary>Dismissing the active chip widens the view back to everything.</summary>
+    private Task OnChipClicked(LibraryFilter filter, bool isActive) =>
+        SelectedChanged.InvokeAsync(isActive ? LibraryFilter.All : filter);
+}

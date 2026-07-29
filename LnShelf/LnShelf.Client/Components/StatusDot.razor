@@ -1,0 +1,29 @@
+@* Publication status, as a dot. Every variant carries a dark halo so it reads on
+   top of any cover art. The label is carried in the title and the grid legend —
+   the dot is never the only channel. *@
+
+<span class="dot @ModifierClass" role="img" title="@Label" aria-label="@Label"></span>
+
+@code {
+    /// <summary>Publication status from metadata — not the user's tracking status.</summary>
+    [Parameter]
+    public required PublicationStatus Value { get; set; }
+
+    private string Label => Value switch
+    {
+        PublicationStatus.Ongoing => "Ongoing",
+        PublicationStatus.Completed => "Completed",
+        PublicationStatus.Hiatus => "Hiatus",
+        PublicationStatus.Cancelled => "Cancelled",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown publication status."),
+    };
+
+    private string ModifierClass => Value switch
+    {
+        PublicationStatus.Ongoing => "dot--ongoing",
+        PublicationStatus.Completed => "dot--completed",
+        PublicationStatus.Hiatus => "dot--hiatus",
+        PublicationStatus.Cancelled => "dot--cancelled",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown publication status."),
+    };
+}

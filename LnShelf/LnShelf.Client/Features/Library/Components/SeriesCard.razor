@@ -1,0 +1,32 @@
+@* Covers do the talking: the card adds a badge, a dot and the bar, and nothing
+   else. Until covers are cached (phase 2) the placeholder names the volume. *@
+
+<article class="card @(Card.HasNewVolume ? "card--new" : null)">
+
+    <div class="cover">
+        <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
+        <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
+        <span class="cover__label tabular">Vol @CoverVolumeNumber</span>
+    </div>
+
+    <ThreeSegmentBar Read="Card.Read" Owned="Card.Owned" Published="Card.Published" />
+
+    <div class="card__foot">
+        <h3 class="card__title">@Card.TitleEnglish</h3>
+
+        @* Printed, not hovered: at narrow widths this is the only way the counts
+           are reachable, and design.md forbids hover-only information. *@
+        <p class="card__counts tabular">@Card.Read / @Card.Owned / @Card.Published</p>
+    </div>
+
+</article>
+
+@code {
+    [Parameter] public required LibraryCardResponse Card { get; set; }
+
+    /// <summary>
+    /// The card shows the latest volume. Falls back to the newest tracked volume
+    /// for a series with nothing released yet.
+    /// </summary>
+    private int CoverVolumeNumber => Card.Published > 0 ? Card.Published : Math.Max(1, Card.Tracked);
+}
