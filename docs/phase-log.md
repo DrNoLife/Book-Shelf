@@ -181,9 +181,28 @@ Phase 5 needs a date source. Candidates worth a session of investigation:
 Google Books, Open Library, or the publishers' own feeds (Yen On, J-Novel Club),
 none of which has been looked at.
 
-**feature-spec §4.2 is wrong** and has not been edited: it promises
-`IReleaseSource` will supply "per-volume release dates, upcoming/announced
-volumes". Correcting a design document is the owner's call, not the build's.
+### Rulings from the owner, at the end of this session
+
+Both were asked for and both were given; they are what unblocks the next session.
+
+1. **`Volume.IsReleased` is kept.** The overrun critique stands as process
+   feedback — one expression was the scope, and this should have paused to flag
+   *before* migrating — but reverting correct, justified, tested work to punish the
+   process would be ceremony. **The behaviour to repeat is the confession plus a
+   revert plan, not the silence.**
+2. **Counts are the release model for v1; dates are a future enrichment.**
+   feature-spec **§4.2 is corrected** (MangaUpdates provides volume counts and
+   status, not dates), **§5** records `IsReleased`, and **§4.5's Upcoming view is
+   regrouped**: "Out now (not owned)" from `IsReleased`, "Announced" from
+   tracked-but-unreleased. Month grouping and the "date moved" notification are
+   **parked until a date source exists**.
+   - **Google Books is the sanctioned candidate** to investigate — per-ISBN
+     `publishedDate`, decent English LN coverage, and the import already stores
+     ISBNs. **Investigation means a spike: captured fixtures and a written
+     verdict, not an integration.**
+
+So the date gap is now a recorded design position rather than an open wound, and
+the next session has a named source and an explicit leash.
 
 ### Phase-log backfill
 

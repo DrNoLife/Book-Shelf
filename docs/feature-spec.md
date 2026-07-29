@@ -108,8 +108,19 @@ The series/volume tracking domain.
   format disambiguation LN/Manga surfaced separately), series detail,
   volume list, relations (LN ↔ manga adaptation links), covers, publication
   status.
-- `IReleaseSource` — MangaUpdates implementation: per-volume release dates,
-  upcoming/announced volumes.
+- `IReleaseSource` — MangaUpdates implementation: **volume counts and publication
+  status, not dates** (**[corrected 2026-07-29]**). The original line here promised
+  per-volume release dates and upcoming/announced volumes; MangaUpdates has
+  neither. Its `/releases` endpoints return scanlation-group chapter postings —
+  187 real records across four tracked series contained zero publisher volumes —
+  and its series record carries only free text: `"23 LN Volumes (Complete)"`,
+  plus per-publisher `"Yen On — 16 Volumes; Ongoing"`.
+  - **Counts are the release model for v1.** A count is a sourced fact about how
+    many volumes exist, so volumes 1..N are marked `Volume.IsReleased` and
+    volumes beyond N are known-to-exist-but-not-out. That is what makes *to buy*
+    computable at all.
+  - **Dates are a future enrichment, not a v1 promise.** Nothing writes
+    `Volume.ReleaseDate` yet, and nothing invents one.
 - Conflict rule (CLAUDE.md): MangaUpdates wins on release dates, AniList on
   everything else; discrepancies land in the sync log — structured as
   `SyncDiscrepancy` rows (§5), never silently resolved.
@@ -162,8 +173,15 @@ The series/volume tracking domain.
 
 ### 4.5 Releases
 
-- Upcoming query across all tracked series, grouped: out now (not owned) /
-  this month / next 3 months / announced-no-date. Format filter applies.
+- Upcoming query across all tracked series. **Regrouped for a dateless release
+  model** (**[corrected 2026-07-29]**, following §4.2): **"Out now (not owned)"**
+  from `IsReleased`, **"Announced"** from tracked-but-unreleased. Format filter
+  applies. The month grouping — this month / next 3 months — is **parked until a
+  date source exists**, as is the "release date moved" notification below.
+- **Sanctioned candidate for that date source: Google Books** (per-ISBN
+  `publishedDate`, decent English light-novel coverage; the StoryGraph import
+  already stores ISBNs). Investigating it means a **spike** — captured fixtures
+  and a written verdict — **not an integration**.
 - `IReleaseNotifier` seam with **one** v1 implementation (**[decision]**:
   ntfy — trivial to self-host or use ntfy.sh, no bot tokens; Discord webhook
   is implementation #2 whenever wanted). Fired by the sync run for: new
@@ -203,8 +221,18 @@ Series
   LastSyncedAt
 
 Volume
-  Id, SeriesId (FK), Number, ReleaseDate (nullable), CoverObjectKey (nullable),
-  ExternalId (nullable — null exactly when IsLocalOnly), IsLocalOnly
+  Id, SeriesId (FK), Number, ReleaseDate (nullable), IsReleased,
+  CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly
+
+  -- IsReleased is source metadata, not a derived state: the release source says
+  -- this volume is in print without saying when. It exists because no source
+  -- publishes per-volume dates (§4.2), and it is what *to buy* is computed from.
+  -- Published = dated-in-the-past OR IsReleased OR owned; to buy uses the first
+  -- two only, never ownership.
+  --
+  -- ExternalId is NOT "null exactly when IsLocalOnly", as this line used to say:
+  -- AniList identifies volumes by count rather than individually, so a synced
+  -- volume routinely has no external id either.
 
 SeriesUserState
   SeriesId (PK/FK), TrackingStatus (Reading|PlanToStart|Completed|Dropped),
