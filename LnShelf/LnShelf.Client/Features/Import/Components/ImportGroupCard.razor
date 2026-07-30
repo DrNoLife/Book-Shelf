@@ -40,7 +40,7 @@
            and has to be visible and reversible where it applies. *@
         <button type="button"
                 class="toggle @(Group.TreatReadAsOwned ? "toggle--on" : null)"
-                aria-pressed="@Group.TreatReadAsOwned"
+                aria-pressed="@Group.TreatReadAsOwned.ToAriaState()"
                 disabled="@(IsCommitted || IsBusy)"
                 @onclick="OnOwnershipToggledAsync">
             @(Group.TreatReadAsOwned ? "Read means owned" : "Read only, not owned")

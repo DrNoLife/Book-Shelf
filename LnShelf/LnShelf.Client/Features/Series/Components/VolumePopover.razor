@@ -23,7 +23,7 @@
     {
         <button type="button"
                 role="menuitemradio"
-                aria-checked="@(Volume.ReadStatus == choice.Status)"
+                aria-checked="@((Volume.ReadStatus == choice.Status).ToAriaState())"
                 class="item @(Volume.ReadStatus == choice.Status ? "item--on" : null)"
                 disabled="@IsBusy"
                 @onclick="() => OnReadAsync(choice.Status)">
@@ -40,7 +40,7 @@
 
     <button type="button"
             role="menuitemcheckbox"
-            aria-checked="@Volume.Owned"
+            aria-checked="@Volume.Owned.ToAriaState()"
             class="item @(Volume.Owned ? "item--on" : null)"
             disabled="@IsBusy"
             @onclick="OnOwnedToggleAsync">
@@ -60,7 +60,7 @@
             {
                 <button type="button"
                         class="edition @(Volume.OwnedFormat == edition ? "edition--on" : null)"
-                        aria-pressed="@(Volume.OwnedFormat == edition)"
+                        aria-pressed="@((Volume.OwnedFormat == edition).ToAriaState())"
                         disabled="@IsBusy"
                         @onclick="() => OnEditionAsync(edition)">
                     @edition

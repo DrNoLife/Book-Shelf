@@ -16,7 +16,7 @@
 
             <button type="button"
                     class="control @(SeriesState.IsSelectMode ? "control--on" : null)"
-                    aria-pressed="@SeriesState.IsSelectMode"
+                    aria-pressed="@SeriesState.IsSelectMode.ToAriaState()"
                     @onclick="() => SeriesState.ToggleSelectMode()">
                 @(SeriesState.IsSelectMode ? "Done" : "Select")
             </button>

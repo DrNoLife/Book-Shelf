@@ -45,8 +45,11 @@
         {
             @foreach (var shelf in Shelves)
             {
+                @* The tint is the visible channel; aria-pressed is the spoken one —
+                   the shelf rows are the same filter control as the status chips. *@
                 <button type="button"
                         class="shelf @(LibraryState.SelectedFilter == shelf.Filter ? "shelf--active" : null) @(shelf.IsAttention ? "shelf--attention" : null)"
+                        aria-pressed="@((LibraryState.SelectedFilter == shelf.Filter).ToAriaState())"
                         @onclick="() => LibraryState.SelectFilterAsync(shelf.Filter)">
                     <span class="shelf__label">@shelf.Label</span>
                     <span class="shelf__count tabular">@shelf.Count@(shelf.CountSuffix)</span>

@@ -5,7 +5,7 @@
     {
         <button type="button"
                 class="tab @(Selected == option.Value ? "tab--active" : null)"
-                aria-pressed="@(Selected == option.Value)"
+                aria-pressed="@((Selected == option.Value).ToAriaState())"
                 @onclick="() => SelectedChanged.InvokeAsync(option.Value)">
             @option.Label
         </button>

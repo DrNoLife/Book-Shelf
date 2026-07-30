@@ -6,7 +6,7 @@
     <button type="button"
             class="dropdown__button"
             aria-haspopup="listbox"
-            aria-expanded="@IsOpen"
+            aria-expanded="@IsOpen.ToAriaState()"
             aria-label="@AriaLabel"
             @onclick="Toggle"
             @onkeydown="OnButtonKeyDown">
@@ -22,7 +22,7 @@
             @foreach (var option in Options)
             {
                 var isSelected = option.Value == Value;
-                <li role="option" aria-selected="@isSelected" @key="option.Value">
+                <li role="option" aria-selected="@isSelected.ToAriaState()" @key="option.Value">
                     <button type="button"
                             class="menu__item @(isSelected ? "menu__item--on" : null)"
                             @onclick="() => SelectAsync(option.Value)">

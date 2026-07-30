@@ -5,7 +5,7 @@
 
 <button type="button"
         class="candidate @(IsSelected ? "candidate--selected" : null)"
-        aria-pressed="@IsSelected"
+        aria-pressed="@IsSelected.ToAriaState()"
         disabled="@IsDisabled"
         @onclick="OnSelected">
 

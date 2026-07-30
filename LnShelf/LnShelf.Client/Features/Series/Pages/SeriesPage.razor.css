@@ -18,11 +18,18 @@
   padding: 22px 26px 26px;
 }
 
-.back {
+/* NavLink renders its own <a>, which a scoped selector cannot reach without ::deep
+   — the third time that trap has bitten (phase 3.3 caught it on "+ Add series" and
+   on InputFile). Unreached, this rule left the anchor blockified as a flex item and
+   the caret — an svg at display:block — stacked above the label. */
+.series__top ::deep .back {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   align-self: flex-start;
+  /* The caret and its label are one phrase; a narrow viewport must shorten the
+     content column, not break the link across two lines. */
+  white-space: nowrap;
   font-size: 12.5px;
   font-weight: 500;
 }

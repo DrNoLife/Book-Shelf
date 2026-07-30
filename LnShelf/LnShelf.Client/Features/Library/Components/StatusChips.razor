@@ -9,7 +9,7 @@
 
         <button type="button"
                 class="chip @(isActive ? "chip--active" : null)"
-                aria-pressed="@isActive"
+                aria-pressed="@isActive.ToAriaState()"
                 @onclick="() => OnChipClicked(option.Filter, isActive)">
             <span>@option.Label</span>
             @if (isActive)

@@ -6,6 +6,125 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.3.1 — two defects, no new features (2026-07-30)
+
+**Goal:** the wrapped back link, and a control audit of the library page.
+
+### 1. "Back to library" wrapped onto two lines
+
+`.back` was styled in `SeriesPage.razor.css` **without `::deep`**, so the rule never
+reached the `<a>` that `NavLink` renders. Unreached, the anchor is blockified as a
+flex item (`.series__top` is a column flex container) and the caret — an `svg` at
+`.icon { display: block }` — took the line above the label. Measured before:
+`display: block`, `gap: normal`, link 1164x33, icon bottom above label top. After:
+`display: flex`, `gap: 6px`, `white-space: nowrap`, link 101x19, one line at 1440,
+760, 380 **and 280px**. Gap is 6px to match the icon-and-label pairing on
+"+ Add series"; design.md publishes no spacing scale, so the sibling control is the
+reference.
+
+This is the **third** time the trap has shipped (phase 3.3 caught it on `InputFile`
+and on `+ Add series`), which is why it is now asserted rather than remembered.
+
+### 2. Every control on the library page, and what it observably does
+
+Driven through the real UI, each control clicked with a before/after state
+fingerprint (grid class, computed columns, gap, card count, titles, footer, active
+markers, preferences row):
+
+| Control | Observable effect |
+|---|---|
+| filter input | "tanya" → 5 cards to 1, footer "1 of 8 shown" |
+| sort dropdown | opens a 4-option listbox; A–Z reorders the cards, footer names the order, row saves `librarySort` |
+| density toggle | swaps `.grid--compact`, changes columns/gap, saves `gridDensity` — **was dead below 860px, see below** |
+| + Add series | `href=search` |
+| format tabs (All/LN/Manga/WN) | reloads the scope; Manga → 0 cards, tab marker moves |
+| status chips ×7 | each narrows the shelf (Behind 5, Reading 7, Backlog 3, Up to date 3, Completed 1); the active chip's × widens back to all 8. Plan to start and Dropped show 0 cards because those sets are empty, not because the chip is dead |
+| sidebar shelf rows ×5 | same filter as the chips, and the chip marker follows |
+| sidebar nav ×3 | real routes (`/`, `search`, `import`) |
+| sidebar Upcoming / Stats | dimmed `<span aria-disabled>`, `tabIndex -1` — not controls; prior ruling, left alone **[flagged]** |
+| grid legend | 0 interactive children by design — it is the text channel for the cards' colour |
+
+**There is no `Rows | Covers` control.** It appears nowhere in the code, in
+`design.md`, in `docs/design/ln-shelf-ui-spec.md`, or in the approved v2 mockup
+HTML. Nothing was removed, because there was nothing to remove; the only
+future-feature placeholders on the page are the two dimmed nav rows above.
+
+### The density toggle was dead below 860px
+
+`.grid--compact` was added in phase 3.3 **above** the `@media (max-width: 860px)`
+block that 3.2 had already written. Two single-class selectors have equal
+specificity, so the media query's later `.grid` rule won: the toggle changed the
+class and saved the preference while `grid-template-columns` stayed `117px` and gap
+stayed `14px 13px`. Compact is now restated inside that block — 800px: 6 columns at
+117px → 9 at 77px; 420px: 3 at 121px → 4 at 90px. Long titles wrap harder in
+compact at phone width; that is the cost of compact, not a defect.
+
+**Reconciling the 3.3 log:** its claim was **narrower than claimed** — neither wrong
+nor regressed. Density and sort really did persist, and the toggle really did work,
+at the desktop width it was screenshotted at. It was never exercised below the
+breakpoint, where the rule was dead the moment it was written.
+
+### The audit's own find: every ARIA state was invalid
+
+Blazor renders a `bool` attribute the HTML way — present when true, omitted when
+false — so `aria-pressed="@isActive"` produced `aria-pressed=""` on the pressed
+control and nothing at all on the rest. Not a valid ARIA state either way: the
+density toggle, the format tabs, the chips, the dropdown and the volume tiles all
+carried the right fill and told a screen reader nothing. One shared
+`bool.ToAriaState()` extension (`Components/AriaExtensions.cs`) now backs all 14
+sites, and the sidebar shelf rows gained the `aria-pressed` they never had. Fixed
+client-wide rather than only on the library page, because the same break in
+`VolumePopover` and `VolumeTile` is the same defect. **[flagged]** — wider than the
+brief.
+
+### Verified, not assumed
+
+- `dotnet build` 0 warnings, `dotnet format --verify-no-changes` clean,
+  **316 tests pass** (313 + 3).
+- Preferences row after toggling, read back from `GET /api/preferences`:
+  `{"gridDensity":"Compact","librarySort":"MostBehind"}` →
+  `{"gridDensity":"Comfortable","librarySort":"MostBehind"}`, and
+  `{"gridDensity":"Comfortable","librarySort":"Alphabetical"}` after A–Z.
+- ARIA attributes read from the DOM: density `["true","false"]`, tabs
+  `["true","false","false","false"]`, chips one `"true"`, shelves one `"true"`,
+  dropdown `aria-expanded` `"false"` closed and `"true"` open.
+- **Both new tests were run against the re-introduced defects and failed** with the
+  exact diagnosis ("@media (max-width: 860px) sets .grid grid-template-columns
+  without restating it for .grid--compact", "SeriesPage.razor.css styles .back with
+  ".back""), then passed after restoring the fixes. A test that has never failed
+  proves nothing.
+- Preferences restored to Comfortable / Most behind.
+
+### Two tests, because C# assertions could not have caught either bug
+
+Both defects lived in stylesheets while the C# was correct, so both tests read the
+files the client actually ships:
+
+- `LibraryGridDensityStylesheetTests` — splits the stylesheet into cascade contexts
+  (top level, then each media query) and fails if any context sets `.grid`'s
+  geometry without restating a *different* geometry for `.grid--compact` after it.
+- `ScopedCssDeepSelectorTests` — fails if a class handed to `NavLink` or `InputFile`
+  is styled by its sibling scoped stylesheet without `::deep`. Today it guards five
+  classes (`bar__add`, `back`, `nav__row`, `upload__input`, `tile__file`). It reads
+  `class="…"` only, so a class arriving through `ActiveClass` is not covered.
+
+`ClientSource` locates the client tree from `[CallerFilePath]`, so neither test
+needs a copy-to-output step that could go stale against the files it polices. Note
+this bends testing.md's "UI components are verified by using the app" — these assert
+stylesheet text, not rendered components, and no bUnit dependency was added.
+
+### What the next session needs to know
+
+- The density toggle changes grid geometry only; the card is identical in both
+  states. `docs/design/ln-shelf-ui-spec.md:34` describes density as "compact covers
+  vs. detailed cards", which implies a second, cover-only card variant. That is a
+  design decision, not a defect fix, and was left out of a defects-only session.
+  **[flagged]** — decide it before the phase-3 UI work is called done.
+- `docs/design.md` still says nothing about grid density at all; the only written
+  spec for it is the older ui-spec line above.
+
+---
+
 ## Phase 3.3 — search page, header furniture, volume menu, covers (2026-07-29)
 
 **Goal:** retire the last provisional surface and make the shelf directly

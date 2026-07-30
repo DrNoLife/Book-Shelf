@@ -7,7 +7,7 @@
     <button type="button"
             class="tile @StateClass @(IsSelected ? "tile--selected" : null)"
             role="checkbox"
-            aria-checked="@(Volume.ReadStatus == ReadStatus.Read)"
+            aria-checked="@((Volume.ReadStatus == ReadStatus.Read).ToAriaState())"
             aria-label="@AccessibleLabel"
             aria-haspopup="@(IsSelectMode ? null : "menu")"
             data-volume="@Volume.Number"
