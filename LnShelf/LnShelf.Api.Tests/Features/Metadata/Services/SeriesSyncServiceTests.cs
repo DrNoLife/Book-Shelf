@@ -68,8 +68,13 @@ public sealed class SeriesSyncServiceTests
 
         var discrepancy = run.Discrepancies.ShouldHaveSingleItem();
         discrepancy.Field.ShouldBe(SyncDiscrepancyField.VolumeCount);
-        discrepancy.AniListValue.ShouldBe("18");
-        discrepancy.MangaUpdatesValue.ShouldBe("16");
+
+        // Recorded as (source, value) pairs, which is what lets a third source disagree
+        // at all — the shape used to be one named column per source, and there were two.
+        discrepancy.Values.Single(value => value.Source is MetadataSourceName.AniList)
+            .Value.ShouldBe("18");
+        discrepancy.Values.Single(value => value.Source is MetadataSourceName.MangaUpdates)
+            .Value.ShouldBe("16");
 
         // The conflict rule: MangaUpdates wins on dates, AniList on everything else.
         discrepancy.ResolvedWith.ShouldBe(MetadataSourceName.AniList);
@@ -199,17 +204,21 @@ public sealed class SeriesSyncServiceTests
     }
 
     [Fact]
-    public async Task RunAsync_Always_SaysThatOnlyCountsAreAvailable()
+    public async Task RunAsync_Always_SaysWhereTheReleaseModelStops()
     {
         await using var dbContext = CreateDbContext();
         await SeedSeriesAsync(dbContext, volumeCount: 3);
 
         var run = await CreateService(dbContext, Linked(volumeCount: 3)).RunAsync(CancellationToken.None);
 
-        // Transparent, not magical: the shelf knows what is in print but not when it
-        // arrived, and the footer must not imply otherwise.
-        run.Summary.ShouldContain("no dates");
+        // Transparent, not magical: the release source's word is a count, dates reach only
+        // the volumes whose ISBN is known, and the footer must not imply more than that.
+        run.Summary.ShouldContain("counts only");
+        run.Summary.ShouldContain("dates where an ISBN is known");
+
+        // These volumes have no ISBN, so nothing was enriched and no date could arrive.
         run.DatesMoved.ShouldBe(0);
+        run.VolumesEnriched.ShouldBe(0);
     }
 
     [Fact]
@@ -303,7 +312,8 @@ public sealed class SeriesSyncServiceTests
 
     private static SeriesSyncService CreateService(
         LnShelfDbContext dbContext,
-        IReleaseSourceMatcher matcher)
+        IReleaseSourceMatcher matcher,
+        IVolumeEnrichmentSource? enrichmentSource = null)
     {
         var releaseSource = Substitute.For<IReleaseSource>();
         releaseSource.SourceName.Returns("MangaUpdates");
@@ -318,9 +328,33 @@ public sealed class SeriesSyncServiceTests
                 RawStatus = "14 Volumes (Ongoing)",
             });
 
+        // Knows nothing by default: these tests are about the release-source half of the
+        // run, and the enrichment half has its own file.
+        enrichmentSource ??= EnrichmentSource();
+
+        var enrichmentOptions = Options.Create(new OpenLibraryOptions { MaximumLookupsPerRun = 60 });
+
         return new SeriesSyncService(
-            dbContext, matcher, releaseSource, TimeProvider.System,
+            dbContext,
+            matcher,
+            releaseSource,
+            new VolumeEnrichmentService(
+                enrichmentSource,
+                Substitute.For<IVolumeCoverCache>(),
+                NullLogger<VolumeEnrichmentService>.Instance),
+            enrichmentSource,
+            enrichmentOptions,
+            TimeProvider.System,
             NullLogger<SeriesSyncService>.Instance);
+    }
+
+    private static IVolumeEnrichmentSource EnrichmentSource(VolumeEnrichment? enrichment = null)
+    {
+        var source = Substitute.For<IVolumeEnrichmentSource>();
+        source.SourceName.Returns("OpenLibrary");
+        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(enrichment);
+
+        return source;
     }
 
     private static async Task SeedSeriesAsync(

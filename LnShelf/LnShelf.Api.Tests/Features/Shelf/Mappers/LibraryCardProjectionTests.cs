@@ -235,6 +235,78 @@ public sealed class LibraryCardProjectionTests
         card.Published.ShouldBeGreaterThanOrEqualTo(card.Owned);
     }
 
+    /// <summary>
+    /// The case per-volume enrichment introduced: a volume carrying <em>both</em> a real
+    /// date and the release source's in-print flag.
+    /// </summary>
+    // Untested before the enrichment phase, and it is the case with teeth: the formula is
+    // disjunctive, so any one ground is enough, and a future date can now sit beside a
+    // flag that says the volume is already out. Which of the two wins is settled by the
+    // sync (a future date on an in-print volume is recorded as a disagreement and not
+    // written); what these rows pin down is that the projection's own answer never
+    // changed — the flag still counts, whatever date is beside it.
+    public static TheoryData<int, bool, int, int, bool> ReleasedWithADateMatrix => new()
+    {
+        // daysFromToday  owned  published  toBuy  isOut
+        //
+        // Dated in the past and in print: the two grounds agree, and it is out.
+        { -30,            false, 1,         1,     true },
+        { -30,            true,  1,         0,     true },
+
+        // Out today. The comparison is <=, so the day itself counts as out.
+        { 0,              false, 1,         1,     true },
+
+        // Dated in the future and in print: the sources disagree, and the flag still
+        // decides. Anything else would make the count-based release model unreliable on
+        // exactly the 63% of volumes enrichment can reach.
+        { 120,            false, 1,         1,     true },
+        { 120,            true,  1,         0,     true },
+    };
+
+    [Theory]
+    [MemberData(nameof(ReleasedWithADateMatrix))]
+    public void ToCard_AVolumeThatIsBothDatedAndInPrint_StillCountsOnEitherGround(
+        int daysFromToday,
+        bool owned,
+        int expectedPublished,
+        int expectedToBuy,
+        bool expectedIsOut)
+    {
+        var series = CreateSeriesWithOneVolume(
+            owned ? ReadStatus.Unread : null, owned, releaseDaysFromToday: daysFromToday);
+        series.Volumes.Single().IsReleased = true;
+
+        var card = ToCard(series);
+
+        // Call sites one and two: Published and ToBuy.
+        card.Published.ShouldBe(expectedPublished);
+        card.ToBuy.ShouldBe(expectedToBuy);
+
+        // Call site three: the tick strip's own IsOut.
+        card.VolumeTicks.ShouldHaveSingleItem().IsOut.ShouldBe(expectedIsOut);
+
+        // Call site four, asserted here so the two projections cannot drift: the same
+        // volume through the series-detail path.
+        SeriesDetailProjection.ToVolume(series.Volumes.Single(), Today).IsOut.ShouldBe(expectedIsOut);
+    }
+
+    [Fact]
+    public void ToCard_AFutureDatedVolumeThatIsInPrint_IsStillTheNextReleaseDate()
+    {
+        // The disagreement is the sync's problem, not the rows view's. If a date is on the
+        // volume, the column that prints the soonest date ahead still prints it.
+        var series = CreateSeriesWithOneVolume(readStatus: null, owned: false, releaseDaysFromToday: 45);
+        series.Volumes.Single().IsReleased = true;
+
+        var card = ToCard(series);
+
+        card.NextReleaseDate.ShouldBe(Today.AddDays(45));
+
+        // And it is simultaneously to buy, because IsReleased says so. Both are true, and
+        // the sync footer is where that contradiction is reported.
+        card.ToBuy.ShouldBe(1);
+    }
+
     [Fact]
     public void ToCard_VolumesBeyondTheReleaseSourcesCount_AreNotToBuy()
     {

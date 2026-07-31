@@ -32,6 +32,7 @@ public static class DesiredVolumeStateMerger
                     Owned = ImportOwnershipRule.IsOwned(row.OwnedInExport, row.ReadStatus, group.TreatReadAsOwned),
                     OwnedFormat = row.OwnedFormat,
                     ReadAt = row.ReadAt,
+                    Isbn = Isbn.Normalize(row.Isbn),
                 };
 
                 merged[volumeNumber] = merged.TryGetValue(volumeNumber, out var existing)
@@ -68,7 +69,33 @@ public static class DesiredVolumeStateMerger
             OwnedFormat = ChooseOwnedFormat(left, right),
 
             ReadAt = Latest(left.ReadAt, right.ReadAt),
+
+            Isbn = ChooseIsbn(left.Isbn, right.Isbn),
         };
+    }
+
+    /// <summary>
+    /// The English edition's ISBN when the two rows disagree about which edition
+    /// this volume is.
+    /// </summary>
+    // The shelf tracks English editions, and every enrichment route works by looking
+    // an ISBN up: a Japanese ISBN resolves to a Japanese record with a Japanese
+    // title and a Japanese cover, which on an English shelf entry is a defect rather
+    // than coverage. Neither being Japanese means it does not matter which is kept,
+    // and both being Japanese means there is no English one to prefer.
+    private static string? ChooseIsbn(string? left, string? right)
+    {
+        if (left is null || right is null)
+        {
+            return left ?? right;
+        }
+
+        if (Isbn.IsJapaneseEdition(left) && !Isbn.IsJapaneseEdition(right))
+        {
+            return right;
+        }
+
+        return left;
     }
 
     // An explicit rank rather than the enum's ordinal: the values are stored as

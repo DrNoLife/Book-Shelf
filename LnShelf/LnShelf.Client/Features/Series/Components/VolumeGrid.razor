@@ -37,6 +37,20 @@
                 </button>
             </div>
 
+            @* Only offered where there is something to show. A control that does nothing
+               on 90% of the shelf is worse than no control (design.md — control audit),
+               and the shelf's titles arrive from a source with partial coverage. *@
+            @if (HasAnyTitle)
+            {
+                <button type="button"
+                        class="control @(Preferences.ShowVolumeTitles ? "control--on" : null)"
+                        aria-pressed="@Preferences.ShowVolumeTitles.ToAriaState()"
+                        title="@TitlesTitle"
+                        @onclick="OnTitlesToggledAsync">
+                    Titles
+                </button>
+            }
+
             @if (Series.VolumeViewOverride is not null)
             {
                 @* The override is visible and reversible — a series quietly ignoring the
@@ -92,6 +106,7 @@
         @if (View == VolumeView.List)
         {
             <VolumeList Volumes="Series.Volumes"
+                        ShowTitles="Preferences.ShowVolumeTitles"
                         IsInteractive="!SeriesState.IsSaving"
                         MenuRequested="OnMenuRequestedAsync"
                         ReadCycled="OnReadCycledAsync"
@@ -105,6 +120,7 @@
                 {
                     <VolumeTile @ref="_tiles[volume.VolumeId]"
                                 Volume="volume"
+                                Title="@(Preferences.ShowVolumeTitles ? volume.Title : null)"
                                 IsSelectMode="SeriesState.IsSelectMode"
                                 IsSelected="SeriesState.SelectedVolumeIds.Contains(volume.VolumeId)"
                                 IsInteractive="!SeriesState.IsSaving"

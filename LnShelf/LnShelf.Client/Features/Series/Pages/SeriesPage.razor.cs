@@ -51,15 +51,26 @@ public partial class SeriesPage : IDisposable
 
             foreach (var discrepancy in unresolved)
             {
+                // The disagreement's own sentence, whichever sources are in it — the
+                // shelf now reads three, and this line used to name exactly two.
                 lines.Add(discrepancy.Field is SyncDiscrepancyField.SeriesLink
                     ? "Not linked to a release source yet — waiting on you."
-                    : $"{discrepancy.Field}: AniList says {discrepancy.AniListValue}, "
-                      + $"MangaUpdates says {discrepancy.MangaUpdatesValue}.");
+                    : $"{Where(discrepancy)}{discrepancy.Field}: {discrepancy.Disagreement}.");
             }
 
             return lines;
         }
     }
+
+    /// <summary>
+    /// "Vol 15 — " when the disagreement is about one volume, nothing when it is about
+    /// the series.
+    /// </summary>
+    // Per-volume dates made this necessary: "ReleaseDate: MangaUpdates says in print,
+    // OpenLibrary says 2026-12-05" is unreadable without knowing which volume it is
+    // about, and every date disagreement is about exactly one.
+    private static string Where(SyncDiscrepancyResponse discrepancy) =>
+        discrepancy.VolumeNumber is { } volumeNumber ? $"Vol {volumeNumber} — " : string.Empty;
 
     protected override void OnInitialized()
     {

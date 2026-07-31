@@ -1,5 +1,7 @@
+global using System.Globalization;
 global using System.Text;
 global using LnShelf.Api.Features.Covers.Abstractions;
+global using LnShelf.Api.Features.Covers.Models;
 global using LnShelf.Api.Features.Import.Mappers;
 global using LnShelf.Api.Features.Import.Models;
 global using LnShelf.Api.Features.Import.Services;

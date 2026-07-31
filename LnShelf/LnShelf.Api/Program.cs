@@ -1,3 +1,4 @@
+using LnShelf.Api.Commands;
 using LnShelf.Api.Errors;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
@@ -5,7 +6,12 @@ using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Preferences;
 using LnShelf.Api.Features.Shelf;
 
-var builder = WebApplication.CreateBuilder(args);
+// A leading bare word is a one-shot maintenance job rather than a request to serve
+// (Commands/IConsoleCommand.cs). It is taken out of the host's arguments so the
+// configuration provider never sees a token that is not a setting.
+var commandLine = ConsoleCommandLine.Parse(args);
+
+var builder = WebApplication.CreateBuilder(commandLine.HostArguments);
 
 builder.Services.AddControllers();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -41,4 +47,13 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 await app.MigrateAndSeedAsync();
+
+// Run the one-shot and exit instead of listening. Migrations have already applied, so
+// a command always sees the schema its work assumes.
+if (commandLine.Name is not null)
+{
+    return await app.RunConsoleCommandAsync(commandLine);
+}
+
 await app.RunAsync();
+return 0;

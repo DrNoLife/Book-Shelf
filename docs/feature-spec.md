@@ -119,11 +119,36 @@ The series/volume tracking domain.
     many volumes exist, so volumes 1..N are marked `Volume.IsReleased` and
     volumes beyond N are known-to-exist-but-not-out. That is what makes *to buy*
     computable at all.
-  - **Dates are a future enrichment, not a v1 promise.** Nothing writes
-    `Volume.ReleaseDate` yet, and nothing invents one.
-- Conflict rule (CLAUDE.md): MangaUpdates wins on release dates, AniList on
-  everything else; discrepancies land in the sync log — structured as
-  `SyncDiscrepancy` rows (§5), never silently resolved.
+  - **Dates arrive from a third source, as an overlay** (**[amended 2026-07-31]**,
+    following the enrichment verdict). This line used to say nothing writes
+    `Volume.ReleaseDate`; `IVolumeEnrichmentSource` now does, for the volumes whose
+    ISBN is known. Counts remain the release model — see the rule below.
+- `IVolumeEnrichmentSource` — Open Library implementation, **keyed on ISBN and
+  nothing else**: given `Volume.Isbn` it returns a release date, a cover URL and
+  the edition's own title. Measured on this shelf's real ISBNs, a direct
+  `/isbn/{isbn}` lookup returns the correct English edition; the same catalogue
+  searched by title returns Japanese editions and omnibuses
+  (`.research/volume-enrichment/`). A volume with no ISBN is skipped silently, so
+  the seam degrades to exactly today's behaviour rather than to an error.
+  - **A year is not a date.** Open Library's `publish_date` is free text and is
+    often just `"2022"`. Only a value naming a whole day becomes a
+    `ReleaseDate`; a coarser one is logged and discarded rather than widened to
+    1 January, for the same reason `IsReleased` exists instead of a fabricated date.
+  - Two one-shot commands sit beside it for the volumes with no ISBN at all:
+    `isbn-discover` proposes into a review CSV, and `isbn-apply` writes back
+    whatever survives review. Discovery never writes to the shelf.
+- Conflict rule (**[amended 2026-07-31]** — it used to name exactly two sources,
+  which three sources cannot be described by):
+  - **Release dates:** whichever source actually has one wins, and a real
+    per-volume date wins *for display*. It never overrules the count about
+    whether a volume is out — `IsOut` keeps its three grounds (§4.1).
+  - **A future date on a volume the count says is in print is a conflict**, not a
+    silent overwrite: it is recorded and the existing value is left alone.
+  - **Volume counts and publication status:** MangaUpdates.
+  - **Everything else:** AniList.
+  - Discrepancies land in the sync log — structured as `SyncDiscrepancy` rows
+    (§5), carrying one `(source, value)` pair per disagreeing source, never
+    silently resolved.
 - **WebNovel is manual-only, acknowledged.** Neither source provides WN
   volume/part lists reliably, so a WN series may exist with no external ids:
   volumes enter via the manual escape hatch, and **sync skips any series
@@ -178,10 +203,19 @@ The series/volume tracking domain.
   from `IsReleased`, **"Announced"** from tracked-but-unreleased. Format filter
   applies. The month grouping — this month / next 3 months — is **parked until a
   date source exists**, as is the "release date moved" notification below.
-- **Sanctioned candidate for that date source: Google Books** (per-ISBN
-  `publishedDate`, decent English light-novel coverage; the StoryGraph import
-  already stores ISBNs). Investigating it means a **spike** — captured fixtures
-  and a written verdict — **not an integration**.
+- **The date source turned out to be Open Library, not Google Books**
+  (**[resolved 2026-07-31]**). The spike this section demanded was run and its
+  verdict is `.research/volume-enrichment/verdict.md`; the integration followed it.
+  Google Books was never measurable — it answered 429 with
+  `quota_limit_value: "0"` — and remains out of scope pending one API-key check
+  (backlog). Open Library needs no key and is licensed for local caching.
+  - **The month grouping is now partly buildable**: real dates exist for the
+    volumes whose ISBN is known — 28 of 94 on the real shelf, none of them in the
+    future. So *"Out now"* and *"Announced"* stay the backbone and the month
+    grouping still has nothing to group. **Open Library catalogues the past and
+    cannot see the future**: 6 of 7 not-yet-owned volumes probed returned no
+    result at all. Forward-looking dates need a publisher, which is where the
+    "release date moved" notification also still waits.
 - `IReleaseNotifier` seam with **one** v1 implementation (**[decision]**:
   ntfy — trivial to self-host or use ntfy.sh, no bot tokens; Discord webhook
   is implementation #2 whenever wanted). Fired by the sync run for: new
@@ -195,6 +229,13 @@ source (latest/first), default library filter (Behind vs All — the UI's
 opinionated default, made a setting per the mockup critique), grid density
 (compact/detailed — the mockup's toggle), sync hour, notification config.
 Exposed as one GET/PUT.
+
+`ShowVolumeTitles` joins the list (**[added 2026-07-31]**): whether a volume's own
+title is printed beside its number, off by default. Shelf-wide rather than per
+series, because "do I want volume titles" is a question about how the reader reads
+the shelf — and a series whose volumes have no titles shows none regardless, which
+is the per-series answer arriving for free. The toggle appears on the series page
+only where a volume actually has one.
 
 ### 4.7 Stats (post-v1, seam only — with one exception)
 
@@ -222,8 +263,21 @@ Series
 
 Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), IsReleased,
+  Isbn (nullable), Title (nullable),
   CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly
 
+  -- Isbn is source metadata, and the written justification a stored field needs:
+  -- it is the only key per-volume enrichment works by (§4.2), it cannot be derived
+  -- from series + number, and it arrives once — from a StoryGraph export or a
+  -- discovery pass — so every later lookup depends on still having it. Distinct
+  -- from ExternalId, which is AniList's own volume identity; one column holding two
+  -- sources' unrelated ids could not say which it held.
+  --
+  -- Title is plain synced metadata, the same class of fact as ReleaseDate: the
+  -- edition's own full_title. Expected to be null on most volumes, because
+  -- light-novel lines name their volumes "Volume N" — which is the number the
+  -- caption already prints. The UI renders nothing when it is null.
+  --
   -- IsReleased is source metadata, not a derived state: the release source says
   -- this volume is in print without saying when. It exists because no source
   -- publishes per-volume dates (§4.2), and it is what *to buy* is computed from.
@@ -251,15 +305,29 @@ VolumeUserState
   CoverOverrideObjectKey (nullable)
 
 SyncRun
-  Id, StartedAt, FinishedAt, SeriesRefreshed, DatesMoved, NewVolumes,
-  Failures, Summary (text)
+  Id, StartedAt, FinishedAt, SeriesRefreshed, SeriesLinked, DatesMoved,
+  VolumesMarkedReleased, VolumesEnriched, VolumeCoversCached, EnrichmentGaps,
+  EnrichmentFailures, NewVolumes, Failures, Summary (text)
+  -- EnrichmentGaps is reported rather than hidden: enriching 52 of 60 volumes
+  -- looked up is the honest number, and a footer printing only the 52 would read
+  -- as though it had done all 60.
 
 SyncDiscrepancy
-  Id, SyncRunId (FK), SeriesId (FK), Field (VolumeCount|ReleaseDate|Status),
-  AniListValue, MangaUpdatesValue, ResolvedWith (AniList|MangaUpdates),
-  VolumeNumber (nullable)
+  Id, SyncRunId (FK), SeriesId (FK), SeriesTitle,
+  Field (VolumeCount|ReleaseDate|Status|SeriesLink),
+  ResolvedWith (AniList|MangaUpdates|OpenLibrary, nullable),
+  VolumeNumber (nullable), Note (nullable)
   -- the structured landing place for §4.2's "recorded, never silently
   -- picked"; surfaced in the series-detail sync note when present
+
+SyncDiscrepancyValue
+  Id, SyncDiscrepancyId (FK), Source (AniList|MangaUpdates|OpenLibrary), Value
+  -- [amended 2026-07-31] This used to be two named columns on SyncDiscrepancy,
+  -- AniListValue and MangaUpdatesValue, which could hold a disagreement between
+  -- exactly those two sources and no others. A third source supplying per-volume
+  -- dates made that a wall rather than an inconvenience: there was nowhere to put
+  -- a third opinion. One row per disagreeing source says the same thing about two
+  -- and can still say it about four.
 
 ImportBatch
   Id, UploadedAt, FileName, RowCount, AutoMatched, NeedsReview, Skipped,
@@ -343,6 +411,7 @@ Caching exists to protect and speed up the *external* edges:
 |---|---|---|
 | AniList search results (query+format key) | ~1 h | search-as-you-type must not chew the 90 req/min budget; import matching hits identical queries repeatedly |
 | AniList/MangaUpdates series detail during import | ~1 h | review queue re-renders candidates constantly |
+| Open Library edition by ISBN | ~24 h | an edition record that has existed for years is not about to change, and one run can ask for the same ISBN twice — discovery verifies a candidate that enrichment then reads again |
 | `/api/sync/latest` | until next run | sidebar hits it on every navigation |
 | Cover existence/headers | ~24 h | avoids MinIO stat calls on grid render (bytes themselves are client-cached via ETag/Cache-Control) |
 

@@ -8,8 +8,14 @@ public sealed record VolumeResponse
     public required Guid VolumeId { get; init; }
     public required int Number { get; init; }
 
-    /// <summary>Null when no source knows the date — which is currently all of them.</summary>
+    /// <summary>Null when no source knows the date, which is most volumes.</summary>
     public DateOnly? ReleaseDate { get; init; }
+
+    /// <summary>
+    /// This volume's own title, when a source supplied one. Null is the norm, and
+    /// renders as nothing at all rather than as a placeholder.
+    /// </summary>
+    public string? Title { get; init; }
 
     /// <summary>
     /// Whether this volume is out, decided by the server so the client never has to

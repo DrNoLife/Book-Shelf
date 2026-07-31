@@ -1,0 +1,124 @@
+# LnShelf — Backlog
+
+Parked items, each with why it's parked and what unblocks it. This is the
+someday-list; the *roadmap* (phase 3.3 polish → phase 6 deploy → phase 5
+upcoming + notifications) lives in the phase log and outranks everything here.
+Nothing on this list is permission to build ahead of the current phase.
+
+## 1. Volume art & release dates — ~~the enrichment spike~~ DONE (2026-07-31)
+
+**The spike ran, the verdict is `.research/volume-enrichment/verdict.md`, and the
+integration shipped as phase 3.5.** Real numbers on the real shelf: 28 dates, 56
+volume titles, 44 volume covers over 94 volumes. What the verdict answered:
+
+- **Date coverage:** 63% of volumes *whose ISBN is known* have a record with a date
+  and a cover. Lower in practice, because a `publish_date` of "2022" is not a date
+  and is refused rather than widened.
+- **Volume-cover coverage:** the 63% is overwhelmingly light novels, which is the
+  right way round for a ~75%-LN shelf. MangaDex was rejected outright — 117 Berserk
+  cover records, zero of them English.
+- **Danish-market editions:** zero, and it does not matter. Saxo's `robots.txt`
+  disallows `*/productpage/*`, which hard-confirms it as a hand-built search URL.
+- **Do `IsReleased` counts stay the release model?** Yes. Dates are an additive
+  display overlay; a future date on a volume the count says is in print is recorded
+  as a conflict, never written.
+
+What is left of this item, as its own smaller entries:
+
+- **Google Books** is still unmeasured and still blocked on one 5-minute check —
+  create an API key and capture a response's `Cache-Control` header. That single
+  header decides whether it is a legitimate cover source for a MinIO-caching app.
+- **Dark Horse** (Berserk's 42 volumes) is an owner's decision: their `robots.txt`
+  names and blocks `anthropic-ai` and the site carries an `ai-train ai-input`
+  opt-out. Nothing technical stops a single-user nightly fetcher; the publisher has
+  stated a preference.
+- **Brave Search** for the cover long tail needs a credit card for its free tier.
+- **Forward-looking dates** ("is volume 17 out?") remain unanswerable from any
+  bibliographic source: Open Library catalogues the past, 6 of 7 not-yet-owned
+  volumes probed returned nothing. Only publishers can answer it, and that tier is
+  the most fragile code in the plan — deferred until phase 5's Upcoming view earns it.
+
+<details>
+<summary>The original item, kept for the record</summary>
+
+One investigation, three questions, one written verdict (per the ruling in
+feature-spec §4.5: spike with captured fixtures first, integration only after
+the verdict). Candidate order:
+
+1. **Google Books, by ISBN.** Per-volume `publishedDate` *and* thumbnail in one
+   structured, legitimate API. Would resurrect real dates (ghost-tile dates,
+   month grouping in Upcoming, the "date moved" notification) and give volume
+   covers for English editions. The shelf's Saxo purchases mean ISBNs are
+   obtainable for owned volumes; unowned volumes need title+volume search.
+2. **MangaDex, for manga series.** Purpose-built per-volume cover art. Manga
+   only; no LN coverage.
+3. **Custom-Search cover suggester** — the long-tail fallback. Google
+   Programmable Search Engine + JSON API (`searchType=image`; free tier 100
+   queries/day covers a full backfill in ~2 days and steady state forever).
+   Query template bakes the known format in:
+   `"{title} light novel volume {n} cover"` / `"{title} manga volume {n} cover"`.
+   **Never auto-take the first result** — top 4–5 candidates render as a strip
+   in the volume-tile popover, the user picks, and the pick stores as an
+   ordinary cover override (so sync can never clobber it, and the human sits on
+   exactly the ambiguity the search can't resolve: manga vs LN edition, fan
+   art, watermarked thumbnails).
+
+Verdict must answer: date coverage %, volume-cover coverage % (per format),
+Danish-market edition coverage, and whether IsReleased counts stay the release
+model or dates replace them where present (`released = dated ∨ known-released`
+per volume, presumably — decide with data).
+
+</details>
+
+## 2. SeriesLink review surface
+
+Sync records unmatched/ambiguous MangaUpdates links as `SyncDiscrepancy` rows
+with `Field = SeriesLink` — currently 4 waiting, visible only in the sync
+footer's "4 to review". They need a small review UI (candidates side by side,
+same pattern as the import queue — reuse those components) and a resolve
+endpoint that sets `MangaUpdatesId`. Until resolved, those series get no
+count-based `IsReleased` updates. Natural companion to any sync-related
+session; too small to be its own phase.
+
+## 3. Series grouping (the Bookworm problem)
+
+AniList models "Ascendance of a Bookworm" as one series per Part; the shelf
+honestly mirrors that, so one story occupies three cards. A *series group* —
+display-level roll-up (one card, combined counts, parts as sections on the
+detail page) over unchanged underlying series — is the fix. Real feature, real
+design work (how do the three-segment bar and Behind counts aggregate?);
+explicitly not a data-model merge. Wait until it annoys enough to earn an
+evening.
+
+## 4. Stats page
+
+The seam exists; the spend line already ships in the series hero. The page:
+volumes read per month split by format, backlog trend over time, spend over
+time, completion rate. Blocked on nothing except being dessert. One session,
+after the app has accumulated a few months of real usage worth charting —
+which also gives the trend queries actual trends.
+
+## 5. WebNovel manual volumes
+
+The v1 contract (feature-spec §4.2): WN series carry no external ids, sync
+skips them, volumes enter via `POST /api/series/{id}/volumes`. The endpoint
+exists; the UI for it doesn't (an "add volume" affordance on the series detail
+page, probably in the volume-grid header, only shown for id-less series).
+Small; bundle into whichever session next touches the series detail page.
+
+## 6. Notification niceties (post-phase-5)
+
+Phase 5 ships the seam + ntfy on IsReleased transitions. Parked beyond that:
+per-series notification preferences UI (the mute flag exists in the model),
+Discord webhook as `IReleaseNotifier` implementation #2, and the "date moved"
+notification — which un-parks only if spike #1 delivers dates.
+
+## 7. Sundry, when passing by
+
+- Library "type to filter" could grow fuzzy matching if the shelf ever gets
+  big enough to need it.
+- Cover ingest currently one size class; thumbnail generation only on a
+  measured grid-render problem (testing.md: measure, don't vibe).
+- `docs/design.md` gained two rulings mid-build (tile focus-visible, the
+  multi-select chip) — fold them into the document properly next time it's
+  open for edits.

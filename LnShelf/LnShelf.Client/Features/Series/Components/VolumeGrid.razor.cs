@@ -86,6 +86,20 @@ public partial class VolumeGrid
             ? $"{view} — the default for every series"
             : $"{view} — for this series only";
 
+    /// <summary>
+    /// Whether any volume here has a title of its own, which is what decides whether the
+    /// toggle is offered at all.
+    /// </summary>
+    // Enrichment reaches the volumes whose ISBN is known, and publishers mostly name their
+    // volumes "Volume N" anyway — so a series with nothing to show gets no control rather
+    // than a control that does nothing.
+    private bool HasAnyTitle => Series.Volumes.Any(volume => !string.IsNullOrWhiteSpace(volume.Title));
+
+    /// <summary>Says what the toggle would do, and that it is a shelf-wide setting.</summary>
+    private string TitlesTitle => Preferences.ShowVolumeTitles
+        ? "Hide volume titles — for every series"
+        : "Show volume titles where a source supplied one — for every series";
+
     /// <summary>Select mode paints chips on tiles, and the list view has no tiles.</summary>
     private string SelectTitle => View == VolumeView.List
         ? "Select — a tiles-view control"
@@ -202,6 +216,16 @@ public partial class VolumeGrid
     }
 
     private Task OnFollowGlobalAsync() => SeriesState.SetVolumeViewOverrideAsync(null);
+
+    /// <summary>
+    /// A shelf-wide preference, unlike the view, which is per series.
+    /// </summary>
+    // Deliberately not a per-series override. "Do I want volume titles" is a question
+    // about how the reader likes to read the shelf, not about one series — and a series
+    // whose volumes have no titles already shows none, which is the per-series answer
+    // arriving for free.
+    private Task OnTitlesToggledAsync() =>
+        Preferences.SetShowVolumeTitlesAsync(!Preferences.ShowVolumeTitles);
 
     private Task OnReadCycledAsync(VolumeResponse volume) => SeriesState.CycleReadAsync(volume);
 

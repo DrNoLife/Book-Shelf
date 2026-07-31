@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using LnShelf.Api.Commands;
+using LnShelf.Api.Features.Metadata.Commands;
 using LnShelf.Api.Features.Metadata.Models;
 using LnShelf.Api.Features.Metadata.Services;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -26,6 +28,7 @@ public static class MetadataFeatureExtensions
 
             services.AddAniList(configuration);
             services.AddReleaseSource(configuration);
+            services.AddVolumeEnrichment(configuration);
             services.AddSync(configuration);
 
             return services;
@@ -79,6 +82,52 @@ public static class MetadataFeatureExtensions
 
             services.AddScoped<IReleaseSource, MangaUpdatesReleaseSource>();
             services.AddScoped<IReleaseSourceMatcher, ReleaseSourceMatcher>();
+
+            return services;
+        }
+
+        /// <summary>Open Library behind <c>IVolumeEnrichmentSource</c> (the enrichment verdict, §3).</summary>
+        private IServiceCollection AddVolumeEnrichment(IConfiguration configuration)
+        {
+            services.Configure<OpenLibraryOptions>(configuration.GetSection(OpenLibraryOptions.SectionName));
+
+            // Its own pool, and the smallest: Open Library is a donated catalogue with
+            // a documented ceiling, unrelated to the other two APIs' budgets.
+            services.AddSingleton<OpenLibraryRateLimiter>();
+            services.AddTransient<OpenLibraryRateLimitHandler>();
+
+            services.AddHttpClient<OpenLibraryClient>((provider, httpClient) =>
+                {
+                    var openLibrary = provider.GetRequiredService<IOptions<OpenLibraryOptions>>().Value;
+                    httpClient.BaseAddress = openLibrary.Endpoint;
+
+                    // Infinite here, and enforced per request inside the handler instead.
+                    // HttpClient.Timeout also covers the wait for a rate-limit permit, and
+                    // at twelve requests a minute that wait is minutes — see
+                    // OpenLibraryRateLimitHandler.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    // Contactable, because Open Library's docs ask for it.
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
+                        LnShelfUserAgent.WithContact(openLibrary.ContactEmail));
+                })
+                .AddHttpMessageHandler<OpenLibraryRateLimitHandler>();
+
+            services.AddScoped<IVolumeEnrichmentSource, OpenLibraryVolumeEnrichmentSource>();
+            services.AddScoped<IIsbnCandidateSource, OpenLibraryIsbnCandidateSource>();
+
+            // Where the conflict rules live. The sync run calls it per series.
+            services.AddScoped<VolumeEnrichmentService>();
+
+            // The one-shots: discovery proposes into a file, apply writes what survives
+            // review. Two commands because a person sits between them.
+            services.AddScoped<IsbnDiscoveryService>();
+            services.AddScoped<IsbnApplyService>();
+            services.AddScoped<IsbnReviewFile>();
+            services.AddScoped<IConsoleCommand, IsbnDiscoverCommand>();
+            services.AddScoped<IConsoleCommand, IsbnApplyCommand>();
 
             return services;
         }

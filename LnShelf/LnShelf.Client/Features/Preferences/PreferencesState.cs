@@ -18,6 +18,13 @@ public sealed class PreferencesState(HttpClient httpClient)
     /// <summary>The series-detail default; a series can override it for itself.</summary>
     public VolumeView VolumeView { get; private set; } = VolumeView.Tiles;
 
+    /// <summary>
+    /// Whether a volume's own title is printed in its caption where one exists.
+    /// </summary>
+    // Off by default: most volumes are named "Volume N", which is the number the caption
+    // already prints.
+    public bool ShowVolumeTitles { get; private set; }
+
     public bool HasLoaded { get; private set; }
     public string? Message { get; private set; }
 
@@ -36,6 +43,7 @@ public sealed class PreferencesState(HttpClient httpClient)
                 LibrarySort = preferences.LibrarySort;
                 LibraryView = preferences.LibraryView;
                 VolumeView = preferences.VolumeView;
+                ShowVolumeTitles = preferences.ShowVolumeTitles;
             }
         }
         catch (HttpRequestException)
@@ -87,6 +95,19 @@ public sealed class PreferencesState(HttpClient httpClient)
         Changed?.Invoke();
 
         return SaveAsync(new UpdatePreferencesRequest { VolumeView = view }, cancellationToken);
+    }
+
+    public Task SetShowVolumeTitlesAsync(bool show, CancellationToken cancellationToken = default)
+    {
+        if (show == ShowVolumeTitles)
+        {
+            return Task.CompletedTask;
+        }
+
+        ShowVolumeTitles = show;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { ShowVolumeTitles = show }, cancellationToken);
     }
 
     public Task SetSortAsync(LibrarySort sort, CancellationToken cancellationToken = default)

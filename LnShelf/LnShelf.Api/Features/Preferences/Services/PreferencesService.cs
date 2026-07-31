@@ -36,15 +36,16 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
         preferences.LibrarySort = request.LibrarySort ?? preferences.LibrarySort;
         preferences.LibraryView = request.LibraryView ?? preferences.LibraryView;
         preferences.VolumeView = request.VolumeView ?? preferences.VolumeView;
+        preferences.ShowVolumeTitles = request.ShowVolumeTitles ?? preferences.ShowVolumeTitles;
         preferences.DefaultLibraryFilter = request.DefaultLibraryFilter ?? preferences.DefaultLibraryFilter;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Preferences saved: density {GridDensity}, sort {LibrarySort}, library view {LibraryView}, "
-            + "volume view {VolumeView}, default filter {DefaultLibraryFilter}",
+            + "volume view {VolumeView}, volume titles {ShowVolumeTitles}, default filter {DefaultLibraryFilter}",
             preferences.GridDensity, preferences.LibrarySort, preferences.LibraryView,
-            preferences.VolumeView, preferences.DefaultLibraryFilter);
+            preferences.VolumeView, preferences.ShowVolumeTitles, preferences.DefaultLibraryFilter);
 
         return ToResponse(preferences);
     }
@@ -55,6 +56,7 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
         LibrarySort = preferences.LibrarySort,
         LibraryView = preferences.LibraryView,
         VolumeView = preferences.VolumeView,
+        ShowVolumeTitles = preferences.ShowVolumeTitles,
         DefaultLibraryFilter = preferences.DefaultLibraryFilter,
     };
 }

@@ -16,6 +16,7 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options)
 
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
+    public DbSet<SyncDiscrepancyValue> SyncDiscrepancyValues => Set<SyncDiscrepancyValue>();
 
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportGroup> ImportGroups => Set<ImportGroup>();

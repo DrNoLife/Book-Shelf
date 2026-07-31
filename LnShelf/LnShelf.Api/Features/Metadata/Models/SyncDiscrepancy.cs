@@ -18,8 +18,15 @@ public sealed class SyncDiscrepancy
 
     public SyncDiscrepancyField Field { get; set; }
 
-    public string? AniListValue { get; set; }
-    public string? MangaUpdatesValue { get; set; }
+    /// <summary>
+    /// What each disagreeing source said, one row per source.
+    /// </summary>
+    // This was a pair of named columns, AniListValue and MangaUpdatesValue, which meant
+    // the schema could hold a disagreement between exactly those two sources and no
+    // others. Open Library supplying per-volume dates made that a wall rather than an
+    // inconvenience: there was nowhere to put a third opinion. A list of (source, value)
+    // pairs says the same thing about two sources and can still say it about four.
+    public ICollection<SyncDiscrepancyValue> Values { get; set; } = [];
 
     /// <summary>Null when nothing was resolved and a person has to decide.</summary>
     public MetadataSourceName? ResolvedWith { get; set; }
@@ -29,4 +36,30 @@ public sealed class SyncDiscrepancy
 
     /// <summary>One line explaining what was found.</summary>
     public string? Note { get; set; }
+
+    /// <summary>Records what one source said. Order of calls is the order shown.</summary>
+    public SyncDiscrepancy Says(MetadataSourceName source, string? value)
+    {
+        Values.Add(new SyncDiscrepancyValue
+        {
+            Id = Guid.CreateVersion7(),
+            SyncDiscrepancyId = Id,
+            Source = source,
+            Value = value,
+        });
+
+        return this;
+    }
+}
+
+/// <summary>One source's side of a disagreement.</summary>
+public sealed class SyncDiscrepancyValue
+{
+    public Guid Id { get; set; }
+    public Guid SyncDiscrepancyId { get; set; }
+
+    public MetadataSourceName Source { get; set; }
+
+    /// <summary>Null when the source's answer was "nothing" — itself a position.</summary>
+    public string? Value { get; set; }
 }

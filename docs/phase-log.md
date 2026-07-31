@@ -6,6 +6,103 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.5 — per-volume enrichment: ISBNs, Open Library, volume titles (2026-07-31)
+
+The integration the enrichment spike unblocked. `.research/volume-enrichment/verdict.md`
+is the ruling this was built to; the four increments below map onto its §2, §4 X.1 and
+§4 X.2, plus the title toggle.
+
+### What exists
+
+**The ISBN backfill (verdict §2).** `Volume.Isbn`, and the one-shot that fills it from
+the identifiers the import had been parsing and dropping since the first commit. Neither
+`ImportShelfWriter` nor `DesiredVolumeStateMerger` had ever read `ImportRow.Isbn`, so 73
+of them sat orphaned in staging. `ImportShelfWriter` now carries them forward, never
+overwriting one that is already there.
+
+**`IVolumeEnrichmentSource` + Open Library (verdict §4 X.2).** A new seam, because both
+existing ones are series-level by contract, and keyed on ISBN because that is the only
+key that works. The nightly sync calls it per volume, capped at 60 lookups per run.
+
+**`IIsbnCandidateSource` and two commands**, for the volumes with no ISBN at all:
+`isbn-discover` proposes into a review CSV, `isbn-apply` writes back what survives. Two
+commands because discovery guesses and a person has to read the guess.
+
+**`Volume.Title` and a shelf-wide toggle**, off by default, offered on the series page
+only where a volume actually has a title.
+
+**`SyncDiscrepancy` generalised** from `AniListValue`/`MangaUpdatesValue` to one
+`(source, value)` row per disagreeing source. This was a wall, not an inconvenience: the
+old shape could hold a disagreement between exactly two named sources, so a third could
+not be recorded at all.
+
+**`IConsoleCommand`**, a new seam: `dotnet run --project LnShelf/LnShelf.Api -- <name>`
+runs a one-shot and exits instead of serving. A backfill that runs once should not leave a
+permanent hole in the API surface.
+
+### What was proven, not assumed
+
+Everything below is from a copy of the live database and live Open Library calls.
+
+- **The backfill wrote 72 ISBNs**, matching brief E's per-series table exactly (86: 11,
+  Bookworm P1: 3, P2: 3, Overlord: 15, Slime: 14, Hero: 4, Tanya: 13, Torture: 9). The
+  second run wrote 0 and reported 72 already recorded.
+- **Two real sync runs**: 52 then 29 volumes enriched, **28 dates written, 56 titles, 44
+  covers** over 94 volumes, **0 failures**. The second run re-asked nothing already
+  complete and picked up the 13 the per-run cap had deferred.
+- **A cached cover serves**: 84 KB JPEG through the existing `/api/covers/{key}` route,
+  under `volume/openlibrary/{volumeId}.jpg` — a different prefix from
+  `override/volume/…`, so sync cannot name an override's key.
+- **The migration round-trips on real data.** All 23 existing discrepancies became 46
+  value rows, and `Down` put them back into the two columns intact. EF scaffolded the
+  DropColumn calls *first*, which would have destroyed them; the file is hand-ordered
+  create → copy → drop.
+- **Titles are better than the verdict expected.** It predicted `VolumeTile.Title` would
+  "stay null essentially forever". Real 86—EIGHTY-SIX volumes came back as "Run Through
+  the Battlefield", "Death, Be Not Proud", "Mist" — the light-novel lines do name their
+  volumes, Open Library's `full_title` carries it, and the caption now prints it.
+- **One defect found by running it, not by reading it.** `HttpClient.Timeout` also covers
+  the wait for a rate-limit permit, so at 12 requests a minute every queued lookup timed
+  out at 20 s and the first real sync failed outright. The Open Library client's timeout
+  is now infinite and the handler applies the request timeout itself, after the permit.
+  AniList and MangaUpdates are unaffected — at 90 and 60 a minute their waits are about a
+  second, which is why nothing had caught this.
+
+### Rulings made here
+
+- **A year is not a date.** Open Library's `publish_date` is free text and is often just
+  `"2022"`. Only a value naming a whole day becomes a `ReleaseDate`. This is why dates
+  landed on 28 volumes rather than the verdict's 63% of 72 — a real and deliberate
+  difference from brief E, which counted "has a `publish_date`" as a pass.
+- **A Japanese-market ISBN is skipped without asking.** Its record describes a Japanese
+  edition, whose date and art are both wrong on an English shelf entry. Checked from the
+  ISBN's registration group rather than the record's language, because the record may
+  state no language at all — Slime volume 1's Japanese ISBN resolves to a *French*
+  edition with an empty `languages` field, which is now a captured fixture.
+- **[flagged] The volume tile falls back to the series cover** when a volume has none of
+  its own. At 47% real cover coverage a grid alternating art and placeholders reads as
+  broken. It is one line in `SeriesDetailProjection`, and design.md's coverless tile is
+  still what a series with no art at all renders — but design.md does specify the
+  coverless tile as a state, so this is the ruling most worth vetoing.
+- **The enrichment retry is deliberate and it costs about 45 requests a night.** A volume
+  that is still missing a date, a cover or a title is re-asked, because Open Library's
+  catalogue grows. A volume with all three is never asked again.
+
+### What the next session needs to know
+
+- **`docs/isbn-review.csv` is generated and waiting for a human.** 8 owned volumes have no
+  ISBN; discovery proposed 1 — Overlord vol 16 as `9781975367800`, Yen On, exactly the gap
+  brief E named. The other 7 returned no Open Library result at all. Nothing has been
+  applied: run `isbn-apply --in docs/isbn-review.csv` after reviewing it.
+- **The shelf has no Berserk.** Brief E's "~50 owned volumes without an ISBN" assumed its
+  42 volumes were present; the live database has 8 series, 80 owned volumes, and 8 gaps.
+- **No `ReleaseDate` discrepancy has occurred yet** on real data — every date found was in
+  the past. The conflict path is covered by tests, not by observation.
+- Still unbuilt and still backlog: the discrepancy review UI (now 4 waiting), Google
+  Books pending its one API-key check, and forward-looking dates, which need a publisher.
+
+---
+
 ## Phase 3.4 — rows view, tick strip, volume-tile captions (2026-07-31)
 
 **Goal:** a second library view, a second series-detail view, one new shared

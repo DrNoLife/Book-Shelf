@@ -202,18 +202,10 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AniListValue")
-                        .HasMaxLength(400)
-                        .HasColumnType("character varying(400)");
-
                     b.Property<string>("Field")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
-
-                    b.Property<string>("MangaUpdatesValue")
-                        .HasMaxLength(400)
-                        .HasColumnType("character varying(400)");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
@@ -246,12 +238,42 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("sync_discrepancy", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancyValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("SyncDiscrepancyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SyncDiscrepancyId");
+
+                    b.ToTable("sync_discrepancy_value", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncRun", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<int>("DatesMoved")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EnrichmentFailures")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EnrichmentGaps")
                         .HasColumnType("integer");
 
                     b.Property<int>("Failures")
@@ -276,6 +298,12 @@ namespace LnShelf.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("VolumeCoversCached")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VolumesEnriched")
+                        .HasColumnType("integer");
 
                     b.Property<int>("VolumesMarkedReleased")
                         .HasColumnType("integer");
@@ -311,6 +339,9 @@ namespace LnShelf.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("ShowVolumeTitles")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("VolumeView")
                         .IsRequired()
@@ -458,6 +489,10 @@ namespace LnShelf.Api.Migrations
                     b.Property<bool>("IsReleased")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Isbn")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<int>("Number")
                         .HasColumnType("integer");
 
@@ -466,6 +501,10 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<Guid>("SeriesId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
 
                     b.HasKey("Id");
 
@@ -547,6 +586,15 @@ namespace LnShelf.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancyValue", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", null)
+                        .WithMany("Values")
+                        .HasForeignKey("SyncDiscrepancyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.SeriesUserState", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", null)
@@ -584,6 +632,11 @@ namespace LnShelf.Api.Migrations
                     b.Navigation("Candidates");
 
                     b.Navigation("Rows");
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", b =>
+                {
+                    b.Navigation("Values");
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncRun", b =>

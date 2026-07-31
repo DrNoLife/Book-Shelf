@@ -14,4 +14,13 @@ public sealed record DesiredVolumeState
     public required bool Owned { get; init; }
     public OwnedFormat? OwnedFormat { get; init; }
     public DateOnly? ReadAt { get; init; }
+
+    /// <summary>
+    /// The ISBN of the edition the export named, normalised. Null when the export
+    /// gave none — which is how three of the real file's 76 rows arrive.
+    /// </summary>
+    // Carried through the merge rather than read straight off the row, because the
+    // merge is where two editions of one volume meet and one of the two ISBNs has to
+    // win.
+    public string? Isbn { get; init; }
 }

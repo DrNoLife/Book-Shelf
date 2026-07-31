@@ -19,10 +19,38 @@
   text-align: left;
 }
 
-.cell--number { grid-area: number; }
+/* With titles on, the number column has to carry a publisher's full title as well as
+   the number, so it takes its width from the state column instead of truncating at 82px.
+   Both selectors again, for the same reason as above. */
+.list--titled .list__head,
+.list--titled .row {
+  grid-template-columns: minmax(150px, 1.7fr) minmax(0, 1fr) 116px 96px;
+}
+
+.cell--number {
+  grid-area: number;
+
+  /* Baseline-aligned so the title sits on the number's line rather than beside its box,
+     and min-width so the title can ellipsise instead of widening the column. */
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
 .cell--state { grid-area: state; }
 .cell--date { grid-area: date; }
 .cell--owned { grid-area: owned; }
+
+/* Quieter than the number, and ellipsised rather than wrapped: a row is one line. */
+.row__title {
+  overflow: hidden;
+  color: var(--faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row:hover:not(:disabled) .row__title { color: var(--muted); }
 
 .list__head {
   padding: 0 8px 7px;
@@ -103,5 +131,15 @@
       "number state"
       "date   owned";
     gap: 4px 12px;
+  }
+
+  /* A title gets the whole first line at phone width; 82px cannot hold one, and folding
+     it under the number would put it over the date. */
+  .list--titled .row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "number number"
+      "state  state"
+      "date   owned";
   }
 }

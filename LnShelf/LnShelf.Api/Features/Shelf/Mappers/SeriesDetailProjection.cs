@@ -16,7 +16,7 @@ public static class SeriesDetailProjection
 
         var volumes = series.Volumes
             .OrderBy(volume => volume.Number)
-            .Select(volume => ToVolume(volume, today))
+            .Select(volume => ToVolume(volume, today, series.CoverObjectKey))
             .ToList();
 
         return new SeriesDetailResponse
@@ -48,7 +48,10 @@ public static class SeriesDetailProjection
         };
     }
 
-    public static VolumeResponse ToVolume(Volume volume, DateOnly today)
+    /// <param name="seriesCoverObjectKey">
+    /// The series' own art, used only when this volume has none of its own.
+    /// </param>
+    public static VolumeResponse ToVolume(Volume volume, DateOnly today, string? seriesCoverObjectKey = null)
     {
         ArgumentNullException.ThrowIfNull(volume);
 
@@ -60,6 +63,7 @@ public static class SeriesDetailProjection
             VolumeId = volume.Id,
             Number = volume.Number,
             ReleaseDate = volume.ReleaseDate,
+            Title = volume.Title,
 
             // The same three grounds as the library card's Published.
             IsOut = (volume.ReleaseDate is not null && volume.ReleaseDate <= today)
@@ -72,9 +76,15 @@ public static class SeriesDetailProjection
             ReadAt = state?.ReadAt,
             PurchasePrice = state?.PurchasePrice,
 
-            // A user-supplied cover always wins over synced art, and sync never
-            // replaces it (CLAUDE.md — Cover overrides are user data).
-            CoverObjectKey = state?.CoverOverrideObjectKey ?? volume.CoverObjectKey,
+            // Three grounds in precedence order: a user-supplied cover always wins and
+            // sync never replaces it (CLAUDE.md — Cover overrides are user data), then
+            // this volume's own synced art, then the series' cover as a fallback.
+            //
+            // The fallback exists because per-volume art is measured at 63% coverage:
+            // without it a grid alternates real covers and empty placeholders, which
+            // reads as broken rather than as partial. design.md's coverless tile is
+            // still what a series with no art at all renders.
+            CoverObjectKey = state?.CoverOverrideObjectKey ?? volume.CoverObjectKey ?? seriesCoverObjectKey,
             HasCoverOverride = state?.CoverOverrideObjectKey is not null,
             IsLocalOnly = volume.IsLocalOnly,
         };

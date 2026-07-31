@@ -13,11 +13,21 @@ public sealed record SyncSummaryResponse
 
     public required int SeriesRefreshed { get; init; }
     public required int SeriesLinked { get; init; }
-    /// <summary>Structurally zero: no source publishes per-volume dates.</summary>
+
+    /// <summary>Volumes whose release date was written or moved.</summary>
     public required int DatesMoved { get; init; }
 
     /// <summary>Volumes the release source confirmed are in print.</summary>
     public required int VolumesMarkedReleased { get; init; }
+
+    /// <summary>Volumes an enrichment source had a record for.</summary>
+    public required int VolumesEnriched { get; init; }
+
+    /// <summary>Volume covers fetched and stored locally by this run.</summary>
+    public required int VolumeCoversCached { get; init; }
+
+    /// <summary>Volumes looked up whose ISBN no enrichment source has a record for.</summary>
+    public required int EnrichmentGaps { get; init; }
 
     public required int NewVolumes { get; init; }
     public required int Failures { get; init; }
@@ -41,8 +51,11 @@ public sealed record SyncDiscrepancyResponse
     public required Guid SeriesId { get; init; }
     public required string SeriesTitle { get; init; }
     public required SyncDiscrepancyField Field { get; init; }
-    public string? AniListValue { get; init; }
-    public string? MangaUpdatesValue { get; init; }
+
+    /// <summary>What each disagreeing source said, in the order the run recorded them.</summary>
+    // A list rather than one field per source: the shelf now takes metadata from three
+    // sources and a named-column-per-source shape could only ever hold two.
+    public required IReadOnlyList<SourcedValueResponse> Values { get; init; }
 
     /// <summary>Null means unresolved — waiting for a person.</summary>
     public MetadataSourceName? ResolvedWith { get; init; }
@@ -51,4 +64,21 @@ public sealed record SyncDiscrepancyResponse
     public string? Note { get; init; }
 
     public bool NeedsReview => ResolvedWith is null;
+
+    /// <summary>
+    /// The disagreement as one clause: "AniList says 18, MangaUpdates says 16".
+    /// </summary>
+    // Here rather than in the client, because the sentence is the same wherever it is
+    // printed and the review UI (backlog item 2) will want the identical wording.
+    public string Disagreement =>
+        string.Join(", ", Values.Select(value => $"{value.Source} says {value.Value ?? "nothing"}"));
+}
+
+/// <summary>One source's side of a disagreement.</summary>
+public sealed record SourcedValueResponse
+{
+    public required MetadataSourceName Source { get; init; }
+
+    /// <summary>Null when the source's answer was "nothing" — itself a position.</summary>
+    public string? Value { get; init; }
 }

@@ -83,6 +83,66 @@ public sealed class DesiredVolumeStateMergerTests
             .OwnedFormat.ShouldBeNull();
 
     [Fact]
+    public void Merge_ARowWithAnIsbn_CarriesItThrough()
+    {
+        // The identifier the export gave: parsed since the first import, and dropped
+        // on the floor until now (the enrichment verdict, §2).
+        var group = CreateGroup("Overlord", [3], isbn: "9780316363983");
+
+        DesiredVolumeStateMerger.Merge([group])[3].Isbn.ShouldBe("9780316363983");
+    }
+
+    [Theory]
+    [InlineData("978-1-9753-0117-0", "9781975301170")]
+    [InlineData(" 9781975301170 ", "9781975301170")]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+
+    // StoryGraph's "ISBN/UID" column is also where it puts its own ids for books that
+    // have no ISBN. Storing one would buy a lookup that can only 404.
+    [InlineData("f5a1c0de-0000-4000-8000-000000000000", null)]
+    public void Merge_AnIsbnTheExportWroteLoosely_IsNormalisedOrRefused(string? raw, string? expected)
+    {
+        var group = CreateGroup("Overlord", [3], isbn: raw);
+
+        DesiredVolumeStateMerger.Merge([group])[3].Isbn.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Merge_OneVolumeInTwoEditions_KeepsTheEnglishIsbn()
+    {
+        // The real Slime shape: one volume listed twice, once per edition. Japanese
+        // registration group 4 against Yen On's 978-1.
+        var english = CreateGroup("Slime", [1], isbn: "9781975301118");
+        var japanese = CreateGroup("転生したらスライムだった件", [1], isbn: "9784896374599");
+
+        DesiredVolumeStateMerger.Merge([english, japanese])[1].Isbn.ShouldBe("9781975301118");
+        DesiredVolumeStateMerger.Merge([japanese, english])[1].Isbn.ShouldBe("9781975301118");
+    }
+
+    [Fact]
+    public void Merge_OneVolumeWhereOnlyOneEditionHasAnIsbn_KeepsTheOneThereIs()
+    {
+        // Also real: the Japanese Slime volume 15 row has a blank ISBN cell.
+        var english = CreateGroup("Slime", [15], isbn: "9781646599387");
+        var japanese = CreateGroup("転生したらスライムだった件", [15]);
+
+        DesiredVolumeStateMerger.Merge([english, japanese])[15].Isbn.ShouldBe("9781646599387");
+        DesiredVolumeStateMerger.Merge([japanese, english])[15].Isbn.ShouldBe("9781646599387");
+    }
+
+    [Fact]
+    public void Merge_OneVolumeInTwoJapaneseEditions_KeepsOneOfThem()
+    {
+        // There is no English edition to prefer, so the rule has nothing to say and
+        // must not drop the identifier the shelf does have.
+        var first = CreateGroup("転生したらスライムだった件", [1], isbn: "9784896374599");
+        var second = CreateGroup("Tensei shitara Slime Datta Ken", [1], isbn: "9784896375954");
+
+        DesiredVolumeStateMerger.Merge([first, second])[1].Isbn.ShouldNotBeNull();
+    }
+
+    [Fact]
     public void Merge_ABookWithNoVolumeNumber_BecomesVolumeOne()
     {
         var group = CreateGroup("Vesten mod vesten", []);
@@ -126,7 +186,8 @@ public sealed class DesiredVolumeStateMergerTests
     private static ImportGroup CreateGroup(
         string seriesTitle,
         int[] volumeNumbers,
-        bool treatReadAsOwned = true)
+        bool treatReadAsOwned = true,
+        string? isbn = null)
     {
         var group = new ImportGroup
         {
@@ -147,6 +208,7 @@ public sealed class DesiredVolumeStateMergerTests
                 ReadStatus = ReadStatus.Read,
                 OwnedInExport = false,
                 OwnedFormat = OwnedFormat.Digital,
+                Isbn = isbn,
             });
         }
 

@@ -54,7 +54,9 @@ public sealed class SeriesDetailQueryService(LnShelfDbContext dbContext, TimePro
             return null;
         }
 
-        var volumes = related.Volumes.Select(volume => SeriesDetailProjection.ToVolume(volume, today)).ToList();
+        var volumes = related.Volumes
+            .Select(volume => SeriesDetailProjection.ToVolume(volume, today, related.CoverObjectKey))
+            .ToList();
 
         return new SeriesRelationResponse
         {

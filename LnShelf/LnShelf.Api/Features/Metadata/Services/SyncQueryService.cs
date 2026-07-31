@@ -7,7 +7,7 @@ public sealed class SyncQueryService(LnShelfDbContext dbContext) : ISyncQuerySer
     {
         var run = await dbContext.SyncRuns
             .AsNoTracking()
-            .Include(candidate => candidate.Discrepancies)
+            .Include(candidate => candidate.Discrepancies).ThenInclude(discrepancy => discrepancy.Values)
             .OrderByDescending(candidate => candidate.StartedAt)
             .FirstOrDefaultAsync(cancellationToken);
 

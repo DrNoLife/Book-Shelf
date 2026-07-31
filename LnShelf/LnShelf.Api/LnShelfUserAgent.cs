@@ -9,4 +9,15 @@ namespace LnShelf.Api;
 public static class LnShelfUserAgent
 {
     public const string Value = "LnShelf/1.0 (self-hosted shelf tracker)";
+
+    /// <summary>
+    /// The contactable form, for sources whose docs ask for one.
+    /// </summary>
+    // Open Library asks callers to identify themselves with a way to reach them, and a
+    // donated catalogue is entitled to know who is reading it. The address comes from
+    // configuration rather than from here, so it is changeable without a rebuild.
+    public static string WithContact(string? contactEmail) =>
+        string.IsNullOrWhiteSpace(contactEmail)
+            ? Value
+            : $"LnShelf/1.0 (contact: {contactEmail.Trim()})";
 }

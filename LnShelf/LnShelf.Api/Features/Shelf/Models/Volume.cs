@@ -31,6 +31,42 @@ public sealed class Volume
     // inventing one to fit the existing column would be fabricating data.
     public bool IsReleased { get; set; }
 
+    /// <summary>
+    /// The ISBN of the edition this volume stands for, when one is known. Null is
+    /// the norm — most volumes reach the shelf from a volume count.
+    /// </summary>
+    // Source metadata, not a derived state, so it sits beside ReleaseDate and
+    // IsReleased rather than under the "computed, never stored" rule. The written
+    // justification feature-spec §5 asks of a stored field:
+    //
+    // It is the only key that per-volume enrichment works by. Open Library answers
+    // GET /isbn/{isbn}.json with the one correct English edition; the same catalogue
+    // searched by title answers with Japanese editions and omnibuses (measured:
+    // .research/volume-enrichment/e-isbn-first-pipeline.md — 63% strict pass by ISBN,
+    // 0 of 7 clean resolutions by title). It cannot be derived from series + number,
+    // which is exactly why it has to be kept: it arrives once, from a StoryGraph
+    // export or a discovery pass, and every later lookup depends on still having it.
+    //
+    // Distinct from ExternalId on purpose. That column is AniList's own volume
+    // identity; putting a second source's identifier in it would mean two sources
+    // sharing one field and neither being able to say which id it holds.
+    public string? Isbn { get; set; }
+
+    /// <summary>
+    /// This volume's own title, when a source supplies one. Null when nothing has
+    /// enriched it, which is most volumes.
+    /// </summary>
+    // Plain synced metadata, the same class of fact as ReleaseDate, so it needs no
+    // special justification under the "derived states are computed, never stored" rule:
+    // it is Open Library's full_title for the edition behind Isbn, and there is nothing
+    // to derive it from.
+    //
+    // Expected to stay null far more often than not, and that is the design rather than
+    // a shortfall — light-novel lines name their volumes "Volume N", which is the number
+    // the caption already prints. The tile's Title parameter was built optional for
+    // exactly this reason and invents nothing when it is absent.
+    public string? Title { get; set; }
+
     public string? CoverObjectKey { get; set; }
 
     /// <summary>Null exactly when <see cref="IsLocalOnly"/> is true.</summary>

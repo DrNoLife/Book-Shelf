@@ -5,11 +5,24 @@ public sealed class SeriesSyncService(
     LnShelfDbContext dbContext,
     IReleaseSourceMatcher releaseSourceMatcher,
     IReleaseSource releaseSource,
+    VolumeEnrichmentService volumeEnrichment,
+    IVolumeEnrichmentSource enrichmentSource,
+    IOptions<OpenLibraryOptions> enrichmentOptions,
     TimeProvider timeProvider,
     ILogger<SeriesSyncService> logger) : ISeriesSyncService
 {
+    /// <summary>
+    /// Per-volume lookups left in this run. A cap on the whole run, not per series.
+    /// </summary>
+    // Enrichment re-asks about the volumes it failed on, because the catalogue grows —
+    // which makes an uncapped run able to spend an hour on gaps against somebody else's
+    // donated API. The run takes a bite and leaves the rest for tomorrow.
+    private int _lookupBudget;
+
     public async Task<SyncRun> RunAsync(CancellationToken cancellationToken)
     {
+        _lookupBudget = enrichmentOptions.Value.MaximumLookupsPerRun;
+
         var run = new SyncRun
         {
             Id = Guid.CreateVersion7(),
@@ -80,16 +93,38 @@ public sealed class SeriesSyncService(
             ? await releaseSource.GetSeriesAsync(externalId, cancellationToken)
             : await LinkAsync(series, run, linkedExternalIds, cancellationToken);
 
+        // Enrichment runs whether or not the release source had anything to say: it reads
+        // per-volume ISBNs, which have nothing to do with whether this series is linked.
+        // Ordered after the count so a volume the count just created can be enriched in
+        // the same run.
+        if (info is not null)
+        {
+            ApplyVolumeCount(series, info, run);
+        }
+
+        await EnrichVolumesAsync(series, run, cancellationToken);
+
         if (info is null)
         {
             return;
         }
 
-        ApplyVolumeCount(series, info, run);
-
         // Metadata only. Nothing in this method touches SeriesUserState or
         // VolumeUserState — sync never writes user state (CLAUDE.md).
         series.LastSyncedAt = timeProvider.GetUtcNow();
+    }
+
+    private async Task EnrichVolumesAsync(Series series, SyncRun run, CancellationToken cancellationToken)
+    {
+        if (_lookupBudget <= 0)
+        {
+            return;
+        }
+
+        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
+
+        _lookupBudget -= await volumeEnrichment.EnrichAsync(
+            series, run, today, _lookupBudget, cancellationToken);
     }
 
     private async Task<ReleaseSeriesInfo?> LinkAsync(
@@ -110,11 +145,13 @@ public sealed class SeriesSyncService(
                 SeriesId = series.Id,
                 SeriesTitle = series.TitleEnglish,
                 Field = SyncDiscrepancyField.SeriesLink,
-                AniListValue = series.TitleEnglish,
-                MangaUpdatesValue = match.Score is { } score ? $"best match scored {score}" : null,
                 ResolvedWith = null,
                 Note = $"{match.Outcome}: {match.Explanation}",
-            });
+            }
+                .Says(MetadataSourceName.AniList, series.TitleEnglish)
+                .Says(
+                    MetadataSourceName.MangaUpdates,
+                    match.Score is { } score ? $"best match scored {score}" : null));
 
             return null;
         }
@@ -155,11 +192,11 @@ public sealed class SeriesSyncService(
             SeriesId = series.Id,
             SeriesTitle = series.TitleEnglish,
             Field = SyncDiscrepancyField.VolumeCount,
-            AniListValue = trackedCount.ToString(CultureInfo.InvariantCulture),
-            MangaUpdatesValue = sourceCount.ToString(CultureInfo.InvariantCulture),
             ResolvedWith = MetadataSourceName.AniList,
             Note = $"MangaUpdates status: {info.RawStatus}",
-        });
+        }
+            .Says(MetadataSourceName.AniList, trackedCount.ToString(CultureInfo.InvariantCulture))
+            .Says(MetadataSourceName.MangaUpdates, sourceCount.ToString(CultureInfo.InvariantCulture)));
 
         if (sourceCount <= trackedCount)
         {
@@ -239,19 +276,42 @@ public sealed class SeriesSyncService(
             parts.Add($"{run.VolumesMarkedReleased} volumes confirmed in print");
         }
 
+        if (run.VolumesEnriched > 0)
+        {
+            parts.Add($"{run.VolumesEnriched} volumes enriched from {enrichmentSource.SourceName}");
+        }
+
+        if (run.DatesMoved > 0)
+        {
+            parts.Add($"{run.DatesMoved} dates written");
+        }
+
+        if (run.VolumeCoversCached > 0)
+        {
+            parts.Add($"{run.VolumeCoversCached} volume covers cached");
+        }
+
+        if (run.EnrichmentGaps > 0)
+        {
+            // Reported, not hidden: enriching 12 of 20 volumes is the honest number, and
+            // a footer that printed only the 12 would read as though it had done all 20.
+            parts.Add($"{run.EnrichmentGaps} volumes not in {enrichmentSource.SourceName}");
+        }
+
         if (run.Discrepancies.Count > 0)
         {
             parts.Add($"{run.Discrepancies.Count} to review");
         }
 
-        if (run.Failures > 0)
+        if (run.Failures + run.EnrichmentFailures > 0)
         {
-            parts.Add($"{run.Failures} failed");
+            parts.Add($"{run.Failures + run.EnrichmentFailures} failed");
         }
 
-        // Said out loud rather than left as a mystery: the shelf knows what is in
-        // print but not when it arrived, and the footer should not imply otherwise.
-        parts.Add($"counts only — {releaseSource.SourceName} publishes no dates");
+        // Said out loud rather than left as a mystery: the release source's word is a
+        // count, dates only reach the volumes whose ISBN is known, and the footer should
+        // not imply the shelf knows more than that.
+        parts.Add($"{releaseSource.SourceName} counts only; dates where an ISBN is known");
 
         return string.Join(" · ", parts);
     }

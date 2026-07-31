@@ -34,15 +34,20 @@ public static class CoversFeatureExtensions
             // Stateless; the options it reads are the only thing it holds.
             services.AddSingleton<CoverNormalizer>();
 
-            // A plain client on its own: cover bytes come from AniList's CDN, not
-            // its GraphQL API, so they must not spend the 90-per-minute query
-            // budget the rate-limit handler protects.
-            services.AddHttpClient<ICoverCache, AniListCoverCache>((provider, httpClient) =>
+            // A plain client on its own: cover bytes come from a CDN, not from any of
+            // the metadata APIs, so they must not spend the query budgets the
+            // rate-limit handlers protect.
+            services.AddHttpClient<CoverFetcher>((provider, httpClient) =>
             {
                 var covers = provider.GetRequiredService<IOptions<CoverStoreOptions>>().Value;
                 httpClient.Timeout = covers.FetchTimeout;
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
             });
+
+            // Both caches are key-builders over the one fetcher: the series cover keyed
+            // on an AniList media id, a volume's synced art keyed on the volume.
+            services.AddScoped<ICoverCache, AniListCoverCache>();
+            services.AddScoped<IVolumeCoverCache, VolumeCoverCache>();
 
             return services;
         }

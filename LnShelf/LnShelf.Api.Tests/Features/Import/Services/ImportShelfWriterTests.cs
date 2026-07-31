@@ -183,6 +183,80 @@ public sealed class ImportShelfWriterTests
     }
 
     [Fact]
+    public async Task ApplyAsync_RowsCarryingAnIsbn_RecordItOnTheVolume()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([3], isbn: "978-0-316-36398-3")],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        var volume = await dbContext.Volumes.SingleAsync(candidate => candidate.Number == 3);
+        volume.Isbn.ShouldBe("9780316363983");
+
+        // Only the volume the row named. The other 17 came from a volume count, which
+        // says nothing about editions.
+        (await dbContext.Volumes.CountAsync(candidate => candidate.Isbn != null)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ASecondImportWithoutIsbns_KeepsTheOneAlreadyRecorded()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([3], isbn: "9780316363983")],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        // The same export re-cut without the ISBN column, or a different export
+        // covering the same volume. Neither is grounds for erasing the identifier.
+        await writer.ApplyAsync(
+            AniListId, [CreateGroup([3])], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        (await dbContext.Volumes.SingleAsync(candidate => candidate.Number == 3))
+            .Isbn.ShouldBe("9780316363983");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ASecondImportNamingAnotherEdition_DoesNotReplaceTheFirst()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([3], isbn: "9780316363983")],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([3], isbn: "9784041052853")],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        // First one wins. Two editions of one volume is not a conflict worth churning
+        // a lookup key over, and the shelf tracks one edition per volume.
+        (await dbContext.Volumes.SingleAsync(candidate => candidate.Number == 3))
+            .Isbn.ShouldBe("9780316363983");
+    }
+
+    [Fact]
     public async Task ApplyAsync_TheSourceHasForgottenTheSeries_Throws()
     {
         await using var dbContext = CreateDbContext();
@@ -231,7 +305,8 @@ public sealed class ImportShelfWriterTests
     private static ImportGroup CreateGroup(
         int[] volumeNumbers,
         ReadStatus readStatus = ReadStatus.Read,
-        bool treatReadAsOwned = true)
+        bool treatReadAsOwned = true,
+        string? isbn = null)
     {
         var group = new ImportGroup
         {
@@ -255,6 +330,7 @@ public sealed class ImportShelfWriterTests
                 OwnedInExport = false,
                 OwnedFormat = OwnedFormat.Digital,
                 ReadAt = new DateOnly(2022, 3, 12),
+                Isbn = isbn,
             });
         }
 

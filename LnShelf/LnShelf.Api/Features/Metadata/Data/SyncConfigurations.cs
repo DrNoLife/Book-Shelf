@@ -37,13 +37,34 @@ public sealed class SyncDiscrepancyConfiguration : IEntityTypeConfiguration<Sync
             .HasConversion<string>().HasMaxLength(32);
 
         builder.Property(discrepancy => discrepancy.SeriesTitle).HasMaxLength(400).IsRequired();
-        builder.Property(discrepancy => discrepancy.AniListValue).HasMaxLength(400);
-        builder.Property(discrepancy => discrepancy.MangaUpdatesValue).HasMaxLength(400);
         builder.Property(discrepancy => discrepancy.Note).HasMaxLength(1000);
 
         // Deliberately no foreign key to Series: a discrepancy outlives the series
         // it was recorded against, and cascading it away with a deleted series would
         // erase the record of why the shelf looked the way it did.
         builder.HasIndex(discrepancy => discrepancy.SeriesId);
+
+        builder.HasMany(discrepancy => discrepancy.Values)
+            .WithOne()
+            .HasForeignKey(value => value.SyncDiscrepancyId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class SyncDiscrepancyValueConfiguration : IEntityTypeConfiguration<SyncDiscrepancyValue>
+{
+    public void Configure(EntityTypeBuilder<SyncDiscrepancyValue> builder)
+    {
+        builder.ToTable("sync_discrepancy_value");
+        builder.HasKey(value => value.Id);
+        builder.Property(value => value.Id).ValueGeneratedNever();
+
+        builder.Property(value => value.Source)
+            .HasConversion<string>().HasMaxLength(32).IsRequired();
+
+        builder.Property(value => value.Value).HasMaxLength(400);
+
+        // Always read with its discrepancy, never on its own.
+        builder.HasIndex(value => value.SyncDiscrepancyId);
     }
 }

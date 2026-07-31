@@ -22,6 +22,12 @@ public sealed record PreferencesResponse
     /// </summary>
     public required VolumeView VolumeView { get; init; }
 
+    /// <summary>
+    /// Whether a volume's own title is printed in its caption where one exists. Off by
+    /// default — most volumes are named "Volume N", which the caption already says.
+    /// </summary>
+    public required bool ShowVolumeTitles { get; init; }
+
     /// <summary>The library's opinionated default filter (§4.6).</summary>
     public required LibraryFilter DefaultLibraryFilter { get; init; }
 }
@@ -33,5 +39,6 @@ public sealed record UpdatePreferencesRequest
     public LibrarySort? LibrarySort { get; init; }
     public LibraryView? LibraryView { get; init; }
     public VolumeView? VolumeView { get; init; }
+    public bool? ShowVolumeTitles { get; init; }
     public LibraryFilter? DefaultLibraryFilter { get; init; }
 }

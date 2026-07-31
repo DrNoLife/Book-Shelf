@@ -23,6 +23,15 @@ public sealed class UserPreferences
     /// <summary>The series-detail default; a series may override it.</summary>
     public VolumeView VolumeView { get; set; } = VolumeView.Tiles;
 
+    /// <summary>
+    /// Whether a volume's own title is printed in its caption where one exists.
+    /// </summary>
+    // Off by default, and deliberately: light-novel lines mostly name their volumes
+    // "Volume N", so on most of the shelf this adds a second copy of the number the
+    // caption already prints. It earns its place on the series where the publisher gave
+    // the volumes real names, which is the user's judgement to make and not a default's.
+    public bool ShowVolumeTitles { get; set; }
+
     /// <summary>Behind is the opinionated default (§4.6).</summary>
     public LibraryFilter DefaultLibraryFilter { get; set; } = LibraryFilter.Behind;
 }

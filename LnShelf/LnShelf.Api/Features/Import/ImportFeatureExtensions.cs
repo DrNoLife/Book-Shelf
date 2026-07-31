@@ -1,4 +1,6 @@
+using LnShelf.Api.Commands;
 using LnShelf.Api.Features.Import.Abstractions;
+using LnShelf.Api.Features.Import.Commands;
 using LnShelf.Api.Features.Import.Models;
 using LnShelf.Api.Features.Import.Services;
 
@@ -25,6 +27,10 @@ public static class ImportFeatureExtensions
             services.AddScoped<ImportShelfWriter>();
             services.AddScoped<IImportQueryService, ImportQueryService>();
             services.AddScoped<IImportCommandService, ImportCommandService>();
+
+            // The one-shot that collects the ISBNs earlier imports parsed and dropped.
+            services.AddScoped<IsbnBackfillService>();
+            services.AddScoped<IConsoleCommand, IsbnBackfillCommand>();
 
             return services;
         }

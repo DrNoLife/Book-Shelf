@@ -43,6 +43,15 @@ public sealed class SeriesDetailProjectionTests
     [InlineData(null, false, true, true)]  // the release source says it is in print
     [InlineData(null, true, false, true)]  // owned, so it must be out
     [InlineData(null, false, false, false)] // nothing known
+
+    // Both at once, which is what per-volume enrichment made possible and what nothing
+    // exercised before it. A date in the past agrees with the flag; a date in the future
+    // contradicts it, and the flag still decides, because the formula is disjunctive by
+    // design. The contradiction is the sync's to record, not this projection's to resolve.
+    [InlineData(-1, false, true, true)]    // dated in the past and in print
+    [InlineData(-1, true, true, true)]     // …and owned
+    [InlineData(30, false, true, true)]    // dated in the future but in print
+    [InlineData(30, true, true, true)]     // …and owned
     public void ToVolume_IsOut_UsesTheSameThreeGroundsAsTheLibraryCard(
         int? releaseDaysFromToday, bool owned, bool isReleased, bool expectedIsOut)
     {
@@ -63,11 +72,19 @@ public sealed class SeriesDetailProjectionTests
     {
         // The two projections are separate code, so this is the test that stops them
         // drifting: a tile and the card above it must never disagree about what is out.
+        // Volumes 4 and 5 are the enrichment cases: a past date and a future date, both on
+        // volumes the release source has marked in print.
         var series = CreateSeries(
             (1, null, true, ReadStatus.Read, null),
             (2, null, true, ReadStatus.Unread, null),
-            (3, null, false, ReadStatus.Unread, null));
-        series.Volumes.Single(volume => volume.Number == 3).IsReleased = true;
+            (3, null, false, ReadStatus.Unread, null),
+            (4, -30, false, ReadStatus.Unread, null),
+            (5, 120, false, ReadStatus.Unread, null));
+
+        foreach (var number in (int[])[3, 4, 5])
+        {
+            series.Volumes.Single(volume => volume.Number == number).IsReleased = true;
+        }
 
         var detail = SeriesDetailProjection.ToDetail(series, Today);
         var card = LibraryCardProjection.ToCard(Today).Compile()(series);

@@ -177,10 +177,17 @@ from writes** — command/query separation at the service boundary.
 - **Cover overrides are user data.** Any cover is a drop target — a
   user-provided image is stored locally as an override and always wins over
   synced art. Sync never replaces or deletes an override.
-- **Conflicting sources are expected**, not exceptional. When AniList and
-  MangaUpdates disagree on volume count or dates, prefer MangaUpdates for
-  release dates, AniList for everything else, and record the discrepancy in the
-  sync log rather than silently picking.
+- **Conflicting sources are expected**, not exceptional. There are three sources,
+  so the rule is a precedence list per field rather than a pairwise preference:
+  - **Release dates** — whichever source actually has one. A real per-volume date
+    (Open Library, by ISBN) wins *for display*; it never overrules
+    `Volume.IsReleased` about whether a volume is out. A **future** date on a
+    volume the count says is in print is a conflict: record it, write nothing.
+  - **Volume counts and publication status** — MangaUpdates.
+  - **Everything else** — AniList.
+  - Record the discrepancy in the sync log rather than silently picking. A
+    `SyncDiscrepancy` carries one `(source, value)` pair per disagreeing source,
+    so a fourth source needs no schema change.
 
 ---
 
@@ -315,9 +322,14 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Seam-first design.** Establish the interface now, even with one
   implementation, for known extension points: `ISeriesMetadataSource` (AniList
   today; another source tomorrow is a new implementation, not an edit),
-  `IReleaseSource` (MangaUpdates), `IShelfImporter` (StoryGraph CSV today,
+  `IReleaseSource` (MangaUpdates), `IVolumeEnrichmentSource` (Open Library, keyed
+  on ISBN — the two series-level seams cannot express "tell me about volume 7"),
+  `IIsbnCandidateSource` (the guess that feeds ISBN discovery, kept separate from
+  the seam that reads facts), `IShelfImporter` (StoryGraph CSV today,
   Goodreads or MAL export later), `IReleaseNotifier` (ntfy/Discord/email —
-  pick one for v1, seam stays). Name the seam when you introduce it.
+  pick one for v1, seam stays), `IConsoleCommand` (one-shot maintenance jobs, so a
+  backfill never becomes a permanent API endpoint). Name the seam when you
+  introduce it.
 - **Derived states are computed in queries, never stored.** *To buy*, *Backlog*,
   *Behind* fall out of read/owned/released — storing them creates sync bugs.
   The one sanctioned exception: `HasNewVolume`, which is last-visit
@@ -357,6 +369,12 @@ dotnet ef migrations add <Name> --project LnShelf/LnShelf.Api
 dotnet ef database update       --project LnShelf/LnShelf.Api
 
 docker compose up                                     # local infra (Postgres)
+
+# One-shot maintenance commands (Commands/IConsoleCommand.cs). A leading bare word
+# runs the job and exits instead of serving; migrations apply first either way.
+dotnet run --project LnShelf/LnShelf.Api -- isbn-backfill
+dotnet run --project LnShelf/LnShelf.Api -- isbn-discover --out ../../docs/isbn-review.csv
+dotnet run --project LnShelf/LnShelf.Api -- isbn-apply    --in  ../../docs/isbn-review.csv
 ```
 
 `dotnet ef` is a local tool — `dotnet tool restore` first.

@@ -2,7 +2,10 @@
    tiles are a wall rather than a shelf. Same state model, same menu — a row is the
    tile's information without its artwork. *@
 
-<ul class="list">
+@* The titled variant is a class on the list rather than on each row: the header and the
+   rows share one grid definition, and the column widths have to change together or a
+   label ends up over the wrong column. *@
+<ul class="list @(ShowTitles ? "list--titled" : null)">
 
     <li class="list__head" aria-hidden="true">
         <span class="cell cell--number eyebrow">Volume</span>
@@ -27,7 +30,16 @@
                     @onclick="args => OnClickAsync(args, volume)"
                     @onkeydown="args => OnKeyDownAsync(args, volume)">
 
-                <span class="cell cell--number tabular">Vol @volume.Number</span>
+                @* The title follows the number in the same cell, so a row with one and a
+                   row without keep every other column aligned. Nothing is printed when
+                   there is no title — no placeholder, no dash. *@
+                <span class="cell cell--number">
+                    <span class="tabular">Vol @volume.Number</span>
+                    @if (ShowTitles && !string.IsNullOrWhiteSpace(volume.Title))
+                    {
+                        <span class="row__title">@volume.Title</span>
+                    }
+                </span>
 
                 <span class="cell cell--state">
                     <span class="swatch"></span>

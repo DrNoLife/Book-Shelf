@@ -9,6 +9,15 @@ public partial class VolumeList
     [Parameter]
     public required IReadOnlyList<VolumeResponse> Volumes { get; set; }
 
+    /// <summary>
+    /// Whether to print each volume's own title beside its number.
+    /// </summary>
+    // A row has the width a tile's caption does not, so this is where a title is least
+    // cramped — but it is still the same preference, and the same volumes have nothing
+    // to print.
+    [Parameter]
+    public bool ShowTitles { get; set; }
+
     /// <summary>False while a write is in flight, so a double-click cannot race.</summary>
     [Parameter]
     public bool IsInteractive { get; set; } = true;

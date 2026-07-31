@@ -1,5 +1,6 @@
 global using System.Globalization;
 global using System.Linq.Expressions;
+global using System.Text;
 global using System.Text.Json;
 global using LnShelf.Api.Data;
 global using LnShelf.Api.Features.Covers.Abstractions;

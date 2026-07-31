@@ -15,6 +15,16 @@ public sealed class VolumeConfiguration : IEntityTypeConfiguration<Volume>
         builder.Property(volume => volume.ExternalId).HasMaxLength(100);
         builder.Property(volume => volume.CoverObjectKey).HasMaxLength(300);
 
+        // No index: enrichment reads a series' volumes and looks up each one's ISBN
+        // externally. Nothing queries the shelf *by* ISBN, so an index would be
+        // maintenance for no reader (data-access.md — no denormalisation until
+        // something is measurably slow).
+        builder.Property(volume => volume.Isbn).HasMaxLength(Isbn.MaximumLength);
+
+        // Generous, because it holds a publisher's own full_title: "That Time I Got
+        // Reincarnated As a Slime, Vol. 14 (light Novel)" is a real one.
+        builder.Property(volume => volume.Title).HasMaxLength(400);
+
         // Sync upserts key on (series, volume number), so re-running is safe.
         builder.HasIndex(volume => new { volume.SeriesId, volume.Number }).IsUnique();
 

@@ -103,6 +103,12 @@ public sealed class ImportShelfWriter(
             counters.LocalOnlyVolumesCreated++;
         }
 
+        // The export's own identifier for the edition, kept because it is the only key
+        // per-volume enrichment works by. Never overwritten: a re-import that has no
+        // ISBN for this volume must not erase the one already recorded, and a second
+        // export naming a different edition is not grounds for replacing the first.
+        volume.Isbn ??= desired.Isbn;
+
         volume.UserState ??= new VolumeUserState { VolumeId = volume.Id };
         var state = volume.UserState;
 
