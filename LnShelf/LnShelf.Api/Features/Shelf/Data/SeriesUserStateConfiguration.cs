@@ -10,6 +10,7 @@ public sealed class SeriesUserStateConfiguration : IEntityTypeConfiguration<Seri
         builder.Property(state => state.TrackingStatus).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(state => state.TitleLanguageOverride).HasConversion<string>().HasMaxLength(32);
         builder.Property(state => state.CoverSourceOverride).HasConversion<string>().HasMaxLength(32);
+        builder.Property(state => state.VolumeViewOverride).HasConversion<string>().HasMaxLength(32);
         builder.Property(state => state.Notes).HasMaxLength(4000);
     }
 }

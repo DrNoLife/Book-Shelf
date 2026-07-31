@@ -307,6 +307,16 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("LibraryView")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("VolumeView")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.HasKey("Id");
 
                     b.ToTable("user_preferences", (string)null);
@@ -417,6 +427,10 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<string>("TrackingStatus")
                         .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("VolumeViewOverride")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 

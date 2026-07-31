@@ -31,8 +31,6 @@
             <span class="tile__hatch"></span>
         }
 
-        <span class="tile__number tabular">@Volume.Number</span>
-
         @* --- second channels, per state --- *@
         @if (State is VolumeTileState.Read)
         {
@@ -62,8 +60,13 @@
        file is handed to it by script so both routes upload identically. *@
     <InputFile class="tile__file" @ref="_inputFile" OnChange="OnFileSelectedAsync" accept="image/*" tabindex="-1" aria-hidden="true" />
 
-    @if (Label is { } label)
-    {
-        <span class="tile__label">@label</span>
-    }
+    @* The caption, under the artwork rather than on it: the number, then whatever else
+       is true about this volume. Its height is reserved, so tiles with and without a
+       state label still line up (design.md — the caption line). *@
+    <span class="tile__caption @(Label is null ? null : "tile__caption--stated")">
+        <span class="tabular">Vol @Volume.Number</span>@foreach (var part in CaptionParts)
+        {
+            <span class="tile__caption-part"> · @part</span>
+        }
+    </span>
 </div>

@@ -117,10 +117,9 @@ public partial class SeriesHero
     };
 
     /// <summary>
-    /// A Saxo search built from title plus volume, client-side — the CTA design.md
-    /// specifies, with no affiliate plumbing behind it.
+    /// The CTA design.md specifies. The URL itself is built in one shared place, since
+    /// the library's rows view now prints the same link.
     /// </summary>
     private string SaxoSearchUrl(int volumeNumber) =>
-        "https://www.saxo.com/dk/products/search?query="
-        + Uri.EscapeDataString($"{Series.TitleEnglish} {volumeNumber}");
+        SaxoSearch.UrlFor(Series.TitleEnglish, volumeNumber);
 }

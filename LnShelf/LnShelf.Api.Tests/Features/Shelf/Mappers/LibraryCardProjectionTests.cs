@@ -309,6 +309,135 @@ public sealed class LibraryCardProjectionTests
         card.Behind.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// The rows view's tick strip is drawn from these, so they have to say the same
+    /// thing the counts do — one tick per volume, in number order, no gaps.
+    /// </summary>
+    [Fact]
+    public void ToCard_VolumeTicks_AgreeWithTheCountsAndAreInNumberOrder()
+    {
+        // The real Overlord shape again: 18 tracked, 16 in print, 16 owned, 15 read.
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+            UserState = new SeriesUserState { TrackingStatus = TrackingStatus.Reading },
+        };
+
+        // Added out of order on purpose: the strip reads left to right as volume 1
+        // onwards, whatever order the rows arrive in.
+        foreach (var number in (int[])[18, 3, 1, 2, 17, 16, .. Enumerable.Range(4, 12)])
+        {
+            series.Volumes.Add(new Volume
+            {
+                Id = Guid.CreateVersion7(),
+                Number = number,
+                IsReleased = number <= 16,
+                UserState = number <= 16
+                    ? new VolumeUserState
+                    {
+                        ReadStatus = number <= 15 ? ReadStatus.Read : ReadStatus.Unread,
+                        Owned = true,
+                    }
+                    : null,
+            });
+        }
+
+        var card = ToCard(series);
+
+        card.VolumeTicks.Count.ShouldBe(card.Tracked);
+        card.VolumeTicks.Select(tick => tick.Number).ShouldBe(Enumerable.Range(1, 18));
+
+        card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.Read).ShouldBe(card.Read);
+        card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.OwnedUnread).ShouldBe(1);
+        card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.ToBuy).ShouldBe(card.ToBuy);
+        card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.NotOut)
+            .ShouldBe(card.Tracked - card.Published);
+    }
+
+    [Theory]
+    [MemberData(nameof(VolumeStateMatrix))]
+    public void ToCard_EveryVolumeState_ProducesExactlyOneTickThatMatchesThePublishedCount(
+        ReadStatus? readStatus,
+        bool owned,
+        int? releaseDaysFromToday,
+        int expectedRead,
+        int expectedOwned,
+        int expectedPublished,
+        int expectedToBuy,
+        int expectedBacklog,
+        bool expectedBehind)
+    {
+        var card = ToCard(CreateSeriesWithOneVolume(readStatus, owned, releaseDaysFromToday));
+        var tick = card.VolumeTicks.ShouldHaveSingleItem();
+
+        // The tick's own IsOut is the card's Published, for the same volume: the strip
+        // cannot show a volume as not-out while the counts call it published.
+        tick.IsOut.ShouldBe(expectedPublished == 1);
+
+        // The precedence, written out because it surprised this test into failing:
+        // "not out" outranks "read". A volume marked read that no source says is in
+        // print is drawn hollow, which is exactly what the volume tile does with the
+        // same volume (VolumeTileStateMap checks IsOut before read status). A strip and
+        // a tile disagreeing about one volume would be the worse bug.
+        tick.Kind.ShouldBe((expectedPublished, expectedRead, expectedOwned) switch
+        {
+            (0, _, _) => VolumeTickKind.NotOut,
+            (_, 1, _) => VolumeTickKind.Read,
+            (_, _, 1) => VolumeTickKind.OwnedUnread,
+            _ => VolumeTickKind.ToBuy,
+        });
+
+        (expectedOwned, expectedBacklog, expectedBehind, expectedToBuy)
+            .ShouldBe((card.Owned, card.Backlog, card.Behind, card.ToBuy));
+    }
+
+    [Fact]
+    public void ToCard_AVolumeReadBeforeItIsOut_DrawsAsNotOutBecauseThatIsWhatTheTileDoes()
+    {
+        // A fan translation read ahead of the English release is the real case. The
+        // counts say read=1, published=0; the tick says "the shelf does not have this
+        // yet", which is the more useful thing for a strip to say and is what the tile
+        // already says about the same volume.
+        var series = CreateSeriesWithOneVolume(ReadStatus.Read, owned: false, releaseDaysFromToday: 30);
+
+        var card = ToCard(series);
+
+        card.Read.ShouldBe(1);
+        card.Published.ShouldBe(0);
+        card.VolumeTicks.ShouldHaveSingleItem().Kind.ShouldBe(VolumeTickKind.NotOut);
+    }
+
+    /// <summary>
+    /// The rows view's next-volume column: the soonest date still ahead of us, and
+    /// nothing at all when no volume carries one.
+    /// </summary>
+    [Fact]
+    public void ToCard_NextReleaseDate_IsTheEarliestDateStillAhead()
+    {
+        var series = CreateSeriesWithOneVolume(ReadStatus.Read, owned: true, releaseDaysFromToday: -30);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 4, ReleaseDate = Today.AddDays(120) });
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 3, ReleaseDate = Today.AddDays(45) });
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 5, ReleaseDate = null });
+
+        var card = ToCard(series);
+
+        card.NextReleaseDate.ShouldBe(Today.AddDays(45));
+    }
+
+    [Fact]
+    public void ToCard_NothingDated_HasNoNextReleaseDate()
+    {
+        // The whole shelf's shape today: dates exist nowhere, so the column falls
+        // through to "No date".
+        var series = CreateSeriesWithOneVolume(ReadStatus.Read, owned: true, releaseDaysFromToday: null);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 2, ReleaseDate = null });
+
+        ToCard(series).NextReleaseDate.ShouldBeNull();
+    }
+
     private static Series CreateSeriesWithOneVolume(ReadStatus? readStatus, bool owned, int? releaseDaysFromToday)
     {
         var series = new Series

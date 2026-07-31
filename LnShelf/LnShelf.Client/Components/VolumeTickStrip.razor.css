@@ -1,0 +1,48 @@
+/* A barcode of the series: one tick per volume, left to right from volume 1, sitting
+   on a common baseline so a shorter tick reads as a shorter tick. */
+.strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+  height: 13px;
+}
+
+.tick {
+  width: 4px;
+  height: 13px;
+  border-radius: 1px;
+  flex: 0 0 auto;
+}
+
+/* The same three fills the three-segment bar uses, assigned the same way
+   (design.md — colour discipline): --acc is done, --acc-deep is in hand but not
+   done, --track is the pile that is out and unbought. */
+.tick--read { background: var(--acc); }
+.tick--owned { background: var(--acc-deep); }
+
+/* To buy: the dimmed fill, plus an edge. Measured in grayscale, --track alone came
+   out at luminance 38 against an 18 background — a tick you could not prove was
+   there. The ring is what makes the dim fill legible without inventing a colour. */
+.tick--tobuy {
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+/* Not out yet: hollow, and half height. Fill-versus-hollow is the second channel and
+   height is the third, which is what keeps this apart from a to-buy tick when the
+   colour is taken away — the two darkest ticks would otherwise differ by 20 levels of
+   gray. Shorter is also the honest shape: it is the volume that is not there yet. */
+.tick--notout {
+  height: 7px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+/* The tail stands for the volumes past the cap; its tooltip names them. */
+.strip__more {
+  margin-left: 4px;
+  font-size: 10.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}

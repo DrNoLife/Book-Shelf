@@ -1,5 +1,8 @@
-@* The centrepiece. The grid owns keyboard navigation because it is the only thing
-   that knows the layout; the tiles own their own state and marks. *@
+@using LnShelf.Shared.Preferences
+
+@* The centrepiece. This section owns keyboard navigation because it is the only thing
+   that knows the layout, and it owns the choice between tiles and list; the tiles and
+   rows own their own state and marks. *@
 
 <section class="volumes">
 
@@ -14,9 +17,43 @@
                these are the only clues that a tile is interactive. *@
             <p class="volumes__hint">Click opens the menu · shift-click toggles owned · ←↑↓→ + space cycles read</p>
 
+            @* Tiles or list, for this series. Choosing here sets an override on the
+               series; the global default lives in preferences, and "Follow" gives it
+               back. *@
+            <div class="toggle" role="group" aria-label="Volume view">
+                <button type="button"
+                        class="toggle__button @(View == VolumeView.Tiles ? "toggle__button--on" : null)"
+                        aria-pressed="@((View == VolumeView.Tiles).ToAriaState())"
+                        title="@ViewTitle(VolumeView.Tiles)"
+                        @onclick="() => OnViewChosenAsync(VolumeView.Tiles)">
+                    Tiles
+                </button>
+                <button type="button"
+                        class="toggle__button @(View == VolumeView.List ? "toggle__button--on" : null)"
+                        aria-pressed="@((View == VolumeView.List).ToAriaState())"
+                        title="@ViewTitle(VolumeView.List)"
+                        @onclick="() => OnViewChosenAsync(VolumeView.List)">
+                    List
+                </button>
+            </div>
+
+            @if (Series.VolumeViewOverride is not null)
+            {
+                @* The override is visible and reversible — a series quietly ignoring the
+                   global preference with no way to say so would be the bug. *@
+                <button type="button"
+                        class="control control--quiet"
+                        title="@($"This series is set to {View}; follow the {Preferences.VolumeView} default instead")"
+                        @onclick="OnFollowGlobalAsync">
+                    Follow default
+                </button>
+            }
+
             <button type="button"
                     class="control @(SeriesState.IsSelectMode ? "control--on" : null)"
                     aria-pressed="@SeriesState.IsSelectMode.ToAriaState()"
+                    disabled="@(View == VolumeView.List)"
+                    title="@SelectTitle"
                     @onclick="() => SeriesState.ToggleSelectMode()">
                 @(SeriesState.IsSelectMode ? "Done" : "Select")
             </button>
@@ -48,22 +85,39 @@
         </div>
     </header>
 
-    <div class="grid" @ref="_gridElement">
-        @foreach (var volume in Series.Volumes)
+    @* The measured element for both renderings: the popover placement and the arrow
+       keys ask it for a [data-volume] rect, and a row carries that attribute exactly
+       as a tile does. *@
+    <div class="volumes__body" @ref="_gridElement">
+        @if (View == VolumeView.List)
         {
-            <VolumeTile @ref="_tiles[volume.VolumeId]"
-                        Volume="volume"
-                        IsSelectMode="SeriesState.IsSelectMode"
-                        IsSelected="SeriesState.SelectedVolumeIds.Contains(volume.VolumeId)"
+            <VolumeList Volumes="Series.Volumes"
                         IsInteractive="!SeriesState.IsSaving"
-                        CoverVersion="SeriesState.CoverVersion"
                         MenuRequested="OnMenuRequestedAsync"
                         ReadCycled="OnReadCycledAsync"
                         OwnedToggled="OnOwnedToggledAsync"
-                        SelectionToggled="OnSelectionToggled"
-                        Navigated="OnNavigatedAsync"
-                        CoverSelected="OnCoverSelectedAsync"
-                        @key="volume.VolumeId" />
+                        Navigated="OnNavigatedAsync" />
+        }
+        else
+        {
+            <div class="grid">
+                @foreach (var volume in Series.Volumes)
+                {
+                    <VolumeTile @ref="_tiles[volume.VolumeId]"
+                                Volume="volume"
+                                IsSelectMode="SeriesState.IsSelectMode"
+                                IsSelected="SeriesState.SelectedVolumeIds.Contains(volume.VolumeId)"
+                                IsInteractive="!SeriesState.IsSaving"
+                                CoverVersion="SeriesState.CoverVersion"
+                                MenuRequested="OnMenuRequestedAsync"
+                                ReadCycled="OnReadCycledAsync"
+                                OwnedToggled="OnOwnedToggledAsync"
+                                SelectionToggled="OnSelectionToggled"
+                                Navigated="OnNavigatedAsync"
+                                CoverSelected="OnCoverSelectedAsync"
+                                @key="volume.VolumeId" />
+                }
+            </div>
         }
     </div>
 
@@ -77,13 +131,19 @@
     }
 
     @* The legend names every state in words, which is the channel that survives both
-       grayscale and a screen reader. *@
-    <div class="legend">
-        <span class="legend__item"><span class="swatch swatch--read"></span>read</span>
-        <span class="legend__item"><span class="swatch swatch--reading"></span>reading</span>
-        <span class="legend__item"><span class="swatch swatch--owned"></span>owned, unread</span>
-        <span class="legend__item"><span class="swatch swatch--tobuy"></span>to buy — dimmed and desaturated</span>
-        <span class="legend__item"><span class="swatch swatch--unreleased"></span>not out yet</span>
-    </div>
+       grayscale and a screen reader. The list view prints those words in every row, so
+       it is not rendered there at all — a `hidden` attribute would have been defeated
+       by this stylesheet's own `display: flex`, which is the same trap as the inert
+       ARIA states phase 3.3.1 found. *@
+    @if (View != VolumeView.List)
+    {
+        <div class="legend">
+            <span class="legend__item"><span class="swatch swatch--read"></span>read</span>
+            <span class="legend__item"><span class="swatch swatch--reading"></span>reading</span>
+            <span class="legend__item"><span class="swatch swatch--owned"></span>owned, unread</span>
+            <span class="legend__item"><span class="swatch swatch--tobuy"></span>to buy — dimmed and desaturated</span>
+            <span class="legend__item"><span class="swatch swatch--unreleased"></span>not out yet</span>
+        </div>
+    }
 
 </section>

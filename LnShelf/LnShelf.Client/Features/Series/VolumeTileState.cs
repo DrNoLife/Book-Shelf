@@ -57,17 +57,40 @@ public static class VolumeTileStateMap
     /// The second channel every state carries, so none of them is colour alone
     /// (design.md). Null where the mark itself is the channel.
     /// </summary>
+    // Caption-form: it shares one line with "Vol N" under a tile ~100px wide, which is
+    // why the date is the short one. The full date is a click away in the volume menu,
+    // and printed outright in the list view.
     public static string? LabelFor(VolumeResponse volume, VolumeTileState state) => state switch
     {
         VolumeTileState.Reading => "Reading",
         VolumeTileState.ToBuy => "To buy",
 
-        // design.md prints the date here; the shelf has none for any volume, so the
-        // word stands in rather than an empty caption.
-        VolumeTileState.Unreleased => volume.ReleaseDate?.ToString("d MMM yyyy", CultureInfo.InvariantCulture)
-                                     ?? "Unreleased",
+        VolumeTileState.Unreleased => volume?.ReleaseDate is { } releaseDate
+            ? ShortDate(releaseDate)
+            : "Unreleased",
 
         VolumeTileState.Announced => "No date",
         _ => null,
     };
+
+    /// <summary>
+    /// Every state named in full, in the fixed terminology — what the list view prints
+    /// and what a screen reader is told.
+    /// </summary>
+    public static string NameFor(VolumeTileState state) => state switch
+    {
+        VolumeTileState.Read => "Read",
+        VolumeTileState.Reading => "Reading",
+        VolumeTileState.OwnedUnread => "Owned, unread",
+        VolumeTileState.ToBuy => "To buy",
+        VolumeTileState.Unreleased => "Not out yet",
+        VolumeTileState.Announced => "Announced, no date",
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown tile state."),
+    };
+
+    /// <summary>"12 Sep" — the caption form, where the year would not fit.</summary>
+    public static string ShortDate(DateOnly date) => date.ToString("d MMM", CultureInfo.InvariantCulture);
+
+    /// <summary>"12 Sep 2026" — everywhere there is room for the whole truth.</summary>
+    public static string FullDate(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 }

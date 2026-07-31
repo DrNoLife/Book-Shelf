@@ -75,5 +75,31 @@ public static class LibraryCardProjection
                 .OrderBy(volume => volume.Number)
                 .Select(volume => (int?)volume.Number)
                 .FirstOrDefault(),
+
+            // The soonest date still ahead of us — the rows view's next-volume column
+            // when there is nothing to buy. Null across the whole shelf today, because
+            // no source publishes per-volume dates (backlog: the enrichment spike).
+            NextReleaseDate = series.Volumes
+                .Where(volume => volume.ReleaseDate != null && volume.ReleaseDate > today)
+                .OrderBy(volume => volume.ReleaseDate)
+                .Select(volume => volume.ReleaseDate)
+                .FirstOrDefault(),
+
+            // One row per volume, carrying facts rather than an appearance: the tick's
+            // four kinds are computed on VolumeTickResponse itself, so the strip and the
+            // card's counts are reading the same rules. Kept dumb here on purpose —
+            // anything smarter than a comparison stops being translatable SQL.
+            VolumeTicks = series.Volumes
+                .OrderBy(volume => volume.Number)
+                .Select(volume => new VolumeTickResponse
+                {
+                    Number = volume.Number,
+                    IsOut = (volume.ReleaseDate != null && volume.ReleaseDate <= today)
+                            || volume.IsReleased
+                            || (volume.UserState != null && volume.UserState.Owned),
+                    Owned = volume.UserState != null && volume.UserState.Owned,
+                    ReadStatus = volume.UserState != null ? volume.UserState.ReadStatus : ReadStatus.Unread,
+                })
+                .ToList(),
         };
 }

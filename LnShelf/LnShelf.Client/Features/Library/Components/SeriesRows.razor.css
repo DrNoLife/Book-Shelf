@@ -1,0 +1,144 @@
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One geometry for the header and every row, so a label can never sit over the wrong
+   column. Both selectors are in this one rule for exactly that reason. */
+.rows__head,
+.row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) minmax(0, 168px) 128px 108px 104px;
+  grid-template-areas: "badge identity strip counts status next";
+  align-items: center;
+
+  /* 18px, not 14: at 14 the counts column's own label ("READ / OWN / OUT", the
+     widest thing in the header) sat hard against "STATUS" and the two read as one
+     phrase. */
+  gap: 18px;
+}
+
+.rows__head {
+  padding: 0 4px 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+.row {
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Hover raises the surface only — no size change, so nothing reflows (design.md). */
+.row:hover { background: var(--surf); }
+
+.cell--badge { grid-area: badge; }
+.cell--identity { grid-area: identity; min-width: 0; }
+.cell--strip { grid-area: strip; min-width: 0; }
+.cell--counts { grid-area: counts; }
+.cell--status { grid-area: status; min-width: 0; }
+.cell--next { grid-area: next; }
+
+/* --- identity --- */
+
+.cell--identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* The series-title face, one step below the grid card's 16px: at 16px the serif's
+   ascenders would set the row height on their own. */
+.row__title {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__title:hover { color: var(--acc-soft); }
+
+.row__romaji {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- counts and status --- */
+
+/* Right-aligned, header and numbers alike: figures line up on their last digit the
+   way a table's do, and the alignment itself separates them from the status column. */
+.cell--counts {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cell--status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.row__status-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* --- next volume --- */
+
+.cell--next {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 11.5px;
+}
+
+.rows__head .cell--next { justify-content: flex-end; }
+
+/* Text-weight accent, never a fill — --acc-soft is the design's text value. */
+.row__buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--acc-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.row__buy:hover { color: var(--acc); }
+
+.row__date { color: var(--muted); white-space: nowrap; }
+.row__nodate { color: var(--faint); white-space: nowrap; }
+
+/* Two lines at narrow widths rather than six squeezed columns: identity and the
+   next-volume answer on top, then status, strip and counts beneath. Nothing is
+   dropped — the same six columns, folded. The header goes, because labels cannot
+   line up over a folded grid; the counts keep their tooltip, exactly as the covers
+   card's printed counts do at this width. */
+@media (max-width: 860px) {
+  .rows__head { display: none; }
+
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "badge  identity next"
+      "status strip    counts";
+    gap: 6px 12px;
+    padding: 10px 2px;
+  }
+
+  /* The strip has the middle of the second line and can be narrower than its ticks;
+     they clip rather than pushing the counts off the row. */
+  .cell--strip { overflow: hidden; }
+}

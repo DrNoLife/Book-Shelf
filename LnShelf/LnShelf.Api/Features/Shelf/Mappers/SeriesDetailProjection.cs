@@ -40,6 +40,7 @@ public static class SeriesDetailProjection
             StartedAt = series.UserState?.StartedAt,
             LastReadAt = series.UserState?.LastReadAt,
             HasNewVolume = series.UserState?.HasNewVolume ?? false,
+            VolumeViewOverride = series.UserState?.VolumeViewOverride,
             Counts = ToCounts(volumes),
             Spend = ToSpend(volumes),
             Relation = null,

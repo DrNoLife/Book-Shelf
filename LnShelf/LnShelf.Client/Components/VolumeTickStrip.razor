@@ -1,0 +1,16 @@
+@* One tick per volume: read, owned-unread, to buy, or not out yet. Two channels, as
+   every state in this design is — the fill's three strengths plus filled-versus-hollow
+   — so the strip survives grayscale. Nothing here is interactive; the tick titles and
+   the strip's own label are the text channel. *@
+
+<span class="strip" role="img" aria-label="@AccessibleLabel">
+    @foreach (var tick in Layout.Visible)
+    {
+        <span class="tick @TickClass(tick.Kind)" title="@TickTitle(tick)" @key="tick.Number"></span>
+    }
+
+    @if (Layout.HiddenCount > 0)
+    {
+        <span class="strip__more tabular" title="@Layout.HiddenLabel">+@Layout.HiddenCount</span>
+    }
+</span>

@@ -16,6 +16,10 @@ public sealed class UserPreferencesConfiguration : IEntityTypeConfiguration<User
             .HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(preferences => preferences.LibrarySort)
             .HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(preferences => preferences.LibraryView)
+            .HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(preferences => preferences.VolumeView)
+            .HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(preferences => preferences.DefaultLibraryFilter)
             .HasConversion<string>().HasMaxLength(32).IsRequired();
     }

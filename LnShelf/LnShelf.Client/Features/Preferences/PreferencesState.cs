@@ -13,6 +13,10 @@ public sealed class PreferencesState(HttpClient httpClient)
 {
     public GridDensity GridDensity { get; private set; } = GridDensity.Comfortable;
     public LibrarySort LibrarySort { get; private set; } = LibrarySort.MostBehind;
+    public LibraryView LibraryView { get; private set; } = LibraryView.Covers;
+
+    /// <summary>The series-detail default; a series can override it for itself.</summary>
+    public VolumeView VolumeView { get; private set; } = VolumeView.Tiles;
 
     public bool HasLoaded { get; private set; }
     public string? Message { get; private set; }
@@ -30,6 +34,8 @@ public sealed class PreferencesState(HttpClient httpClient)
             {
                 GridDensity = preferences.GridDensity;
                 LibrarySort = preferences.LibrarySort;
+                LibraryView = preferences.LibraryView;
+                VolumeView = preferences.VolumeView;
             }
         }
         catch (HttpRequestException)
@@ -55,6 +61,32 @@ public sealed class PreferencesState(HttpClient httpClient)
         Changed?.Invoke();
 
         return SaveAsync(new UpdatePreferencesRequest { GridDensity = density }, cancellationToken);
+    }
+
+    public Task SetLibraryViewAsync(LibraryView view, CancellationToken cancellationToken = default)
+    {
+        if (view == LibraryView)
+        {
+            return Task.CompletedTask;
+        }
+
+        LibraryView = view;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { LibraryView = view }, cancellationToken);
+    }
+
+    public Task SetVolumeViewAsync(VolumeView view, CancellationToken cancellationToken = default)
+    {
+        if (view == VolumeView)
+        {
+            return Task.CompletedTask;
+        }
+
+        VolumeView = view;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { VolumeView = view }, cancellationToken);
     }
 
     public Task SetSortAsync(LibrarySort sort, CancellationToken cancellationToken = default)

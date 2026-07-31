@@ -106,21 +106,85 @@ rgba(8,7,11,0.55)` halo so it reads on any cover art:
 
 ### Volume tile — the signature component
 
-Base tile: cover (or `#1a1620` placeholder), ring `0 0 0 1px var(--line)`,
-volume number at `rgba(244,240,234,0.9)`. State is **always two channels**
-(strip/ring/filter + icon/label), never color alone:
+Base tile: cover (or `#1a1620` placeholder) and ring `0 0 0 1px var(--line)`.
+**Nothing is printed on the artwork** — see the caption line below. State is
+**always two channels** (strip/ring/filter + icon/label), never color alone:
 
 | State | Strip (bottom) | Extra channel |
 |---|---|---|
 | Read | `--acc` | ✓ check mark, `--acc-soft` |
-| Reading | `--acc` | ring `0 0 0 1.5px #ff5a36` + glow `0 0 14px rgba(255,90,54,0.45)`, book-open icon, label "Reading" in `--acc-soft` |
+| Reading | `--acc` | ring `0 0 0 1.5px #ff5a36` + glow `0 0 14px rgba(255,90,54,0.45)`, book-open icon, caption reads "Reading" in `--acc-soft` |
 | Owned, unread | `--acc-deep` | (recessed strip is itself the second read vs. owned channel) |
-| To buy | none | `opacity: 0.42` + `filter: grayscale(0.9)`, label "To buy" |
-| Unreleased | none | hatch fill `repeating-linear-gradient(135deg, #221d2b 0 5px, transparent 5px 10px)`, inset ring, date as label |
-| Announced | none | inset ring only, number at 0.3 alpha, label "Announced, no date" (short: "No date") |
+| To buy | none | `opacity: 0.42` + `filter: grayscale(0.9)`, caption reads "To buy" |
+| Unreleased | none | hatch fill `repeating-linear-gradient(135deg, #221d2b 0 5px, transparent 5px 10px)`, inset ring, date in the caption |
+| Announced | none | inset ring only, caption reads "Announced, no date" (short: "No date") |
 
 Interaction: click/tap cycles read state · shift-click / long-press toggles
 owned · arrow keys + space in the grid. Hover never reflows.
+
+**The caption line** (amended 2026-07-31 — the volume number used to sit on the
+cover at `rgba(244,240,234,0.9)` with two shadow layers to survive light
+artwork; the artwork is a cover, not a text background):
+
+- One line under the tile: `Vol N`, `--muted`, 11px sans, `tabular-nums`.
+- Anything else true about the volume follows after a `·` separator, in
+  `--faint`: the state label where the state has one, so "Vol 9 · Reading",
+  "Vol 15 · 12 Sep". Reading's half of the caption takes `--acc-soft`.
+- The date here is the **short** form (`12 Sep`) — a ~100px tile has no room
+  for the year. The full date is printed in the volume menu and in the list
+  view.
+- The caption **accommodates a volume title** when a source ever supplies one
+  ("Vol 3 · The Fool"); none does today, and titles are never invented.
+- Its height is **reserved**, so a row mixing captioned and plain tiles keeps
+  its tops and its bottom strips aligned. One line, ellipsised, never wrapped.
+- The coverless volume tile therefore prints nothing on the placeholder itself;
+  its caption is its label. (The *series card*'s placeholder still prints
+  "Vol N" — it has no caption line.)
+
+### Volume tick strip
+
+One tick per volume, left to right from volume 1 — the rows view's progress
+channel, where a three-segment bar would lose which volumes are which. Four
+kinds, being the four the tile's six coarsen into (Reading collapses into
+owned-unread or to-buy; dated and announced both collapse into not-out):
+
+| Kind | Tick |
+|---|---|
+| Read | full height, filled `--acc` |
+| Owned, unread | full height, filled `--acc-deep` |
+| To buy | full height, filled `--track` **plus** inset ring `--line-2` |
+| Not out yet | **half height, hollow** — transparent, inset ring `--line-2` |
+
+Ticks are 4px wide, 13px tall (7px for not-out), radius 1, 2px apart, sitting on
+a common baseline. Three channels, because two were measured and found wanting:
+grayscale luminance came out 122 / 64 / 38 against an 18 background, so `--track`
+alone could not be told from empty space and the two dark ticks differed by 20
+levels of gray. Hence the ring on to-buy and the height difference on not-out.
+**Capped at 24 ticks**, then a `+N` tail in `--faint` whose tooltip names the
+volumes it stands for. No per-tick interactivity in v1; each tick's `title`
+reads "Vol 12 · to buy".
+
+### The two view toggles
+
+Both are the quiet segmented control — `--surf` container, `--line-2` border,
+the chosen segment on `--raise` with an inset `--line-2` ring — deliberately
+*not* the format tabs' persimmon pill, so a view choice never competes with the
+scope tabs for the same signal:
+
+- **Library: Rows | Covers**, in the toolbar beside density, stored as
+  `LibraryView`. Filter chips, format tabs, type-to-filter and sort apply
+  identically to both. Density belongs to the covers grid, so in rows it is
+  *disabled with a title saying which view it applies to*, never hidden.
+  Rows columns: format badge · title + muted romaji · tick strip · read/own/out
+  (tabular) · publication dot + status · next volume ("Out now ↗" linking Saxo
+  for the next to-buy when behind, else the release date, else "No date").
+- **Series detail: Tiles | List**, above the volume grid. Global preference
+  (`VolumeView`) plus a per-series override (`SeriesUserState.VolumeViewOverride`,
+  null = follow the global); when an override is set the section offers "Follow
+  default" to clear it. Select mode paints chips on tiles, so in list view it is
+  disabled with a title. A list row is the tile's information without artwork:
+  number, state swatch + name, release date when known, owned edition; clicking
+  it opens the same volume menu.
 
 ### Three-segment progress bar
 

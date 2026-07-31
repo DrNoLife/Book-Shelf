@@ -1,5 +1,6 @@
 @page "/"
 @using LnShelf.Client.Features.Library.Components
+@using LnShelf.Shared.Preferences
 
 @* Visible only where the sidebar is not — narrow viewports need the orientation,
    the desktop shell already provides it. *@
@@ -10,7 +11,7 @@
     <div class="library__top">
         @if (Library is not null)
         {
-            <LibraryHeader Totals="Library.Totals" />
+            <LibraryHeader Totals="Library.Totals" Eyebrow="@Eyebrow" />
         }
 
         <LibraryToolbar TextFilter="@LibraryState.TextFilter"
@@ -18,7 +19,9 @@
                         Sort="LibraryState.Sort"
                         SortChanged="OnSortChangedAsync"
                         Density="Preferences.GridDensity"
-                        DensityChanged="OnDensityChangedAsync" />
+                        DensityChanged="OnDensityChangedAsync"
+                        View="Preferences.LibraryView"
+                        ViewChanged="OnViewChangedAsync" />
 
         <div class="controls">
             <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
@@ -52,12 +55,21 @@
         }
         else
         {
-            <div class="@GridDensityClass">
-                @foreach (var card in Cards)
-                {
-                    <SeriesCard Card="card" @key="card.SeriesId" />
-                }
-            </div>
+            @* Two renderings of the identical set: the chips, tabs, filter text and
+               sort have all been applied before either of these sees a card. *@
+            @if (Preferences.LibraryView == LibraryView.Rows)
+            {
+                <SeriesRows Cards="Cards" />
+            }
+            else
+            {
+                <div class="@GridDensityClass">
+                    @foreach (var card in Cards)
+                    {
+                        <SeriesCard Card="card" @key="card.SeriesId" />
+                    }
+                </div>
+            }
 
             @* Counts honestly: when a filter is narrowing the view, the line says
                what is hidden rather than quietly reporting a smaller number. *@

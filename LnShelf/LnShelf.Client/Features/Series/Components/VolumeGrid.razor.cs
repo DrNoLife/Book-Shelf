@@ -1,3 +1,5 @@
+using LnShelf.Client.Features.Preferences;
+using LnShelf.Shared.Preferences;
 using LnShelf.Shared.Shelf;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -14,7 +16,16 @@ public partial class VolumeGrid
     public required SeriesState SeriesState { get; set; }
 
     [Inject]
+    public required PreferencesState Preferences { get; set; }
+
+    [Inject]
     public required IJSRuntime JavaScript { get; set; }
+
+    /// <summary>
+    /// This series' view: its own override when it has one, otherwise the global
+    /// preference. The whole resolution rule, in one place.
+    /// </summary>
+    private VolumeView View => Series.VolumeViewOverride ?? Preferences.VolumeView;
 
     private ElementReference _gridElement;
 
@@ -66,6 +77,19 @@ public partial class VolumeGrid
     private int? ReadThrough => NextRunEnd(volume => volume.ReadStatus is ReadStatus.Read);
 
     private int? OwnedThrough => NextRunEnd(volume => volume.Owned);
+
+    /// <summary>
+    /// Says whether a choice would set an override or is only following the default.
+    /// </summary>
+    private string ViewTitle(VolumeView view) =>
+        view == Preferences.VolumeView && Series.VolumeViewOverride is null
+            ? $"{view} — the default for every series"
+            : $"{view} — for this series only";
+
+    /// <summary>Select mode paints chips on tiles, and the list view has no tiles.</summary>
+    private string SelectTitle => View == VolumeView.List
+        ? "Select — a tiles-view control"
+        : SeriesState.IsSelectMode ? "Leave select mode" : "Select volumes in bulk";
 
     private string MarkSelectedReadLabel => $"Mark {SeriesState.SelectedVolumeIds.Count} read";
 
@@ -159,6 +183,25 @@ public partial class VolumeGrid
 
     /// <summary>Matches the API's cap (CoverStoreOptions.MaximumUploadBytes).</summary>
     private const long CoverUploadLimitBytes = 8 * 1024 * 1024;
+
+    /// <summary>
+    /// Choosing a view on a series sets that series' override, which is the point: the
+    /// choice is about this series, not about the shelf. The global default is changed
+    /// in preferences, not by looking at one series.
+    /// </summary>
+    private async Task OnViewChosenAsync(VolumeView view)
+    {
+        // Select mode belongs to the tiles; leaving it on while its chips vanish would
+        // leave a selection nothing can see.
+        if (view == VolumeView.List && SeriesState.IsSelectMode)
+        {
+            SeriesState.ToggleSelectMode();
+        }
+
+        await SeriesState.SetVolumeViewOverrideAsync(view);
+    }
+
+    private Task OnFollowGlobalAsync() => SeriesState.SetVolumeViewOverrideAsync(null);
 
     private Task OnReadCycledAsync(VolumeResponse volume) => SeriesState.CycleReadAsync(volume);
 

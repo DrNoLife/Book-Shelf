@@ -15,6 +15,13 @@ public sealed class SeriesUserState
 
     public TitleLanguage? TitleLanguageOverride { get; set; }
     public CoverSource? CoverSourceOverride { get; set; }
+
+    /// <summary>
+    /// This series' volume view. Null means "follow the global preference" — the same
+    /// shape as the two override columns above it.
+    /// </summary>
+    public VolumeView? VolumeViewOverride { get; set; }
+
     public bool NotificationsMuted { get; set; }
 
     // The one sanctioned stored non-derived flag (CLAUDE.md): last-visit

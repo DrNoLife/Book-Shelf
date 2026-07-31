@@ -21,20 +21,44 @@
                   ValueChanged="OnSortChangedAsync"
                   AriaLabel="Sort the shelf" />
 
+        @* Two views of the same set. Words rather than icons: "rows" and "covers" are
+           not shapes anyone recognises, and the quiet raised fill keeps this from
+           competing with the format tabs' persimmon pill. *@
+        <div class="toggle" role="group" aria-label="Library view">
+            <button type="button"
+                    class="toggle__button toggle__button--wide @(View == LibraryView.Rows ? "toggle__button--on" : "")"
+                    aria-pressed="@((View == LibraryView.Rows).ToAriaState())"
+                    title="Rows — one line per series"
+                    @onclick="() => OnViewChangedAsync(LibraryView.Rows)">
+                Rows
+            </button>
+            <button type="button"
+                    class="toggle__button toggle__button--wide @(View == LibraryView.Covers ? "toggle__button--on" : "")"
+                    aria-pressed="@((View == LibraryView.Covers).ToAriaState())"
+                    title="Covers — the cover grid"
+                    @onclick="() => OnViewChangedAsync(LibraryView.Covers)">
+                Covers
+            </button>
+        </div>
+
         @* Two channels, not colour alone: the pressed button carries the raised fill
-           and the icon differs between the two densities. *@
+           and the icon differs between the two densities. Disabled rather than hidden in
+           the rows view: a control that vanishes reads as a bug, one that says why it is
+           inert does not. *@
         <div class="toggle" role="group" aria-label="Grid density">
             <button type="button"
                     class="toggle__button @(Density == GridDensity.Comfortable ? "toggle__button--on" : "")"
                     aria-pressed="@((Density == GridDensity.Comfortable).ToAriaState())"
-                    title="Comfortable"
+                    disabled="@IsDensityDisabled"
+                    title="@DensityTitle("Comfortable")"
                     @onclick="() => OnDensityChangedAsync(GridDensity.Comfortable)">
                 <Icon Name="IconName.SquaresFour" Size="14" />
             </button>
             <button type="button"
                     class="toggle__button @(Density == GridDensity.Compact ? "toggle__button--on" : "")"
                     aria-pressed="@((Density == GridDensity.Compact).ToAriaState())"
-                    title="Compact"
+                    disabled="@IsDensityDisabled"
+                    title="@DensityTitle("Compact")"
                     @onclick="() => OnDensityChangedAsync(GridDensity.Compact)">
                 <Icon Name="IconName.GridNine" Size="14" />
             </button>
@@ -61,6 +85,16 @@
 
     [Parameter] public EventCallback<GridDensity> DensityChanged { get; set; }
 
+    [Parameter] public LibraryView View { get; set; }
+
+    [Parameter] public EventCallback<LibraryView> ViewChanged { get; set; }
+
+    /// <summary>Density is a grid setting, and the rows view has no grid.</summary>
+    private bool IsDensityDisabled => View == LibraryView.Rows;
+
+    private string DensityTitle(string density) =>
+        IsDensityDisabled ? $"{density} — density applies to the covers view" : density;
+
     /// <summary>Labels say what the order is, not what the enum is called.</summary>
     private static readonly IReadOnlyList<DropdownOption> SortOptions =
     [
@@ -77,4 +111,6 @@
         SortChanged.InvokeAsync(Enum.Parse<LibrarySort>(value));
 
     private Task OnDensityChangedAsync(GridDensity density) => DensityChanged.InvokeAsync(density);
+
+    private Task OnViewChangedAsync(LibraryView view) => ViewChanged.InvokeAsync(view);
 }

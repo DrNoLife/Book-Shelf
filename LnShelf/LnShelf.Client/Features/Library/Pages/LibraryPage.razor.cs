@@ -47,6 +47,17 @@ public partial class LibraryPage : IDisposable
     private string GridDensityClass =>
         Preferences.GridDensity == GridDensity.Compact ? "grid grid--compact" : "grid";
 
+    /// <summary>
+    /// The rows view spends this view's one wry line on its eyebrow; the covers view
+    /// keeps the plain section marker.
+    /// </summary>
+    // design.md allows one wry line per view, in fine print, never in a control. An
+    // eyebrow is fine print, and a table of what you have not bought is the one place
+    // on the shelf where "honestly" is the joke and the description at once.
+    private string Eyebrow => Preferences.LibraryView == LibraryView.Rows
+        ? "The shelf, honestly"
+        : "Library";
+
     protected override async Task OnInitializedAsync()
     {
         LibraryState.Changed += OnStateChanged;
@@ -81,4 +92,6 @@ public partial class LibraryPage : IDisposable
     }
 
     private Task OnDensityChangedAsync(GridDensity density) => Preferences.SetDensityAsync(density);
+
+    private Task OnViewChangedAsync(LibraryView view) => Preferences.SetLibraryViewAsync(view);
 }

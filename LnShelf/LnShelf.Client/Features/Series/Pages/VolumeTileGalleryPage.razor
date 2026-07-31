@@ -3,11 +3,17 @@
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @inject IWebAssemblyHostEnvironment HostEnvironment
 
+@using LnShelf.Shared.Shelf
+
 @* A design harness, not a feature: one tile per state, so every state can be checked
    — and grayscale-checked — including the two the real shelf cannot currently produce.
    No source publishes per-volume dates, so nothing on the shelf is "unreleased with a
    date"; and nothing is announced-with-no-date either. The volumes here are synthetic
-   and belong to no series; the route is development-only. *@
+   and belong to no series; the route is development-only.
+
+   The tick strip is here for the same reason: no one series on the shelf carries all
+   four tick kinds at once, and the strip's whole claim is that all four survive
+   grayscale. *@
 
 @if (!HostEnvironment.IsDevelopment())
 {
@@ -28,6 +34,7 @@ else
                 <div class="sample" @key="sample.Label">
                     <div class="sample__tile">
                         <VolumeTile Volume="sample.Volume"
+                                    Title="@sample.Title"
                                     IsSelectMode="sample.IsSelectMode"
                                     IsSelected="sample.IsSelected" />
                     </div>
@@ -44,10 +51,40 @@ else
                 <div class="sample" @key="sample.Label">
                     <div class="sample__tile">
                         <VolumeTile Volume="sample.Volume"
+                                    Title="@sample.Title"
                                     IsSelectMode="sample.IsSelectMode"
                                     IsSelected="sample.IsSelected" />
                     </div>
                     <p class="sample__label">@sample.Label</p>
+                </div>
+            }
+        </div>
+
+        <h2 class="gallery__title">Volume tick strip</h2>
+        <p class="gallery__note">
+            The rows view's progress channel: one tick per volume, four kinds. Fill
+            strength separates read from owned-unread from to-buy; filled versus hollow
+            separates all three from a volume that is not out yet.
+        </p>
+
+        <div class="row row--strips" id="strips">
+            @foreach (var strip in Strips)
+            {
+                <div class="strip-sample" @key="strip.Label">
+                    <VolumeTickStrip Ticks="strip.Ticks" />
+                    <p class="sample__label">@strip.Label</p>
+                </div>
+            }
+        </div>
+
+        <p class="eyebrow">Same strips, grayscale — all four kinds must stay apart</p>
+
+        <div class="row row--strips row--grayscale" id="strips-grayscale">
+            @foreach (var strip in Strips)
+            {
+                <div class="strip-sample" @key="strip.Label">
+                    <VolumeTickStrip Ticks="strip.Ticks" />
+                    <p class="sample__label">@strip.Label</p>
                 </div>
             }
         </div>

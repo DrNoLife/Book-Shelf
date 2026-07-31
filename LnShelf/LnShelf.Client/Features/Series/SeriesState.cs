@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using LnShelf.Shared.Preferences;
 using LnShelf.Shared.Shelf;
 
 namespace LnShelf.Client.Features.Series;
@@ -130,6 +131,52 @@ public sealed class SeriesState(HttpClient httpClient)
             else
             {
                 Message = $"Could not apply that: {(int)response.StatusCode} {response.StatusCode}.";
+            }
+        }
+        catch (HttpRequestException exception)
+        {
+            Message = exception.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Sets this series' volume view, or clears the override with null so it follows the
+    /// global preference again.
+    /// </summary>
+    // The endpoint answers with the whole series, so the page redraws from one response
+    // — the same shape as the bulk write above.
+    public async Task SetVolumeViewOverrideAsync(
+        VolumeView? view,
+        CancellationToken cancellationToken = default)
+    {
+        if (Series is null)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            using var response = await httpClient.PutAsJsonAsync(
+                $"api/series/{Series.SeriesId}/volume-view",
+                new SetSeriesVolumeViewRequest { View = view },
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Series = await response.Content.ReadFromJsonAsync<SeriesDetailResponse>(cancellationToken);
+            }
+            else
+            {
+                Message = $"Could not save that view: {(int)response.StatusCode} {response.StatusCode}.";
             }
         }
         catch (HttpRequestException exception)

@@ -1,4 +1,5 @@
 using LnShelf.Api.Data;
+using LnShelf.Shared.Preferences;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -147,6 +148,65 @@ public sealed class SeriesCommandServiceTests
         card.Behind.ShouldBeFalse();
         card.Matches(LibraryFilter.UpToDate).ShouldBeTrue();
         card.Matches(LibraryFilter.PlanToStart).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The per-series volume view. Null is a value, not an omission: it is how a series
+    /// goes back to following the global preference.
+    /// </summary>
+    [Theory]
+    [InlineData(VolumeView.List)]
+    [InlineData(VolumeView.Tiles)]
+    public async Task SetVolumeViewAsync_AChosenView_IsStoredOnTheSeriesAndComesBackOnTheDetail(
+        VolumeView view)
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+
+        var detail = await service.SetVolumeViewAsync(
+            added.ShouldNotBeNull().SeriesId,
+            new SetSeriesVolumeViewRequest { View = view },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().VolumeViewOverride.ShouldBe(view);
+        (await dbContext.SeriesUserStates.SingleAsync()).VolumeViewOverride.ShouldBe(view);
+    }
+
+    [Fact]
+    public async Task SetVolumeViewAsync_ANullView_ClearsTheOverrideSoTheSeriesFollowsTheGlobal()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var seriesId = added.ShouldNotBeNull().SeriesId;
+
+        await service.SetVolumeViewAsync(
+            seriesId, new SetSeriesVolumeViewRequest { View = VolumeView.List }, CancellationToken.None);
+
+        var detail = await service.SetVolumeViewAsync(
+            seriesId, new SetSeriesVolumeViewRequest { View = null }, CancellationToken.None);
+
+        detail.ShouldNotBeNull().VolumeViewOverride.ShouldBeNull();
+        (await dbContext.SeriesUserStates.SingleAsync()).VolumeViewOverride.ShouldBeNull();
+
+        // One user-state row throughout: choosing a view is a write to the row the
+        // series already had, never a second one.
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SetVolumeViewAsync_UnknownSeries_ReturnsNullAndWritesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var detail = await CreateService(dbContext, CreateMetadataSource()).SetVolumeViewAsync(
+            Guid.CreateVersion7(),
+            new SetSeriesVolumeViewRequest { View = VolumeView.List },
+            CancellationToken.None);
+
+        detail.ShouldBeNull();
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(0);
     }
 
     private static SeriesCommandService CreateService(

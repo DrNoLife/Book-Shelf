@@ -1,0 +1,91 @@
+@* The rows view: one line per series, the same set the covers grid shows. Header and
+   rows are one component on purpose — they share a single grid definition, so the
+   column labels cannot drift off the columns they name (the phase 3.3.1 lesson about
+   restating geometry in two places). *@
+
+<ul class="rows">
+
+    @* The counts column needs a text channel; a tooltip alone would be hover-only
+       information, which design.md forbids. *@
+    <li class="rows__head" aria-hidden="true">
+        <span class="cell cell--badge"></span>
+        <span class="cell cell--identity eyebrow">Series</span>
+        <span class="cell cell--strip eyebrow">Volumes</span>
+        <span class="cell cell--counts eyebrow">Read / own / out</span>
+        <span class="cell cell--status eyebrow">Status</span>
+        <span class="cell cell--next eyebrow">Next</span>
+    </li>
+
+    @foreach (var card in Cards)
+    {
+        <li class="row" @key="card.SeriesId">
+
+            <span class="cell cell--badge"><FormatBadge Value="card.Format" /></span>
+
+            @* The title is the link, not the whole row: the next-volume column carries
+               an external link of its own, and an anchor cannot live inside an anchor. *@
+            <span class="cell cell--identity">
+                <a class="row__title" href="@($"/series/{card.SeriesId}")">@card.TitleEnglish</a>
+                @if (card.TitleRomaji is { } romaji && !string.Equals(romaji, card.TitleEnglish, StringComparison.Ordinal))
+                {
+                    <span class="row__romaji">@romaji</span>
+                }
+            </span>
+
+            <span class="cell cell--strip"><VolumeTickStrip Ticks="card.VolumeTicks" /></span>
+
+            <span class="cell cell--counts tabular" title="@CountsTitle(card)">
+                @card.Read / @card.Owned / @card.Published
+            </span>
+
+            <span class="cell cell--status">
+                <StatusDot Value="card.PublicationStatus" />
+                <span class="row__status-label">@PublicationLabel(card.PublicationStatus)</span>
+            </span>
+
+            <span class="cell cell--next">
+                @if (card.ToBuy > 0 && card.NextToBuyNumber is { } nextToBuy)
+                {
+                    @* Behind on buying, so the column is a control that says what it
+                       does; the volume it points at is named in the tooltip. *@
+                    <a class="row__buy"
+                       href="@SaxoSearch.UrlFor(card.TitleEnglish, nextToBuy)"
+                       title="@($"Vol {nextToBuy} on Saxo")"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Out now <Icon Name="IconName.ArrowUpRight" Size="10" />
+                    </a>
+                }
+                else if (card.NextReleaseDate is { } nextRelease)
+                {
+                    <span class="row__date tabular">@FormatDate(nextRelease)</span>
+                }
+                else
+                {
+                    <span class="row__nodate">No date</span>
+                }
+            </span>
+
+        </li>
+    }
+
+</ul>
+
+@code {
+    [Parameter] public required IReadOnlyList<LibraryCardResponse> Cards { get; set; }
+
+    private static string CountsTitle(LibraryCardResponse card) =>
+        $"{card.Read} read · {card.Owned} owned · {card.Published} out";
+
+    private static string PublicationLabel(PublicationStatus status) => status switch
+    {
+        PublicationStatus.Ongoing => "Ongoing",
+        PublicationStatus.Completed => "Completed",
+        PublicationStatus.Hiatus => "Hiatus",
+        PublicationStatus.Cancelled => "Cancelled",
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown publication status."),
+    };
+
+    private static string FormatDate(DateOnly date) =>
+        date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+}

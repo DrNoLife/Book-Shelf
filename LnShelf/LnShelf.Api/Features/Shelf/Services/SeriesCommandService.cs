@@ -73,6 +73,41 @@ public sealed class SeriesCommandService(
         };
     }
 
+    public async Task<SeriesDetailResponse?> SetVolumeViewAsync(
+        Guid seriesId,
+        SetSeriesVolumeViewRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Loaded with its volumes because the answer is the refreshed detail response:
+        // the page then redraws from one round trip, as the bulk endpoint already does.
+        var series = await dbContext.Series
+            .Include(candidate => candidate.UserState)
+            .Include(candidate => candidate.Volumes).ThenInclude(volume => volume.UserState)
+            .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
+
+        if (series is null)
+        {
+            return null;
+        }
+
+        // A series with no user-state row has never been touched; choosing a view is a
+        // touch, and it is the same row every other per-series preference lives on.
+        var state = series.UserState ??= new SeriesUserState { SeriesId = series.Id };
+        state.VolumeViewOverride = request.View;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Series {SeriesId} volume view override is now {VolumeViewOverride}",
+            seriesId,
+            request.View?.ToString() ?? "the global preference");
+
+        return SeriesDetailProjection.ToDetail(
+            series, DateOnly.FromDateTime(timeProvider.GetLocalNow().Date));
+    }
+
     /// <summary>
     /// Idempotency as a read, not a conflict. The unique index on
     /// <c>AniListId</c> is the backstop; this lookup is the behaviour, and it

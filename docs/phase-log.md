@@ -6,6 +6,185 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.4 — rows view, tick strip, volume-tile captions (2026-07-31)
+
+**Goal:** a second library view, a second series-detail view, one new shared
+component, and the volume number off the artwork.
+
+### What exists
+
+- **`VolumeTickStrip` (`Components/`)** — one tick per volume, four kinds
+  (read / owned-unread / to buy / not out yet), capped at 24 with a `+N` tail whose
+  tooltip names the volumes it swallowed. Ticks carry `title="Vol 12 · to buy"`; the
+  strip carries the whole thing in words as its `aria-label` ("16 read, 3 owned,
+  unread, 4 to buy"). No per-tick interactivity, as ruled.
+  `VolumeTickStripLayout` holds the cap so it is testable without a browser.
+- **Library `Rows | Covers`** toggle in the toolbar, persisted as
+  `UserPreferences.LibraryView`. Rows columns: format badge · title + muted romaji ·
+  tick strip · read/own/out (tabular, right-aligned) · publication dot + status ·
+  next volume. Chips, format tabs, type-to-filter and sort are applied before either
+  view sees a card, so they behave identically in both. **Density is disabled in
+  rows, not hidden**, with `title="Comfortable — density applies to the covers view"`.
+- **Next-volume column**: `Out now ↗` linking a Saxo search for the next to-buy when
+  behind, else the earliest future release date, else `No date`. The Saxo URL now has
+  one home (`Client/SaxoSearch.cs`) because the series hero prints the same link.
+- **Series detail `Tiles | List`**, global (`UserPreferences.VolumeView`) plus a
+  per-series override (`SeriesUserState.VolumeViewOverride`, null = follow the
+  global) written by `PUT /api/series/{id}/volume-view`. An overridden series shows a
+  **"Follow default"** button, so a series ignoring the global preference always says
+  so and can be put back. `VolumeList` rows: number, state swatch + name, release
+  date when known, owned edition; click opens the existing `VolumePopover`.
+- **The volume tile's caption.** The number is off the cover: `Vol N`, `--muted`,
+  11px, tabular, under the tile, with the state label after a `·` — "Vol 16 ·
+  Reading", "Vol 17 · 12 Sep", "Vol 18 · No date". Caption height is reserved (15px
+  measured on every tile), one line, ellipsised. It accommodates an optional volume
+  title (`VolumeTile.Title`) that nothing but the design gallery passes, because no
+  source names volumes.
+- **`docs/design.md` amended**: the volume-tile row about a number on the artwork is
+  gone and replaced by the caption spec; the tick strip and both view toggles are now
+  specified there.
+- The rows view spends this view's one wry line on its eyebrow: **"The shelf,
+  honestly · 9 series"**. Covers keeps "Library · 9 series".
+
+### Verified, not assumed
+
+- `dotnet build` 0 warnings, `dotnet format --verify-no-changes` clean,
+  **359 tests pass** (316 + 43 new/expanded).
+- **Preferences round trip**, read from `GET /api/preferences` between clicks:
+  `libraryView` went `Rows → Covers → Rows`, and the rendered view followed each
+  time; after a full page reload the view was still rows.
+- **The override is per series and survives a reload**: Overlord set to List renders
+  18 list rows and 0 tiles, still does after reloading the page, and the row in
+  `series_user_state` reads `VolumeViewOverride = List` while
+  `user_preferences.VolumeView` stays `Tiles` — Berserk, which has no override, still
+  renders 42 tiles. Clicking a list row opened the volume menu headed "Vol 16".
+- **Next-volume column, all three branches on one screen**: Slime "Out now ↗" →
+  `…query=That%20Time…%2020`, which is its `nextToBuyNumber` of 20; Overlord
+  "12 Sep 2026"; Berserk "No date" with a `+18` tail titled "18 more — volumes 25–42".
+- **The caption and alignment, measured rather than eyeballed**: `.tile__number`
+  occurs 0 times in the rendered grid; every caption is 15px tall; in the row that
+  mixes plain and captioned tiles (Vol 10–18) every tile top is 702 and every bottom
+  strip top is 858 — one value each, so nothing is ragged.
+- **Grayscale is measured, and the first attempt failed it.** Sampling the gallery's
+  grayscale strip gave luminance 122 (read) / 64 (owned-unread) / 38 (to buy) against
+  an 18 background: `--track` alone could not be told from empty space, and the two
+  dark ticks were 20 gray levels apart. To-buy gained an inset `--line-2` ring and
+  not-out went to half height; re-measured, the four kinds now read
+  122 / 64 / 39-with-a-75-ring / 14px-tall-hollow. **[flagged]** — a third channel on
+  one component, decided by measurement, and design.md records the numbers.
+- Screenshots: rows and covers at 1440 and 400, the series grid with a real cover
+  under a clean face, the list view at 1440 and 430, both tick strips in colour and
+  grayscale.
+
+### Two defects found while photographing this work
+
+1. **`hidden` on the legend did nothing.** `<div class="legend" hidden="@(…)">` is
+   defeated by the stylesheet's own `display: flex` — the attribute was present and
+   the legend stayed on screen in list view. Now a conditional render. This is the
+   phase 3.3.1 lesson again in a new costume: an attribute that looks like state but
+   changes nothing.
+2. **A stale scoped-CSS bundle nearly became false evidence.** `dotnet run` does not
+   rebuild `LnShelf.Client.styles.css`, so the first grayscale measurement and the
+   first rows screenshot were taken against the previous build's CSS. Caught because
+   the measured tick heights did not match the stylesheet. **Rebuild and restart the
+   client before every screenshot round.**
+
+### Decisions taken
+
+- **Tick kinds are computed on `VolumeTickResponse` itself**, not in the SQL
+  projection: the projection stays a translatable expression carrying four raw facts
+  (number, is-out, owned, read status) and the appearance is a switch expression on
+  the record, in `LnShelf.Shared`, exactly as `LibraryCardResponse.Behind` already
+  is. Nested ternaries inside an EF `Expression` were the alternative, and they were
+  unreadable.
+- **`LibraryCardResponse` now carries one row per volume.** The rows view needs a
+  tick per volume across the whole shelf, so per-series round trips are the one thing
+  feature-spec §4.1 forbids; the payload for this shelf is ~180 tick objects.
+- **"Not out" outranks "read" in a tick**, which a matrix test caught by failing: a
+  volume marked read that no source says is in print draws hollow. That is what
+  `VolumeTileStateMap` already does with the same volume, and a strip and a tile
+  disagreeing would be the worse bug. Written into the test rather than remembered.
+- **Reading has no tick of its own** — a 4px tick cannot carry a sixth state, so it
+  collapses into owned-unread or to-buy, and both flavours of "not out" collapse into
+  one hollow tick. Named in the shared record's comment.
+- **The rows header and the rows share one grid rule**, in one component, because the
+  phase 3.3.1 density bug was two places restating the same geometry. Header and
+  first row measured identical left/right edges on all six columns.
+- **Select mode stays a tiles control**, disabled with a title in list view, and
+  switching to list leaves select mode so a selection cannot survive invisibly.
+- **The caption's date is short (`12 Sep`)**; a ~100px tile has no room for the year.
+  The full date is in the volume menu, in the list view's Released column, and in the
+  tile's spoken label ("Volume 17, due 12 Sep 2026").
+- **The migration's scaffolded defaults were wrong and were edited.** EF generated
+  `defaultValue: ""` for two required enum-as-text columns, which the existing
+  preferences row would have come back unable to parse; they are `"Covers"` and
+  `"Tiles"` now. The model does not declare those defaults, so a later migration may
+  offer to drop them — harmless, and the C# defaults are what new rows use.
+
+### Deviations, all deliberate
+
+The owner's rows mock (2026-07-30) **is not in the repository** — `docs/design/`
+holds only the approved v2 mockup from 07-29, and phase 3.3.1 recorded that no
+`Rows | Covers` control appeared in any checked-in artefact. The rows view was
+therefore built to the column list in the goal, and these are the choices that a
+side-by-side against the mock would have to rule on:
+
+1. **The mock's purple palette is not used at all** — that was the instruction.
+   States map onto persimmon: `--acc` read, `--acc-deep` owned-unread, `--track`
+   to-buy, hollow not-out.
+2. **A header row of eyebrow labels** (Series / Volumes / Read / own / out / Status /
+   Next) was added. The counts column is three bare numbers; without a label its only
+   explanation would have been a tooltip, and design.md forbids hover-only
+   information. It is hidden at narrow widths, where the covers card's printed counts
+   already set the precedent.
+3. **The row is not one big link.** The next-volume column carries an external
+   anchor, and an anchor cannot nest, so the title is the link and the row only
+   highlights on hover.
+4. **No new-volume signal in rows.** The covers card has the persimmon edge; the
+   goal's column list does not include it and nothing was invented for it.
+5. **Narrow rows fold onto two lines** (badge · title · next, then status · strip ·
+   counts) rather than dropping columns.
+6. **The tick strip shows the first 24**, not the last 24, with the tail after them —
+   the strip reads left to right from volume 1, and starting silently at volume 19
+   would misrepresent which end of the series it showed.
+7. **To-buy ticks have a ring and not-out ticks are half height** — the grayscale
+   measurement above, not a style preference.
+
+### The development database was given two things it did not have
+
+The shelf is eight light novels, none dated, none longer than 23 volumes, so two
+evidence cases could not be photographed from it. Both were inserted as dev fixture
+data, not invented in the UI:
+
+- **Berserk** — manga, 42 volumes, all owned, 30 read, nothing dated. This is the
+  series the 24-tick cap exists for, and being caught up is what makes its
+  next-volume column fall through to "No date".
+- **Overlord volume 17 dated 12 Sep 2026** (the mockup's own date) and **volume 16
+  set to Reading**, plus a cover override on volume 16 so one tile in the caption
+  screenshot has real artwork under it. No metadata source supplies per-volume dates
+  or volume covers — that is backlog item 1, the enrichment spike.
+
+The library preference was left on **Rows** and the Overlord override on **List**,
+since those are the states the evidence records.
+
+### What the next session needs to know
+
+- **`Mark 1– owned` renders with an empty number** when everything in print is
+  already owned (`Mark 1–@OwnedThrough owned` with a null value). The button is
+  correctly disabled, so it is cosmetic, and it predates this phase — left alone
+  rather than fixed as a drive-by. Visible in this phase's screenshots.
+- **`VolumePopover`'s read swatches are inverted** relative to design.md: its
+  `swatch--read` is `--acc-deep` and `swatch--reading` is `--acc`, while the tile, the
+  legend, the tick strip and the new list view all use `--acc` for read. Also
+  pre-existing, also left alone; it is a one-line fix for whoever opens that file.
+- The per-series override has no UI for setting it from the library — only from the
+  series page. That is enough for one user.
+- `SeriesRows` is one component holding the header and the rows on purpose. If it
+  grows a second responsibility, extract the row, and take the shared grid rule with
+  it.
+
+---
+
 ## Phase 3.3.1 — two defects, no new features (2026-07-30)
 
 **Goal:** the wrapped back link, and a control audit of the library page.

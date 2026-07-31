@@ -1,3 +1,5 @@
+using LnShelf.Shared.Preferences;
+
 namespace LnShelf.Shared.Shelf;
 
 /// <summary>
@@ -35,6 +37,14 @@ public sealed record SeriesDetailResponse
     public DateOnly? StartedAt { get; init; }
     public DateOnly? LastReadAt { get; init; }
     public required bool HasNewVolume { get; init; }
+
+    /// <summary>
+    /// This series' own volume view, or null to follow the global preference.
+    /// </summary>
+    // A per-series override rather than one global switch, because the right view is a
+    // property of the series: 42 manga volumes want a list, 14 light novels with art
+    // want tiles.
+    public VolumeView? VolumeViewOverride { get; init; }
 
     public required SeriesCountsResponse Counts { get; init; }
 

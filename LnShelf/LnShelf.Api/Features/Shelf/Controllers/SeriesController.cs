@@ -34,6 +34,20 @@ public sealed class SeriesController(
     }
 
     /// <summary>
+    /// Sets this series' volume view, or clears the override with a null view so the
+    /// series follows the global preference. Answers with the refreshed series.
+    /// </summary>
+    [HttpPut("{seriesId:guid}/volume-view")]
+    public async Task<ActionResult<SeriesDetailResponse>> SetVolumeViewAsync(
+        Guid seriesId,
+        [FromBody] SetSeriesVolumeViewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var detail = await seriesCommandService.SetVolumeViewAsync(seriesId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
     /// Adds an AniList series to the shelf, with its volumes and a default
     /// user-state row (feature-spec §6).
     /// </summary>

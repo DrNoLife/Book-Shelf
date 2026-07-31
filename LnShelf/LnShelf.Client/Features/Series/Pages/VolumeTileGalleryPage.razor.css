@@ -42,6 +42,19 @@
   color: var(--muted);
 }
 
+/* The strips stack rather than sit side by side: each is a full series' worth of
+   ticks, and they are read left to right. */
+.row--strips {
+  flex-direction: column;
+  gap: 14px;
+}
+
+.strip-sample {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .notice {
   padding: 26px;
   font-size: 12.5px;

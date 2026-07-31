@@ -74,7 +74,19 @@
   background: transparent;
 }
 
-.toggle__button:hover { color: var(--muted); }
+/* The view toggle's segments carry words, so they need horizontal room the
+   icon-only density buttons do not. */
+.toggle__button--wide {
+  width: auto;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.toggle__button:hover:not(:disabled) { color: var(--muted); }
+
+/* Inert, and visibly so — the title says which view it belongs to. */
+.toggle__button:disabled { opacity: 0.4; cursor: default; }
 
 .toggle__button--on {
   background: var(--raise);

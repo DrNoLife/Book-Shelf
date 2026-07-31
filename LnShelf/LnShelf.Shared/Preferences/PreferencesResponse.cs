@@ -13,6 +13,15 @@ public sealed record PreferencesResponse
     public required GridDensity GridDensity { get; init; }
     public required LibrarySort LibrarySort { get; init; }
 
+    /// <summary>Covers grid or rows — the library's two views of the same set.</summary>
+    public required LibraryView LibraryView { get; init; }
+
+    /// <summary>
+    /// The series-detail default. A series may override it
+    /// (<see cref="LnShelf.Shared.Shelf.SeriesDetailResponse.VolumeViewOverride"/>).
+    /// </summary>
+    public required VolumeView VolumeView { get; init; }
+
     /// <summary>The library's opinionated default filter (§4.6).</summary>
     public required LibraryFilter DefaultLibraryFilter { get; init; }
 }
@@ -22,5 +31,7 @@ public sealed record UpdatePreferencesRequest
 {
     public GridDensity? GridDensity { get; init; }
     public LibrarySort? LibrarySort { get; init; }
+    public LibraryView? LibraryView { get; init; }
+    public VolumeView? VolumeView { get; init; }
     public LibraryFilter? DefaultLibraryFilter { get; init; }
 }

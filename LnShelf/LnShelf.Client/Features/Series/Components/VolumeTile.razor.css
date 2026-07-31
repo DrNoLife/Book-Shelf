@@ -35,18 +35,9 @@
   object-fit: cover;
 }
 
-.tile__number {
-  position: absolute;
-  left: 6px;
-  bottom: 7px;
-  font-size: 12px;
-  color: rgba(244, 240, 234, 0.9);
-
-  /* So the number survives a light cover. The second layer is the same halo
-     design.md puts behind the publication dot "so a dot reads on any cover" — a
-     soft drop shadow alone washes out on a bright, saturated one. */
-  text-shadow: 0 1px 3px rgba(8, 7, 11, 0.9), 0 0 7px var(--dot-halo);
-}
+/* The volume number is not here. It used to be printed over the artwork with two
+   shadow layers to survive a light cover; it now lives in the caption under the tile,
+   because the artwork is a cover, not a text background (design.md, amended). */
 
 /* The bottom strip is the primary channel for the owned/read axis. */
 .tile__strip {
@@ -104,12 +95,11 @@
 }
 
 .tile--unreleased { box-shadow: inset 0 0 0 1px var(--line-2); }
-.tile--unreleased .tile__number { color: rgba(244, 240, 234, 0.55); }
 
-/* Announced: inset ring only and a faint number, so it reads as the emptiest of
-   the six. Its label says "No date". */
+/* Announced: inset ring only, so it reads as the emptiest of the six. Its caption
+   says "No date", which is now the whole of its text channel — the faint number that
+   used to sit on the artwork went with the rest of them. */
 .tile--announced { box-shadow: inset 0 0 0 1px var(--line); }
-.tile--announced .tile__number { color: rgba(244, 240, 234, 0.3); }
 
 /* --- select mode (ruling) ---------------------------------------------------- */
 
@@ -158,16 +148,28 @@
   border-radius: 6px;
 }
 
-/* --- label ------------------------------------------------------------------- */
+/* --- caption ----------------------------------------------------------------- */
 
-.tile__label {
-  font-size: 10.5px;
-  line-height: 1.25;
-  color: var(--faint);
+/* "Vol 9", or "Vol 9 · Reading", or "Vol 15 · 12 Sep". One line, ellipsised rather
+   than wrapped, and its height is reserved: a row mixing stated and plain tiles has
+   to keep its tops and its bottom strips aligned, which a caption that sometimes
+   takes two lines would break. */
+.tile__caption {
+  display: block;
+  min-height: 15px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tile--reading + .tile__label,
-.tile-wrap:has(.tile--reading) .tile__label { color: var(--acc-soft); }
+/* The state half of the caption is fine print next to the number. */
+.tile__caption-part { color: var(--faint); }
+
+/* Reading is the one state whose words carry the text-weight accent (design.md). */
+.tile-wrap:has(.tile--reading) .tile__caption-part { color: var(--acc-soft); }
 
 /* The file input is the only route a cover arrives by, for both the picker and a
    dropped file, so it exists in the DOM but is never seen. InputFile is a component,

@@ -17,6 +17,12 @@ public sealed class UserPreferences
 
     public LibrarySort LibrarySort { get; set; } = LibrarySort.MostBehind;
 
+    /// <summary>Covers is the default — the design's thesis is covers doing the talking.</summary>
+    public LibraryView LibraryView { get; set; } = LibraryView.Covers;
+
+    /// <summary>The series-detail default; a series may override it.</summary>
+    public VolumeView VolumeView { get; set; } = VolumeView.Tiles;
+
     /// <summary>Behind is the opinionated default (§4.6).</summary>
     public LibraryFilter DefaultLibraryFilter { get; set; } = LibraryFilter.Behind;
 }

@@ -2,7 +2,7 @@
    line says what they mean without a single piece of jargon. *@
 
 <header class="header">
-    <p class="eyebrow">Library · @Totals.SeriesCount series</p>
+    <p class="eyebrow">@Eyebrow · @Totals.SeriesCount series</p>
 
     <div class="header__row">
         <div class="stats">
@@ -32,4 +32,11 @@
     /// <summary>Totals across the current format scope, not the filtered subset.</summary>
     [Parameter]
     public required LibraryTotals Totals { get; set; }
+
+    /// <summary>
+    /// The section marker. The page decides it, because the rows view spends its one
+    /// wry line here.
+    /// </summary>
+    [Parameter]
+    public string Eyebrow { get; set; } = "Library";
 }

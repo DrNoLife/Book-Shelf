@@ -1,3 +1,4 @@
+using LnShelf.Client.Features.Preferences;
 using LnShelf.Client.Features.Sync;
 using LnShelf.Shared.Metadata;
 using LnShelf.Shared.Shelf;
@@ -15,6 +16,14 @@ public partial class SeriesPage : IDisposable
 
     [Inject]
     public required SyncState SyncState { get; set; }
+
+    /// <summary>
+    /// Held here rather than in the volume section: the global volume view has to be
+    /// read before the section first draws, or a series following the default would
+    /// render as tiles and then swap to a list a moment later.
+    /// </summary>
+    [Inject]
+    public required PreferencesState Preferences { get; set; }
 
     private SeriesDetailResponse? Series => SeriesState.Series;
 
@@ -56,6 +65,7 @@ public partial class SeriesPage : IDisposable
     {
         SeriesState.Changed += OnStateChanged;
         SyncState.Changed += OnStateChanged;
+        Preferences.Changed += OnStateChanged;
     }
 
     /// <summary>
@@ -64,6 +74,11 @@ public partial class SeriesPage : IDisposable
     /// </summary>
     protected override async Task OnParametersSetAsync()
     {
+        if (!Preferences.HasLoaded)
+        {
+            await Preferences.LoadAsync();
+        }
+
         if (Series?.SeriesId != SeriesId)
         {
             await SeriesState.LoadAsync(SeriesId);
@@ -79,6 +94,7 @@ public partial class SeriesPage : IDisposable
     {
         SeriesState.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;
+        Preferences.Changed -= OnStateChanged;
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

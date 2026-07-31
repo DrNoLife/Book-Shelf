@@ -44,6 +44,15 @@ public partial class VolumeTile
     [Parameter]
     public EventCallback<VolumeResponse> SelectionToggled { get; set; }
 
+    /// <summary>
+    /// This volume's own title, printed in the caption after the number when it exists.
+    /// </summary>
+    // No metadata source supplies per-volume titles (AniList counts volumes, it does not
+    // name them), so nothing passes this today except the design gallery. The caption
+    // accommodates it rather than inventing one.
+    [Parameter]
+    public string? Title { get; set; }
+
     /// <summary>Arrow keys, handled by the grid because it knows the layout.</summary>
     [Parameter]
     public EventCallback<(VolumeResponse Volume, string Key)> Navigated { get; set; }
@@ -61,6 +70,26 @@ public partial class VolumeTile
     private VolumeTileState State => VolumeTileStateMap.For(Volume);
 
     private string? Label => VolumeTileStateMap.LabelFor(Volume, State);
+
+    /// <summary>
+    /// What follows "Vol N" in the caption: the volume's title if it has one, then the
+    /// state label if the state carries one. "Vol 9 · Reading", "Vol 15 · 12 Sep".
+    /// </summary>
+    private IEnumerable<string> CaptionParts
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Title))
+            {
+                yield return Title;
+            }
+
+            if (Label is { } label)
+            {
+                yield return label;
+            }
+        }
+    }
 
     /// <summary>
     /// The override already arrives as the volume's cover key (the projection prefers
@@ -104,7 +133,11 @@ public partial class VolumeTile
                 VolumeTileState.Reading => "reading",
                 VolumeTileState.OwnedUnread => "owned, unread",
                 VolumeTileState.ToBuy => "to buy",
-                VolumeTileState.Unreleased => Label is null ? "not out yet" : $"due {Label}",
+
+                // Spoken with the year the caption has no room for.
+                VolumeTileState.Unreleased => Volume.ReleaseDate is { } releaseDate
+                    ? $"due {VolumeTileStateMap.FullDate(releaseDate)}"
+                    : "not out yet",
                 VolumeTileState.Announced => "announced, no date",
                 _ => string.Empty,
             };

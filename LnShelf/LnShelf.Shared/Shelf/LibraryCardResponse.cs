@@ -42,6 +42,19 @@ public sealed record LibraryCardResponse
     public int? NextToBuyNumber { get; init; }
 
     /// <summary>
+    /// The earliest date a volume that is not out yet carries. Null when no source has
+    /// dated anything — which is currently every series (backlog: the enrichment spike).
+    /// </summary>
+    public DateOnly? NextReleaseDate { get; init; }
+
+    /// <summary>
+    /// One entry per volume, in number order — what the rows view's tick strip draws.
+    /// </summary>
+    // Carried on the card rather than fetched per series: the rows view shows the whole
+    // shelf at once, so a round trip per row is exactly what feature-spec §4.1 forbids.
+    public IReadOnlyList<VolumeTickResponse> VolumeTicks { get; init; } = [];
+
+    /// <summary>
     /// Carried so the client can sort by them without a second round trip.
     /// </summary>
     // The library is one response holding every card, so sorting is a client
