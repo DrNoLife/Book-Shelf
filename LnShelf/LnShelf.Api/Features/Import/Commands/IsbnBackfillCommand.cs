@@ -5,7 +5,7 @@ namespace LnShelf.Api.Features.Import.Commands;
 /// <summary>
 /// <c>dotnet run --project LnShelf/LnShelf.Api -- isbn-backfill</c>
 /// </summary>
-public sealed class IsbnBackfillCommand(IsbnBackfillService backfill) : IConsoleCommand
+public sealed class IsbnBackfillCommand(IIsbnBackfill backfill) : IConsoleCommand
 {
     public string Name => "isbn-backfill";
 

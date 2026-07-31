@@ -136,6 +136,10 @@ public static class MetadataFeatureExtensions
         {
             services.Configure<SyncOptions>(configuration.GetSection(SyncOptions.SectionName));
 
+            // What happens to one series, shared by the nightly sweep and the refresh that
+            // runs when a series is added (feature-spec §4.2 — "same code path").
+            services.AddScoped<SeriesRefresher>();
+
             services.AddScoped<ISeriesSyncService, SeriesSyncService>();
             services.AddScoped<ISyncQueryService, SyncQueryService>();
 

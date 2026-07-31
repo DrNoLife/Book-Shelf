@@ -210,6 +210,90 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
+    public async Task AddFromAniListAsync_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var isbnBackfill = Substitute.For<IIsbnBackfill>();
+        isbnBackfill.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new IsbnBackfillReport
+            {
+                Offered = 14,
+                Written = 14,
+                AlreadyRecorded = 0,
+                WithoutVolume = 0,
+            });
+
+        var sync = Substitute.For<ISeriesSyncService>();
+        sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new SyncRun
+            {
+                Id = Guid.CreateVersion7(),
+                StartedAt = DateTimeOffset.UnixEpoch,
+                Summary = "Mushoku Tensei refreshed · 14 volumes enriched from OpenLibrary",
+            });
+
+        var response = await CreateService(dbContext, CreateMetadataSource(), isbnBackfill, sync)
+            .AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+
+        // The order is the whole point: enrichment is keyed on ISBN, so the ISBNs have to be
+        // on the volumes before the refresh looks at them. Adopting after would enrich
+        // nothing and the caller would never know why.
+        Received.InOrder(() =>
+        {
+            isbnBackfill.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+            sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        });
+
+        // And what the refresh managed comes back, so the page that asked can say so.
+        response.ShouldNotBeNull().RefreshSummary
+            .ShouldNotBeNull().ShouldContain("14 volumes enriched");
+    }
+
+    [Fact]
+    public async Task AddFromAniListAsync_ASeriesAlreadyTracked_DoesNotRefreshItAgain()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var isbnBackfill = NoStagedIsbns();
+        var sync = NoRefresh();
+        var service = CreateService(dbContext, CreateMetadataSource(), isbnBackfill, sync);
+
+        await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var second = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+
+        second.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
+
+        // Adding twice is a no-op, and that has to include the refresh: pressing Add on a
+        // series already on the shelf must not spend anyone's rate limit.
+        await sync.Received(1).RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await isbnBackfill.Received(1).RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AddFromAniListAsync_ARefreshThatThrows_StillAddsTheSeries()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var sync = Substitute.For<ISeriesSyncService>();
+        sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns<Task<SyncRun?>>(_ => throw new HttpRequestException("MangaUpdates is down"));
+
+        var response = await CreateService(dbContext, CreateMetadataSource(), NoStagedIsbns(), sync)
+            .AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+
+        // The series is on the shelf by the time the refresh runs, so failing the add would
+        // be the wrong trade — the refresh is an improvement on the add, not part of it.
+        response.ShouldNotBeNull().AlreadyTracked.ShouldBeFalse();
+        response.VolumeCount.ShouldBe(26);
+
+        // Said with silence rather than a lie: no summary, because nothing was refreshed.
+        response.RefreshSummary.ShouldBeNull();
+
+        (await dbContext.Series.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task DeleteAsync_ATrackedSeries_TakesItsVolumesAndAllUserStateWithIt()
     {
         await using var dbContext = CreateDbContext();
@@ -323,9 +407,45 @@ public sealed class SeriesCommandServiceTests
 
     private static SeriesCommandService CreateService(
         LnShelfDbContext dbContext,
-        ISeriesMetadataSource metadataSource) =>
-        new(dbContext, metadataSource, CreateCoverCache(), TimeProvider.System,
+        ISeriesMetadataSource metadataSource,
+        IIsbnBackfill? isbnBackfill = null,
+        ISeriesSyncService? seriesSync = null) =>
+        new(dbContext,
+            metadataSource,
+            CreateCoverCache(),
+            isbnBackfill ?? NoStagedIsbns(),
+            seriesSync ?? NoRefresh(),
+            TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
+
+    /// <summary>Staging holds nothing for this series — the usual case for a new one.</summary>
+    private static IIsbnBackfill NoStagedIsbns()
+    {
+        var backfill = Substitute.For<IIsbnBackfill>();
+        backfill.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new IsbnBackfillReport
+            {
+                Offered = 0,
+                Written = 0,
+                AlreadyRecorded = 0,
+                WithoutVolume = 0,
+            });
+
+        return backfill;
+    }
+
+    /// <summary>
+    /// A refresh that answers nothing, so the add tests stay about adding.
+    /// </summary>
+    // Null is a real answer here, not a fake one: it is what a refresh returns when the
+    // series has no external sources to reach, and the add must not depend on more.
+    private static ISeriesSyncService NoRefresh()
+    {
+        var sync = Substitute.For<ISeriesSyncService>();
+        sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((SyncRun?)null);
+
+        return sync;
+    }
 
     /// <summary>Pretends the cover was cached, so the stored key can be asserted.</summary>
     private static ICoverCache CreateCoverCache()

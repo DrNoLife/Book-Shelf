@@ -6,6 +6,65 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.7 — adding a series refreshes it immediately (2026-07-31)
+
+Adding a series used to fetch AniList and stop: titles, a cover, a volume list, and
+nothing true about the volumes themselves. No in-print flags, no dates, no volume art, no
+titles until 04:00. Deleting a series and re-adding it made that obvious — it came back
+with 23 volumes and zero of everything else.
+
+- **`SeriesRefresher`** — the per-series half of the sync, extracted from
+  `SeriesSyncService`. The nightly sweep and an on-demand refresh now share one copy of the
+  rules, which is what feature-spec §4.2's "same code path" was already asking for.
+  `SeriesSyncService` keeps what a *run* is and got considerably smaller for it.
+- **`ISeriesSyncService.RunForSeriesAsync`** — one series, on demand, writing a run whose
+  summary names it ("Slime refreshed · 1 linked to MangaUpdates · …") rather than "1 series
+  refreshed", because that run becomes the latest and the sidebar prints it.
+- **Add-series adopts staged ISBNs first, then refreshes.** The order is the feature:
+  enrichment is keyed on ISBN, so a re-added series whose ISBNs are still stranded in
+  `import_row` would be skipped volume by volume and the refresh would find nothing.
+  `IIsbnBackfill` is the new seam for that, so the Shelf slice is not reaching into a
+  concrete Import service.
+- **`MaximumLookupsOnDemand`, default 8** — a much smaller allowance than the sweep's 60,
+  because somebody is waiting. Whatever it does not reach, the nightly run finishes.
+- **Never fatal.** The series is already on the shelf when the refresh runs, so a dead
+  MangaUpdates logs a warning and the add still succeeds with `RefreshSummary = null`.
+
+### Proven on a copy of the live shelf
+
+Deleted Slime and re-added it, exactly as the owner had:
+
+| | before this phase | after |
+|---|---|---|
+| volumes | 23 | 23 |
+| in print | 0 | **23** (linked to MangaUpdates) |
+| ISBNs | 0 | **14** (adopted from staging) |
+| dates / titles / covers | 0 / 0 / 0 | **1 / 5 / 1** |
+
+**10.7 seconds** for the whole POST. Adding the same series again answers
+`alreadyTracked: true` with no refresh at all, so a second press spends nobody's rate
+limit. Five of the fourteen ISBNs were enriched — the 8-lookup budget stopped there, with 3
+of those 8 being genuine catalogue gaps.
+
+### One defect this phase created and then caught
+
+Swapping `IsbnBackfillService` for the `IIsbnBackfill` registration left
+`IsbnBackfillCommand` asking for a type nobody registered any more. **Every test passed**
+and the app would not start — the service tests all use `new`, which is the right way to
+test behaviour and the exact reason none of them touches the container.
+
+`CompositionRootTests` now builds the real service collection with `ValidateOnBuild` and
+`ValidateScopes`, and separately activates every controller from a scope, since MVC never
+registers controllers as services and `ValidateOnBuild` cannot see them. That is the
+assertion the suite was missing, not DI ceremony.
+
+### Still not built
+
+The **UI button** for "sync now". The service half exists and is what add-series calls, so
+the button and a `POST /api/series/{id}/sync` are now small; neither was in scope here.
+
+---
+
 ## Phase 3.6 — deleting a series (2026-07-31)
 
 `DELETE /api/series/{id}` finally exists. feature-spec §6 has listed it since the first

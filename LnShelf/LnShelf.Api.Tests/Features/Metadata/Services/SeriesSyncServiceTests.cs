@@ -334,14 +334,20 @@ public sealed class SeriesSyncServiceTests
 
         var enrichmentOptions = Options.Create(new OpenLibraryOptions { MaximumLookupsPerRun = 60 });
 
-        return new SeriesSyncService(
-            dbContext,
+        var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
             new VolumeEnrichmentService(
                 enrichmentSource,
                 Substitute.For<IVolumeCoverCache>(),
                 NullLogger<VolumeEnrichmentService>.Instance),
+            TimeProvider.System,
+            NullLogger<SeriesRefresher>.Instance);
+
+        return new SeriesSyncService(
+            dbContext,
+            refresher,
+            releaseSource,
             enrichmentSource,
             enrichmentOptions,
             TimeProvider.System,

@@ -51,6 +51,15 @@ public sealed class OpenLibraryOptions
     public int MaximumLookupsPerRun { get; set; } = 60;
 
     /// <summary>
+    /// Volumes one on-demand refresh will look up — adding a series, or a manual sync.
+    /// </summary>
+    // Much smaller than the nightly allowance, because somebody is waiting for this one.
+    // At twelve lookups a minute, eight is about forty seconds: slow for a click, but
+    // inside the browser's default hundred-second request timeout with room to spare.
+    // Whatever it does not reach, the nightly sweep finishes.
+    public int MaximumLookupsOnDemand { get; set; } = 8;
+
+    /// <summary>
     /// A day: an edition record that has existed for years is not about to change.
     /// </summary>
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(24);

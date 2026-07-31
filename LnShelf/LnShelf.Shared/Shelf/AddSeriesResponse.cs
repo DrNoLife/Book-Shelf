@@ -19,4 +19,14 @@ public sealed record AddSeriesResponse
     /// Adding twice is a no-op, not a duplicate.
     /// </summary>
     public required bool AlreadyTracked { get; init; }
+
+    /// <summary>
+    /// What the refresh that ran alongside the add managed to fetch, in the same words
+    /// the sidebar prints. Null when nothing was refreshed.
+    /// </summary>
+    // Reported rather than left implicit: adding a series now links it to the release
+    // source and enriches whatever volumes carry an ISBN, and how much of that succeeded
+    // is exactly what the person who pressed Add wants to know. AniList alone would leave
+    // a series with volumes and nothing else true about them.
+    public string? RefreshSummary { get; init; }
 }

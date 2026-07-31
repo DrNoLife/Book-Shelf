@@ -5,6 +5,8 @@ public sealed class SeriesCommandService(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
     ICoverCache coverCache,
+    IIsbnBackfill isbnBackfill,
+    ISeriesSyncService seriesSync,
     TimeProvider timeProvider,
     ILogger<SeriesCommandService> logger) : ISeriesCommandService
 {
@@ -63,14 +65,70 @@ public sealed class SeriesCommandService(
             series.Id,
             series.Volumes.Count);
 
+        var refreshSummary = await CompleteAsync(series.Id, cancellationToken);
+
         return new AddSeriesResponse
         {
             SeriesId = series.Id,
             TitleEnglish = series.TitleEnglish,
+
+            // Re-read from the entity rather than reusing the pre-refresh values: the
+            // refresh can discover volumes AniList did not know about, and reporting the
+            // count from before it ran would be wrong the moment it does.
             Format = series.Format,
             VolumeCount = series.Volumes.Count,
             AlreadyTracked = false,
+            RefreshSummary = refreshSummary,
         };
+    }
+
+    /// <summary>
+    /// Everything a newly added series needs beyond AniList: the ISBNs the shelf already
+    /// knows for it, then a refresh against the release and enrichment sources.
+    /// </summary>
+    // AniList supplies titles, a cover and a volume *list* — and nothing else that is true
+    // about the volumes themselves. Without this, a freshly added series sits with no
+    // in-print flags, no dates, no volume art and no titles until the nightly job runs,
+    // which is what "I added a series and no real data arrived" was.
+    //
+    // The ISBN adoption comes first and on purpose: enrichment is keyed on ISBN, so a
+    // re-added series whose staged ISBNs have not been restored yet would be skipped
+    // volume by volume and the refresh would find nothing to do.
+    //
+    // Never fatal. The series is already on the shelf by the time this runs, and failing
+    // the add because MangaUpdates was down would be the wrong trade — the refresh is an
+    // improvement on the add, not part of it.
+    private async Task<string?> CompleteAsync(Guid seriesId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var adopted = await isbnBackfill.RunForSeriesAsync(seriesId, cancellationToken);
+
+            if (adopted.Written > 0)
+            {
+                logger.LogInformation(
+                    "Adopted {IsbnCount} ISBN(s) from import staging for {SeriesId}",
+                    adopted.Written,
+                    seriesId);
+            }
+
+            var run = await seriesSync.RunForSeriesAsync(seriesId, cancellationToken);
+
+            return run?.Summary;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not refresh {SeriesId} on add; the nightly sync will pick it up",
+                seriesId);
+
+            return null;
+        }
     }
 
     public async Task<SeriesDetailResponse?> SetVolumeViewAsync(

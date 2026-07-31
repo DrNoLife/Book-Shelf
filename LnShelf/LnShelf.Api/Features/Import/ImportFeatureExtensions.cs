@@ -28,8 +28,10 @@ public static class ImportFeatureExtensions
             services.AddScoped<IImportQueryService, ImportQueryService>();
             services.AddScoped<IImportCommandService, ImportCommandService>();
 
-            // The one-shot that collects the ISBNs earlier imports parsed and dropped.
-            services.AddScoped<IsbnBackfillService>();
+            // Collects the ISBNs earlier imports parsed and dropped. Two callers: the
+            // one-shot command, and add-series adopting them for one series so enrichment
+            // has a key to work with.
+            services.AddScoped<IIsbnBackfill, IsbnBackfillService>();
             services.AddScoped<IConsoleCommand, IsbnBackfillCommand>();
 
             return services;
