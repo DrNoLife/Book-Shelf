@@ -14,6 +14,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // state" and "overrides always win" true by construction.
 public sealed class VolumeEnrichmentService(
     IVolumeEnrichmentSource enrichmentSource,
+    IIsbnCandidateSource candidateSource,
     IVolumeCoverCache coverCache,
     ILogger<VolumeEnrichmentService> logger)
 {
@@ -21,25 +22,24 @@ public sealed class VolumeEnrichmentService(
     /// "In the future" is relative to a day, so the caller supplies it — the same
     /// convention the projections follow.
     /// </param>
-    /// <param name="lookupBudget">
-    /// How many volumes this call may look up. The caller owns the run's whole budget.
+    /// <param name="budget">
+    /// Spent down as requests are made, not as volumes are visited: one volume can cost
+    /// several requests when its own ISBN turns out not to be indexed.
     /// </param>
-    /// <returns>Lookups actually spent, so the caller can subtract them.</returns>
-    public async Task<int> EnrichAsync(
+    public async Task EnrichAsync(
         Series series,
         SyncRun run,
         DateOnly today,
-        int lookupBudget,
+        LookupBudget budget,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(run);
-
-        var spent = 0;
+        ArgumentNullException.ThrowIfNull(budget);
 
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
-            if (spent >= lookupBudget)
+            if (budget.IsExhausted)
             {
                 break;
             }
@@ -49,14 +49,12 @@ public sealed class VolumeEnrichmentService(
                 continue;
             }
 
-            spent++;
-
             // Per-volume failure isolation. The sync run already isolates per series;
             // this keeps one unreachable edition record from costing a series its other
             // twenty volumes.
             try
             {
-                await ApplyAsync(series, volume, run, today, cancellationToken);
+                await ApplyAsync(series, volume, run, today, budget, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -73,8 +71,6 @@ public sealed class VolumeEnrichmentService(
                     volume.Isbn);
             }
         }
-
-        return spent;
     }
 
     /// <summary>
@@ -104,9 +100,18 @@ public sealed class VolumeEnrichmentService(
         Volume volume,
         SyncRun run,
         DateOnly today,
+        LookupBudget budget,
         CancellationToken cancellationToken)
     {
+        budget.Spend(1);
         var enrichment = await enrichmentSource.GetByIsbnAsync(volume.Isbn!, cancellationToken);
+
+        // Not indexed under the ISBN this shelf holds — which does not mean the volume is
+        // absent. The printing the reader owns is often simply not the printing a library
+        // catalogued: five of Slime's ISBNs 404 while Open Library plainly holds those
+        // volumes under other ISBNs. So the volume is searched for by name, and any
+        // candidate has to prove it is this series' volume N before it is believed.
+        enrichment ??= await ResolveBySearchAsync(series, volume, run, budget, cancellationToken);
 
         if (enrichment is null)
         {
@@ -133,6 +138,96 @@ public sealed class VolumeEnrichmentService(
         ApplyReleaseDate(series, volume, enrichment, run, today);
         ApplyTitle(volume, enrichment);
         await ApplyCoverAsync(volume, enrichment, run, cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds another printing of the same volume, when the held ISBN is not indexed.
+    /// </summary>
+    // Held to a far higher bar than a direct ISBN lookup, and deliberately so. Asking for
+    // an ISBN is unambiguous; searching by name is a guess, and this shelf has the worst
+    // case of it — the Slime light novel and the Slime manga share a title. So a candidate
+    // is only believed when its own record names this series, this volume number and the
+    // right medium (VolumeEditionMatcher), and the first one that does wins.
+    //
+    // Volume.Isbn is never rewritten from here. It records the edition the reader owns; the
+    // record that happened to supply a date is not that.
+    private async Task<VolumeEnrichment?> ResolveBySearchAsync(
+        Series series,
+        Volume volume,
+        SyncRun run,
+        LookupBudget budget,
+        CancellationToken cancellationToken)
+    {
+        if (budget.IsExhausted)
+        {
+            return null;
+        }
+
+        budget.Spend(1);
+        var candidates = await candidateSource.FindAsync(
+            series.TitleEnglish, volume.Number, cancellationToken);
+
+        foreach (var candidate in candidates.Isbns)
+        {
+            if (budget.IsExhausted)
+            {
+                return null;
+            }
+
+            // The reader's own ISBN was already asked for and is what got us here.
+            if (string.Equals(candidate, volume.Isbn, StringComparison.Ordinal)
+                || Isbn.IsJapaneseEdition(candidate))
+            {
+                continue;
+            }
+
+            budget.Spend(1);
+            var enrichment = await enrichmentSource.GetByIsbnAsync(candidate, cancellationToken);
+
+            if (enrichment is null
+                || enrichment.Language is EditionLanguage.Other
+                || !VolumeEditionMatcher.Matches(series.TitleEnglish, volume.Number, series.Format, enrichment))
+            {
+                continue;
+            }
+
+            // The record has to say which medium it is, not merely fail to say it is the
+            // other one. This path writes to the shelf with nobody looking, and the case it
+            // guards against is real: a discovery run over this shelf proposed three
+            // Kodansha manga volumes for a Yen Press light novel, all of them titled just
+            // "…Slime 18" with no marker at all. Where Open Library does not say, this does
+            // not guess — the volume is left alone and the review file is the way in.
+            if (!VolumeEditionMatcher.ConfirmsMedium(series.Format, enrichment))
+            {
+                logger.LogInformation(
+                    "{TitleEnglish} volume {VolumeNumber}: {RecordKey} (\"{RecordTitle}\", {Publisher}) is the "
+                    + "right volume but does not state that it is a {Format}; left for review",
+                    series.TitleEnglish,
+                    volume.Number,
+                    enrichment.SourceRecordKey,
+                    enrichment.Title,
+                    enrichment.Publisher,
+                    series.Format);
+
+                continue;
+            }
+
+            logger.LogInformation(
+                "{TitleEnglish} volume {VolumeNumber}: ISBN {Isbn} is not indexed, but {RecordKey} "
+                + "({CandidateIsbn}, \"{RecordTitle}\") is the same volume",
+                series.TitleEnglish,
+                volume.Number,
+                volume.Isbn,
+                enrichment.SourceRecordKey,
+                candidate,
+                enrichment.Title);
+
+            run.VolumesResolvedBySearch++;
+
+            return enrichment;
+        }
+
+        return null;
     }
 
     /// <summary>

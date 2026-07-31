@@ -30,8 +30,19 @@ public sealed record IsbnDiscoveryRow
 /// <summary>Why a volume ended up with an ISBN, or with none.</summary>
 public enum IsbnDiscoveryOutcome
 {
-    /// <summary>The edition's own record says English.</summary>
+    /// <summary>
+    /// The record says English and says it is this medium — the only fully confident answer.
+    /// </summary>
     ConfirmedEnglish,
+
+    /// <summary>
+    /// The right series and volume, but the record never says which medium it is.
+    /// </summary>
+    // The one to actually look at. A real run proposed three Kodansha manga volumes for a
+    // Yen Press light novel this way, all titled plainly "…Slime 18" — the right series, the
+    // right number, and the wrong book. Nothing else in the row would have given it away, so
+    // the outcome says it instead of pretending to be sure.
+    MediumUnconfirmed,
 
     /// <summary>No language on the record, but the publisher is an English-market one.</summary>
     LikelyEnglishPublisher,

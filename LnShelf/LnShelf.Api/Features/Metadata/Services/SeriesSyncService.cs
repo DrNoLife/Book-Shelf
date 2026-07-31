@@ -186,6 +186,13 @@ public sealed class SeriesSyncService(
             parts.Add($"{run.VolumeCoversCached} volume covers cached");
         }
 
+        if (run.VolumesResolvedBySearch > 0)
+        {
+            // Named as the weaker claim it is: the reader's own ISBN was not indexed, so
+            // another printing of the same volume supplied the data.
+            parts.Add($"{run.VolumesResolvedBySearch} matched to another printing");
+        }
+
         if (run.EnrichmentGaps > 0)
         {
             // Reported, not hidden: enriching 12 of 20 volumes is the honest number, and

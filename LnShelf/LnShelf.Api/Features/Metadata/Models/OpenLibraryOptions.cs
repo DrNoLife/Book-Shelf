@@ -64,6 +64,13 @@ public sealed class OpenLibraryOptions
     /// </summary>
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(24);
 
-    public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(20);
+    /// <summary>
+    /// Thirty seconds, because the search endpoint is a Solr query and is slow.
+    /// </summary>
+    // Twenty was borrowed from the other two sources and measured too tight here: a real
+    // discovery run over nine volumes lost three of them to timeouts, two of which were
+    // findable on a retry. This bounds one request, not the wait for a rate-limit permit —
+    // see OpenLibraryRateLimitHandler for why those are not the same clock.
+    public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public TimeSpan MaximumRetryDelay { get; set; } = TimeSpan.FromSeconds(60);
 }

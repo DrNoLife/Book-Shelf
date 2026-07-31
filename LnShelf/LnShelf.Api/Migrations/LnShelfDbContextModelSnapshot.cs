@@ -308,6 +308,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<int>("VolumesMarkedReleased")
                         .HasColumnType("integer");
 
+                    b.Property<int>("VolumesResolvedBySearch")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("StartedAt");

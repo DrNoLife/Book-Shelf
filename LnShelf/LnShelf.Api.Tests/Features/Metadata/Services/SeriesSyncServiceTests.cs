@@ -339,6 +339,7 @@ public sealed class SeriesSyncServiceTests
             releaseSource,
             new VolumeEnrichmentService(
                 enrichmentSource,
+                NoCandidates(),
                 Substitute.For<IVolumeCoverCache>(),
                 NullLogger<VolumeEnrichmentService>.Instance),
             TimeProvider.System,
@@ -398,6 +399,20 @@ public sealed class SeriesSyncServiceTests
 
         dbContext.Series.Add(series);
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A search that offers nothing: these tests are about the release-source half of a
+    /// run, and the search fallback has its own file.
+    /// </summary>
+    private static IIsbnCandidateSource NoCandidates()
+    {
+        var source = Substitute.For<IIsbnCandidateSource>();
+        source.SourceName.Returns("OpenLibrary");
+        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(IsbnCandidates.None);
+
+        return source;
     }
 
     private static LnShelfDbContext CreateDbContext() =>

@@ -72,8 +72,10 @@ public sealed class SeriesRefresher(
 
         var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
 
-        budget.Spend(await volumeEnrichment.EnrichAsync(
-            series, run, today, budget.Remaining, cancellationToken));
+        // The budget is handed over rather than a number: one volume can cost several
+        // requests when its own ISBN is not the one that got indexed, and only the
+        // enrichment knows how many it actually spent.
+        await volumeEnrichment.EnrichAsync(series, run, today, budget, cancellationToken);
     }
 
     private async Task<ReleaseSeriesInfo?> LinkAsync(

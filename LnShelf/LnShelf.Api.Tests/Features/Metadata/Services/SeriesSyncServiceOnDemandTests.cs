@@ -110,8 +110,13 @@ public sealed class SeriesSyncServiceOnDemandTests
             .RunForSeriesAsync(seriesId, CancellationToken.None);
 
         // Somebody is waiting for this one, so it takes a small bite and the nightly sweep
-        // finishes the rest — 20 volumes' worth of lookups at twelve a minute is not a click.
-        await enrichmentSource.Received(OnDemandBudget)
+        // finishes the rest — 20 volumes' worth of requests at twelve a minute is not a click.
+        //
+        // Four volumes, not eight, because the budget counts *requests* rather than volumes:
+        // every one of these ISBNs comes back unindexed, so each volume costs a direct lookup
+        // plus a fallback search. Counting a volume as one lookup would let a series quietly
+        // spend several times its share against somebody else's donated API.
+        await enrichmentSource.Received(OnDemandBudget / 2)
             .GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -165,6 +170,7 @@ public sealed class SeriesSyncServiceOnDemandTests
             releaseSource,
             new VolumeEnrichmentService(
                 enrichmentSource,
+                NoCandidates(),
                 Substitute.For<IVolumeCoverCache>(),
                 NullLogger<VolumeEnrichmentService>.Instance),
             TimeProvider.System,
@@ -218,6 +224,20 @@ public sealed class SeriesSyncServiceOnDemandTests
         await dbContext.SaveChangesAsync();
 
         return series.Id;
+    }
+
+    /// <summary>
+    /// A search that offers nothing: these tests are about the release-source half of a
+    /// run, and the search fallback has its own file.
+    /// </summary>
+    private static IIsbnCandidateSource NoCandidates()
+    {
+        var source = Substitute.For<IIsbnCandidateSource>();
+        source.SourceName.Returns("OpenLibrary");
+        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(IsbnCandidates.None);
+
+        return source;
     }
 
     private static LnShelfDbContext CreateDbContext() =>

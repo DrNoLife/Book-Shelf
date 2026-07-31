@@ -32,6 +32,15 @@ public sealed class SyncRun
     public int VolumeCoversCached { get; set; }
 
     /// <summary>
+    /// Volumes whose own ISBN was not indexed, but whose data was found under another
+    /// printing of the same volume.
+    /// </summary>
+    // Counted separately from VolumesEnriched because it is a weaker claim: the record came
+    // from a name search rather than from the identifier the reader gave, and a run that
+    // leaned on it should say so.
+    public int VolumesResolvedBySearch { get; set; }
+
+    /// <summary>
     /// Volumes looked up whose ISBN the source has no usable record for.
     /// </summary>
     // Reported rather than hidden: 20% of this shelf's known ISBNs are genuine catalogue

@@ -6,6 +6,87 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.8 — the search query was the bug (2026-07-31)
+
+Slime enriched worse than every other series and the review file said five of its volumes
+were "not in Open Library". They were. **The query was.**
+
+### What was actually wrong
+
+`OpenLibraryIsbnCandidateSource` sent one quoted phrase, `"<series> volume <N>"`. Open
+Library's search ANDs its terms and no title on this shelf contains the word *volume*, so
+that single token excluded every result. Measured against the live catalogue:
+
+| query | hits |
+|---|---|
+| `"…Slime volume 16"` ← what shipped | **0** |
+| `…Slime volume 16` unquoted | **0** — the word alone is fatal |
+| `…Slime 16` | **2**, first is *That Time I Got Reincarnated as a Slime 16* |
+| `"…Slime, Vol. 16"` | **1** |
+
+Open Library holds **82 works** for this series with English entries for volumes 9–23. So
+"not catalogued" was never true; it was never asked properly.
+
+This also undermines a headline finding of the verdict. Brief E's *"6 of 7 not-yet-owned
+volumes returned zero results — Open Library catalogues the past and cannot see the
+future"* used the same phrase. Re-tested: **Slime 20 is catalogued** (1 work, 2 ISBNs);
+**Overlord 17 genuinely is not**. That conclusion is part real, part measurement artifact,
+and `.research/` has not been rewritten — this entry is the correction.
+
+### The three causes, separated
+
+1. **The query** (a bug, fixed): both working forms are now tried and their ISBNs unioned.
+2. **Direct-ISBN-only lookup** (a design gap, fixed): five Slime ISBNs 404 because the
+   printing the owner holds is not the printing a library catalogued, while the volume sits
+   there under a sibling ISBN. Enrichment now falls back to a name search when a held ISBN
+   is not indexed.
+3. **Thin records** (real, unfixable here): the Slime records that *are* reachable carry
+   year-only dates (`"2019"`) and `covers: null`, because Yen Press's are indexed as digital
+   editions. 86—EIGHTY-SIX's ISBNs happened to be the indexed printings with library-grade
+   records, which is the whole reason it scored 11/11. Slime's luck was worse.
+
+### What made loosening safe
+
+`VolumeEditionMatcher`. A looser search returns neighbouring volumes, prefix-colliding
+series and the other medium, so a candidate is only believed when its own record names this
+series, this volume number, and the right medium:
+
+- The volume number must **lead** the text after the series title. Containment alone let
+  `Overlord` match *Overlord's Unfinished Business, Vol. 3* — and this shelf has the live
+  version of that problem, the *Slime Diaries* spin-off.
+- **[found by running it]** The first fixed run proposed three **Kodansha America** volumes
+  for a Yen Press light novel — Slime 13, 18 and 19, titled plainly "…Slime 18" with no
+  marker. Kodansha publishes the Slime *manga*. So the silent path now requires the record
+  to positively say `(light novel)`, and the reviewed path labels the ones that do not.
+  Publisher is deliberately *not* the signal: Yen Press publishes both media of this series.
+
+### Measured on a copy of the live shelf
+
+| | before | after |
+|---|---|---|
+| review file proposals | 1 of 8 | **8 of 9** (7 confirmed + 1 flagged) |
+| Slime titled / dated / covers | 5 / 1 / 1 | **10 / 3 / 3** |
+| Tanya titled / covers | 10 / 9 | **13 / 12** |
+| volumes matched to a sibling printing | — | **7** over two runs |
+
+The sibling ISBNs are visibly right: `9781975301194 → 1975301188`,
+`9781646599387 → 1975314492`, `9781975310554 → 9781975310547`.
+
+Slime's dates and covers barely moved, and that is cause 3, not a shortfall in the fix: the
+records now being found genuinely have neither.
+
+### Two smaller things
+
+- `RequestTimeout` raised 20s → **30s**, and one query form failing no longer costs the
+  volume its other form. A run lost three of nine volumes to timeouts; search is a Solr
+  query and is slow. Two of those three were findable.
+- `SyncRun.VolumesResolvedBySearch` counts the weaker claim separately, and the footer says
+  "matched to another printing" rather than folding it into the confident number.
+- **[found by running it]** The new column had no migration. EF's
+  `PendingModelChangesWarning` caught it at startup, not the test suite.
+
+---
+
 ## Phase 3.7 — adding a series refreshes it immediately (2026-07-31)
 
 Adding a series used to fetch AniList and stop: titles, a cover, a volume list, and

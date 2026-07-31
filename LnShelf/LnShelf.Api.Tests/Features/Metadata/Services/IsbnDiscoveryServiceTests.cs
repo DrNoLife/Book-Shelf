@@ -87,7 +87,7 @@ public sealed class IsbnDiscoveryServiceTests
         var rows = await CreateService(
                 dbContext,
                 Candidates(JapaneseIsbn),
-                Enrichments((JapaneseIsbn, EditionLanguage.Unstated, "MICROMAGAZINE")))
+                EnrichmentsForVolume(1, (JapaneseIsbn, EditionLanguage.Unstated, "MICROMAGAZINE")))
             .RunAsync(CancellationToken.None);
 
         var row = rows.ShouldHaveSingleItem();
@@ -143,7 +143,7 @@ public sealed class IsbnDiscoveryServiceTests
         var rows = await CreateService(
                 dbContext,
                 candidateSource,
-                Enrichments((EnglishIsbn, EditionLanguage.English, "Yen On")))
+                EnrichmentsForVolume(3, (EnglishIsbn, EditionLanguage.English, "Yen On")))
             .RunAsync(CancellationToken.None);
 
         // Per-volume failure isolation, the same rule the sync run follows.
@@ -189,7 +189,13 @@ public sealed class IsbnDiscoveryServiceTests
     }
 
     /// <summary>An enrichment source that knows exactly these editions and nothing else.</summary>
+    /// <summary>Editions for volume 2, which is what most of these tests target.</summary>
     private static IVolumeEnrichmentSource Enrichments(
+        params (string Isbn, EditionLanguage Language, string Publisher)[] editions) =>
+        EnrichmentsForVolume(2, editions);
+
+    private static IVolumeEnrichmentSource EnrichmentsForVolume(
+        int volumeNumber,
         params (string Isbn, EditionLanguage Language, string Publisher)[] editions)
     {
         var source = Substitute.For<IVolumeEnrichmentSource>();
@@ -198,10 +204,13 @@ public sealed class IsbnDiscoveryServiceTests
 
         foreach (var (isbn, language, publisher) in editions)
         {
+            // The title has to name the volume actually being asked about: discovery now
+            // refuses a candidate whose own record is for a different volume or series
+            // (VolumeEditionMatcher), which is what makes the loose searches safe.
             source.GetByIsbnAsync(isbn, Arg.Any<CancellationToken>()).Returns(new VolumeEnrichment
             {
                 SourceRecordKey = $"/books/{isbn}",
-                Title = $"Overlord, Volume 2 ({publisher})",
+                Title = $"Overlord, Vol. {volumeNumber} (light Novel) ({publisher})",
                 Publisher = publisher,
                 Language = language,
             });

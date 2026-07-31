@@ -84,6 +84,7 @@ public sealed class IsbnDiscoveryService(
             {
                 candidate.Id,
                 candidate.TitleEnglish,
+                candidate.Format,
                 VolumeNumbers = candidate.Volumes
                     .Where(volume => volume.Isbn == null
                                      && volume.UserState != null
@@ -103,6 +104,7 @@ public sealed class IsbnDiscoveryService(
                     {
                         SeriesId = candidate.Id,
                         SeriesTitle = candidate.TitleEnglish,
+                        Format = candidate.Format,
                         VolumeNumber = number,
                     })),
         ];
@@ -134,6 +136,9 @@ public sealed class IsbnDiscoveryService(
         VolumeEnrichment? likely = null;
         string? likelyIsbn = null;
 
+        VolumeEnrichment? unconfirmed = null;
+        string? unconfirmedIsbn = null;
+
         foreach (var candidate in candidates.Isbns)
         {
             var enrichment = await enrichmentSource.GetByIsbnAsync(candidate, cancellationToken);
@@ -143,16 +148,36 @@ public sealed class IsbnDiscoveryService(
                 continue;
             }
 
-            // A record that names English is the answer. Take it and stop asking — an
-            // explicit statement beats every inference below it, whatever the ISBN's
-            // registration group says.
-            if (enrichment.Language is EditionLanguage.English)
+            // The record has to name this series, this volume number and the right medium.
+            // The searches that feed this are deliberately loose — they have to be, or they
+            // find nothing — so this is what keeps a manga volume out of a light novel's
+            // row, and a neighbouring volume out of this one's.
+            if (!VolumeEditionMatcher.Matches(
+                    target.SeriesTitle, target.VolumeNumber, target.Format, enrichment))
+            {
+                continue;
+            }
+
+            // A record that names English *and* names this medium is the answer. Take it and
+            // stop asking — an explicit statement beats every inference below it.
+            if (enrichment.Language is EditionLanguage.English
+                && VolumeEditionMatcher.ConfirmsMedium(target.Format, enrichment))
             {
                 return target.ToRow(
                     IsbnDiscoveryOutcome.ConfirmedEnglish,
-                    $"{candidates.Isbns.Count} candidate(s) offered; this record names English.",
+                    $"{candidates.Isbns.Count} candidate(s) offered; this record names English "
+                    + $"and says it is a {target.Format}.",
                     candidate,
                     enrichment);
+            }
+
+            // English, the right volume, but silent about the medium. Kept as a fallback and
+            // labelled, because this is where a manga volume gets proposed for a light novel.
+            if (enrichment.Language is EditionLanguage.English)
+            {
+                unconfirmed ??= enrichment;
+                unconfirmedIsbn ??= candidate;
+                continue;
             }
 
             // Unstated: usable only on the publisher's word, and never for a
@@ -165,6 +190,19 @@ public sealed class IsbnDiscoveryService(
                 likely = enrichment;
                 likelyIsbn = candidate;
             }
+        }
+
+        // English and the right volume beats a guess from the publisher, so it is offered
+        // first — with the medium called out as the thing to check.
+        if (unconfirmedIsbn is not null)
+        {
+            return target.ToRow(
+                IsbnDiscoveryOutcome.MediumUnconfirmed,
+                $"{candidates.Isbns.Count} candidate(s) verified; English and the right volume, but the "
+                + $"record never says it is a {target.Format} — {unconfirmed!.Publisher} could be the "
+                + "other medium of the same story. Check before applying.",
+                unconfirmedIsbn,
+                unconfirmed);
         }
 
         if (likelyIsbn is null)
@@ -187,6 +225,10 @@ public sealed class IsbnDiscoveryService(
     {
         public required Guid SeriesId { get; init; }
         public required string SeriesTitle { get; init; }
+
+        /// <summary>Which medium, so a manga edition cannot be proposed for a light novel.</summary>
+        public required Format Format { get; init; }
+
         public required int VolumeNumber { get; init; }
 
         public IsbnDiscoveryRow ToRow(
