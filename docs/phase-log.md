@@ -6,6 +6,37 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.6 — deleting a series (2026-07-31)
+
+`DELETE /api/series/{id}` finally exists. feature-spec §6 has listed it since the first
+sketch and nothing implemented it, so removing a series meant opening psql.
+
+- **`ISeriesCommandService.DeleteAsync`**, returning false rather than throwing for an id
+  that is not there. The volumes and both user-state tables go with it by the cascades
+  already configured in `SeriesConfiguration` and `VolumeConfiguration`.
+- **`RelatedSeriesId` is cleared on any series pointing at the deleted one.** It is a
+  plain column with no foreign key, so nothing in the database would have stopped it
+  referring to a row that is gone.
+- **Cover objects are deliberately left in MinIO**, matching what removing a volume's
+  cover override already does: dropping the reference is the operation, the bytes are a
+  cache, and re-adding the series finds its art already local.
+- **Discrepancy rows are left too**, which is the existing documented intent —
+  `SyncDiscrepancy` has no foreign key to `Series` because "a discrepancy outlives the
+  series it was recorded against".
+- **The control sits at the very foot of the series page**, quiet, above a hairline, and
+  prints what it costs before it is pressed: "Deletes 10 volumes, 9 read, 9 owned. This
+  cannot be undone." The browser's own `confirm` is the prompt — a Blazor modal would look
+  more at home but would also be dismissable by clicking past it.
+- **No new colour.** design.md fixes the palette and has no danger token, so the button
+  carries none at rest and borrows the accent on hover.
+
+Verified against a copy of the live shelf: `DELETE` → 204, the same call again → 404, `GET`
+the deleted series → 404, and Torture Princess' 10 volumes and 10 user-state rows gone
+(94 → 84 volumes, 85 → 75 states), with the other 7 series untouched. Behaviour is tested;
+the pixels have not been screenshotted.
+
+---
+
 ## Phase 3.5 — per-volume enrichment: ISBNs, Open Library, volume titles (2026-07-31)
 
 The integration the enrichment spike unblocked. `.research/volume-enrichment/verdict.md`

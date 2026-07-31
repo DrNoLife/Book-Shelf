@@ -104,5 +104,13 @@ window.lnshelf = {
 
     clickElement: function (element) {
         if (element) element.click();
+    },
+
+    // The browser's own confirm, for the one action that cannot be undone. A modal built
+    // in Blazor would look more at home, but it would also be dismissable by clicking
+    // past it — and this is the only place in the app where the wrong answer costs a
+    // series' read history, ownership and prices with no way back.
+    confirm: function (message) {
+        return window.confirm(message);
     }
 };

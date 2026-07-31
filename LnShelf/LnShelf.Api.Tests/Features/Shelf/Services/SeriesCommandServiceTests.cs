@@ -209,6 +209,118 @@ public sealed class SeriesCommandServiceTests
         (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(0);
     }
 
+    [Fact]
+    public async Task DeleteAsync_ATrackedSeries_TakesItsVolumesAndAllUserStateWithIt()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+
+        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var seriesId = added.ShouldNotBeNull().SeriesId;
+
+        // Give it the state a real series accumulates, so the delete has something to lose.
+        var volume = await dbContext.Volumes.FirstAsync(candidate => candidate.Number == 1);
+        volume.UserState = new VolumeUserState
+        {
+            VolumeId = volume.Id,
+            ReadStatus = ReadStatus.Read,
+            Owned = true,
+            PurchasePrice = 180,
+        };
+        // Adding a series already creates its user-state row, so this promotes the one
+        // that is there rather than making a second.
+        var seriesState = await dbContext.SeriesUserStates.SingleAsync();
+        seriesState.TrackingStatus = TrackingStatus.Reading;
+        await dbContext.SaveChangesAsync();
+
+        (await service.DeleteAsync(seriesId, CancellationToken.None)).ShouldBeTrue();
+
+        // All four tables, by the cascades in SeriesConfiguration and VolumeConfiguration.
+        // A series row left behind with no volumes, or volumes with no series, would both
+        // be worse than either outcome.
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+        (await dbContext.Volumes.CountAsync()).ShouldBe(0);
+        (await dbContext.VolumeUserStates.CountAsync()).ShouldBe(0);
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownSeries_IsFalseRatherThanAFailure()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // Nothing to delete is an answer, not an error — a stale page sending the request
+        // twice should get a plain "not here" the second time.
+        (await CreateService(dbContext, CreateMetadataSource())
+            .DeleteAsync(Guid.CreateVersion7(), CancellationToken.None)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ASeriesAnotherOneIsLinkedTo_ClearsTheDanglingRelation()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+
+        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var deletedId = added.ShouldNotBeNull().SeriesId;
+
+        // The manga adaptation of the light novel being removed. RelatedSeriesId is a plain
+        // column with no foreign key, so nothing in the database would stop it pointing at
+        // a row that is gone.
+        var manga = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 999,
+            TitleEnglish = "Mushoku Tensei (manga)",
+            Format = Format.Manga,
+            PublicationStatus = PublicationStatus.Ongoing,
+            RelatedSeriesId = deletedId,
+        };
+        dbContext.Series.Add(manga);
+        await dbContext.SaveChangesAsync();
+
+        await service.DeleteAsync(deletedId, CancellationToken.None);
+
+        var survivor = await dbContext.Series.SingleAsync();
+        survivor.TitleEnglish.ShouldBe("Mushoku Tensei (manga)");
+
+        // "Tracked separately" is what the relation panel says; a link to a series that no
+        // longer exists is not that.
+        survivor.RelatedSeriesId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_OneOfTwoSeries_LeavesTheOtherEntirelyAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+
+        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+
+        var keeper = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 999,
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+        };
+        keeper.Volumes.Add(new Volume
+        {
+            Id = Guid.CreateVersion7(),
+            Number = 1,
+            UserState = new VolumeUserState { ReadStatus = ReadStatus.Read, Owned = true },
+        });
+        dbContext.Series.Add(keeper);
+        await dbContext.SaveChangesAsync();
+
+        await service.DeleteAsync(added.ShouldNotBeNull().SeriesId, CancellationToken.None);
+
+        (await dbContext.Series.SingleAsync()).TitleEnglish.ShouldBe("Overlord");
+        (await dbContext.Volumes.SingleAsync()).Number.ShouldBe(1);
+        (await dbContext.VolumeUserStates.CountAsync()).ShouldBe(1);
+    }
+
     private static SeriesCommandService CreateService(
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource) =>

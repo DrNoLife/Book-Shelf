@@ -60,6 +60,57 @@
   background: var(--surf);
 }
 
+/* The one destructive control, at the very foot and above a hairline that separates it
+   from everything reversible. Quiet at rest on purpose: it has to be findable, not
+   inviting. */
+.danger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* No new colour: design.md fixes the palette, and persimmon already *is* this system's
+   "look here". So the button carries no colour at all until it is reached for, and then
+   it borrows the accent rather than introducing a red the shelf does not own. */
+.danger__button {
+  padding: 6px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.danger__button:hover:not(:disabled),
+.danger__button:focus-visible {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.danger__button:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 2px;
+}
+
+.danger__button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Printed, never hovered: what this costs is exactly the thing design.md says must not
+   be hidden behind an interaction. */
+.danger__fine {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--faint);
+}
+
 .sync__line {
   font-size: 11px;
   line-height: 1.45;

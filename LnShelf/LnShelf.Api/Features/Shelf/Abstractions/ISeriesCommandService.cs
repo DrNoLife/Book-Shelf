@@ -25,4 +25,15 @@ public interface ISeriesCommandService
         Guid seriesId,
         SetSeriesVolumeViewRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a series from the shelf, with its volumes and every piece of user state
+    /// on them (feature-spec §6).
+    /// </summary>
+    // Genuinely destructive, and the only endpoint that is: read status, ownership,
+    // prices and cover overrides all go with it. There is no soft delete and no undo —
+    // one user, one shelf, and a "deleted" flag every query would have to remember to
+    // filter is a worse bargain than a confirmation prompt.
+    /// <returns>False when no series has that id — nothing to delete is not a failure.</returns>
+    Task<bool> DeleteAsync(Guid seriesId, CancellationToken cancellationToken);
 }

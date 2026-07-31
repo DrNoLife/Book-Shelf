@@ -76,4 +76,18 @@ public sealed class SeriesController(
             ? Ok(response)
             : StatusCode(StatusCodes.Status201Created, response);
     }
+
+    /// <summary>
+    /// Removes a series from the shelf, with its volumes and all user state on them
+    /// (feature-spec §6).
+    /// </summary>
+    // 404 rather than 204 for an id that is not there. The two answers are different
+    // facts — "it is gone now" and "it was never here" — and the second one is worth
+    // knowing when a stale page sends the request twice.
+    [HttpDelete("{seriesId:guid}")]
+    public async Task<IActionResult> DeleteAsync(Guid seriesId, CancellationToken cancellationToken)
+    {
+        var deleted = await seriesCommandService.DeleteAsync(seriesId, cancellationToken);
+        return deleted ? NoContent() : NotFound();
+    }
 }

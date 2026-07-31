@@ -190,6 +190,51 @@ public sealed class SeriesState(HttpClient httpClient)
         }
     }
 
+    /// <summary>
+    /// Removes the loaded series from the shelf. The caller confirms first.
+    /// </summary>
+    // No optimistic update and no local removal: the page this state belongs to is about
+    // to be navigated away from, so the honest thing is to report whether the server
+    // actually did it and let the caller leave.
+    public async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
+    {
+        if (Series is not { } series)
+        {
+            return false;
+        }
+
+        IsSaving = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            using var response = await httpClient.DeleteAsync(
+                $"api/series/{series.SeriesId}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            Message = response.StatusCode is System.Net.HttpStatusCode.NotFound
+                ? "That series is not on the shelf any more."
+                : $"Could not delete that series: {(int)response.StatusCode} {response.StatusCode}.";
+
+            return false;
+        }
+        catch (HttpRequestException exception)
+        {
+            Message = exception.Message;
+            return false;
+        }
+        finally
+        {
+            IsSaving = false;
+            Changed?.Invoke();
+        }
+    }
+
     public void OpenMenu(VolumeResponse volume)
     {
         ArgumentNullException.ThrowIfNull(volume);

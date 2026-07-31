@@ -1,8 +1,10 @@
+using System.Globalization;
 using LnShelf.Client.Features.Preferences;
 using LnShelf.Client.Features.Sync;
 using LnShelf.Shared.Metadata;
 using LnShelf.Shared.Shelf;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace LnShelf.Client.Features.Series.Pages;
 
@@ -25,7 +27,49 @@ public partial class SeriesPage : IDisposable
     [Inject]
     public required PreferencesState Preferences { get; set; }
 
+    [Inject]
+    public required IJSRuntime JavaScript { get; set; }
+
+    [Inject]
+    public required NavigationManager Navigation { get; set; }
+
     private SeriesDetailResponse? Series => SeriesState.Series;
+
+    /// <summary>
+    /// What pressing the button actually destroys, counted from this series.
+    /// </summary>
+    // Printed under the control rather than only inside the prompt: design.md forbids
+    // hiding information behind an interaction, and the cost of this one is the whole
+    // reason to hesitate.
+    private string DeleteCost
+    {
+        get
+        {
+            if (Series is not { } series)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string> { $"{series.Counts.Tracked} volumes" };
+
+            if (series.Counts.Read > 0)
+            {
+                parts.Add($"{series.Counts.Read} read");
+            }
+
+            if (series.Counts.Owned > 0)
+            {
+                parts.Add($"{series.Counts.Owned} owned");
+            }
+
+            if (series.Spend is { } spend)
+            {
+                parts.Add($"{spend.Total.ToString("0", CultureInfo.InvariantCulture)} kr recorded");
+            }
+
+            return $"Deletes {string.Join(", ", parts)}. This cannot be undone.";
+        }
+    }
 
     /// <summary>
     /// What the last run actually did, plus anything about this series it left for a
@@ -99,6 +143,33 @@ public partial class SeriesPage : IDisposable
         {
             await SyncState.LoadAsync();
         }
+    }
+
+    /// <summary>
+    /// Confirms, deletes, and leaves for the library.
+    /// </summary>
+    // The prompt names the series and its numbers, because "Are you sure?" on its own is
+    // a question nobody can answer wrongly on purpose. Navigation only happens on a real
+    // success — a failed delete leaves the page where it is, with the reason on it.
+    private async Task OnDeleteAsync()
+    {
+        if (Series is not { } series)
+        {
+            return;
+        }
+
+        var confirmed = await JavaScript.InvokeAsync<bool>(
+            "lnshelf.confirm",
+            $"Remove “{series.TitleEnglish}” from the shelf?\n\n{DeleteCost}");
+
+        if (!confirmed || !await SeriesState.DeleteAsync())
+        {
+            return;
+        }
+
+        // forceLoad: false — the library page re-fetches on initialisation, so a client
+        // navigation is enough and a full reload would throw away the shell.
+        Navigation.NavigateTo("/", forceLoad: false);
     }
 
     public void Dispose()

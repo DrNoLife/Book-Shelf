@@ -56,6 +56,20 @@
                     }
                 </aside>
             </div>
+
+            @* At the very foot, quiet, and saying what it costs before it is pressed —
+               a destructive action should be findable, not prominent. *@
+            <div class="danger">
+                @* Words, no icon: the icon set has no trash glyph, and inventing one that
+                   nobody has looked at is worse than a label that cannot be misread. *@
+                <button type="button"
+                        class="danger__button"
+                        disabled="@SeriesState.IsSaving"
+                        @onclick="OnDeleteAsync">
+                    Remove from shelf
+                </button>
+                <p class="danger__fine">@DeleteCost</p>
+            </div>
         }
     </div>
 

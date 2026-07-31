@@ -108,6 +108,53 @@ public sealed class SeriesCommandService(
             series, DateOnly.FromDateTime(timeProvider.GetLocalNow().Date));
     }
 
+    public async Task<bool> DeleteAsync(Guid seriesId, CancellationToken cancellationToken)
+    {
+        var series = await dbContext.Series
+            .Include(candidate => candidate.Volumes)
+            .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
+
+        if (series is null)
+        {
+            return false;
+        }
+
+        // Counted before the delete, because afterwards there is nothing to count and
+        // the log line is the only record that this shelf ever held them.
+        var volumeCount = series.Volumes.Count;
+
+        // RelatedSeriesId is a plain column with no foreign key, so nothing in the
+        // database would stop it pointing at a row that no longer exists. Cleared here
+        // rather than tolerated: the LN ↔ manga link reads as "tracked separately", and a
+        // link to a series that is gone is not that.
+        var linkedBack = await dbContext.Series
+            .Where(candidate => candidate.RelatedSeriesId == seriesId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var candidate in linkedBack)
+        {
+            candidate.RelatedSeriesId = null;
+        }
+
+        // Volumes, both user-state tables and the series' own row go with it, by the
+        // cascades configured in SeriesConfiguration and VolumeConfiguration.
+        dbContext.Series.Remove(series);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Cover objects are deliberately left in MinIO, matching what removing a volume's
+        // cover override already does: dropping the reference is the operation, and the
+        // bytes are a cache. Re-adding the series finds its art already local.
+        logger.LogInformation(
+            "Deleted {TitleEnglish} ({SeriesId}) with {VolumeCount} volumes and all user state on them; "
+            + "{LinkedBackCount} relation(s) cleared",
+            series.TitleEnglish,
+            seriesId,
+            volumeCount,
+            linkedBack.Count);
+
+        return true;
+    }
+
     /// <summary>
     /// Idempotency as a read, not a conflict. The unique index on
     /// <c>AniListId</c> is the backstop; this lookup is the behaviour, and it
