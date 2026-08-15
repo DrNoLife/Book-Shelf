@@ -57,7 +57,7 @@ public static class AniListMediaMapper
 
             // Cleaned here rather than on the way out: nothing inward should ever hold
             // AniList's markup, and the sanitizer is what makes `asHtml: false` true.
-            Description = AniListDescriptionSanitizer.Sanitize(media.Description),
+            Description = HtmlDescriptionSanitizer.Sanitize(media.Description),
 
             Genres = media.Genres?.ToArray() ?? [],
             Author = AniListStaffMapper.FindAuthor(media.Staff),

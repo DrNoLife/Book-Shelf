@@ -91,6 +91,46 @@ public sealed class VolumeEnrichmentServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_AVolumeThatAlreadyHasATitle_KeepsIt()
+    {
+        var series = Series(Volume(3, EnglishIsbn, isReleased: true));
+        var volume = series.Volumes.Single();
+        volume.Title = "Overlord, Vol. 3 (light novel)";
+
+        await CreateService(Enrichment(title: "Overlord, Volume 3: The Bloody Valkyrie"))
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // A change from the one-source rule this pass used to follow, where the source's
+        // current answer replaced the last one it gave. There is no per-field provenance
+        // column, so with two sources writing titles last-writer-wins would have them
+        // overwriting each other on alternate nights forever. First-wins in the passes'
+        // own order is the only rule that cannot flip-flop; a wrong title is fixed by
+        // clearing the column, and a nightly flip is not fixable at all.
+        volume.Title.ShouldBe("Overlord, Vol. 3 (light novel)");
+    }
+
+    [Fact]
+    public async Task EnrichAsync_AVolumeWhoseOnlyGapIsItsBlurb_IsNotAskedOfOpenLibrary()
+    {
+        var series = Series(Volume(3, EnglishIsbn, isReleased: true));
+        var volume = series.Volumes.Single();
+        volume.ReleaseDate = new DateOnly(2017, 1, 31);
+        volume.CoverObjectKey = "volume/openlibrary/abc.jpg";
+        volume.Title = "Overlord, Volume 3: The Bloody Valkyrie";
+
+        var source = EnrichmentSource(Enrichment());
+
+        await CreateService(source).EnrichAsync(
+            series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // Open Library carried a blurb for none of this shelf's fifteen sampled ISBNs, so
+        // asking again is spending a budgeted lookup on a certainty. The catalogue is the
+        // source that has blurbs, and it is asked — the store request is the one this run
+        // does make.
+        await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task EnrichAsync_ACover_NeverLandsOnTheOverrideKey()
     {
         var series = Series(Volume(3, EnglishIsbn, isReleased: true));
@@ -138,8 +178,9 @@ public sealed class VolumeEnrichmentServiceTests
         var spent = 10 - budget.Remaining;
 
         // The seam is keyed on ISBN because that is the only key that works. No ISBN is
-        // nothing to ask about — not an error, and not a request.
-        spent.ShouldBe(0);
+        // nothing to ask about — not an error, and not a request. The one spent is the
+        // catalogue's, which needs no ISBN and is exactly why it exists.
+        spent.ShouldBe(1);
         run.VolumesEnriched.ShouldBe(0);
         run.EnrichmentGaps.ShouldBe(0);
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -157,8 +198,8 @@ public sealed class VolumeEnrichmentServiceTests
 
         // The real Slime volume 1 case. Its record is a French edition stating no language
         // at all, so the record cannot rule itself out — the ISBN's registration group is
-        // the signal, and it costs no request to read.
-        spent.ShouldBe(0);
+        // the signal, and it costs no request to read. The one spent is the catalogue's.
+        spent.ShouldBe(1);
         series.Volumes.Single().ReleaseDate.ShouldBeNull();
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
@@ -246,16 +287,29 @@ public sealed class VolumeEnrichmentServiceTests
         volume.ReleaseDate = new DateOnly(2017, 1, 31);
         volume.CoverObjectKey = "volume/openlibrary/abc.jpg";
         volume.Title = "Overlord, Volume 3: The Bloody Valkyrie";
+        volume.Description = "Momonga's guild hall becomes his kingdom.";
 
+        var catalogueSource = NoCatalogue();
         var source = EnrichmentSource(Enrichment());
+
         var budget = Budget(10);
-        await CreateService(source).EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+        await new VolumeEnrichmentService(
+                catalogueSource,
+                source,
+                NoCandidates(),
+                new VolumeFactWriter(
+                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
+                NullLogger<VolumeEnrichmentService>.Instance)
+            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+
         var spent = 10 - budget.Remaining;
 
-        // Nothing left to learn, so a nightly run does not re-ask. Volumes that are still
-        // incomplete are re-asked on purpose — the catalogue grows.
+        // Nothing left to learn, so a nightly run asks neither source. Volumes that are
+        // still incomplete are re-asked on purpose — both catalogues grow.
         spent.ShouldBe(0);
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await catalogueSource.DidNotReceive().GetVolumesAsync(
+            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -266,13 +320,14 @@ public sealed class VolumeEnrichmentServiceTests
             Volume(2, "9780316363921", isReleased: true),
             Volume(3, EnglishIsbn, isReleased: true));
 
-        var budget = Budget(2);
+        var budget = Budget(3);
         await CreateService(Enrichment()).EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
-        var spent = 2 - budget.Remaining;
+        var spent = 3 - budget.Remaining;
 
         // A cap on the run, not a target: the rest wait for tomorrow rather than spending
-        // an hour against somebody else's donated API.
-        spent.ShouldBe(2);
+        // an hour against somebody else's donated API. One went on the catalogue, so two of
+        // the three volumes were looked up and the third was not.
+        spent.ShouldBe(3);
     }
 
     [Fact]
@@ -299,10 +354,13 @@ public sealed class VolumeEnrichmentServiceTests
             series, second, Today, budget, CancellationToken.None);
         var spent = 10 - budget.Remaining;
 
-        // Complete after the first run, so the second does not even ask (testing.md #3).
-        spent.ShouldBe(0);
+        // The by-ISBN pass has nothing left to learn after the first run, so the second
+        // spends only the catalogue's one request — which it does because the volume still
+        // has no blurb, and the catalogue is the only source that carries one (testing.md #3).
+        spent.ShouldBe(1);
         second.DatesMoved.ShouldBe(0);
         second.VolumeCoversCached.ShouldBe(0);
+        second.DescriptionsWritten.ShouldBe(0);
     }
 
     [Fact]
@@ -341,10 +399,26 @@ public sealed class VolumeEnrichmentServiceTests
         IVolumeCoverCache? coverCache = null,
         IIsbnCandidateSource? candidateSource = null) =>
         new(
+            NoCatalogue(),
             source,
             candidateSource ?? NoCandidates(),
-            coverCache ?? Substitute.For<IVolumeCoverCache>(),
+            new VolumeFactWriter(
+                coverCache ?? Substitute.For<IVolumeCoverCache>(),
+                NullLogger<VolumeFactWriter>.Instance),
             NullLogger<VolumeEnrichmentService>.Instance);
+
+    /// <summary>A store catalogue that knows nothing, so these tests stay about the by-ISBN path.</summary>
+    // It still costs the one request the catalogue pass always spends, which is why the
+    // budget assertions here start from one rather than from zero.
+    private static IVolumeCatalogueSource NoCatalogue()
+    {
+        var source = Substitute.For<IVolumeCatalogueSource>();
+        source.SourceName.Returns("AppleBooks");
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        return source;
+    }
 
     /// <summary>A search that offers nothing, so these tests stay about the by-ISBN path.</summary>
     private static IIsbnCandidateSource NoCandidates()

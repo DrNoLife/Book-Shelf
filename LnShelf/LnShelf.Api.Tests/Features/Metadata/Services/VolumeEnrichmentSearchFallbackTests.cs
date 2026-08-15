@@ -123,10 +123,10 @@ public sealed class VolumeEnrichmentSearchFallbackTests
                 Candidates(IndexedIsbn))
             .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
 
-        // One direct lookup, one search, one candidate verified. Counting a volume as a
-        // single lookup would let one series quietly spend four times its share against
-        // somebody else's donated API.
-        budget.Remaining.ShouldBe(7);
+        // One catalogue request for the series, then one direct lookup, one search and one
+        // candidate verified for the volume. Counting a volume as a single lookup would let
+        // one series quietly spend four times its share against somebody else's donated API.
+        budget.Remaining.ShouldBe(6);
     }
 
     [Fact]
@@ -135,9 +135,9 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var series = Series(Volume(4, HeldIsbn));
         var candidateSource = Candidates(IndexedIsbn);
 
-        // Exactly enough for the direct lookup and nothing more.
+        // Exactly enough for the catalogue request and the direct lookup, and nothing more.
         await CreateService(EnrichmentSource((HeldIsbn, null)), candidateSource)
-            .EnrichAsync(series, Run(), Today, new LookupBudget(1), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, new LookupBudget(2), CancellationToken.None);
 
         await candidateSource.DidNotReceive()
             .FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
@@ -147,10 +147,28 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         IVolumeEnrichmentSource enrichmentSource,
         IIsbnCandidateSource candidateSource) =>
         new(
+            NoCatalogue(),
             enrichmentSource,
             candidateSource,
-            Substitute.For<IVolumeCoverCache>(),
+            new VolumeFactWriter(
+                Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
             NullLogger<VolumeEnrichmentService>.Instance);
+
+    /// <summary>
+    /// A store catalogue that knows nothing, so this file stays about the by-ISBN fallback.
+    /// </summary>
+    // It also costs nothing: an empty answer means the catalogue pass writes nothing, and
+    // the budget assertions below count only the ISBN pass's own requests plus the one the
+    // catalogue always spends.
+    private static IVolumeCatalogueSource NoCatalogue()
+    {
+        var source = Substitute.For<IVolumeCatalogueSource>();
+        source.SourceName.Returns("AppleBooks");
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        return source;
+    }
 
     private static IIsbnCandidateSource Candidates(params string[] isbns)
     {

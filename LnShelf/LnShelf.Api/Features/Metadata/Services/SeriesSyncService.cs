@@ -9,6 +9,7 @@ public sealed class SeriesSyncService(
     LnShelfDbContext dbContext,
     SeriesRefresher refresher,
     IReleaseSource releaseSource,
+    IVolumeCatalogueSource catalogueSource,
     IVolumeEnrichmentSource enrichmentSource,
     IOptions<OpenLibraryOptions> enrichmentOptions,
     TimeProvider timeProvider,
@@ -181,6 +182,11 @@ public sealed class SeriesSyncService(
             parts.Add($"{run.DatesMoved} dates written");
         }
 
+        if (run.DescriptionsWritten > 0)
+        {
+            parts.Add($"{run.DescriptionsWritten} volume blurbs written");
+        }
+
         if (run.VolumeCoversCached > 0)
         {
             parts.Add($"{run.VolumeCoversCached} volume covers cached");
@@ -211,9 +217,11 @@ public sealed class SeriesSyncService(
         }
 
         // Said out loud rather than left as a mystery: the release source's word is a
-        // count, dates only reach the volumes whose ISBN is known, and the footer should
-        // not imply the shelf knows more than that.
-        parts.Add($"{releaseSource.SourceName} counts only; dates where an ISBN is known");
+        // count, and everything per-volume comes from two catalogues that each cover part
+        // of the shelf. The footer should not imply the shelf knows more than that.
+        parts.Add(
+            $"{releaseSource.SourceName} counts only; volume detail from "
+            + $"{catalogueSource.SourceName} and {enrichmentSource.SourceName}");
 
         return string.Join(" · ", parts);
     }

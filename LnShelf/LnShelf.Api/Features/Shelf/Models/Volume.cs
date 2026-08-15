@@ -67,6 +67,24 @@ public sealed class Volume
     // exactly this reason and invents nothing when it is absent.
     public string? Title { get; set; }
 
+    /// <summary>
+    /// This volume's own blurb, when a source supplies one. Null when nothing has
+    /// enriched it.
+    /// </summary>
+    // Plain synced metadata, the same class of fact as ReleaseDate and Title, so it needs
+    // no special justification under the "derived states are computed, never stored" rule:
+    // it is a store's own copy for this volume, and there is nothing to derive it from.
+    //
+    // Stored rather than fetched on read, for the reason the series synopsis is: the shelf
+    // must render without the source being up, and a detail page that made a live store
+    // request per volume would be both slow and rude.
+    //
+    // Uncapped, unlike Title — the same call SeriesConfiguration makes about
+    // Series.Description. A blurb is prose whose length is the source's business, and
+    // Postgres `text` costs nothing over varchar(n) while being unable to truncate one
+    // mid-sentence.
+    public string? Description { get; set; }
+
     public string? CoverObjectKey { get; set; }
 
     /// <summary>Null exactly when <see cref="IsLocalOnly"/> is true.</summary>

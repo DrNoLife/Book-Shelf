@@ -42,7 +42,7 @@ internal static class AniListQueries
     // kilobytes of payload nothing renders.
     //
     // asHtml: false is the *less* marked-up of the two AniList offers, not clean text —
-    // it still returns <br>, <i> and entities, which AniListDescriptionSanitizer removes.
+    // it still returns <br>, <i> and entities, which HtmlDescriptionSanitizer removes.
     public const string SeriesDetail =
         """
         query SeriesDetail($id: Int!) {

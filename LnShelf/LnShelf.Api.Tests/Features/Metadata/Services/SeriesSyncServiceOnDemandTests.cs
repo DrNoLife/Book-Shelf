@@ -170,9 +170,11 @@ public sealed class SeriesSyncServiceOnDemandTests
             releaseSource,
             NoMetadata(),
             new VolumeEnrichmentService(
+                NoCatalogue(),
                 enrichmentSource,
                 NoCandidates(),
-                Substitute.For<IVolumeCoverCache>(),
+                new VolumeFactWriter(
+                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
                 NullLogger<VolumeEnrichmentService>.Instance),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
@@ -181,6 +183,7 @@ public sealed class SeriesSyncServiceOnDemandTests
             dbContext,
             refresher,
             releaseSource,
+            NoCatalogue(),
             enrichmentSource,
             Options.Create(new OpenLibraryOptions
             {
@@ -244,6 +247,17 @@ public sealed class SeriesSyncServiceOnDemandTests
     /// A search that offers nothing: these tests are about the release-source half of a
     /// run, and the search fallback has its own file.
     /// </summary>
+    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
+    private static IVolumeCatalogueSource NoCatalogue()
+    {
+        var source = Substitute.For<IVolumeCatalogueSource>();
+        source.SourceName.Returns("AppleBooks");
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        return source;
+    }
+
     private static IIsbnCandidateSource NoCandidates()
     {
         var source = Substitute.For<IIsbnCandidateSource>();

@@ -26,6 +26,9 @@ public sealed record SyncSummaryResponse
     /// <summary>Volume covers fetched and stored locally by this run.</summary>
     public required int VolumeCoversCached { get; init; }
 
+    /// <summary>Volumes given a blurb by this run.</summary>
+    public required int DescriptionsWritten { get; init; }
+
     /// <summary>
     /// Volumes whose own ISBN was not indexed, but which were matched to another printing
     /// of the same volume by name.

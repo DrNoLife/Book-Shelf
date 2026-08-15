@@ -270,6 +270,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<int>("DatesMoved")
                         .HasColumnType("integer");
 
+                    b.Property<int>("DescriptionsWritten")
+                        .HasColumnType("integer");
+
                     b.Property<int>("EnrichmentFailures")
                         .HasColumnType("integer");
 
@@ -484,6 +487,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(100)

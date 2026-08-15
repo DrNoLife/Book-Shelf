@@ -1,16 +1,21 @@
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// Decides whether an edition record really is this series' volume N.
+/// Decides whether a record's own title really is this series' volume N.
 /// </summary>
 // The guard that makes searching for a volume safe at all. Looking an ISBN up is
-// unambiguous; *finding* an ISBN by title is not, and this shelf has the worst possible
+// unambiguous; *finding* a record by title is not, and this shelf has the worst possible
 // case of it — "That Time I Got Reincarnated as a Slime" exists as a light novel and as a
 // manga with near-identical titles and interleaved volume numbering. Accepting a candidate
 // because its record says English and Yen Press would put manga art on a light novel.
 //
-// So every candidate ISBN has to be verified twice over: the edition's own record has to
-// name this series, this volume number, and not the other medium.
+// So every candidate has to be verified twice over: its own title has to name this series,
+// this volume number, and not the other medium.
+//
+// The work is done on the title string, with the record types as overloads over it. Two
+// seams now feed this — an ISBN lookup's VolumeEnrichment and a store catalogue's
+// CatalogueVolume — and both carry exactly one field the matcher ever reads. Duplicating
+// the rules per record type would be two places for one judgement to drift.
 public static class VolumeEditionMatcher
 {
     /// <param name="edition">A record already fetched by ISBN, so it describes one edition.</param>
@@ -18,14 +23,36 @@ public static class VolumeEditionMatcher
     {
         ArgumentNullException.ThrowIfNull(edition);
 
-        if (edition.Title is not { } editionTitle)
+        return Matches(seriesTitle, volumeNumber, format, edition.Title);
+    }
+
+    /// <param name="recordTitle">A record's own title, which is all the evidence there is.</param>
+    public static bool Matches(string seriesTitle, int volumeNumber, Format format, string? recordTitle) =>
+        TryMatchVolumeNumber(seriesTitle, format, recordTitle, out var number) && number == volumeNumber;
+
+    /// <summary>
+    /// Which volume of this series the record is, if it is one at all.
+    /// </summary>
+    // The form the catalogue pass needs, and the one the rules actually live in: a store
+    // answers with a series' whole shelf at once, so the question is "which volume is
+    // this" rather than "is this volume 7". <see cref="Matches"/> is this plus a
+    // comparison, which keeps both readings of the same rule in one place.
+    public static bool TryMatchVolumeNumber(
+        string seriesTitle,
+        Format format,
+        string? recordTitle,
+        out int volumeNumber)
+    {
+        volumeNumber = 0;
+
+        if (recordTitle is null)
         {
             // Nothing to check it against. A record with no title of any kind is not
             // evidence that it is the right book.
             return false;
         }
 
-        var normalizedEdition = TitleNormalizer.Normalize(editionTitle);
+        var normalizedRecord = TitleNormalizer.Normalize(recordTitle);
         var normalizedSeries = TitleNormalizer.Normalize(seriesTitle);
 
         if (normalizedSeries.Length is 0)
@@ -33,13 +60,13 @@ public static class VolumeEditionMatcher
             return false;
         }
 
-        var seriesAt = normalizedEdition.IndexOf(normalizedSeries, StringComparison.Ordinal);
+        var seriesAt = normalizedRecord.IndexOf(normalizedSeries, StringComparison.Ordinal);
         if (seriesAt < 0)
         {
             return false;
         }
 
-        if (NamesTheOtherMedium(normalizedEdition, format))
+        if (NamesTheOtherMedium(normalizedRecord, format))
         {
             return false;
         }
@@ -47,13 +74,13 @@ public static class VolumeEditionMatcher
         // Only the part after the series title, which is where a volume number lives.
         // Searching the whole title would let "86—EIGHTY-SIX" satisfy a request for
         // volume 86.
-        var remainder = normalizedEdition[(seriesAt + normalizedSeries.Length)..];
+        var remainder = normalizedRecord[(seriesAt + normalizedSeries.Length)..];
 
-        return VolumeNumberLeads(remainder, volumeNumber);
+        return TryReadLeadingVolumeNumber(remainder, out volumeNumber);
     }
 
     /// <summary>
-    /// Whether the volume number is the first thing said after the series title.
+    /// The volume number, if it is the first thing said after the series title.
     /// </summary>
     // A containment test alone is too generous, because one series' title is often a prefix
     // of another's. "Overlord" appears in "Overlord's Unfinished Business, Vol. 3", and this
@@ -67,16 +94,17 @@ public static class VolumeEditionMatcher
     // collision.
     private const int LeadingTokenAllowance = 3;
 
-    private static bool VolumeNumberLeads(string remainder, int volumeNumber)
+    private static bool TryReadLeadingVolumeNumber(string remainder, out int volumeNumber)
     {
-        var tokens = TitleNormalizer.Tokenize(remainder);
+        volumeNumber = 0;
 
-        foreach (var token in tokens.Take(LeadingTokenAllowance))
+        foreach (var token in TitleNormalizer.Tokenize(remainder).Take(LeadingTokenAllowance))
         {
             // Whole tokens only. A "16" inside "2016" is a year, not a volume.
             if (int.TryParse(token, CultureInfo.InvariantCulture, out var number))
             {
-                return number == volumeNumber;
+                volumeNumber = number;
+                return true;
             }
         }
 
@@ -99,7 +127,13 @@ public static class VolumeEditionMatcher
     {
         ArgumentNullException.ThrowIfNull(edition);
 
-        var normalized = TitleNormalizer.Normalize(edition.Title);
+        return ConfirmsMedium(format, edition.Title);
+    }
+
+    /// <param name="recordTitle">A record's own title, which is all the evidence there is.</param>
+    public static bool ConfirmsMedium(Format format, string? recordTitle)
+    {
+        var normalized = TitleNormalizer.Normalize(recordTitle);
 
         return format switch
         {
@@ -117,12 +151,12 @@ public static class VolumeEditionMatcher
     // "…, Vol. 14 (light Novel)" and the adaptation "… (manga)". Where neither word is
     // present the check says nothing, which is the honest answer — the volume-number and
     // series-title tests are doing the work by then.
-    private static bool NamesTheOtherMedium(string normalizedEditionTitle, Format format)
+    private static bool NamesTheOtherMedium(string normalizedRecordTitle, Format format)
     {
-        var tokens = TitleNormalizer.Tokenize(normalizedEditionTitle);
+        var tokens = TitleNormalizer.Tokenize(normalizedRecordTitle);
 
         var saysManga = tokens.Contains("manga");
-        var saysLightNovel = normalizedEditionTitle.Contains("light novel", StringComparison.Ordinal);
+        var saysLightNovel = normalizedRecordTitle.Contains("light novel", StringComparison.Ordinal);
 
         return format switch
         {
@@ -131,5 +165,4 @@ public static class VolumeEditionMatcher
             _ => false,
         };
     }
-
 }

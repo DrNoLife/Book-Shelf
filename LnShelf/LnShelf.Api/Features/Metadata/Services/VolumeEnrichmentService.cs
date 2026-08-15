@@ -1,21 +1,24 @@
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// Applies one enrichment source's per-volume facts to a series' volumes: a date, a
-/// cover, a title, and a recorded disagreement where the sources do not agree.
+/// Fills in a series' volumes from the two per-volume sources: the store catalogue first,
+/// then a per-ISBN lookup for whatever is still missing.
 /// </summary>
-// Extracted from SeriesSyncService rather than added to it. That class's job is "walk
-// the shelf, reconcile each series against the release source"; this one's is "read one
-// volume's edition record and decide what may be written from it", which is where all
-// the conflict rules are. Two jobs, two classes.
+// Extracted from SeriesSyncService rather than added to it. That class's job is "walk the
+// shelf, reconcile each series against the release source"; this one's is "which volumes
+// are worth asking about, and who to ask". What may be written from an answer lives one
+// step further out again, in VolumeFactWriter, because both passes here share those rules.
 //
-// What it never does: write user state, or touch VolumeUserState.CoverOverrideObjectKey.
-// Enrichment only ever writes Volume.*, which is what keeps "sync never overwrites user
-// state" and "overrides always win" true by construction.
+// The order of the two passes is the precedence order, and it is deliberate. The catalogue
+// answers for a whole series in one request and carries the fields the ISBN lookup does
+// not (a blurb, and a date for volumes with no ISBN at all); the ISBN lookup is
+// unambiguous but only reaches the 59% of volumes whose ISBN is known. Catalogue first,
+// gaps second.
 public sealed class VolumeEnrichmentService(
+    IVolumeCatalogueSource catalogueSource,
     IVolumeEnrichmentSource enrichmentSource,
     IIsbnCandidateSource candidateSource,
-    IVolumeCoverCache coverCache,
+    VolumeFactWriter factWriter,
     ILogger<VolumeEnrichmentService> logger)
 {
     /// <param name="today">
@@ -23,8 +26,9 @@ public sealed class VolumeEnrichmentService(
     /// convention the projections follow.
     /// </param>
     /// <param name="budget">
-    /// Spent down as requests are made, not as volumes are visited: one volume can cost
-    /// several requests when its own ISBN turns out not to be indexed.
+    /// Spent down as requests are made, not as volumes are visited: the catalogue costs one
+    /// for the whole series, and one volume can cost several when its own ISBN turns out
+    /// not to be indexed.
     /// </param>
     public async Task EnrichAsync(
         Series series,
@@ -37,6 +41,167 @@ public sealed class VolumeEnrichmentService(
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(budget);
 
+        await EnrichFromCatalogueAsync(series, run, today, budget, cancellationToken);
+        await EnrichByIsbnAsync(series, run, today, budget, cancellationToken);
+    }
+
+    /// <summary>
+    /// One request for the whole series, matched back onto the volumes the shelf tracks.
+    /// </summary>
+    private async Task EnrichFromCatalogueAsync(
+        Series series,
+        SyncRun run,
+        DateOnly today,
+        LookupBudget budget,
+        CancellationToken cancellationToken)
+    {
+        if (budget.IsExhausted || !series.Volumes.Any(NeedsAnything))
+        {
+            return;
+        }
+
+        budget.Spend(1);
+
+        IReadOnlyList<CatalogueVolume> catalogue;
+
+        // Failure isolation at the pass, matching what the per-volume loop below does. A
+        // store being down is not a reason for the series to lose its ISBN lookups too.
+        try
+        {
+            catalogue = await catalogueSource.GetVolumesAsync(
+                series.TitleEnglish, series.Format, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            run.EnrichmentFailures++;
+            logger.LogWarning(
+                exception,
+                "The {SourceName} catalogue failed for {TitleEnglish}; continuing to the ISBN pass",
+                catalogueSource.SourceName,
+                series.TitleEnglish);
+
+            return;
+        }
+
+        var matched = MatchToVolumeNumbers(series, catalogue);
+
+        foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
+        {
+            if (!matched.TryGetValue(volume.Number, out var record))
+            {
+                continue;
+            }
+
+            await factWriter.ApplyAsync(series, volume, ToFacts(record), run, today, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Which of the store's records is this series' volume N, where any is.
+    /// </summary>
+    // Two filters, both of them the matcher's, and both necessary. A store search for
+    // "Slime light novel" answers with the manga, the German editions, the spin-offs and
+    // volumes of unrelated series that happen to share a word; TryMatchVolumeNumber
+    // refuses everything whose title does not name this series with a number leading
+    // straight after it, and ConfirmsMedium then insists the record say which medium it is
+    // rather than merely fail to say it is the other one. This pass writes to the shelf
+    // with nobody looking, which is the bar that earns the stricter of the two.
+    //
+    // First confirmed record per volume number wins. Apple lists a volume more than once —
+    // a bundle, a re-release — and the ranking puts the plain edition first.
+    //
+    // Volume numbers the shelf does not track are ignored outright. The release source owns
+    // volume counts (CLAUDE.md), so a store listing volume 25 of a series the count says
+    // has 23 is not grounds to create two volumes; it is a store carrying a spin-off or a
+    // future listing under a number this shelf has no opinion about.
+    private Dictionary<int, CatalogueVolume> MatchToVolumeNumbers(
+        Series series,
+        IReadOnlyList<CatalogueVolume> catalogue)
+    {
+        var tracked = series.Volumes.Select(volume => volume.Number).ToHashSet();
+        var matched = new Dictionary<int, CatalogueVolume>();
+
+        foreach (var record in catalogue)
+        {
+            if (!VolumeEditionMatcher.TryMatchVolumeNumber(
+                    series.TitleEnglish, series.Format, record.Title, out var number))
+            {
+                continue;
+            }
+
+            if (!tracked.Contains(number) || matched.ContainsKey(number))
+            {
+                continue;
+            }
+
+            if (!VolumeEditionMatcher.ConfirmsMedium(series.Format, record.Title))
+            {
+                logger.LogInformation(
+                    "{TitleEnglish} volume {VolumeNumber}: {RecordKey} (\"{RecordTitle}\") is the right "
+                    + "volume but does not state that it is a {Format}; skipped",
+                    series.TitleEnglish,
+                    number,
+                    record.SourceRecordKey,
+                    record.Title,
+                    series.Format);
+
+                continue;
+            }
+
+            matched[number] = record;
+        }
+
+        logger.LogInformation(
+            "{SourceName} matched {MatchedCount} of {RecordCount} records to {TitleEnglish}'s volumes",
+            catalogueSource.SourceName,
+            matched.Count,
+            catalogue.Count,
+            series.TitleEnglish);
+
+        return matched;
+    }
+
+    private VolumeFacts ToFacts(CatalogueVolume record) => new()
+    {
+        Source = MetadataSourceName.AppleBooks,
+        SourceName = catalogueSource.SourceName,
+        SourceRecordKey = record.SourceRecordKey,
+        Title = record.Title,
+        Description = record.Description,
+        ReleaseDate = record.ReleaseDate,
+
+        // Nothing to keep: a storefront date is either a full ISO timestamp or absent, so
+        // there is no coarse-but-real string of the "2022" kind to report.
+        RawReleaseDate = null,
+        CoverImageUrl = record.ArtworkUrl,
+    };
+
+    private static VolumeFacts ToFacts(VolumeEnrichment enrichment, string sourceName) => new()
+    {
+        Source = MetadataSourceName.OpenLibrary,
+        SourceName = sourceName,
+        SourceRecordKey = enrichment.SourceRecordKey,
+        Title = enrichment.Title,
+
+        // Open Library carries no blurbs for this shelf's editions at all — measured 0 of
+        // 15 — so there is nothing to map and ShouldLookUp does not ask on their account.
+        Description = null,
+        ReleaseDate = enrichment.ReleaseDate,
+        RawReleaseDate = enrichment.RawPublishDate,
+        CoverImageUrl = enrichment.CoverImageUrl,
+    };
+
+    private async Task EnrichByIsbnAsync(
+        Series series,
+        SyncRun run,
+        DateOnly today,
+        LookupBudget budget,
+        CancellationToken cancellationToken)
+    {
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
             if (budget.IsExhausted)
@@ -54,7 +219,7 @@ public sealed class VolumeEnrichmentService(
             // twenty volumes.
             try
             {
-                await ApplyAsync(series, volume, run, today, budget, cancellationToken);
+                await ApplyByIsbnAsync(series, volume, run, today, budget, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -73,8 +238,16 @@ public sealed class VolumeEnrichmentService(
         }
     }
 
+    /// <summary>Whether any source is still worth a request for this volume at all.</summary>
+    private static bool NeedsAnything(Volume volume) =>
+        volume.ReleaseDate is null
+        || volume.CoverObjectKey is null
+        || volume.Title is null
+        || volume.Description is null;
+
     /// <summary>
-    /// Whether this volume is worth a request. Silent about the ones that are not.
+    /// Whether this volume is worth a request to the by-ISBN source. Silent about the ones
+    /// that are not.
     /// </summary>
     // Three reasons to skip, and none of them is an error:
     //
@@ -90,12 +263,18 @@ public sealed class VolumeEnrichmentService(
     //   learn, so a nightly run does not re-ask. Incomplete ones are re-asked, which is
     //   deliberate: Open Library's catalogue grows, and today's missing record is next
     //   quarter's hit.
+    //
+    // Description is deliberately absent from that last list, unlike NeedsAnything's.
+    // Open Library carried a blurb for 0 of this shelf's 15 sampled ISBNs, so a volume
+    // whose only gap is its description would be re-asked every night forever for a field
+    // the source has never once supplied — sixty budgeted lookups a night spent on a
+    // certainty.
     private static bool ShouldLookUp(Volume volume) =>
         volume.Isbn is not null
         && !Isbn.IsJapaneseEdition(volume.Isbn)
         && (volume.ReleaseDate is null || volume.CoverObjectKey is null || volume.Title is null);
 
-    private async Task ApplyAsync(
+    private async Task ApplyByIsbnAsync(
         Series series,
         Volume volume,
         SyncRun run,
@@ -135,9 +314,13 @@ public sealed class VolumeEnrichmentService(
 
         run.VolumesEnriched++;
 
-        ApplyReleaseDate(series, volume, enrichment, run, today);
-        ApplyTitle(volume, enrichment);
-        await ApplyCoverAsync(volume, enrichment, run, cancellationToken);
+        await factWriter.ApplyAsync(
+            series,
+            volume,
+            ToFacts(enrichment, enrichmentSource.SourceName),
+            run,
+            today,
+            cancellationToken);
     }
 
     /// <summary>
@@ -228,124 +411,5 @@ public sealed class VolumeEnrichmentService(
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Writes the date, unless it contradicts what the release source already said.
-    /// </summary>
-    // The rule the verdict settled (§1). A real date wins for display where one exists,
-    // but IsReleased stays the release model: it is a sourced count covering the whole
-    // shelf, where dates cover 63% of the minority of volumes whose ISBN is known.
-    //
-    // So a date in the past is written — it agrees with IsReleased and says more than it
-    // does. A future date on a volume the release source has already counted as in print
-    // is the two sources contradicting each other about one volume, and the standing rule
-    // for that is "recorded, never silently picked": the disagreement becomes a row for a
-    // person and the existing value is left exactly as it was. Writing it would put a
-    // future date on a volume the shelf simultaneously reports as out, which is the
-    // silent inconsistency the rule exists to prevent.
-    private void ApplyReleaseDate(
-        Series series,
-        Volume volume,
-        VolumeEnrichment enrichment,
-        SyncRun run,
-        DateOnly today)
-    {
-        if (enrichment.ReleaseDate is not { } releaseDate)
-        {
-            if (enrichment.RawPublishDate is { } raw)
-            {
-                // Said out loud: "2022" is a real fact that is not a date, and going
-                // quiet about it would look like the record had none at all.
-                logger.LogInformation(
-                    "{RecordKey} dates {TitleEnglish} volume {VolumeNumber} only as {RawPublishDate}, "
-                    + "which names no day",
-                    enrichment.SourceRecordKey,
-                    series.TitleEnglish,
-                    volume.Number,
-                    raw);
-            }
-
-            return;
-        }
-
-        if (releaseDate == volume.ReleaseDate)
-        {
-            return;
-        }
-
-        if (releaseDate > today && volume.IsReleased)
-        {
-            run.Discrepancies.Add(new SyncDiscrepancy
-            {
-                Id = Guid.CreateVersion7(),
-                SeriesId = series.Id,
-                SeriesTitle = series.TitleEnglish,
-                Field = SyncDiscrepancyField.ReleaseDate,
-                VolumeNumber = volume.Number,
-                ResolvedWith = null,
-                Note = $"ISBN {volume.Isbn}, record {enrichment.SourceRecordKey}. "
-                       + "The date was not written; the count still decides whether this volume is out.",
-            }
-                .Says(MetadataSourceName.MangaUpdates, "in print")
-                .Says(
-                    MetadataSourceName.OpenLibrary,
-                    releaseDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
-
-            logger.LogInformation(
-                "{TitleEnglish} volume {VolumeNumber}: the release source says in print, {SourceName} says "
-                + "{ReleaseDate}. Recorded for review; nothing written",
-                series.TitleEnglish,
-                volume.Number,
-                enrichmentSource.SourceName,
-                releaseDate);
-
-            return;
-        }
-
-        volume.ReleaseDate = releaseDate;
-        run.DatesMoved++;
-    }
-
-    private void ApplyTitle(Volume volume, VolumeEnrichment enrichment)
-    {
-        if (enrichment.Title is not { } title || title == volume.Title)
-        {
-            return;
-        }
-
-        // Metadata, so the source's current answer wins over the last one it gave. Only
-        // Volume.Title is written; nothing here can reach a user-editable field.
-        volume.Title = title;
-    }
-
-    /// <summary>
-    /// Caches the art under this volume's synced key, leaving any override untouched.
-    /// </summary>
-    // The override is not even consulted: an override lives on VolumeUserState under a
-    // different key prefix, and the projection prefers it on read. Writing the synced key
-    // while an override exists is correct and wanted — feature-spec §4.3 says removing an
-    // override falls back to synced art, which requires the synced art to be there.
-    private async Task ApplyCoverAsync(
-        Volume volume,
-        VolumeEnrichment enrichment,
-        SyncRun run,
-        CancellationToken cancellationToken)
-    {
-        if (enrichment.CoverImageUrl is not { } coverImageUrl || volume.CoverObjectKey is not null)
-        {
-            return;
-        }
-
-        var objectKey = await coverCache.EnsureCachedAsync(
-            volume.Id, enrichmentSource.SourceName, coverImageUrl, cancellationToken);
-
-        if (objectKey is null)
-        {
-            return;
-        }
-
-        volume.CoverObjectKey = objectKey;
-        run.VolumeCoversCached++;
     }
 }

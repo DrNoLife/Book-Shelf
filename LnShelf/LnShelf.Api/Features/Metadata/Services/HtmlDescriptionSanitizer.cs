@@ -4,12 +4,18 @@ using System.Text.RegularExpressions;
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// Turns AniList's synopsis into the plain text the shelf stores and renders.
+/// Turns a source's marked-up blurb into the plain text the shelf stores and renders.
 /// </summary>
-// AniList's `asHtml: false` is a weaker claim than it sounds: it is the *less* marked-up
-// of the two renderings, not clean text. Real descriptions arrive with <br> line breaks,
-// <i>/<b> emphasis and entities such as &mdash;, because the field is community markdown
-// passed through a partial converter.
+// Two consumers, both of which hand over HTML at the boundary:
+//
+// - AniList series synopses. Its `asHtml: false` is a weaker claim than it sounds: it is
+//   the *less* marked-up of the two renderings, not clean text. Real descriptions arrive
+//   with <br> line breaks, <i>/<b> emphasis and entities such as &mdash;, because the
+//   field is community markdown passed through a partial converter.
+// - Apple Books per-volume blurbs, which arrive with <br /> and &#xa0; outright.
+//
+// Named for what it does rather than for who calls it, which is why it no longer carries
+// AniList's name: the rules are about HTML, not about either source.
 //
 // Cleaning happens here, at the boundary, so nothing inward ever holds markup: the client
 // renders the description as text, and sanitizing on the way out instead would mean every
@@ -18,7 +24,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // The trailing "(Source: Yen Press)" note is kept on purpose. It is honest attribution for
 // prose the shelf did not write, and the shelf's voice rules do not permit quietly
 // dropping it.
-public static partial class AniListDescriptionSanitizer
+public static partial class HtmlDescriptionSanitizer
 {
     /// <returns>Null when the source says nothing — a blank synopsis renders no panel.</returns>
     public static string? Sanitize(string? description)

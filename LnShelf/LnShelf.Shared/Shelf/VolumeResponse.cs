@@ -18,6 +18,12 @@ public sealed record VolumeResponse
     public string? Title { get; init; }
 
     /// <summary>
+    /// This volume's own blurb, when a source supplied one. Null is a normal answer and
+    /// renders as nothing at all rather than as a placeholder.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Whether this volume is out, decided by the server so the client never has to
     /// re-derive it: a date in the past, or the release source's word, or ownership.
     /// </summary>

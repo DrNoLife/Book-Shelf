@@ -22,7 +22,7 @@ public sealed record SeriesMetadata
 
     /// <summary>
     /// The synopsis, already plain text — the source's markup is removed at the edge
-    /// (see <c>AniListDescriptionSanitizer</c>). Null when the source has none.
+    /// (see <c>HtmlDescriptionSanitizer</c>). Null when the source has none.
     /// </summary>
     public string? Description { get; init; }
 

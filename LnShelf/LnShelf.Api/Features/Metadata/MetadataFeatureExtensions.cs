@@ -28,6 +28,7 @@ public static class MetadataFeatureExtensions
 
             services.AddAniList(configuration);
             services.AddReleaseSource(configuration);
+            services.AddVolumeCatalogue(configuration);
             services.AddVolumeEnrichment(configuration);
             services.AddSync(configuration);
 
@@ -86,6 +87,40 @@ public static class MetadataFeatureExtensions
             return services;
         }
 
+        /// <summary>Apple Books behind <c>IVolumeCatalogueSource</c>.</summary>
+        private IServiceCollection AddVolumeCatalogue(IConfiguration configuration)
+        {
+            services.Configure<AppleBooksOptions>(configuration.GetSection(AppleBooksOptions.SectionName));
+
+            // Its own pool: the four APIs have unrelated budgets.
+            services.AddSingleton<AppleBooksRateLimiter>();
+            services.AddTransient<AppleBooksRateLimitHandler>();
+
+            services.AddHttpClient<AppleBooksClient>((provider, httpClient) =>
+                {
+                    var appleBooks = provider.GetRequiredService<IOptions<AppleBooksOptions>>().Value;
+                    httpClient.BaseAddress = appleBooks.Endpoint;
+
+                    // Infinite here, and enforced per request inside the handler instead —
+                    // the same arrangement as Open Library's, for the same reason:
+                    // HttpClient.Timeout also covers the wait for a rate-limit permit. See
+                    // AppleBooksRateLimitHandler.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+
+                    // The endpoint answers `text/javascript` whatever is asked for, which is
+                    // why AppleBooksClient deserializes by hand rather than through
+                    // ReadFromJsonAsync. Asking for JSON anyway is still the honest request.
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
+                })
+                .AddHttpMessageHandler<AppleBooksRateLimitHandler>();
+
+            services.AddScoped<IVolumeCatalogueSource, AppleBooksVolumeCatalogueSource>();
+
+            return services;
+        }
+
         /// <summary>Open Library behind <c>IVolumeEnrichmentSource</c> (the enrichment verdict, §3).</summary>
         private IServiceCollection AddVolumeEnrichment(IConfiguration configuration)
         {
@@ -118,8 +153,10 @@ public static class MetadataFeatureExtensions
             services.AddScoped<IVolumeEnrichmentSource, OpenLibraryVolumeEnrichmentSource>();
             services.AddScoped<IIsbnCandidateSource, OpenLibraryIsbnCandidateSource>();
 
-            // Where the conflict rules live. The sync run calls it per series.
+            // Where the conflict rules live. The sync run calls the service per series; the
+            // writer is what both of its passes route every write through.
             services.AddScoped<VolumeEnrichmentService>();
+            services.AddScoped<VolumeFactWriter>();
 
             // The one-shots: discovery proposes into a file, apply writes what survives
             // review. Two commands because a person sits between them.

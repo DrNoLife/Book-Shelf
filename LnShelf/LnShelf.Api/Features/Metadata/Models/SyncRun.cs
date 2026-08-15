@@ -32,6 +32,15 @@ public sealed class SyncRun
     public int VolumeCoversCached { get; set; }
 
     /// <summary>
+    /// Volumes given a blurb by this run.
+    /// </summary>
+    // Counted apart from VolumesEnriched because it is the one field only the store
+    // catalogue supplies: Open Library carried a blurb for none of this shelf's sampled
+    // ISBNs, so a run that filled descriptions in did so from a source the enrichment
+    // counter does not describe.
+    public int DescriptionsWritten { get; set; }
+
+    /// <summary>
     /// Volumes whose own ISBN was not indexed, but whose data was found under another
     /// printing of the same volume.
     /// </summary>

@@ -118,6 +118,78 @@ public sealed class VolumeEditionMatcherTests
     public void ConfirmsMedium_ARecordWithNoTitle_ConfirmsNothing() =>
         VolumeEditionMatcher.ConfirmsMedium(Format.LightNovel, Edition(null)).ShouldBeFalse();
 
+    [Theory]
+    // Apple Books' own titles, verbatim from a captured search. The store writes the
+    // series name with two hyphens where the shelf holds a horizontal bar, and
+    // TitleNormalizer folds both.
+    [InlineData("86―EIGHTY-SIX", "86--EIGHTY-SIX, Vol. 8 (light novel)", 8)]
+    [InlineData("86―EIGHTY-SIX", "86--EIGHTY-SIX, Vol. 14 (light novel)", 14)]
+    [InlineData("That Time I Got Reincarnated as a Slime",
+        "That Time I Got Reincarnated as a Slime, Vol. 16 (light novel)", 16)]
+    public void TryMatchVolumeNumber_AStoreTitle_ReadsItsVolumeNumber(
+        string seriesTitle,
+        string recordTitle,
+        int expected)
+    {
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber(seriesTitle, Format.LightNovel, recordTitle, out var volumeNumber)
+            .ShouldBeTrue();
+
+        volumeNumber.ShouldBe(expected);
+    }
+
+    [Theory]
+    // The Slime Diaries trap, in the store's own wording this time: a spin-off whose title
+    // starts with the tracked series' title and then numbers itself from one.
+    [InlineData("That Time I Got Reincarnated as a Slime",
+        "That Time I Got Reincarnated as a Slime: The Slime Diaries, Vol. 3 (light novel)")]
+
+    // The manga of the same volume of the same series, one row away in a real response.
+    [InlineData("86―EIGHTY-SIX", "86--EIGHTY-SIX, Vol. 1 (manga)")]
+
+    // A German-market edition, which the store returns alongside the English ones. It has
+    // no number in the three tokens after the series title — "deutsche light novel" gets
+    // there first.
+    [InlineData("86―EIGHTY-SIX", "86 – EIGHTY-SIX (deutsche Light Novel): Band 1")]
+
+    // A different series entirely, which the store returns for a two-word query.
+    [InlineData("86―EIGHTY-SIX",
+        "Saving 80,000 Gold in Another World for my Retirement Volume 6 (light novel)")]
+    public void TryMatchVolumeNumber_ARecordThatIsNotThisSeriesVolume_ReadsNothing(
+        string seriesTitle,
+        string recordTitle) =>
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber(seriesTitle, Format.LightNovel, recordTitle, out _)
+            .ShouldBeFalse();
+
+    [Fact]
+    public void TryMatchVolumeNumber_ASpinOffNumberedFromOne_IsIndistinguishableAndSaysSo()
+    {
+        // Flagged rather than hidden. "Alter.1" is a real Apple listing for a 86 side
+        // story, and it does put a 1 immediately after the series title — which is exactly
+        // what a genuine volume 1 looks like, so the matcher accepts it.
+        //
+        // What saves volume 1 is that the catalogue pass takes the first confirmed record
+        // per number and Apple ranks the numbered volumes above the side stories. That is a
+        // dependency on the store's ordering, and it is written down here so the next
+        // change to that pass knows it exists.
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber(
+                "86―EIGHTY-SIX", Format.LightNovel, "86--EIGHTY-SIX Alter.1 (light novel)", out var number)
+            .ShouldBeTrue();
+
+        number.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData("86--EIGHTY-SIX, Vol. 8 (light novel)", true)]
+    [InlineData("86--EIGHTY-SIX, Vol. 1 (manga)", false)]
+    [InlineData("86--EIGHTY-SIX: Operation High School", false)]
+    public void ConfirmsMedium_AStoreTitle_NeedsTheMarkerSaidOutLoud(
+        string recordTitle,
+        bool expected) =>
+        VolumeEditionMatcher.ConfirmsMedium(Format.LightNovel, recordTitle).ShouldBe(expected);
+
     private static VolumeEnrichment Edition(string? title) => new()
     {
         SourceRecordKey = "/books/OL1M",

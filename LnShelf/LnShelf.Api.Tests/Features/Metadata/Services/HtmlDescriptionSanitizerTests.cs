@@ -1,10 +1,11 @@
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
-/// AniList's synopsis, cleaned at the edge. Every case here is a shape the field really
-/// arrives in under <c>asHtml: false</c> — which strips less than its name suggests.
+/// A source's blurb, cleaned at the edge. Every case here is a shape AniList's synopsis
+/// really arrives in under <c>asHtml: false</c> — which strips less than its name suggests
+/// — and the same rules now clean Apple Books' per-volume blurbs.
 /// </summary>
-public sealed class AniListDescriptionSanitizerTests
+public sealed class HtmlDescriptionSanitizerTests
 {
     [Theory]
     [InlineData("One.<br>Two.")]
@@ -12,12 +13,12 @@ public sealed class AniListDescriptionSanitizerTests
     [InlineData("One.<br />Two.")]
     [InlineData("One.<BR>Two.")]
     public void Sanitize_EverySpellingOfABreakTag_BecomesANewline(string description) =>
-        AniListDescriptionSanitizer.Sanitize(description).ShouldBe("One.\nTwo.");
+        HtmlDescriptionSanitizer.Sanitize(description).ShouldBe("One.\nTwo.");
 
     [Fact]
     public void Sanitize_InlineMarkup_IsStrippedAndItsTextKept()
     {
-        var sanitized = AniListDescriptionSanitizer.Sanitize(
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
             "The <i>web novel</i> and the <b>light novel</b> differ.");
 
         // The emphasis is lost on purpose: the shelf renders this as text, and half a tag
@@ -28,7 +29,7 @@ public sealed class AniListDescriptionSanitizerTests
     [Fact]
     public void Sanitize_HtmlEntities_AreDecoded()
     {
-        var sanitized = AniListDescriptionSanitizer.Sanitize(
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
             "Rudeus &mdash; a newborn &amp; a 34-year-old &#039;NEET&#039;.");
 
         sanitized.ShouldBe("Rudeus — a newborn & a 34-year-old 'NEET'.");
@@ -39,7 +40,7 @@ public sealed class AniListDescriptionSanitizerTests
     {
         // The reason entities are decoded last: decoded first, "&lt;spoiler&gt;" would look
         // like a tag to the stripper and take the rest of the sentence with it.
-        AniListDescriptionSanitizer.Sanitize("Marked &lt;spoiler&gt; by the community.")
+        HtmlDescriptionSanitizer.Sanitize("Marked &lt;spoiler&gt; by the community.")
             .ShouldBe("Marked <spoiler> by the community.");
     }
 
@@ -48,7 +49,7 @@ public sealed class AniListDescriptionSanitizerTests
     {
         // The real paragraph separator AniList emits: two <br> around a literal newline,
         // which is four newlines once converted.
-        var sanitized = AniListDescriptionSanitizer.Sanitize("First.<br>\n<br>\nSecond.");
+        var sanitized = HtmlDescriptionSanitizer.Sanitize("First.<br>\n<br>\nSecond.");
 
         sanitized.ShouldBe("First.\n\nSecond.");
     }
@@ -56,7 +57,7 @@ public sealed class AniListDescriptionSanitizerTests
     [Fact]
     public void Sanitize_TheSourceNote_IsKept()
     {
-        var sanitized = AniListDescriptionSanitizer.Sanitize(
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
             "A synopsis.<br>\n<br>\n(Source: Yen Press)");
 
         // Honest attribution for prose the shelf did not write. Dropping it would read as
@@ -66,7 +67,7 @@ public sealed class AniListDescriptionSanitizerTests
 
     [Fact]
     public void Sanitize_SurroundingWhitespace_IsTrimmed() =>
-        AniListDescriptionSanitizer.Sanitize("<br>\n  A synopsis.  <br>\n").ShouldBe("A synopsis.");
+        HtmlDescriptionSanitizer.Sanitize("<br>\n  A synopsis.  <br>\n").ShouldBe("A synopsis.");
 
     [Theory]
     [InlineData(null)]
@@ -76,14 +77,14 @@ public sealed class AniListDescriptionSanitizerTests
     [InlineData("<br><br>")]
     [InlineData("<i> </i>")]
     public void Sanitize_NothingWorthRendering_IsNull(string? description) =>
-        AniListDescriptionSanitizer.Sanitize(description).ShouldBeNull();
+        HtmlDescriptionSanitizer.Sanitize(description).ShouldBeNull();
 
     [Fact]
     public void Sanitize_ACarriageReturnParagraphBreak_IsOneBlankLineNotTwo()
     {
         // \r\n\r\n is four characters and two line endings; counting the \r separately
         // would leave a hole in the middle of the hero.
-        AniListDescriptionSanitizer.Sanitize("First.\r\n\r\nSecond.")
+        HtmlDescriptionSanitizer.Sanitize("First.\r\n\r\nSecond.")
             .ShouldBe("First.\n\nSecond.");
     }
 }

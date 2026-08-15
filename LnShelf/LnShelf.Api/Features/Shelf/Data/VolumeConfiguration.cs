@@ -25,6 +25,12 @@ public sealed class VolumeConfiguration : IEntityTypeConfiguration<Volume>
         // Reincarnated As a Slime, Vol. 14 (light Novel)" is a real one.
         builder.Property(volume => volume.Title).HasMaxLength(400);
 
+        // Uncapped, the one string here without a length — exactly the call
+        // SeriesConfiguration makes about the series synopsis. A blurb is prose, so its
+        // length is the source's business; uncapped means Postgres `text`, which costs
+        // nothing over varchar(n) and cannot truncate a description mid-sentence.
+        builder.Property(volume => volume.Description);
+
         // Sync upserts key on (series, volume number), so re-running is safe.
         builder.HasIndex(volume => new { volume.SeriesId, volume.Number }).IsUnique();
 

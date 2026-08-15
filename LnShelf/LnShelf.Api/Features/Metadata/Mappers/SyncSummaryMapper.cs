@@ -16,6 +16,7 @@ public static class SyncSummaryMapper
             VolumesMarkedReleased = run.VolumesMarkedReleased,
             VolumesEnriched = run.VolumesEnriched,
             VolumeCoversCached = run.VolumeCoversCached,
+            DescriptionsWritten = run.DescriptionsWritten,
             VolumesResolvedBySearch = run.VolumesResolvedBySearch,
             EnrichmentGaps = run.EnrichmentGaps,
             NewVolumes = run.NewVolumes,

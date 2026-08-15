@@ -211,10 +211,11 @@ public sealed class SeriesSyncServiceTests
 
         var run = await CreateService(dbContext, Linked(volumeCount: 3)).RunAsync(CancellationToken.None);
 
-        // Transparent, not magical: the release source's word is a count, dates reach only
-        // the volumes whose ISBN is known, and the footer must not imply more than that.
+        // Transparent, not magical: the release source's word is a count, everything
+        // per-volume comes from two catalogues that each cover part of the shelf, and the
+        // footer must not imply more than that.
         run.Summary.ShouldContain("counts only");
-        run.Summary.ShouldContain("dates where an ISBN is known");
+        run.Summary.ShouldContain("volume detail from AppleBooks and OpenLibrary");
 
         // These volumes have no ISBN, so nothing was enriched and no date could arrive.
         run.DatesMoved.ShouldBe(0);
@@ -339,9 +340,11 @@ public sealed class SeriesSyncServiceTests
             releaseSource,
             NoMetadata(),
             new VolumeEnrichmentService(
+                NoCatalogue(),
                 enrichmentSource,
                 NoCandidates(),
-                Substitute.For<IVolumeCoverCache>(),
+                new VolumeFactWriter(
+                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
                 NullLogger<VolumeEnrichmentService>.Instance),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
@@ -350,6 +353,7 @@ public sealed class SeriesSyncServiceTests
             dbContext,
             refresher,
             releaseSource,
+            NoCatalogue(),
             enrichmentSource,
             enrichmentOptions,
             TimeProvider.System,
@@ -419,6 +423,17 @@ public sealed class SeriesSyncServiceTests
     /// A search that offers nothing: these tests are about the release-source half of a
     /// run, and the search fallback has its own file.
     /// </summary>
+    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
+    private static IVolumeCatalogueSource NoCatalogue()
+    {
+        var source = Substitute.For<IVolumeCatalogueSource>();
+        source.SourceName.Returns("AppleBooks");
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        return source;
+    }
+
     private static IIsbnCandidateSource NoCandidates()
     {
         var source = Substitute.For<IIsbnCandidateSource>();

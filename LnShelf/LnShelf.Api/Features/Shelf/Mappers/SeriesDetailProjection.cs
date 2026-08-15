@@ -69,6 +69,11 @@ public static class SeriesDetailProjection
             ReleaseDate = volume.ReleaseDate,
             Title = volume.Title,
 
+            // Blank-checked like the series synopsis, and unlike Title: a row holding
+            // whitespace must not render an empty blurb panel. Title is left verbatim
+            // because a blank one is refused at the point it is written.
+            Description = NullIfBlank(volume.Description),
+
             // The same three grounds as the library card's Published.
             IsOut = (volume.ReleaseDate is not null && volume.ReleaseDate <= today)
                     || volume.IsReleased

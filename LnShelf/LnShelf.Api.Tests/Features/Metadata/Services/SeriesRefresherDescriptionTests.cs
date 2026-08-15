@@ -134,9 +134,11 @@ public sealed class SeriesRefresherDescriptionTests
             releaseSource,
             metadataSource,
             new VolumeEnrichmentService(
+                NoCatalogue(),
                 NoEnrichment(),
                 NoCandidates(),
-                Substitute.For<IVolumeCoverCache>(),
+                new VolumeFactWriter(
+                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
                 NullLogger<VolumeEnrichmentService>.Instance),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
@@ -199,6 +201,17 @@ public sealed class SeriesRefresherDescriptionTests
         source.SourceName.Returns("OpenLibrary");
         source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((VolumeEnrichment?)null);
+
+        return source;
+    }
+
+    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
+    private static IVolumeCatalogueSource NoCatalogue()
+    {
+        var source = Substitute.For<IVolumeCatalogueSource>();
+        source.SourceName.Returns("AppleBooks");
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
         return source;
     }
