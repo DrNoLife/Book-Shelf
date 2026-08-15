@@ -6,6 +6,48 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.13 — the details, made presentable (2026-08-15)
+
+Three data-quality defects from the 3.12 browser pass, each fixed on captured
+evidence rather than the first hypothesis.
+
+- **The glued-paragraph fix contradicted its own brief.** The assumed cause —
+  unconverted block tags — does not exist: across 357 live Apple rows only 33
+  carried any tag at all (`br` 116, `i` 52, `b` 6 occurrences; no `<p>`, no
+  `<div>`), and none of the affected rows had tags. Apple strips the
+  publisher's markup and puts nothing in its place. Two repair rules were
+  earned instead: a glued-sentence rule (`…have.The attack` → break; two
+  letters before the stop keeps it off `J.R.R.Tolkien`) and a glued-headline
+  rule (first case-join inside the leading 60 chars, multi-word, all-caps or
+  ends-lower — the cap and guard are the two real false positives found, a
+  hard-wrapped Tanya blurb and a French title glue). Validated over 317 real
+  blurbs: 55 repaired, zero false positives, all 13 AniList synopses untouched.
+  Where Apple replaced the break with a *space*, the information is gone and
+  the rules do not guess.
+- **Volume titles are subtitles now.** `VolumeSubtitleExtractor` anchors on the
+  volume marker (`, Vol. N` / `Volume N` / bare number) at the write boundary,
+  source-agnostic. `Volume.Title` became three-state — null unresolved, `""`
+  resolved-without-subtitle, else the subtitle — so enrichment stops re-asking
+  for names that do not exist (light-novel lines mostly don't name volumes).
+  The projection maps `""` → null; the wire contract is unchanged.
+- **No cover is cached from a record dated in the future** — Apple ships a
+  typographic placeholder for preorders (measured: 86 vol 14, due 2026-12-08).
+- **One repair migration** nulled the store-prefixed titles, all 83 flattened
+  blurbs, and the placeholder cover; `Down` is a documented no-op. A live
+  resync refilled 83 blurbs (37 with their break restored — the rest are
+  genuinely one paragraph) and a second sync wrote nothing. 665 tests pass.
+- **enrichment-verify's thresholded metric is now `matched`** (the catalogue
+  named the volume), with `titled` demoted to an informational line — a healthy
+  pipeline over a series whose volumes have no subtitles must not fail.
+- **[flagged] The repair cost ~17 real Open Library subtitles** (86's "Run
+  Through the Battlefield" et al.): Apple answers `""` first, `""` is resolved,
+  so the by-ISBN pass is never asked again. A `subtitle-backfill` one-shot
+  (in flight) asks Open Library once for every ISBN-bearing volume whose title
+  is empty; `ApplyTitle` deliberately allows the `"" → subtitle` upgrade and
+  never the reverse.
+
+---
+
 ## Phase 3.12 — blurbs in the popover, titles on, and what the browser caught (2026-08-15)
 
 The client-side half of the book-details work, verified in the running app.
