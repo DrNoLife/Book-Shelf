@@ -19,6 +19,13 @@ public sealed class AniListMedia
     /// <summary>The total volume count — not a volume list. Null while unknown.</summary>
     public int? Volumes { get; set; }
 
+    /// <summary>
+    /// The synopsis, requested with <c>asHtml: false</c> — which still carries
+    /// <c>&lt;br&gt;</c>, <c>&lt;i&gt;</c> and HTML entities. Only the detail query asks
+    /// for it; a search row leaves it null.
+    /// </summary>
+    public string? Description { get; set; }
+
     public AniListMediaTitle? Title { get; set; }
     public AniListFuzzyDate? StartDate { get; set; }
     public AniListCoverImage? CoverImage { get; set; }

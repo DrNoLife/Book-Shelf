@@ -140,6 +140,32 @@ public sealed class SeriesDetailProjectionTests
     }
 
     [Fact]
+    public void ToDetail_ASynopsis_ReachesTheDetailWithItsParagraphBreaksIntact()
+    {
+        var series = CreateSeries((1, null, true, ReadStatus.Read, null));
+        series.Description = "First paragraph.\n\nSecond paragraph.";
+
+        // The blank line is the contract with the hero, which splits on it to make <p>s.
+        // Collapsing it here would turn a synopsis into one wall of text.
+        SeriesDetailProjection.ToDetail(series, Today)
+            .Description.ShouldBe("First paragraph.\n\nSecond paragraph.");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ToDetail_NoSynopsisWorthPrinting_IsNull(string? description)
+    {
+        // Null is what makes the hero render nothing at all. A blank string would render an
+        // empty block that reads as a broken layout.
+        var series = CreateSeries((1, null, true, ReadStatus.Read, null));
+        series.Description = description;
+
+        SeriesDetailProjection.ToDetail(series, Today).Description.ShouldBeNull();
+    }
+
+    [Fact]
     public void ToDetail_BlankNotes_AreNull()
     {
         // An empty note must not render an empty panel.

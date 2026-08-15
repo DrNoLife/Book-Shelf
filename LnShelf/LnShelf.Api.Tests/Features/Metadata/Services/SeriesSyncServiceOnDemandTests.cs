@@ -168,6 +168,7 @@ public sealed class SeriesSyncServiceOnDemandTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
+            NoMetadata(),
             new VolumeEnrichmentService(
                 enrichmentSource,
                 NoCandidates(),
@@ -224,6 +225,19 @@ public sealed class SeriesSyncServiceOnDemandTests
         await dbContext.SaveChangesAsync();
 
         return series.Id;
+    }
+
+    /// <summary>
+    /// AniList knows nothing: these tests are about the release-source half of a run, and
+    /// the description heal has its own file.
+    /// </summary>
+    private static ISeriesMetadataSource NoMetadata()
+    {
+        var source = Substitute.For<ISeriesMetadataSource>();
+        source.GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns((SeriesMetadata?)null);
+
+        return source;
     }
 
     /// <summary>

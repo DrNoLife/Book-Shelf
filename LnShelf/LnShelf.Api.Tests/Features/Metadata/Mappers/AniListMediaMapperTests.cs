@@ -97,6 +97,45 @@ public sealed class AniListMediaMapperTests
     }
 
     [Fact]
+    public void ToSeriesMetadata_TheCapturedNovel_CarriesASynopsisWithNoMarkupLeftInIt()
+    {
+        var description = AniListMediaMapper.ToSeriesMetadata(
+                AniListFixtures.LoadMedia(AniListFixtures.MushokuTenseiNovel))
+            .Description.ShouldNotBeNull();
+
+        // Nothing inward ever holds AniList's markup: the client renders this as text.
+        description.ShouldNotContain("<");
+        description.ShouldNotContain("&mdash;");
+        description.ShouldContain("—");
+
+        // Four paragraphs, separated by one blank line each — the shape the hero splits on.
+        // AniList's own separator is two <br> around a newline, which is four newlines.
+        description.Split("\n\n").Length.ShouldBe(4);
+        description.ShouldNotContain("\n\n\n");
+
+        // The attribution stays. It is honest about prose the shelf did not write.
+        description.ShouldEndWith("(Source: Seven Seas Entertainment)");
+    }
+
+    [Fact]
+    public void ToSearchResult_TheCapturedMushokuSearch_CarriesNoSynopsisAtAll()
+    {
+        // The search query deliberately does not ask for one — a row prints a title, a
+        // format and a year, and twenty synopses would be kilobytes nothing renders. The
+        // captured page is the evidence that the shipped document still omits it.
+        MushokuSearchMedia.ShouldAllBe(media => media.Description == null);
+    }
+
+    [Fact]
+    public void ToSeriesMetadata_MediaWithNoDescription_LeavesItNullRatherThanEmpty()
+    {
+        var media = CreateMedia();
+        media.Description = "   ";
+
+        AniListMediaMapper.ToSeriesMetadata(media).Description.ShouldBeNull();
+    }
+
+    [Fact]
     public void ToSeriesMetadata_TheCapturedNovel_MaterialisesTheVolumeCountAsUndatedVolumes()
     {
         var metadata = AniListMediaMapper.ToSeriesMetadata(

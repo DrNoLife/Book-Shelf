@@ -134,6 +134,64 @@
   color: var(--muted);
 }
 
+/* --- synopsis ----------------------------------------------------------------- */
+
+.synopsis {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* Body copy in the secondary strength: the synopsis is context, not the page's subject,
+   and --text here would compete with the title above it. */
+.synopsis__body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 78ch;
+}
+
+/* Paragraph spacing as a margin rather than a flex gap, because the clamped state below
+   changes the container's display and a gap would vanish with it. */
+.synopsis__paragraph + .synopsis__paragraph { margin-top: 8px; }
+
+/* -webkit-line-clamp only counts lines inside a -webkit-box, so the clamp swaps the
+   container's display rather than adding a max-height in em — a height would cut the
+   fourth line in half at any line-height but the one it was computed for. */
+.synopsis__body--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+}
+
+/* The same quiet control as the one at the foot of the page: no colour at rest, borrowing
+   the accent only once it is reached for. A synopsis is not an action. */
+.synopsis__toggle {
+  padding: 3px 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--faint);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  background: transparent;
+  cursor: pointer;
+}
+
+.synopsis__toggle:hover,
+.synopsis__toggle:focus-visible {
+  border-color: var(--line-3);
+  color: var(--muted);
+}
+
+.synopsis__toggle:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 2px;
+}
+
 /* --- stat panel and side panel ---------------------------------------------- */
 
 .hero__panels {

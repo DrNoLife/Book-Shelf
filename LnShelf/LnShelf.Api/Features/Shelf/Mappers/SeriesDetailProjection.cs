@@ -33,6 +33,10 @@ public static class SeriesDetailProjection
             Publisher = series.Publisher,
             StartYear = series.StartYear,
             Genres = [.. series.Genres],
+
+            // Blank-checked like Notes: a row holding whitespace must not render a
+            // synopsis block containing nothing.
+            Description = NullIfBlank(series.Description),
             CoverObjectKey = series.CoverObjectKey,
             AniListId = series.AniListId,
             MangaUpdatesId = series.MangaUpdatesId,

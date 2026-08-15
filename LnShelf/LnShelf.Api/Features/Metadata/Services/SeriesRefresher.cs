@@ -14,6 +14,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class SeriesRefresher(
     IReleaseSourceMatcher releaseSourceMatcher,
     IReleaseSource releaseSource,
+    ISeriesMetadataSource metadataSource,
     VolumeEnrichmentService volumeEnrichment,
     TimeProvider timeProvider,
     ILogger<SeriesRefresher> logger)
@@ -49,6 +50,10 @@ public sealed class SeriesRefresher(
         // the same pass.
         await EnrichVolumesAsync(series, run, budget, cancellationToken);
 
+        // Also unconditional, and for the same reason: whether this series has a synopsis
+        // has nothing to do with whether the release source recognised it.
+        await HealDescriptionAsync(series, cancellationToken);
+
         if (info is null)
         {
             return;
@@ -76,6 +81,59 @@ public sealed class SeriesRefresher(
         // requests when its own ISBN is not the one that got indexed, and only the
         // enrichment knows how many it actually spent.
         await volumeEnrichment.EnrichAsync(series, run, today, budget, cancellationToken);
+    }
+
+    /// <summary>
+    /// Gives a series a synopsis when it has none — the series added before the shelf
+    /// ever asked AniList for one.
+    /// </summary>
+    // The description only, never the rest of the metadata. Re-applying every AniList field
+    // here would make a gap-fill indistinguishable from a full re-sync, and the other fields
+    // were already written when the series was added.
+    //
+    // No budget mechanics, deliberately, unlike the enrichment above. This costs one AniList
+    // request per description-less series and is self-extinguishing — the guard stops firing
+    // the moment the column is filled. AniList allows 90 requests a minute and this shelf
+    // holds single digits of series, so the worst case is one sweep spending nine of them,
+    // once. A LookupBudget here would be machinery guarding nothing.
+    private async Task HealDescriptionAsync(Series series, CancellationToken cancellationToken)
+    {
+        if (series.Description is not null || series.AniListId is not { } aniListId)
+        {
+            return;
+        }
+
+        try
+        {
+            var metadata = await metadataSource.GetSeriesAsync(aniListId, cancellationToken);
+
+            if (metadata?.Description is not { } description)
+            {
+                return;
+            }
+
+            series.Description = description;
+
+            logger.LogInformation(
+                "{TitleEnglish}: description filled in from AniList {AniListId}",
+                series.TitleEnglish,
+                aniListId);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // This file's failure philosophy, applied one level down: a refresh that got the
+            // volume counts right is not worth failing because a synopsis could not be
+            // fetched. The next run will try again — the guard is still true.
+            logger.LogWarning(
+                exception,
+                "Could not fetch a description for {TitleEnglish} (AniList {AniListId}); continuing",
+                series.TitleEnglish,
+                aniListId);
+        }
     }
 
     private async Task<ReleaseSeriesInfo?> LinkAsync(

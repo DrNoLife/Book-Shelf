@@ -27,6 +27,12 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         builder.Property(series => series.Illustrator).HasMaxLength(200);
         builder.Property(series => series.CoverObjectKey).HasMaxLength(300);
 
+        // The one string here with no cap, on purpose: every other one is an identity
+        // field where a length is a real constraint, and a synopsis is prose whose length
+        // is the source's business. Uncapped means Postgres `text`, which costs nothing
+        // over varchar(n) and cannot truncate a description mid-sentence.
+        builder.Property(series => series.Description);
+
         // Matching and sync key on the external ids constantly (data-access.md).
         builder.HasIndex(series => series.AniListId).IsUnique();
         builder.HasIndex(series => series.MangaUpdatesId).IsUnique();

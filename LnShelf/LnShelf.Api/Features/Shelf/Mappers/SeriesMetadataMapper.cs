@@ -70,6 +70,7 @@ public static class SeriesMetadataMapper
         series.Genres = [.. metadata.Genres];
         series.Author = metadata.Author;
         series.Illustrator = metadata.Illustrator;
+        series.Description = metadata.Description;
         series.LastSyncedAt = syncedAt;
 
         if (coverObjectKey is not null)

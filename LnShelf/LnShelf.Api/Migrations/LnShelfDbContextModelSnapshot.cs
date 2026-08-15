@@ -372,6 +372,9 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(32)

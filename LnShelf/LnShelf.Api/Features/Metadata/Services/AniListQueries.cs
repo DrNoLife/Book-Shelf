@@ -37,6 +37,12 @@ internal static class AniListQueries
     /// illustrator sit at the top of the relevance order, and the tail is
     /// translators and letterers the shelf does not store.
     /// </summary>
+    // description is asked for here and deliberately not in the search query: a search
+    // row prints a title, a format and a year, and a synopsis per row would be several
+    // kilobytes of payload nothing renders.
+    //
+    // asHtml: false is the *less* marked-up of the two AniList offers, not clean text —
+    // it still returns <br>, <i> and entities, which AniListDescriptionSanitizer removes.
     public const string SeriesDetail =
         """
         query SeriesDetail($id: Int!) {
@@ -48,6 +54,7 @@ internal static class AniListQueries
             startDate { year }
             title { english romaji native }
             coverImage { large }
+            description(asHtml: false)
             genres
             staff(perPage: 12) {
               edges {

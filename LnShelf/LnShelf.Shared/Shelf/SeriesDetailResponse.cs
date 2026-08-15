@@ -26,6 +26,12 @@ public sealed record SeriesDetailResponse
     public int? StartYear { get; init; }
     public required IReadOnlyList<string> Genres { get; init; }
 
+    /// <summary>
+    /// The synopsis as plain text, paragraphs separated by a blank line. Null when no
+    /// source has one — the hero then prints nothing rather than an empty panel.
+    /// </summary>
+    public string? Description { get; init; }
+
     public string? CoverObjectKey { get; init; }
 
     /// <summary>External ids, for the links out. Null hides its link.</summary>

@@ -6,8 +6,45 @@ namespace LnShelf.Client.Features.Series.Components;
 
 public partial class SeriesHero
 {
+    /// <summary>
+    /// Longer than this and the synopsis is clamped behind a "More" toggle.
+    /// </summary>
+    // A character count rather than a line count, because the component cannot measure
+    // lines: the clamp itself is CSS, and this only decides whether the toggle is offered.
+    // ~500 characters is roughly the four clamped lines at the hero's measure, so a synopsis
+    // that would not have been cut does not get a button that does nothing.
+    private const int ClampThreshold = 500;
+
+    /// <summary>
+    /// The series whose synopsis the reader has opened, or null for none.
+    /// </summary>
+    // Keyed on the series rather than held as a bool: the same component instance is reused
+    // when navigating from one series to the next, and a bare flag would open the new
+    // series' synopsis because the reader expanded the previous one's.
+    private Guid? _expandedSeriesId;
+
     [Parameter]
     public required SeriesDetailResponse Series { get; set; }
+
+    /// <summary>
+    /// The synopsis split into paragraphs. Empty when there is nothing to say, which is
+    /// what makes the whole block disappear rather than render an empty panel.
+    /// </summary>
+    // The API sends plain text with a blank line between paragraphs (the metadata slice's
+    // sanitizer guarantees the shape), so splitting is all the client has to do.
+    private IReadOnlyList<string> DescriptionParagraphs =>
+        Series.Description is { } description
+            ? description.Split(
+                "\n\n",
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : [];
+
+    private bool IsDescriptionLong => Series.Description is { Length: > ClampThreshold };
+
+    private bool IsDescriptionExpanded => _expandedSeriesId == Series.SeriesId;
+
+    private void ToggleDescription() =>
+        _expandedSeriesId = IsDescriptionExpanded ? null : Series.SeriesId;
 
     /// <summary>
     /// "Kadokawa · 2013 – · 14 volumes out", with the clauses that have no data left

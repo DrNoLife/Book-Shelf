@@ -21,6 +21,12 @@ public sealed record SeriesMetadata
     public int? StartYear { get; init; }
 
     /// <summary>
+    /// The synopsis, already plain text — the source's markup is removed at the edge
+    /// (see <c>AniListDescriptionSanitizer</c>). Null when the source has none.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// The source's CDN URL. Server-side only — the cover cache fetches it once
     /// and the browser only ever sees the local cover route (design.md).
     /// </summary>

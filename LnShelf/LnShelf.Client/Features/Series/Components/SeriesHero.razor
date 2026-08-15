@@ -64,6 +64,35 @@
             </div>
         }
 
+        @* The synopsis, in body text under the identity block. Nothing renders when no
+           source has one — an empty "no description" line would be noise on every
+           manual entry. *@
+        @if (DescriptionParagraphs.Count > 0)
+        {
+            <div class="synopsis">
+                <div class="synopsis__body @(IsDescriptionLong && !IsDescriptionExpanded ? "synopsis__body--clamped" : null)">
+                    @foreach (var paragraph in DescriptionParagraphs)
+                    {
+                        <p class="synopsis__paragraph">@paragraph</p>
+                    }
+                </div>
+
+                @* Quiet, and never hover-only (design.md): the toggle is a visible control
+                   with a visible label, not a gradient the reader has to guess at. *@
+                @if (IsDescriptionLong)
+                {
+                    <button type="button"
+                            class="synopsis__toggle"
+                            @* The string, not the bool: Blazor drops a false bool attribute
+                               entirely, and a missing aria-expanded is not "collapsed". *@
+                            aria-expanded="@(IsDescriptionExpanded ? "true" : "false")"
+                            @onclick="ToggleDescription">
+                        @(IsDescriptionExpanded ? "Less" : "More")
+                    </button>
+                }
+            </div>
+        }
+
         <div class="hero__panels">
             <div class="stats">
                 <div class="stats__row">

@@ -35,6 +35,12 @@ public sealed class Series
     public string? Illustrator { get; set; }
 
     /// <summary>
+    /// The synopsis, as plain text. Null for a series added before the shelf asked
+    /// for one, and for a manual entry no source knows about.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
     /// The series' own cover, cached locally from the metadata source.
     /// </summary>
     // An addition to feature-spec §5, which puts covers only on Volume. AniList
