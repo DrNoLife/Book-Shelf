@@ -81,7 +81,22 @@
 
 .primary:disabled { opacity: 0.45; cursor: default; }
 
+/* Folded onto two lines: cover and identity on the first, the facts and Add on the
+   second. Named areas rather than a column count — placing only the facts left Add to
+   auto-placement, which dropped it into the cover's column on a third row of its own,
+   adrift from the row it belongs to. */
 @media (max-width: 760px) {
-  .row { grid-template-columns: 38px minmax(0, 1fr) auto; }
-  .row__facts { grid-column: 2 / -1; flex-wrap: wrap; gap: 8px; }
+  .row {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "cover identity identity"
+      "cover facts    add";
+    align-items: start;
+    gap: 8px 14px;
+  }
+
+  .row__cover { grid-area: cover; }
+  .row__identity { grid-area: identity; }
+  .row__facts { grid-area: facts; flex-wrap: wrap; gap: 8px; align-self: center; }
+  .primary { grid-area: add; align-self: center; }
 }

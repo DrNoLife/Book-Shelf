@@ -95,6 +95,55 @@ public sealed class PopoverPlacerTests
         VolumePopover.HeightFor(without).ShouldBe(VolumePopover.Height);
     }
 
+    [Fact]
+    public void TheRowsOnlySomeVolumesHaveAreCountedIntoTheHeight()
+    {
+        // An owned volume carries the edition buttons and one with an override carries
+        // "Remove cover". Both were missing from the nominal height, which is how the menu
+        // came to hang off the bottom of a phone screen with its last row below the fold.
+        var plain = Volume(description: null);
+        var owned = plain with { Owned = true };
+        var overridden = plain with { HasCoverOverride = true };
+
+        VolumePopover.HeightFor(plain).ShouldBe(VolumePopover.Height);
+        VolumePopover.HeightFor(owned).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
+        VolumePopover.HeightFor(overridden).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
+        VolumePopover.HeightFor(owned with { HasCoverOverride = true })
+            .ShouldBeGreaterThan(VolumePopover.HeightFor(owned));
+    }
+
+    [Theory]
+    [InlineData(16, 100)]     // hangs below
+    [InlineData(16, 500)]     // flips above
+    [InlineData(232, 100)]    // right column, hangs below
+    [InlineData(232, 500)]    // right column, flips above
+    public void TheTallestMenuStaysInsideAPhoneScreen(double left, double top)
+    {
+        // 400x850, and the widest, tallest menu the component can render: a blurb, the
+        // edition buttons and "Remove cover". The nominal numbers are what the placement
+        // is computed from, so they are what has to fit — this is the assertion that was
+        // missing when they said 372 and the menu rendered 403.
+        var volume = Volume(description: "A blurb the source actually supplied.") with
+        {
+            Owned = true,
+            HasCoverOverride = true,
+        };
+
+        var tile = Tile(left, top, width: 96, height: 144) with
+        {
+            ViewportWidth = 400,
+            ViewportHeight = 850,
+        };
+
+        var placement = PopoverPlacer.For(
+            tile, VolumePopover.WidthFor(volume), VolumePopover.HeightFor(volume));
+
+        placement.Left.ShouldBeGreaterThanOrEqualTo(0);
+        placement.Top.ShouldBeGreaterThanOrEqualTo(0);
+        (placement.Left + VolumePopover.WidthFor(volume)).ShouldBeLessThanOrEqualTo(400);
+        (placement.Top + VolumePopover.HeightFor(volume)).ShouldBeLessThanOrEqualTo(850);
+    }
+
     private static VolumeResponse Volume(string? description) => new()
     {
         VolumeId = Guid.CreateVersion7(),

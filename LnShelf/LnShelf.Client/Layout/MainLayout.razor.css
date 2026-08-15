@@ -19,6 +19,13 @@
   background: var(--bg);
 }
 
+/* Below 861px there is no room for a 224px column, so the shell turns on its side:
+   the sidebar becomes the top strip (Sidebar.razor.css) and the content column keeps
+   the rest. The content is still the only scroller, which is what keeps the nav on
+   screen while the shelf moves under it. */
 @media (max-width: 860px) {
-  .app { grid-template-columns: minmax(0, 1fr); }
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
 }

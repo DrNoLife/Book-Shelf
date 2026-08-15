@@ -153,6 +153,61 @@
 .foot__link:hover,
 .foot ::deep .foot__link:hover { color: var(--muted); }
 
+/* The sidebar used to be hidden outright here, which left a phone with no way to reach
+   Search, Import or the changelog at all — the shelf was the whole app. It becomes the
+   top strip instead: same rows, same routes, laid on their side.
+
+   Two things stay behind, both because a 400px strip has no room to spare:
+   - the shelves, which are the status chips the library already prints under the
+     toolbar (StatusChips carries every filter the shelf rows do, and two more);
+   - the sync note, five lines of fine print that would push the shelf itself off the
+     first screen. The series page prints its own sync panel either way.
+   The dimmed Upcoming and Stats rows go too. Dimming them costs nothing in a vertical
+   list, which is what that decision was made for; in a horizontal strip they would
+   cost the room the three routes that exist actually need. */
 @media (max-width: 860px) {
-  .sidebar { display: none; }
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    padding: 6px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+
+    /* The strip is the one thing on the page allowed to run wide — it scrolls itself
+       rather than making the page scroll sideways. */
+    overflow-x: auto;
+  }
+
+  /* The mark alone: below 861px every page prints its own h1, so the wordmark would be
+     naming the app twice on the row that can least afford it. */
+  .brand { flex: 0 0 auto; padding: 0; }
+  .brand__name { display: none; }
+
+  .nav { flex-direction: row; gap: 2px; }
+
+  /* Taller and narrower than the column version: a thumb needs the height, and the three
+     rows plus the changelog link have to clear 400px between them without the strip
+     having to scroll. */
+  .nav__row,
+  .nav ::deep .nav__row {
+    padding: 9px 8px;
+    white-space: nowrap;
+  }
+
+  /* Paired with the ::deep form for the same reason the rule above is: the top-level
+     ".nav ::deep .nav__row" compiles to two classes plus the scope attribute, which
+     outranks a lone ".nav__row--pending" no matter how much later it is declared. */
+  .nav__row--pending,
+  .nav ::deep .nav__row--pending { display: none; }
+
+  .shelves,
+  .sync { display: none; }
+
+  /* Pushed to the far end, the quiet corner it occupies on the desktop column. */
+  .foot { margin-left: auto; padding: 0; }
+
+  .foot__link,
+  .foot ::deep .foot__link { padding: 9px 0; white-space: nowrap; }
 }

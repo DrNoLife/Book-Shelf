@@ -156,5 +156,11 @@
 
 @media (max-width: 860px) {
   .volumes__hint { display: none; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(72px, 96px)); }
+
+  /* The 96px cap stopped paying for itself once the viewport was narrow: three tracks of
+     96 in a 360px row left 48px of dead gutter (84px of it at tablet width) and shrank the
+     captions for nothing. The cap comes off and the tiles share the width evenly — the
+     same move the library grid already makes at this breakpoint. The 84px floor is what
+     still lands three across on a phone and seven on a tablet. */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }

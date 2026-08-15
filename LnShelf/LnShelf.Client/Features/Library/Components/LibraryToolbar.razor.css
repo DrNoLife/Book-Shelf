@@ -117,3 +117,15 @@
   .bar__field { max-width: none; flex-basis: 100%; }
   .bar__group { width: 100%; justify-content: space-between; }
 }
+
+/* Four controls do not fit one 400px line, and space-between squeezed them until the
+   sort label and "Add series" each broke across two lines inside their own button. They
+   wrap onto a second line at their natural width instead — a control that wraps reads
+   as a control; one whose words wrap reads as broken. */
+@media (max-width: 480px) {
+  .bar__group {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+}

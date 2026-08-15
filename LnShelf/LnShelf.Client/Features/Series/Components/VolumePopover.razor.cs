@@ -7,7 +7,10 @@ namespace LnShelf.Client.Features.Series.Components;
 
 public partial class VolumePopover
 {
-    /// <summary>Nominal size, used to decide the flip before the menu is measurable.</summary>
+    /// <summary>
+    /// Nominal size, used to decide the flip before the menu is measurable: the head, the
+    /// three read rows, the owned row, "Set cover…", the footer and the hairlines between.
+    /// </summary>
     public const double Width = 208;
     public const double Height = 250;
 
@@ -17,16 +20,40 @@ public partial class VolumePopover
     /// </summary>
     // The placement is computed before the menu exists, from these numbers rather than
     // from a measurement — so a menu that grew and did not say so would be placed as if it
-    // were still 250 tall and hang off the bottom of the screen.
+    // were still 250 tall and hang off the bottom of the screen. Which is exactly what
+    // happened: measured at 400x850 the described menu of an owned volume renders 403px
+    // tall against the 372 this claimed, and hung 18px off the bottom of the screen with
+    // "Set cover…" and the drop hint below the fold. The rows that only some volumes have
+    // are now named and counted rather than left inside one number that drifts.
     public const double DescribedWidth = 248;
-    public const double DescribedHeight = 372;
+    public const double DescribedHeight = 386;
+
+    /// <summary>The edition buttons, which only an owned volume shows.</summary>
+    private const double EditionRowHeight = 33;
+
+    /// <summary>"Remove cover", which only a volume carrying an override shows.</summary>
+    private const double RemoveCoverRowHeight = 32;
 
     /// <summary>The nominal size this volume's menu will take, blurb or no blurb.</summary>
     public static double WidthFor(VolumeResponse volume) =>
         HasBlurb(volume) ? DescribedWidth : Width;
 
-    public static double HeightFor(VolumeResponse volume) =>
-        HasBlurb(volume) ? DescribedHeight : Height;
+    public static double HeightFor(VolumeResponse volume)
+    {
+        var height = HasBlurb(volume) ? DescribedHeight : Height;
+
+        if (volume.Owned)
+        {
+            height += EditionRowHeight;
+        }
+
+        if (volume.HasCoverOverride)
+        {
+            height += RemoveCoverRowHeight;
+        }
+
+        return height;
+    }
 
     private static bool HasBlurb(VolumeResponse volume)
     {
