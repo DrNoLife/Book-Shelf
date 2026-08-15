@@ -6,6 +6,81 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## v0.12.0 — a version number, and a changelog page to put it on (2026-08-15)
+
+Copied from the Hearth project's convention, adapted to feature slices:
+`<Version>` lives once in `LnShelf/Directory.Build.props`; the release record is
+`Features/Changelog/Services/ChangelogCatalog.cs`, served at `GET /api/changelog`
+(which also reports the running assembly's version) and rendered at `/changelog`
+with a quiet sidebar link. Releasing a batch is: add the catalog entry, bump the
+version. A test holds the newest entry equal to the assembly version, another
+holds the entries strictly newest-first and unique — the convention is enforced,
+not remembered. Verified with a live curl: `currentVersion: "0.12.0"`, four
+entries (0.9.0 summarising phases 1–3.8, then 0.10.0, 0.11.0, 0.12.0).
+
+---
+
+## Phase 3.10 — the catalogue knows the volumes (2026-08-15)
+
+The gap phase 3.5 could not close: enrichment was keyed on ISBN, so a freshly
+added series — no import rows, no ISBNs — got nothing per volume. And no keyless
+bibliographic source carries volume descriptions at all (measured: 0 of 15 of
+this shelf's editions and works on Open Library; Google Books' anonymous quota
+is a hard-coded zero as of today, from two egress paths).
+
+**The answer is a bookstore, not a library.** The iTunes Search API (Apple
+Books) is keyless, documented, and answers one search per series with every
+volume's own title, blurb, full release date and print-quality artwork
+(measured up to 1400×2100). Its titles are exactly the form
+`VolumeEditionMatcher` already validates — "That Time I Got Reincarnated as a
+Slime, Vol. 16 (light novel)" — and `TitleNormalizer` already folds Apple's
+"86--EIGHTY-SIX" onto the shelf's "86―EIGHTY-SIX".
+
+- **`IVolumeCatalogueSource`** — the new seam: one request, many volumes, keyed
+  on series title + format, no ISBN. Deliberately a third seam beside the
+  series-level pair and the by-ISBN seam; none of them can express the question.
+  The source does not filter its own answer — the caller owns the matcher, so
+  the conflict rules stay in one place.
+- **`AppleBooksVolumeCatalogueSource`** behind it: own 20/min rate-limiter pool
+  (same permit-then-timeout handler design Open Library needed), HybridCache for
+  a day, `media=ebook&country=us`, medium keyword appended to the term.
+- **`Volume.Description`** end to end (entity → migration → `VolumeResponse`),
+  sanitized by the renamed `HtmlDescriptionSanitizer` (two consumers now).
+- **Write rules extracted to `VolumeFactWriter`**, parameterised by source: date
+  conflict (future date on an in-print volume records a discrepancy, writes
+  nothing — observed live on 86 vol 14, "MangaUpdates says in print, AppleBooks
+  says 2026-12-08"), title and description fill-if-null, cover cached under the
+  source's own key prefix. Titles moved from overwrite to fill-if-null
+  everywhere: two sources with no per-field provenance would flip-flop nightly.
+- The by-ISBN Open Library pass runs after the catalogue pass and deliberately
+  does not re-ask for descriptions (the 0/15 measurement above).
+
+### Measured on the live shelf (94 volumes, two sync runs)
+
+| | before | after |
+|---|---|---|
+| covers | 44 | **89** |
+| titles | 50 | **89** |
+| dates | 28 | **87** |
+| descriptions | 0 | **83** |
+
+Slime alone went from 1 cover to 22. 8 Apple HTTP requests served 13 catalogue
+reads across the two runs. 599 tests pass, 0 warnings.
+
+### Rulings made here
+
+- **The medium bar stands, and it costs Bookworm.** Apple titles that series
+  "Ascendance of a Bookworm: Part 1 Volume 3" with no `(light novel)` marker,
+  so `ConfirmsMedium` refuses all of it — 0 records accepted, coverage
+  unchanged. Loosening the bar is exactly what would put manga art on Slime.
+  **[flagged]** if Bookworm's blurbs ever matter enough to revisit.
+- **"86--EIGHTY-SIX Alter.1 (light novel)"** — a side story — matches volume 1
+  on identical evidence to the real volume 1; the pass survives only because
+  Apple ranks numbered volumes first and first-confirmed-per-number wins. That
+  ordering dependency is an explicit test with a comment, not an accident.
+
+---
+
 ## Phase 6.1 — the deployment stack (2026-08-15)
 
 Two images, one published port, one script — modeled on the Hearth project's
