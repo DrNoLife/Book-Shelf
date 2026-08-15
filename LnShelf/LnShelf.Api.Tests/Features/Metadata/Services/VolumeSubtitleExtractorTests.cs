@@ -17,6 +17,15 @@ public sealed class VolumeSubtitleExtractorTests
     // A record whose separator arrived with a space in front of it, and a stray bracket the
     // source itself left behind. Neither is this class's to correct.
     [InlineData("86--EIGHTY-SIX, Vol. 5 : Death, Be Not Proud )", 5, "Death, Be Not Proud )")]
+    // Open Library puts the medium marker *between* the number and the subtitle, where an
+    // end-anchored strip could not reach it. Both of these reached live captions as
+    // "(light novel): …" before the marker rule stopped depending on position.
+    [InlineData("Saga of Tanya the Evil, Vol. 8 (light Novel): In Omnia Paratus", 8, "In Omnia Paratus")]
+    [InlineData(
+        "The Hero Laughs While Walking the Path of Vengeance a Second Time, Vol. 4 (light novel): "
+        + "The Merchant, Mired in Greed",
+        4,
+        "The Merchant, Mired in Greed")]
     public void Extract_ARecordWithASubtitle_KeepsOnlyTheSubtitle(
         string recordTitle, int volumeNumber, string expected) =>
         VolumeSubtitleExtractor.Extract(recordTitle, volumeNumber).ShouldBe(expected);
@@ -36,6 +45,13 @@ public sealed class VolumeSubtitleExtractorTests
         "Ascendance of a Bookworm: I'll Do Anything to Become a Librarian! Part 1: "
         + "Daughter of a Soldier, Vol. 1",
         1)]
+    // The leftover here is the series name in brackets, twice over — an annotation the record
+    // made about itself, not a name for the volume. Left in, it captioned Slime volume 3 with
+    // its own series title.
+    [InlineData(
+        "That Time I Got Reincarnated as a Slime, Vol. 3 (light novel) "
+        + "(That Time I Got Reincarnated as a Slime (light novel))",
+        3)]
     public void Extract_ARecordNamingNothingButTheVolume_IsEmptyRatherThanNull(
         string recordTitle, int volumeNumber) =>
         // Empty is the answer "named, and it has no subtitle", which is what stops

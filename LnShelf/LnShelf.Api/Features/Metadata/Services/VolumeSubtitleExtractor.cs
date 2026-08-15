@@ -83,18 +83,36 @@ public static partial class VolumeSubtitleExtractor
     /// </summary>
     private static string Tidy(string subtitle)
     {
-        var tidied = LeadingSeparatorPattern().Replace(subtitle, string.Empty);
+        // Every occurrence, wherever it sits, rather than only a trailing one. Both positions
+        // are real and the shelf has both: Apple trails the marker ("…, Vol. 14 (light
+        // novel)"), while Open Library puts it between the number and the subtitle ("Saga of
+        // Tanya the Evil, Vol. 8 (light Novel): In Omnia Paratus"), which leaves it at the
+        // *front* of what this method is given — where an end-anchored rule cannot reach it,
+        // and where it was reaching captions as "(light Novel): In Omnia Paratus".
+        var tidied = MediumMarkerPattern().Replace(subtitle, string.Empty);
 
-        // Looped, because a record can trail more than one: "…, Vol. 14 (light Novel)
-        // (manga)" is not a shape this shelf has seen, but one pass would leave half of it
-        // behind if it ever did.
-        while (TrailingMediumMarkerPattern().Match(tidied) is { Success: true } marker)
-        {
-            tidied = tidied[..marker.Index];
-        }
+        // After the marker rather than before it: taking the marker out is what exposes the
+        // separator the source put between the number and the subtitle.
+        tidied = LeadingSeparatorPattern().Replace(tidied, string.Empty).Trim();
 
-        return tidied.Trim();
+        return IsSingleParenthetical(tidied) ? string.Empty : tidied;
     }
+
+    /// <summary>
+    /// Whether all that is left is one bracketed aside, which is an annotation and not a
+    /// subtitle.
+    /// </summary>
+    // Real, and the reason this exists: Open Library titles this shelf's Slime volume 3
+    // "…, Vol. 3 (light novel) (That Time I Got Reincarnated as a Slime (light novel))", whose
+    // leftover is the series name over again in brackets. A caption says what this volume is
+    // called, and a bracketed repeat of the series it belongs to is not that — the honest
+    // answer is the same "no subtitle" every other Slime volume gets.
+    //
+    // Only the wholly-wrapped case is refused, which is what the closing bracket landing last
+    // tests for. "Run Through the Battlefront (Finish)" is a subtitle that happens to carry a
+    // bracket and keeps it, and "(Start) and (Finish)" closes early and is left alone too.
+    private static bool IsSingleParenthetical(string subtitle) =>
+        subtitle.StartsWith('(') && subtitle.IndexOf(')') == subtitle.Length - 1;
 
     /// <summary>
     /// A volume marker carrying a number: <c>, Vol. 3:</c>, <c>Vol. 17</c>, <c>Volume 3</c>.
@@ -122,13 +140,17 @@ public static partial class VolumeSubtitleExtractor
     private static partial Regex LeadingSeparatorPattern();
 
     /// <summary>
-    /// The medium marker, where it trails the subtitle.
+    /// The medium marker, wherever in the leftover it sits.
     /// </summary>
     // It is the record's statement of which medium it is, which the matcher upstream needs
     // and a caption does not: the series already knows its own format, and "(light novel)"
     // under every tile of a light novel says nothing.
+    //
+    // Unanchored, so one pass takes every copy: a record can carry it twice ("…, Vol. 3
+    // (light novel) (… (light novel))" is a real Open Library title), and the position it
+    // appears in differs by source rather than being fixed.
     [GeneratedRegex(
-        @"\s*\((?:light\s+novel|manga)\)\s*$",
+        @"\s*\((?:light\s+novel|manga)\)",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
-    private static partial Regex TrailingMediumMarkerPattern();
+    private static partial Regex MediumMarkerPattern();
 }

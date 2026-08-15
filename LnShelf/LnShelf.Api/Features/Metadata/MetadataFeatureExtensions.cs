@@ -167,6 +167,13 @@ public static class MetadataFeatureExtensions
             services.AddScoped<IConsoleCommand, IsbnDiscoverCommand>();
             services.AddScoped<IConsoleCommand, IsbnApplyCommand>();
 
+            // A third one-shot, and the only one of the three that writes unreviewed. It can:
+            // the ISBN pair has to guess an identifier, where this asks the same seam the
+            // nightly pass asks, about volumes it has stopped asking about, and writes one
+            // column from the answer.
+            services.AddScoped<SubtitleBackfillService>();
+            services.AddScoped<IConsoleCommand, SubtitleBackfillCommand>();
+
             return services;
         }
 
