@@ -88,6 +88,17 @@ public static class EnrichmentVerificationConsoleReport
                 seriesWidths);
         }
 
+        // Its own line, and printed whether or not a title won: which name the store answered
+        // to is the difference between a shelf that works and one that has been asking under
+        // a romaji title all along, and neither reads off the volume counts above.
+        if (series.VolumeLevel is not null)
+        {
+            // Labelled "store" rather than "catalogue" so it fits the label column the two
+            // measured rows set, which is the column a reader's eye follows down the block. It
+            // also pairs with "release" below: one line per source that had to be asked.
+            yield return Pad(["store", CatalogueOutcome(series)], seriesWidths);
+        }
+
         if (series.VolumeLevel is { LargestCover: { } largest } volumeLevel)
         {
             yield return Pad(
@@ -131,6 +142,12 @@ public static class EnrichmentVerificationConsoleReport
 
         return $"{title}{identity} -- volumes: {series.VolumeCountGround}";
     }
+
+    /// <summary>Which of the series' known titles the store answered to, if any did.</summary>
+    private static string CatalogueOutcome(SeriesVerification series) =>
+        series.CatalogueTitle is { } accepted
+            ? $"answered under \"{accepted}\" -- of {series.KnownTitleCount} title(s) known"
+            : $"{Absent} -- none of the {series.KnownTitleCount} title(s) known was recognised";
 
     private static string[] SeriesRow(SeriesVerification series)
     {

@@ -22,6 +22,13 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         builder.Property(series => series.TitleEnglish).HasMaxLength(400).IsRequired();
         builder.Property(series => series.TitleRomaji).HasMaxLength(400);
         builder.Property(series => series.TitleNative).HasMaxLength(400);
+
+        // Same cap as the other titles, because it holds one of them: whichever of the
+        // series' known titles the volume catalogue answered to. AlternativeTitles needs no
+        // configuration at all — Npgsql maps a string[] to text[] by convention, which is
+        // how Genres is already stored.
+        builder.Property(series => series.CatalogueTitle).HasMaxLength(400);
+
         builder.Property(series => series.Publisher).HasMaxLength(200);
         builder.Property(series => series.Author).HasMaxLength(200);
         builder.Property(series => series.Illustrator).HasMaxLength(200);

@@ -148,6 +148,14 @@ public sealed class EnrichmentVerificationService(
             VolumeLevel = volumeLevel,
             VolumeCountGround = count.Ground,
             ReleaseSourceNote = count.ReleaseSourceNote,
+
+            // Read off the series the enrichment just wrote it onto, so the report says which
+            // of the titles the store actually accepted — or, when it stays null, that none
+            // of them was. On the MangaUpdates path that is the difference between a pass and
+            // a diagnosis.
+            CatalogueTitle = series.CatalogueTitle,
+            KnownTitleCount = 1 + series.AlternativeTitles.Length,
+
             Passed = Judge(seriesLevel, volumeLevel),
         };
     }
@@ -182,11 +190,17 @@ public sealed class EnrichmentVerificationService(
     /// The series as the shelf would hold it the moment it was added, and no further.
     /// </summary>
     // Never attached to a DbContext and never saved. The titles matter: the release source
-    // is searched on romaji first, and the catalogue is searched on the English title.
+    // is searched on romaji first, and the catalogue arbitrates across every title the
+    // series is known by — which is why the alternatives are copied over rather than left
+    // empty. A gate that handed the enrichment one romaji title would be checking a
+    // narrower pipeline than the one the add flow runs, and would fail on a working shelf.
     //
     // The external id is written to the column the resolving source owns, which is also what
     // makes the count step honest: a series resolved through MangaUpdates arrives already
     // linked, and nothing then goes matching for a link it has.
+    //
+    // CatalogueTitle is deliberately left null: this series has never been enriched before,
+    // so the run measures the arbitration from cold, exactly as the night a series is added.
     private static Series ToInMemorySeries(ResolvedSeries resolved) => new()
     {
         Id = Guid.CreateVersion7(),
@@ -196,6 +210,7 @@ public sealed class EnrichmentVerificationService(
         TitleEnglish = resolved.TitleEnglish,
         TitleRomaji = resolved.TitleRomaji,
         TitleNative = resolved.TitleNative,
+        AlternativeTitles = [.. resolved.AlternativeTitles],
         PublicationStatus = resolved.PublicationStatus,
     };
 

@@ -15,8 +15,8 @@
             <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="14" /></span>
             <input class="field__input"
                    type="search"
-                   placeholder="Search AniList by title…"
-                   aria-label="Search AniList by title"
+                   placeholder="Search by title…"
+                   aria-label="Search by title"
                    value="@SearchState.Query"
                    @oninput="OnQueryInput" />
             <button type="submit" class="primary" disabled="@SearchState.IsBusy">Search</button>
@@ -43,7 +43,9 @@
 
         @if (SearchState.IsBusy)
         {
-            <p class="notice">Searching AniList…</p>
+            @* Source-neutral, because which source answers is no longer fixed: the search
+               falls back to a second catalogue, and the note above says so when it did. *@
+            <p class="notice">Searching…</p>
         }
         else if (SearchState.Results.Count > 0)
         {

@@ -103,6 +103,22 @@ public sealed record SeriesVerification
     /// <summary>Which source decided how many volumes were checked.</summary>
     public required string VolumeCountGround { get; init; }
 
+    /// <summary>
+    /// The title the volume catalogue answered to. Null when it recognised none of them.
+    /// </summary>
+    // Reported because it is the fact that separates "the store has never heard of this
+    // series" from "the shelf was asking under the wrong name", and those had been
+    // indistinguishable: a series resolved through MangaUpdates arrives titled in romaji,
+    // and the store answers 0 results for it. A pass now says which of the series' names
+    // earned it.
+    public string? CatalogueTitle { get; init; }
+
+    /// <summary>
+    /// How many titles the catalogue could have been asked under — the shelf's own plus its
+    /// alternatives. Zero for a series that was never resolved.
+    /// </summary>
+    public int KnownTitleCount { get; init; }
+
     /// <summary>Why the release source did not answer. Non-fatal — the run falls through.</summary>
     public string? ReleaseSourceNote { get; init; }
 

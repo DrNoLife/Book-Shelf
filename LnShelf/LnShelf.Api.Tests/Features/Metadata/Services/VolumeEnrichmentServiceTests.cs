@@ -246,6 +246,23 @@ public sealed class VolumeEnrichmentServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_ARecordWithNoTitleOfItsOwn_StillCountsTheVolumeAsNamed()
+    {
+        var series = Series(Volume(3, EnglishIsbn, isReleased: true));
+        var volume = series.Volumes.Single();
+
+        await CreateService(Enrichment(releaseDate: new DateOnly(2017, 1, 31)))
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // Empty, not null. The record was found under this volume's own ISBN, so the volume is
+        // resolved — it simply has no name to reduce to a subtitle. Left null, the column would
+        // claim nothing had ever named it: the same settled question would be re-asked every
+        // night forever, and `enrichment-verify` would count the volume as one the pipeline
+        // never reached (Volume.Title's three states).
+        volume.Title.ShouldBe(string.Empty);
+    }
+
+    [Fact]
     public async Task EnrichAsync_NoRecordForTheIsbn_IsAGapNotAFailure()
     {
         var series = Series(Volume(3, EnglishIsbn, isReleased: true));

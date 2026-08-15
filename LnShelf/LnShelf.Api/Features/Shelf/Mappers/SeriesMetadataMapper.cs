@@ -78,6 +78,15 @@ public static class SeriesMetadataMapper
 
             Format = metadata.Format,
             TitleEnglish = metadata.TitleEnglish,
+
+            // The whole reason this column exists. MangaUpdates files this series under
+            // whichever title its editors chose — often the romaji one — and the English
+            // name the US storefront lists it under is one unlabelled entry among the
+            // Russian and Arabic ones. Stored so the volume catalogue can be asked under
+            // each in turn until one is recognised.
+            AlternativeTitles = SeriesKnownTitles.Alternatives(
+                metadata.TitleEnglish, metadata.AssociatedTitles),
+
             PublicationStatus = metadata.PublicationStatus,
             Publisher = metadata.Publisher,
             StartYear = metadata.StartYear,
@@ -134,6 +143,19 @@ public static class SeriesMetadataMapper
         series.TitleEnglish = metadata.TitleEnglish;
         series.TitleRomaji = metadata.TitleRomaji;
         series.TitleNative = metadata.TitleNative;
+
+        // Romaji only. TitleNative is deliberately left out: it is the Japanese title in
+        // Japanese script, and the US storefront the catalogue pass searches cannot match a
+        // word of it — storing it would buy nothing and cost a request per sweep.
+        //
+        // Overwritten rather than filled if empty, on the same rule as Genres: this is
+        // metadata the source owns, so whatever it says now is the answer. A series added
+        // before the column existed keeps an empty one until it is re-applied, which costs it
+        // nothing — its stored title is already the English one AniList supplies, and that is
+        // the first title the catalogue is asked under.
+        series.AlternativeTitles = SeriesKnownTitles.Alternatives(
+            metadata.TitleEnglish, [metadata.TitleRomaji]);
+
         series.PublicationStatus = metadata.PublicationStatus;
         series.Publisher = metadata.Publisher;
         series.StartYear = metadata.StartYear;

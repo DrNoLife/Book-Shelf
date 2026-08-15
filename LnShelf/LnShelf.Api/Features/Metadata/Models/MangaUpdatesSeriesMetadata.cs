@@ -25,6 +25,16 @@ public sealed record MangaUpdatesSeriesMetadata
     // wrong guess is worse than a romaji title the reader recognises anyway.
     public required string TitleEnglish { get; init; }
 
+    /// <summary>
+    /// The record's whole <c>associated</c> bag, suffix stripped and otherwise untouched —
+    /// romaji, English, German, Russian, Arabic and kanji all mixed together, unlabelled.
+    /// </summary>
+    // Carried whole, for the same reason ReleaseSeriesInfo carries it whole: what any of
+    // them is worth depends on the question. Linking scores them against the shelf's title;
+    // the volume catalogue is asked which one it recognises. Filtering here would decide
+    // both questions in the one place that knows neither.
+    public IReadOnlyList<string> AssociatedTitles { get; init; } = [];
+
     public required Format Format { get; init; }
     public required PublicationStatus PublicationStatus { get; init; }
 

@@ -16,6 +16,16 @@ public sealed record ResolvedSeries
     public string? TitleRomaji { get; init; }
     public string? TitleNative { get; init; }
 
+    /// <summary>
+    /// Every other title the resolving source knows the series by, already filtered and
+    /// capped the way the add flow stores them (<see cref="Series.AlternativeTitles"/>).
+    /// </summary>
+    // Carried so that `enrichment-verify` exercises the identical arbitration the add flow
+    // does. Without it, the command's in-memory series would offer the catalogue one title —
+    // the romaji one, on the MangaUpdates path — and report a red gate for a shelf that
+    // works, which is the exact failure this record was created to stop.
+    public IReadOnlyList<string> AlternativeTitles { get; init; } = [];
+
     public required Format Format { get; init; }
     public required PublicationStatus PublicationStatus { get; init; }
 

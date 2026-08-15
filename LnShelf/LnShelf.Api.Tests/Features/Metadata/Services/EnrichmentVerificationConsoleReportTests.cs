@@ -119,6 +119,48 @@ public sealed class EnrichmentVerificationConsoleReportTests
         text.ShouldContain("86 eighty six [MangaUpdates]");
     }
 
+    [Fact]
+    public void Render_ASeriesTheStoreAnsweredForUnderAnAlternativeTitle_SaysWhichTitleItWas()
+    {
+        var throughAlternative = Passing() with
+        {
+            Source = MetadataSourceName.MangaUpdates,
+            SeriesLevel = Passing().SeriesLevel! with { Title = "Kono Subarashii Sekai ni Shukufuku o!" },
+            CatalogueTitle = "Konosuba - God's Blessing on This Wonderful World!",
+            KnownTitleCount = 4,
+        };
+
+        var text = string.Join(
+            Environment.NewLine, EnrichmentVerificationConsoleReport.Render(Report(throughAlternative)));
+
+        // The fact that separates a working pipeline from a lucky one: the shelf holds this
+        // series under a romaji title the store answers nothing for, and the run passed because
+        // the arbitration found the name it does answer to.
+        text.ShouldContain("answered under \"Konosuba - God's Blessing on This Wonderful World!\"");
+        text.ShouldContain("of 4 title(s) known");
+    }
+
+    [Fact]
+    public void Render_ASeriesNoTitleOfWhichTheStoreRecognised_SaysSoRatherThanGoingQuiet()
+    {
+        var noCatalogueTitle = Passing() with
+        {
+            VolumeLevel = Passing().VolumeLevel! with { Matched = 0, Described = 0, Covered = 0, Dated = 0 },
+            CatalogueTitle = null,
+            KnownTitleCount = 3,
+            Passed = false,
+        };
+
+        var text = string.Join(
+            Environment.NewLine, EnrichmentVerificationConsoleReport.Render(Report(noCatalogueTitle)));
+
+        // Zeroes across the volume row say something went wrong; this line says what, and it is
+        // the difference between "the store has never heard of this series" and "the shelf was
+        // asking under the wrong name".
+        text.ShouldContain("none of the 3 title(s) known was recognised");
+        text.ShouldContain("VERDICT: FAIL");
+    }
+
     private static EnrichmentVerificationReport Report(SeriesVerification series) =>
         new() { Format = Format.LightNovel, Series = [series] };
 
@@ -146,6 +188,8 @@ public sealed class EnrichmentVerificationConsoleReportTests
             LargestCover = new VerifiedImage { ByteCount = 400_000, Width = 1400, Height = 2100 },
         },
         VolumeCountGround = "14 from the release source",
+        CatalogueTitle = "The Saga of Tanya the Evil",
+        KnownTitleCount = 2,
         Passed = true,
     };
 }

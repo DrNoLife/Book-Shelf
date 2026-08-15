@@ -154,14 +154,19 @@ public sealed class VolumeFactWriter(
     // so without this, the by-ISBN source's subtitles could never land on a volume the store
     // had already named, even on the runs where it is asked anyway. null → "" → a subtitle,
     // and never backwards.
+    //
+    // A record with no title of its own still resolves the volume, which is why the null
+    // case coalesces to empty rather than returning. Reaching this method at all means some
+    // source *placed* this volume — the catalogue matched a record to it, or its own ISBN was
+    // looked up — and "placed, with no subtitle to show" is exactly what empty says. Left
+    // null, the column would claim the volume was never resolved: the same settled question
+    // would be re-asked every night forever, and `enrichment-verify` would count the volume
+    // as one the pipeline never reached.
     private static void ApplyTitle(Volume volume, VolumeFacts facts)
     {
-        if (facts.Title is not { } recordTitle)
-        {
-            return;
-        }
-
-        var subtitle = VolumeSubtitleExtractor.Extract(recordTitle, volume.Number);
+        var subtitle = facts.Title is { } recordTitle
+            ? VolumeSubtitleExtractor.Extract(recordTitle, volume.Number)
+            : string.Empty;
 
         if (volume.Title is null)
         {

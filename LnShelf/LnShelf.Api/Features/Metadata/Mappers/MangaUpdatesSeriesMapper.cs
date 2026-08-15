@@ -105,6 +105,11 @@ public static class MangaUpdatesSeriesMapper
         {
             SourceId = record.SeriesId,
             TitleEnglish = StripNovelSuffix(record.Title),
+
+            // The same bag ToSeriesInfo carries, for a second reader: the English name a US
+            // storefront lists this series under is in here or nowhere.
+            AssociatedTitles = ToAssociatedTitles(record.Associated),
+
             Format = format,
             PublicationStatus = ToPublicationStatus(record.Status),
             StartYear = ToYear(record.Year),

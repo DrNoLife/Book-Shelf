@@ -27,6 +27,36 @@ public sealed class Series
     public string? TitleRomaji { get; set; }
     public string? TitleNative { get; set; }
 
+    /// <summary>
+    /// Every *other* title a metadata source knows this series by — AniList's romaji, or
+    /// the unlabelled bag MangaUpdates keeps in <c>associated</c>.
+    /// </summary>
+    // Stored because the volume catalogue has to be asked under a name it recognises, and
+    // which name that is cannot be worked out from this row: MangaUpdates files a large
+    // share of series under romaji ("Kono Subarashii Sekai ni Shukufuku o!") while the US
+    // storefront carries only the English name ("Konosuba: God's Blessing on This Wonderful
+    // World!"), and it labels none of the alternatives it offers.
+    //
+    // Filtered to Latin-script titles, deduped and capped where it is written
+    // (SeriesKnownTitles) — each entry is a store request the enrichment may spend.
+    public string[] AlternativeTitles { get; set; } = [];
+
+    /// <summary>
+    /// The title the volume catalogue actually answered to. Null until one has.
+    /// </summary>
+    // A stored field that is not a derived state, so it needs the justification CLAUDE.md
+    // asks for: it is not computed from anything on this row. It is source metadata — the
+    // name the store knows this series by — and the same class of fact as
+    // <see cref="MangaUpdatesId"/>, which is likewise another catalogue's own handle for
+    // the same series, learned once and kept.
+    //
+    // Kept because arbitration costs requests. The store is what decides which of a series'
+    // titles it recognises, and Konosuba's is the fourth of four the shelf can offer; a
+    // nightly sweep that did not remember the winner would spend four requests a night
+    // re-answering a settled question. Re-learnable by setting it back to null, which the
+    // enrichment pass does itself the moment the remembered title stops matching.
+    public string? CatalogueTitle { get; set; }
+
     public PublicationStatus PublicationStatus { get; set; }
     public string? Publisher { get; set; }
     public int? StartYear { get; set; }

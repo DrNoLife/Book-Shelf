@@ -46,8 +46,23 @@ public sealed class VolumeEnrichmentService(
     }
 
     /// <summary>
-    /// One request for the whole series, matched back onto the volumes the shelf tracks.
+    /// One request per title tried, until the store recognises one — then that title's
+    /// answer, matched back onto the volumes the shelf tracks.
     /// </summary>
+    // The store arbitrates, and nothing here picks a title on its own. It cannot: the shelf
+    // holds whichever name the resolving source filed the series under, which is often
+    // romaji ("Kono Subarashii Sekai ni Shukufuku o!"), and the US storefront answers 0
+    // results for those — measured, Konosuba enriched 0 of 17 volumes on that title while a
+    // series whose stored title happened to be English enriched 28 of 28. The English name
+    // is in the alternatives, unlabelled, next to the Russian and Arabic ones, and no cheap
+    // rule can tell which is which (Torture Princess' bag holds "Isekai Goumon Hime",
+    // "Isekai Goumon-hime" and "Torture Princess: Fremd Torturchen" — any rule picks wrong
+    // on one). Whether a storefront recognises a title is a fact only the storefront has, so
+    // it is asked, and the winner is remembered on the series (Series.CatalogueTitle).
+    //
+    // "Recognises" means at least one of this series' tracked volumes confirmed by the
+    // matcher, not a non-empty response: a store answers 74 results for "Gifting this
+    // Wonderful World with Blessings!" and not one of them is the series.
     private async Task EnrichFromCatalogueAsync(
         Series series,
         SyncRun run,
@@ -60,16 +75,87 @@ public sealed class VolumeEnrichmentService(
             return;
         }
 
-        budget.Spend(1);
+        var attempts = CatalogueAttempts(series);
+        var remembered = series.CatalogueTitle;
+        var rememberedAnswered = false;
+        var tried = 0;
 
-        IReadOnlyList<CatalogueVolume> catalogue;
+        for (var attempt = 0; attempt < attempts.Length; attempt++)
+        {
+            if (budget.IsExhausted)
+            {
+                break;
+            }
 
-        // Failure isolation at the pass, matching what the per-volume loop below does. A
-        // store being down is not a reason for the series to lose its ISBN lookups too.
+            budget.Spend(1);
+            tried++;
+
+            var catalogue = await TryGetVolumesAsync(series, attempts[attempt], run, cancellationToken);
+
+            if (catalogue is null)
+            {
+                continue;
+            }
+
+            rememberedAnswered |= string.Equals(attempts[attempt], remembered, StringComparison.Ordinal);
+
+            var matched = MatchToVolumeNumbers(series, attempts[attempt], catalogue);
+
+            if (matched.Count is 0)
+            {
+                continue;
+            }
+
+            // Learned, so the next sweep spends one request rather than this many. Assigning
+            // the same string it already held changes no row — EF's change tracking decides
+            // that — so the ordinary case stays a no-op write.
+            series.CatalogueTitle = attempts[attempt];
+
+            logger.LogInformation(
+                "{TitleEnglish}: the {SourceName} catalogue answered under \"{CatalogueTitle}\", "
+                + "attempt {Attempt} of {AttemptCount}",
+                series.TitleEnglish,
+                catalogueSource.SourceName,
+                attempts[attempt],
+                attempt + 1,
+                attempts.Length);
+
+            await ApplyMatchedAsync(series, matched, run, today, cancellationToken);
+
+            return;
+        }
+
+        ForgetCatalogueTitleIfStale(series, tried, attempts.Length, rememberedAnswered);
+    }
+
+    /// <summary>
+    /// The titles to try, in order: the one the store already answered to, then the shelf's
+    /// own, then every other title a source knows this series by.
+    /// </summary>
+    // The remembered title leads so the ordinary night costs exactly one request, and the
+    // rest of the list still follows it — which is what makes a remembered title that has
+    // stopped working self-healing rather than permanent.
+    //
+    // Latin-filtered again here, defensively rather than because the column is untrusted: a
+    // row written before the filter existed, or edited by hand in psql, would otherwise
+    // spend a request on kanji the US store cannot match a character of.
+    private static string[] CatalogueAttempts(Series series) =>
+        SeriesKnownTitles.Askable(
+            [series.CatalogueTitle, series.TitleEnglish, .. series.AlternativeTitles]);
+
+    /// <returns>Null when the store could not be reached, which is not an answer.</returns>
+    // Failure isolation per attempt, matching what the per-volume loop below does. A store
+    // being down is not a reason for the series to lose its ISBN lookups too — nor for one
+    // title's failed request to cost the other titles theirs.
+    private async Task<IReadOnlyList<CatalogueVolume>?> TryGetVolumesAsync(
+        Series series,
+        string attemptTitle,
+        SyncRun run,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            catalogue = await catalogueSource.GetVolumesAsync(
-                series.TitleEnglish, series.Format, cancellationToken);
+            return await catalogueSource.GetVolumesAsync(attemptTitle, series.Format, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -80,15 +166,22 @@ public sealed class VolumeEnrichmentService(
             run.EnrichmentFailures++;
             logger.LogWarning(
                 exception,
-                "The {SourceName} catalogue failed for {TitleEnglish}; continuing to the ISBN pass",
+                "The {SourceName} catalogue failed for {TitleEnglish} under \"{AttemptTitle}\"; continuing",
                 catalogueSource.SourceName,
-                series.TitleEnglish);
+                series.TitleEnglish,
+                attemptTitle);
 
-            return;
+            return null;
         }
+    }
 
-        var matched = MatchToVolumeNumbers(series, catalogue);
-
+    private async Task ApplyMatchedAsync(
+        Series series,
+        Dictionary<int, CatalogueVolume> matched,
+        SyncRun run,
+        DateOnly today,
+        CancellationToken cancellationToken)
+    {
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
             if (!matched.TryGetValue(volume.Number, out var record))
@@ -101,8 +194,63 @@ public sealed class VolumeEnrichmentService(
     }
 
     /// <summary>
+    /// Clears a remembered title the store has stopped answering to, so the next run
+    /// re-learns from scratch.
+    /// </summary>
+    /// <param name="triedCount">
+    /// How many of the titles were actually asked about. Fewer than all of them means the
+    /// budget ran out first, which disproves nothing.
+    /// </param>
+    /// <param name="rememberedAnswered">
+    /// Whether the store actually answered under it. A store that could not be reached has
+    /// said nothing about the title, and an outage must not erase what the shelf learned.
+    /// </param>
+    // Cleared rather than kept, because a learned link that no longer resolves is worse than
+    // none: it would go on being tried first every night. The remembered title is always the
+    // first attempt and the pass never starts with an exhausted budget, so by the time this
+    // runs it has certainly had its turn — but only a finished list and a real answer count
+    // as evidence against it. Clearing on a budget cut or an outage would trade one wasted
+    // request for a whole attempt list on the next run.
+    private void ForgetCatalogueTitleIfStale(
+        Series series,
+        int triedCount,
+        int attemptCount,
+        bool rememberedAnswered)
+    {
+        if (series.CatalogueTitle is { } remembered && rememberedAnswered && triedCount == attemptCount)
+        {
+            logger.LogWarning(
+                "{TitleEnglish}: the {SourceName} catalogue no longer answers under \"{CatalogueTitle}\", "
+                + "nor under any of the {AttemptCount} titles tried; forgetting it",
+                series.TitleEnglish,
+                catalogueSource.SourceName,
+                remembered,
+                attemptCount);
+
+            series.CatalogueTitle = null;
+            return;
+        }
+
+        logger.LogInformation(
+            "{TitleEnglish}: the {SourceName} catalogue recognised none of the {TriedCount} of "
+            + "{AttemptCount} titles tried",
+            series.TitleEnglish,
+            catalogueSource.SourceName,
+            triedCount,
+            attemptCount);
+    }
+
+    /// <summary>
     /// Which of the store's records is this series' volume N, where any is.
     /// </summary>
+    /// <param name="seriesTitle">
+    /// The title this answer was fetched under, not necessarily the shelf's own. It has to
+    /// be the one the matcher compares against: when the store answered under an
+    /// alternative, its records name *that* title — "Konosuba: God's Blessing on This
+    /// Wonderful World!, Vol. 3 (light novel)" for a series the shelf calls "Kono Subarashii
+    /// Sekai ni Shukufuku o!" — and the shelf's own title appears nowhere in them. The
+    /// subtitle extractor needs no such care; it anchors on the volume number, not the title.
+    /// </param>
     // Two filters, both of them the matcher's, and both necessary. A store search for
     // "Slime light novel" answers with the manga, the German editions, the spin-offs and
     // volumes of unrelated series that happen to share a word; TryMatchVolumeNumber
@@ -120,6 +268,7 @@ public sealed class VolumeEnrichmentService(
     // future listing under a number this shelf has no opinion about.
     private Dictionary<int, CatalogueVolume> MatchToVolumeNumbers(
         Series series,
+        string seriesTitle,
         IReadOnlyList<CatalogueVolume> catalogue)
     {
         var tracked = series.Volumes.Select(volume => volume.Number).ToHashSet();
@@ -128,7 +277,7 @@ public sealed class VolumeEnrichmentService(
         foreach (var record in catalogue)
         {
             if (!VolumeEditionMatcher.TryMatchVolumeNumber(
-                    series.TitleEnglish, series.Format, record.Title, out var number))
+                    seriesTitle, series.Format, record.Title, out var number))
             {
                 continue;
             }
@@ -156,11 +305,13 @@ public sealed class VolumeEnrichmentService(
         }
 
         logger.LogInformation(
-            "{SourceName} matched {MatchedCount} of {RecordCount} records to {TitleEnglish}'s volumes",
+            "{SourceName} matched {MatchedCount} of {RecordCount} records to {TitleEnglish}'s volumes "
+            + "under \"{AttemptTitle}\"",
             catalogueSource.SourceName,
             matched.Count,
             catalogue.Count,
-            series.TitleEnglish);
+            series.TitleEnglish,
+            seriesTitle);
 
         return matched;
     }

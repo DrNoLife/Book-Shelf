@@ -18,6 +18,12 @@ public static class ResolvedSeriesMapper
             TitleEnglish = metadata.TitleEnglish,
             TitleRomaji = metadata.TitleRomaji,
             TitleNative = metadata.TitleNative,
+
+            // The same one title the AniList add path stores, and for the same reason: the
+            // native title is Japanese script the US storefront cannot match.
+            AlternativeTitles = SeriesKnownTitles.Alternatives(
+                metadata.TitleEnglish, [metadata.TitleRomaji]),
+
             Format = metadata.Format,
             PublicationStatus = metadata.PublicationStatus,
             Description = metadata.Description,
@@ -44,6 +50,12 @@ public static class ResolvedSeriesMapper
             // honest to put in either of these (see MangaUpdatesSeriesMetadata).
             TitleRomaji = null,
             TitleNative = null,
+
+            // The bag itself, though, is exactly what the volume catalogue needs: the
+            // English name a US storefront lists this series under is one of these or
+            // nowhere. Unlabelled is fine, because the store is what arbitrates.
+            AlternativeTitles = SeriesKnownTitles.Alternatives(
+                metadata.TitleEnglish, metadata.AssociatedTitles),
 
             Format = metadata.Format,
             PublicationStatus = metadata.PublicationStatus,

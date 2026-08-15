@@ -364,12 +364,20 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<string[]>("AlternativeTitles")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
                     b.Property<int?>("AniListId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Author")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CatalogueTitle")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
 
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)

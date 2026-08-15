@@ -85,6 +85,35 @@ public sealed class VolumeEditionMatcherTests
     }
 
     [Fact]
+    public void Matches_ARecordNamingTheTitleTheStoreWasAskedUnder_IsAccepted()
+    {
+        // The reason the catalogue pass hands this method the *attempt* title rather than the
+        // shelf's own. Both strings are real: the store answered under the name MangaUpdates
+        // lists as an alternative, so its records carry that name — punctuated its own way,
+        // which TitleNormalizer folds — and the shelf's romaji title appears in none of them.
+        VolumeEditionMatcher.Matches(
+                "Konosuba - God's Blessing on This Wonderful World!",
+                3,
+                Format.LightNovel,
+                Edition("Konosuba: God's Blessing on This Wonderful World!, Vol. 3 (light novel)"))
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Matches_TheSameRecordAgainstTheShelfsOwnRomajiTitle_IsRefused()
+    {
+        // The bug the arbitration closes, stated as a test: a series added while AniList was
+        // down is titled "Kono Subarashii Sekai ni Shukufuku o!", and matching the store's
+        // records against that name rejects every one of the seventeen volumes it carries.
+        VolumeEditionMatcher.Matches(
+                "Kono Subarashii Sekai ni Shukufuku o!",
+                3,
+                Format.LightNovel,
+                Edition("Konosuba: God's Blessing on This Wonderful World!, Vol. 3 (light novel)"))
+            .ShouldBeFalse();
+    }
+
+    [Fact]
     public void Matches_ARecordWithNoTitle_IsRefused() =>
         VolumeEditionMatcher.Matches("Overlord", 3, Format.LightNovel, Edition(null)).ShouldBeFalse();
 

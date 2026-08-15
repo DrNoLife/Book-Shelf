@@ -132,6 +132,25 @@ public sealed class MangaUpdatesSeriesMapperTests
     }
 
     [Fact]
+    public void ToSeriesMetadata_TheCapturedSeries_CarriesTheWholeAssociatedBagInward()
+    {
+        var metadata = MangaUpdatesSeriesMapper.ToSeriesMetadata(
+            MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.FremdTorturchenSeries));
+
+        // The add flow needs these, not only the linker: the name a US storefront lists this
+        // series under is one entry in here or nowhere, and which one it is cannot be told
+        // from the bag — the store is what arbitrates. So the bag travels whole, kanji
+        // included, and is filtered where it is used.
+        metadata.AssociatedTitles.ShouldBe(
+        [
+            "Isekai Goumon Hime",
+            "Isekai Goumon-hime",
+            "Torture Princess: Fremd Torturchen",
+            "異世界拷問姫 (小説)",
+        ]);
+    }
+
+    [Fact]
     public void ToSeriesMetadata_TheCapturedDescription_IsStoredAsPlainText()
     {
         var metadata = MangaUpdatesSeriesMapper.ToSeriesMetadata(
