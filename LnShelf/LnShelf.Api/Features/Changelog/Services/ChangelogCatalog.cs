@@ -14,6 +14,17 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.14.0", new DateOnly(2026, 8, 15), "When AniList sleeps",
+        [
+            "AniList disabled its whole public API today — and search stopped answering. Now, when AniList " +
+                "is unreachable, search quietly falls back to MangaUpdates and says so above the results.",
+            "Adding a series works from either source: a MangaUpdates result arrives with its description, " +
+                "cover, status, authors and volumes, and the volume details still fill in from Apple Books.",
+            "Series whose catalogue name is Japanese now enrich anyway: the shelf tries every title a series " +
+                "is known by until the store recognises one, then remembers the winner.",
+            "When something upstream really is down, the error now says which source and why, instead of a " +
+                "bare \"Internal Server Error\".",
+        ]),
         new("0.13.0", new DateOnly(2026, 8, 15), "Fits in a pocket",
         [
             "The app is usable on a phone and a tablet now: the navigation becomes a slim strip across the " +

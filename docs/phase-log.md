@@ -6,6 +6,62 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## v0.14.0 — when AniList sleeps (2026-08-15)
+
+The owner searched "Torture princess" and got a bare 500. The cause was
+upstream — AniList disabled its **entire public API** today ("temporarily
+disabled due to severe stability issues", 403 in ~10ms from every network) —
+but the 500 exposed two real defects: the outage surfaced as a cryptic
+internal error, and the app had no second way to search or add anything.
+
+**Graceful failure.** `AniListGraphQlClient` throws a typed
+`MetadataSourceUnavailableException` carrying the upstream's own message;
+the problem-details handler maps it to 503; the search page prints the
+detail instead of `net_http_message_not_success_statuscode_reason`.
+
+**MangaUpdates fallback, search and add.** `ISeriesSearchService` /
+`FallbackSeriesSearchService` own the one copy of the rule: AniList first;
+on unavailability (not on a 429 — throttling stays the limiter's business)
+fall back to MangaUpdates and mark the response so the page prints one quiet
+note. `POST /api/series` takes exactly one of `aniListId`/`mangaUpdatesId`;
+the MU add maps the full record (description through the sanitizer, cover
+cached, status parsed leniently, authors, genres, year) and the same
+refresh runs after — Apple Books volume enrichment does not need AniList.
+Two bugs found by running it: HybridCache's JSON serialization invoked the
+guarded `AniListId` getter and poisoned the fallback (`[JsonIgnore]`, with a
+regression test), and a MU-added series was invisible to the nightly sweep
+forever (`AniListId != null` was the filter).
+
+**The store arbitrates the title (3.14).** MU's primary titles are romaji,
+and Apple's US catalogue answers 0 for them — Konosuba added from the
+fallback enriched 0/17. No heuristic can pick "the English one" out of MU's
+`associated` bag, so none does: `Series.AlternativeTitles` (Latin-script
+filtered, capped 8) carries every name a source knows, the catalogue pass
+asks under each until one answers with confirmed volumes, and the winner is
+remembered in `Series.CatalogueTitle` — forgotten only when the store
+answers under it and still matches nothing, never on an outage or a spent
+budget. A matched record with no subtitle resolves to `""` now, closing the
+three-state contradiction 3.13 left.
+
+**Proven during the live outage, end to end:** search "torture princess" →
+200, Fremd Torturchen with cover and note; Konosuba added from the fallback
+enriched **17/17 blurbs, covers and dates on title attempt 4**; SAO 28/28 on
+attempt 1; `enrichment-verify` **PASS 3 of 3** with every canary resolved
+through MangaUpdates under a romaji title and the report naming the accepted
+title ("answered under \"The Saga of Tanya the Evil\" — of 3 titles known").
+773 tests, 0 warnings. Open Library was separately degraded (503/timeouts)
+during verification — the per-volume failure isolation held, 2 failures
+logged, nothing aborted.
+
+**Known and flagged:** a series added from MU and later re-added from
+AniList makes two rows (the matcher links only after add; merging is
+backlog). `VolumeEnrichmentService` is now 574 lines — the catalogue pass
+wants extracting into a collaborator next time the file is open. Bookworm
+still enriches nothing (no marker on Apple's side; unchanged). The search
+page copy is source-neutral now.
+
+---
+
 ## Phase 6.2 — deployed, and proven where it runs (2026-08-15)
 
 `.\deploy.ps1` against the real server: both images built, one tarball shipped,
