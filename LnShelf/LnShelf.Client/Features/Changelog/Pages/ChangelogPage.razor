@@ -1,0 +1,51 @@
+@page "/changelog"
+@using LnShelf.Shared.Changelog
+
+@* Text-first and quiet, per design.md: no cards, no color-coding by release —
+   just the eyebrow naming the running version and a plain list underneath. *@
+
+<h1 class="changelog__title">Changelog</h1>
+
+<div class="changelog">
+
+    <div class="changelog__top">
+        <p class="eyebrow">Changelog@(State.Response is { } response ? $" · v{response.CurrentVersion}" : "")</p>
+    </div>
+
+    <div class="changelog__body">
+        @if (State.LoadFailed)
+        {
+            <p class="notice">Could not reach the API.</p>
+        }
+        else if (State.Response is not { } loaded)
+        {
+            <p class="notice">Loading the changelog…</p>
+        }
+        else if (loaded.Entries.Count == 0)
+        {
+            <p class="notice">Nothing recorded yet.</p>
+        }
+        else
+        {
+            <div class="entries">
+                @foreach (var entry in loaded.Entries)
+                {
+                    <section class="entry" @key="entry.Version">
+                        <p class="entry__meta">
+                            <span class="entry__version">v@(entry.Version)</span>
+                            <span class="entry__date tabular">@FormatDate(entry.Date)</span>
+                        </p>
+                        <h2 class="entry__title">@entry.Title</h2>
+                        <ul class="entry__changes">
+                            @foreach (var change in entry.Changes)
+                            {
+                                <li>@change</li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </div>
+        }
+    </div>
+
+</div>

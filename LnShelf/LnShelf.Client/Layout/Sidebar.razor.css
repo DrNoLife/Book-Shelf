@@ -133,6 +133,26 @@
   color: var(--faint);
 }
 
+/* --- foot --- */
+
+.foot {
+  padding: 4px 8px 0;
+}
+
+/* NavLink renders its own <a>, unreachable from scoped CSS without ::deep
+   (.claude/rules/blazor.md) — same trap .nav__row already guards against. */
+.foot__link,
+.foot ::deep .foot__link {
+  display: block;
+  padding: 5px 0;
+  font-size: 11px;
+  color: var(--faint);
+  text-decoration: none;
+}
+
+.foot__link:hover,
+.foot ::deep .foot__link:hover { color: var(--muted); }
+
 @media (max-width: 860px) {
   .sidebar { display: none; }
 }

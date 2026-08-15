@@ -1,4 +1,5 @@
 using LnShelf.Client;
+using LnShelf.Client.Features.Changelog;
 using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
 using LnShelf.Client.Features.Preferences;
@@ -32,5 +33,8 @@ builder.Services.AddScoped<SyncState>();
 
 // The series-detail page's own state: one fetch, then per-volume writes.
 builder.Services.AddScoped<SeriesState>();
+
+// The changelog page's own state: one fetch, no writes.
+builder.Services.AddScoped<ChangelogState>();
 
 await builder.Build().RunAsync();

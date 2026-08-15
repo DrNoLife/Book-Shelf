@@ -8,6 +8,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
+    <!-- The app version, in ONE place. It stamps every assembly in the solution.
+         Keep it equal to the newest entry in LnShelf.Api\Features\Changelog\Services\
+         ChangelogCatalog.cs, which is what GET /api/changelog reports —
+         ChangelogCatalogTests enforces that mechanically. Pre-1.0 scheme: bump the
+         MINOR for a feature batch, the PATCH for a fix-only batch. Releasing a batch is:
+         add the changelog entry, bump this. -->
+    <Version>0.12.0</Version>
+
     <!-- TreatWarningsAsErrors only covers the compiler. MSBuild warnings —
          assembly version conflicts, NuGet audit advisories — are defects by the
          same standard, so they fail the build too. -->
