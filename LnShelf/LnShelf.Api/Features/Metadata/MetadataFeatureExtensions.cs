@@ -30,6 +30,7 @@ public static class MetadataFeatureExtensions
             services.AddReleaseSource(configuration);
             services.AddVolumeCatalogue(configuration);
             services.AddVolumeEnrichment(configuration);
+            services.AddEnrichmentVerification();
             services.AddSync(configuration);
 
             return services;
@@ -165,6 +166,29 @@ public static class MetadataFeatureExtensions
             services.AddScoped<IsbnReviewFile>();
             services.AddScoped<IConsoleCommand, IsbnDiscoverCommand>();
             services.AddScoped<IConsoleCommand, IsbnApplyCommand>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// The live check that the per-volume sources still answer at all.
+        /// </summary>
+        // Registered like any other command, and with nothing else pointing at it: the
+        // service is only ever reached by typing `enrichment-verify`, which is the point —
+        // it exists to be run deliberately, not to run itself.
+        private IServiceCollection AddEnrichmentVerification()
+        {
+            // A plain client with no rate-limit handler, exactly like the cover fetcher's:
+            // cover bytes come from CDNs rather than from the metadata APIs, so verifying
+            // them must not spend the budgets those handlers protect.
+            services.AddHttpClient<VerificationImageProbe>(httpClient =>
+            {
+                httpClient.Timeout = VerificationImageProbe.RequestTimeout;
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
+            });
+
+            services.AddScoped<EnrichmentVerificationService>();
+            services.AddScoped<IConsoleCommand, EnrichmentVerifyCommand>();
 
             return services;
         }

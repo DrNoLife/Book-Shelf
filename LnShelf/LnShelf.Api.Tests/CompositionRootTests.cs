@@ -44,6 +44,7 @@ public sealed class CompositionRootTests
     [InlineData("isbn-backfill")]
     [InlineData("isbn-discover")]
     [InlineData("isbn-apply")]
+    [InlineData("enrichment-verify")]
     public void EveryConsoleCommand_IsResolvableByItsName(string commandName)
     {
         using var provider = BuildServices().BuildServiceProvider();

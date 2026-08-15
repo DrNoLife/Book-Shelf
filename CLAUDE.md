@@ -375,6 +375,7 @@ docker compose up                                     # local infra (Postgres)
 dotnet run --project LnShelf/LnShelf.Api -- isbn-backfill
 dotnet run --project LnShelf/LnShelf.Api -- isbn-discover --out ../../docs/isbn-review.csv
 dotnet run --project LnShelf/LnShelf.Api -- isbn-apply    --in  ../../docs/isbn-review.csv
+dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [--format LightNovel]
 ```
 
 `dotnet ef` is a local tool — `dotnet tool restore` first.
