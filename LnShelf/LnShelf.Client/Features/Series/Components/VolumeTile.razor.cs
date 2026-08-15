@@ -47,9 +47,8 @@ public partial class VolumeTile
     /// <summary>
     /// This volume's own title, printed in the caption after the number when it exists.
     /// </summary>
-    // No metadata source supplies per-volume titles (AniList counts volumes, it does not
-    // name them), so nothing passes this today except the design gallery. The caption
-    // accommodates it rather than inventing one.
+    // The catalogue pass names most volumes; the ones it could not reach stay null, and a
+    // null caption prints nothing rather than an invented title.
     [Parameter]
     public string? Title { get; set; }
 

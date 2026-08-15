@@ -1,7 +1,7 @@
 @* The volume's state menu. Fixed-positioned from a measured tile rect, so it escapes
    every ancestor's overflow and never reflows the grid it sits over. *@
 
-<div class="menu @(Placement.FlippedVertically ? "menu--above" : null)"
+<div class="menu @(HasDescription ? "menu--described" : null) @(Placement.FlippedVertically ? "menu--above" : null)"
      style="left: @(Placement.Left.ToString("0.##", CultureInfo.InvariantCulture))px; top: @(Placement.Top.ToString("0.##", CultureInfo.InvariantCulture))px;"
      role="menu"
      aria-label="@($"Volume {Volume.Number} state")"
@@ -16,6 +16,22 @@
             <span class="menu__date tabular">@releaseDate.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span>
         }
     </p>
+
+    @* The volume's own blurb, where a source supplied one. Clamped, not scrolled: the
+       menu's height is what decides its placement, so an unbounded region here would put
+       the rows below it off the bottom of the screen. Nothing renders when there is no
+       blurb — no placeholder, the same rule the caption's title follows. *@
+    @if (DescriptionParagraphs.Count > 0)
+    {
+        <div class="blurb">
+            @foreach (var paragraph in DescriptionParagraphs)
+            {
+                <p class="blurb__paragraph">@paragraph</p>
+            }
+        </div>
+
+        <div class="hairline"></div>
+    }
 
     @* Read status: three outright choices, not a cycle — the swatch on the current one
        is the second channel next to the words. *@

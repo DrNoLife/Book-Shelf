@@ -1,4 +1,5 @@
 using LnShelf.Client.Features.Series;
+using LnShelf.Client.Features.Series.Components;
 
 namespace LnShelf.Api.Tests.Client;
 
@@ -63,6 +64,47 @@ public sealed class PopoverPlacerTests
         (placement.Left + MenuWidth).ShouldBeLessThanOrEqualTo(1440);
         (placement.Top + MenuHeight).ShouldBeLessThanOrEqualTo(900);
     }
+
+    [Fact]
+    public void AMenuCarryingABlurbIsPlacedAtItsOwnTallerSize()
+    {
+        // The placement is computed before the menu renders, so its size arrives as the
+        // component's nominal numbers rather than as a measurement. A blurb makes the menu
+        // taller, and a tile that had room below it for the short menu may not have room
+        // for this one — which is the whole reason the size is asked for per volume.
+        var tile = Tile(left: 400, top: 480);
+
+        var plain = PopoverPlacer.For(tile, VolumePopover.Width, VolumePopover.Height);
+        var described = PopoverPlacer.For(
+            tile, VolumePopover.DescribedWidth, VolumePopover.DescribedHeight);
+
+        plain.FlippedVertically.ShouldBeFalse();     // 612 + 6 + 250 fits in 900
+        described.FlippedVertically.ShouldBeTrue();  // 612 + 6 + 372 does not
+        described.Top.ShouldBe(480 - VolumePopover.DescribedHeight - 6);
+    }
+
+    [Fact]
+    public void TheBlurbSizesAreAskedForPerVolume()
+    {
+        var withBlurb = Volume(description: "A blurb the source actually supplied.");
+        var without = Volume(description: null);
+
+        VolumePopover.WidthFor(withBlurb).ShouldBe(VolumePopover.DescribedWidth);
+        VolumePopover.HeightFor(withBlurb).ShouldBe(VolumePopover.DescribedHeight);
+        VolumePopover.WidthFor(without).ShouldBe(VolumePopover.Width);
+        VolumePopover.HeightFor(without).ShouldBe(VolumePopover.Height);
+    }
+
+    private static VolumeResponse Volume(string? description) => new()
+    {
+        VolumeId = Guid.CreateVersion7(),
+        Number = 1,
+        Description = description,
+        IsOut = true,
+        ReadStatus = ReadStatus.Unread,
+        Owned = false,
+        IsLocalOnly = false,
+    };
 
     [Fact]
     public void AMenuWithNowhereToFlipIsPinnedRatherThanPlacedOffScreen()

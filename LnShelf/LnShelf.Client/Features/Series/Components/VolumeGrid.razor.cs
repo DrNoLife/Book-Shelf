@@ -157,7 +157,10 @@ public partial class VolumeGrid
             return;
         }
 
-        _placement = PopoverPlacer.For(rect, VolumePopover.Width, VolumePopover.Height);
+        // The nominal size is asked for per volume: a menu with a blurb in it is wider and
+        // taller, and placing it as if it were not would hang it off the screen edge.
+        _placement = PopoverPlacer.For(
+            rect, VolumePopover.WidthFor(volume), VolumePopover.HeightFor(volume));
         SeriesState.OpenMenu(volume);
     }
 

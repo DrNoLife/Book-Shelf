@@ -11,6 +11,10 @@
   box-shadow: 0 12px 28px rgba(8, 7, 11, 0.55);
 }
 
+/* A menu carrying a blurb is wider — prose at 208px is four words to a line. The width
+   is paired with VolumePopover.DescribedWidth, which is what the placement uses. */
+.menu--described { width: 248px; }
+
 .menu__head {
   display: flex;
   align-items: baseline;
@@ -24,6 +28,27 @@
 }
 
 .menu__date { text-transform: none; letter-spacing: 0; }
+
+/* The blurb: body copy in the secondary strength, like the hero's synopsis — context for
+   the rows below, never the loudest thing in the menu.
+
+   Clamped rather than scrolled, and clamped with -webkit-line-clamp rather than a
+   max-height: a scroll region inside a menu that closes on focus-out is a trap, and a
+   height in em cuts the last line in half at any line-height but the one it was computed
+   for. Six lines is what DescribedHeight budgets for. */
+.blurb {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  overflow: hidden;
+  padding: 0 8px 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.blurb__paragraph + .blurb__paragraph { margin-top: 6px; }
 
 .menu__foot {
   padding: 6px 8px 3px;

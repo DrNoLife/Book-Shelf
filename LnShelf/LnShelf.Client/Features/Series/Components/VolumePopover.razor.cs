@@ -11,6 +11,29 @@ public partial class VolumePopover
     public const double Width = 208;
     public const double Height = 250;
 
+    /// <summary>
+    /// The nominal size with a blurb in it: wider, because 208px of prose is four words a
+    /// line, and taller by the clamped blurb plus its hairline.
+    /// </summary>
+    // The placement is computed before the menu exists, from these numbers rather than
+    // from a measurement — so a menu that grew and did not say so would be placed as if it
+    // were still 250 tall and hang off the bottom of the screen.
+    public const double DescribedWidth = 248;
+    public const double DescribedHeight = 372;
+
+    /// <summary>The nominal size this volume's menu will take, blurb or no blurb.</summary>
+    public static double WidthFor(VolumeResponse volume) =>
+        HasBlurb(volume) ? DescribedWidth : Width;
+
+    public static double HeightFor(VolumeResponse volume) =>
+        HasBlurb(volume) ? DescribedHeight : Height;
+
+    private static bool HasBlurb(VolumeResponse volume)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+        return !string.IsNullOrWhiteSpace(volume.Description);
+    }
+
     [Parameter]
     public required VolumeResponse Volume { get; set; }
 
@@ -34,6 +57,19 @@ public partial class VolumePopover
     public required IJSRuntime JavaScript { get; set; }
 
     private ElementReference _menuElement;
+
+    private bool HasDescription => HasBlurb(Volume);
+
+    /// <summary>
+    /// The blurb split into paragraphs, the shape the API's sanitizer guarantees (a blank
+    /// line between paragraphs) and the same split the hero's synopsis does.
+    /// </summary>
+    private IReadOnlyList<string> DescriptionParagraphs =>
+        Volume.Description is { } description
+            ? description.Split(
+                "\n\n",
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : [];
 
     private sealed record ReadChoice(ReadStatus Status, string Label, string SwatchClass);
 
