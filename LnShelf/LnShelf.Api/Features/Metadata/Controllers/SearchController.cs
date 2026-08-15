@@ -16,8 +16,12 @@ public sealed class SearchController(SeriesSearchPresentationService searchServi
     /// Omit to search every tracked format. The light novel and the manga of one
     /// title come back as two results either way.
     /// </param>
+    // No try/catch: a source refusing to serve throws MetadataSourceUnavailableException,
+    // which the central handler turns into a 503 naming the source and quoting it. The
+    // substitution of one source for another happens below this, inside
+    // ISeriesSearchService, so this method is unaware of it beyond passing on the note.
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<SeriesSearchResultResponse>>> SearchAsync(
+    public async Task<ActionResult<SeriesSearchResponse>> SearchAsync(
         [FromQuery(Name = "q")] string query,
         [FromQuery] Format? format,
         CancellationToken cancellationToken)

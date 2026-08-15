@@ -7,11 +7,23 @@ namespace LnShelf.Api.Features.Covers.Models;
 public static class CoverObjectKey
 {
     /// <summary>
+    /// A series' cover from one series-level source, keyed on that source's own id.
+    /// </summary>
+    // The source is in the key for the reason ForVolumeSync gives: two sources' art for
+    // one series must not land on the same file. The id is a long because MangaUpdates'
+    // are eleven digits.
+    //
+    // For AniList this produces exactly the key it always did — `anilist/85470.jpg` — so
+    // nothing already in the store is orphaned by this becoming the general form.
+    public static string ForSeriesSource(MetadataSourceName source, long sourceId, string extension) =>
+        $"{Slug(source.ToString())}/{sourceId}{extension}";
+
+    /// <summary>
     /// Keyed on the AniList media id, so a cover cached while reviewing an import
     /// candidate is already the series' cover the moment that candidate is chosen.
     /// </summary>
     public static string ForAniList(int aniListId, string extension) =>
-        $"anilist/{aniListId}{extension}";
+        ForSeriesSource(MetadataSourceName.AniList, aniListId, extension);
 
     /// <summary>
     /// A user-supplied cover for one volume. Keyed on the volume, so an override

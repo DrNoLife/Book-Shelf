@@ -8,10 +8,10 @@ public static class SeriesSearchResultMapper
     extension(IReadOnlyList<SeriesSearchResult> results)
     {
         /// <param name="coverObjectKeys">
-        /// Locally cached cover per AniList id, as far as caching succeeded.
+        /// Locally cached cover per source id, as far as caching succeeded.
         /// </param>
         public IReadOnlyList<SeriesSearchResultResponse> ToResponses(
-            IReadOnlyDictionary<int, string> coverObjectKeys)
+            IReadOnlyDictionary<long, string> coverObjectKeys)
         {
             ArgumentNullException.ThrowIfNull(coverObjectKeys);
 
@@ -19,17 +19,19 @@ public static class SeriesSearchResultMapper
             [
                 .. results.Select(result => ToResponse(
                     result,
-                    coverObjectKeys.TryGetValue(result.ExternalId, out var key) ? key : null)),
+                    coverObjectKeys.TryGetValue(result.SourceId, out var key) ? key : null)),
             ];
         }
     }
 
     private static SeriesSearchResultResponse ToResponse(SeriesSearchResult result, string? coverObjectKey) => new()
     {
-        // The contract names the source explicitly (feature-spec §6's
-        // POST /api/series { aniListId, format }), so the client can hand the id
-        // straight back without knowing anything else about AniList.
-        AniListId = result.ExternalId,
+        // The contract names the source and carries that source's id, so the client can
+        // hand the pair straight back to POST /api/series without knowing anything else
+        // about either API — and so a MangaUpdates row cannot be added as an AniList one.
+        Source = result.Source,
+        AniListId = result.Source is MetadataSourceName.AniList ? result.AniListId : null,
+        MangaUpdatesId = result.Source is MetadataSourceName.MangaUpdates ? result.SourceId : null,
         TitleEnglish = result.TitleEnglish,
         TitleRomaji = result.TitleRomaji,
         TitleNative = result.TitleNative,

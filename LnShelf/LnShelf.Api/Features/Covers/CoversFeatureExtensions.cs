@@ -44,8 +44,11 @@ public static class CoversFeatureExtensions
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
             });
 
-            // Both caches are key-builders over the one fetcher: the series cover keyed
-            // on an AniList media id, a volume's synced art keyed on the volume.
+            // All three caches are key-builders over the one fetcher: a series cover keyed
+            // on its source's id, the AniList-shaped adapter onto that for the callers who
+            // hold a media id and nothing else, and a volume's synced art keyed on the
+            // volume.
+            services.AddScoped<ISeriesCoverCache, SeriesCoverCache>();
             services.AddScoped<ICoverCache, AniListCoverCache>();
             services.AddScoped<IVolumeCoverCache, VolumeCoverCache>();
 

@@ -96,4 +96,168 @@ public sealed class MangaUpdatesSeriesMapperTests
 
         info.ExternalId.ShouldBeGreaterThan(int.MaxValue);
     }
+
+    [Fact]
+    public void ToSeriesMetadata_TheCapturedSeries_MapsEverythingTheAddFlowStores()
+    {
+        var metadata = MangaUpdatesSeriesMapper.ToSeriesMetadata(
+            MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.FremdTorturchenSeries));
+
+        metadata.SourceId.ShouldBe(MangaUpdatesFixtures.FremdTorturchenSeriesId);
+
+        // The marker comes off; the romaji primary title does not become English by it.
+        // That is the honest outcome and the reason the search page shows it as-is.
+        metadata.TitleEnglish.ShouldBe("Fremd Torturchen");
+
+        metadata.Format.ShouldBe(Format.LightNovel);
+        metadata.StartYear.ShouldBe(2016);
+
+        // "9 Volumes + 1 Extra (Complete)": nine, because the extra is not a numbered
+        // volume, and Completed, because the text says so.
+        metadata.VolumeCount.ShouldBe(9);
+        metadata.PublicationStatus.ShouldBe(PublicationStatus.Completed);
+        metadata.RawStatus.ShouldBe("9 Volumes + 1 Extra (Complete)");
+
+        // Writer and illustrator come from one array, told apart by MangaUpdates' own
+        // role word — which is the only thing separating them.
+        metadata.Author.ShouldBe("AYASATO Keishi");
+        metadata.Illustrator.ShouldBe("UKAI Saki");
+
+        // Two publishers, and the English one wins: this shelf tracks English releases,
+        // so Yen On is the answer a reader wants over the original imprint.
+        metadata.Publisher.ShouldBe("Yen On");
+
+        metadata.Genres.ShouldContain("Fantasy");
+        metadata.CoverImageUrl.ShouldBe("https://cdn.mangaupdates.com/image/i289956.jpg");
+    }
+
+    [Fact]
+    public void ToSeriesMetadata_TheCapturedDescription_IsStoredAsPlainText()
+    {
+        var metadata = MangaUpdatesSeriesMapper.ToSeriesMetadata(
+            MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.FremdTorturchenSeries));
+
+        var description = metadata.Description.ShouldNotBeNull();
+
+        description.ShouldStartWith("\"I am 'Torturchen' Elisabeth Le Fanu");
+        description.ShouldContain("fourteen ranked demons");
+
+        // Nothing inward holds markup: the sanitizer is the edge for MangaUpdates too, and
+        // its paragraph breaks survive because that is what the hero panel renders on.
+        description.ShouldNotContain('<');
+        description.ShouldContain("\n\n");
+    }
+
+    [Fact]
+    public void ToSearchResult_TheCapturedSearch_MapsEveryTrackableHit()
+    {
+        var search = MangaUpdatesFixtures.LoadSearch(MangaUpdatesFixtures.TorturePrincessSearch);
+        var results = search.Results.ShouldNotBeNull();
+
+        var hits = results
+            .Select(result => MangaUpdatesSeriesMapper.ToSearchResult(result.Record!))
+            .OfType<SeriesSearchResult>()
+            .ToList();
+
+        hits.Count.ShouldBe(results.Count);
+        hits.ShouldAllBe(hit => hit.Source == MetadataSourceName.MangaUpdates);
+        hits.ShouldAllBe(hit => hit.Format == Format.LightNovel);
+
+        var wanted = hits
+            .FirstOrDefault(hit => hit.SourceId == MangaUpdatesFixtures.FremdTorturchenSeriesId)
+            .ShouldNotBeNull();
+
+        wanted.TitleEnglish.ShouldBe("Fremd Torturchen");
+        wanted.StartYear.ShouldBe(2016);
+        wanted.CoverImageUrl.ShouldBe("https://cdn.mangaupdates.com/image/i289956.jpg");
+
+        // The id survives the widening it needed: eleven digits do not fit in an int, which
+        // is what SeriesSearchResult.SourceId being a long is for.
+        wanted.SourceId.ShouldBeGreaterThan(int.MaxValue);
+    }
+
+    [Fact]
+    public void ToSearchResult_TheCapturedSearch_KnowsNeitherStatusNorVolumeCount()
+    {
+        // Recorded as a fact about the API rather than a wish. A search payload carries no
+        // `status` and no `completed`, so a row can state neither how many volumes exist nor
+        // whether publication finished — hence Ongoing and "vols unknown" on the page, and
+        // hence the add fetching the full record. If MangaUpdates ever adds the fields, this
+        // test is what says so.
+        var search = MangaUpdatesFixtures.LoadSearch(MangaUpdatesFixtures.TorturePrincessSearch);
+        var results = search.Results.ShouldNotBeNull();
+
+        results.ShouldAllBe(result => result.Record!.Status == null);
+        results.ShouldAllBe(result => !result.Record!.Completed);
+        results.ShouldAllBe(result => result.Record!.Authors == null);
+
+        var wanted = results
+            .Select(result => MangaUpdatesSeriesMapper.ToSearchResult(result.Record!))
+            .OfType<SeriesSearchResult>()
+            .First(hit => hit.SourceId == MangaUpdatesFixtures.FremdTorturchenSeriesId);
+
+        wanted.VolumeCount.ShouldBeNull();
+        wanted.PublicationStatus.ShouldBe(PublicationStatus.Ongoing);
+
+        // And the completed series it really is, once the full record is fetched.
+        MangaUpdatesSeriesMapper.ToSeriesMetadata(
+                MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.FremdTorturchenSeries))
+            .PublicationStatus.ShouldBe(PublicationStatus.Completed);
+    }
+
+    [Fact]
+    public void ToSearchResult_AMediumTheShelfDoesNotTrack_IsDropped()
+    {
+        // Doujinshi and artbooks come back from an unfiltered search and cannot be added,
+        // so the row never reaches the page.
+        MangaUpdatesSeriesMapper.ToSearchResult(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Something (Doujinshi)",
+            Type = "Doujinshi",
+        }).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Publication status out of MangaUpdates' free-text status field.
+    /// </summary>
+    // Every string here except the invented last two is a real status from a series this
+    // shelf tracks or searched for. The default matters: an unreadable status is not a
+    // reason to refuse to add a series, so it reads as Ongoing.
+    [Theory]
+    [InlineData("9 Volumes + 1 Extra (Complete)", PublicationStatus.Completed)]
+    [InlineData("14 Volumes (Ongoing)", PublicationStatus.Ongoing)]
+    [InlineData("23 LN Volumes + 2 SS Volumes (Complete)", PublicationStatus.Completed)]
+    [InlineData("17 Volumes (Hiatus)", PublicationStatus.Hiatus)]
+    [InlineData("4 Volumes (Cancelled)", PublicationStatus.Cancelled)]
+    [InlineData("", PublicationStatus.Ongoing)]
+    [InlineData(null, PublicationStatus.Ongoing)]
+    public void ToSeriesMetadata_TheStatusText_DecidesPublicationStatus(
+        string? status,
+        PublicationStatus expected)
+    {
+        MangaUpdatesSeriesMapper.ToSeriesMetadata(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Status = status,
+        }).PublicationStatus.ShouldBe(expected);
+    }
+
+    /// <summary>MangaUpdates' medium words in the shelf's own vocabulary.</summary>
+    [Theory]
+    [InlineData("Novel", Format.LightNovel)]
+    [InlineData("Manga", Format.Manga)]
+    [InlineData("Manhwa", Format.Manga)]
+    [InlineData("Manhua", Format.Manga)]
+    public void ToSearchResult_ATrackedMedium_MapsToTheShelfsFormat(string sourceType, Format expected)
+    {
+        MangaUpdatesSeriesMapper.ToSearchResult(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever",
+            Type = sourceType,
+        }).ShouldNotBeNull().Format.ShouldBe(expected);
+    }
 }

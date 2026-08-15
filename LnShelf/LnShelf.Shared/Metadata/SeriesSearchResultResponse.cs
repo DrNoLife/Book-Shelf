@@ -9,11 +9,26 @@ namespace LnShelf.Shared.Metadata;
 /// </summary>
 public sealed record SeriesSearchResultResponse
 {
-    public required int AniListId { get; init; }
+    /// <summary>Which source this hit came from, and therefore which id is set.</summary>
+    // On the row rather than only on the response, because a row is what gets handed
+    // back to POST /api/series: the client must be able to say which source's id it is
+    // holding without inferring it from which field happens to be null.
+    public required MetadataSourceName Source { get; init; }
+
+    /// <summary>AniList's media id. Null when another source answered the search.</summary>
+    public int? AniListId { get; init; }
+
+    /// <summary>
+    /// MangaUpdates' series id. Null when another source answered the search.
+    /// </summary>
+    // A long, not an int: MangaUpdates ids are eleven digits (17992364412) and
+    // overflow an Int32.
+    public long? MangaUpdatesId { get; init; }
 
     /// <summary>
     /// Never blank: AniList leaves the English title null for a large share of
-    /// entries, so romaji then native stand in.
+    /// entries, so romaji then native stand in. MangaUpdates files many series under
+    /// their romaji title, so a hit from it is often romaji outright.
     /// </summary>
     public required string TitleEnglish { get; init; }
 

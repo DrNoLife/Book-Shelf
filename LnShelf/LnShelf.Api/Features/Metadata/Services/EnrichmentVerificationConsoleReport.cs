@@ -107,10 +107,27 @@ public static class EnrichmentVerificationConsoleReport
         yield return $"  {Verdict(series.Passed)}";
     }
 
+    /// <summary>
+    /// The series' line: what it resolved to, on whose authority, and how many volumes.
+    /// </summary>
+    // The source is printed here rather than as a fifth cell in the series row, because it
+    // belongs with the identity it qualifies: "[MangaUpdates 17992364412]" is one fact, and
+    // splitting the catalogue away from the number in it would read as two.
+    //
+    // It earns its place because the source is no longer fixed. A run whose series were
+    // resolved through the MangaUpdates fallback can pass every threshold — the per-volume
+    // pipeline does not care where the title came from — and without this the reader would
+    // have no way to tell that AniList was down while it did.
     private static string Heading(SeriesVerification series)
     {
         var title = series.SeriesLevel?.Title ?? series.SearchTerm;
-        var identity = series.ExternalId is { } externalId ? $" [{externalId}]" : string.Empty;
+
+        var identity = (series.Source, series.ExternalId) switch
+        {
+            ({ } source, { } externalId) => $" [{source} {externalId}]",
+            ({ } source, null) => $" [{source}]",
+            _ => string.Empty,
+        };
 
         return $"{title}{identity} -- volumes: {series.VolumeCountGround}";
     }

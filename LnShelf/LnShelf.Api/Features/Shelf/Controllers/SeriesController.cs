@@ -48,27 +48,45 @@ public sealed class SeriesController(
     }
 
     /// <summary>
-    /// Adds an AniList series to the shelf, with its volumes and a default
-    /// user-state row (feature-spec §6).
+    /// Adds a series to the shelf from whichever source the request names, with its
+    /// volumes and a default user-state row (feature-spec §6).
     /// </summary>
-    // The status code is the idempotency evidence: 201 the first time, 200 with
-    // alreadyTracked every time after. No Location header yet — GET
-    // /api/series/{id} is phase 3, and pointing at a route that does not exist
-    // would be a lie in a header.
+    // One endpoint for both sources rather than two routes, deliberately. The search page
+    // has one row shape and one Add button; what differs is which id the row was carrying.
+    // A second route would duplicate this method's whole contract — the 201/200 idempotency
+    // evidence and the 404 shape — to express a fact the body already states.
+    //
+    // The status code is that idempotency evidence: 201 the first time, 200 with
+    // alreadyTracked every time after. No Location header yet — GET /api/series/{id} is
+    // phase 3, and pointing at a route that does not exist would be a lie in a header.
+    //
+    // A request naming neither source or both is a 400, from AddSeriesSource.
     [HttpPost]
     public async Task<ActionResult<AddSeriesResponse>> AddAsync(
         [FromBody] AddSeriesRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await seriesCommandService.AddFromAniListAsync(request, cancellationToken);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var source = AddSeriesSource.Of(request);
+
+        var response = source switch
+        {
+            MetadataSourceName.MangaUpdates =>
+                await seriesCommandService.AddFromMangaUpdatesAsync(request, cancellationToken),
+            _ => await seriesCommandService.AddFromAniListAsync(request, cancellationToken),
+        };
 
         if (response is null)
         {
+            var sourceId = request.AniListId?.ToString(CultureInfo.InvariantCulture)
+                           ?? request.MangaUpdatesId?.ToString(CultureInfo.InvariantCulture);
+
             return NotFound(new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
-                Title = "Unknown AniList series",
-                Detail = $"AniList has no series with id {request.AniListId}.",
+                Title = $"Unknown {source} series",
+                Detail = $"{source} has no series with id {sourceId}.",
             });
         }
 

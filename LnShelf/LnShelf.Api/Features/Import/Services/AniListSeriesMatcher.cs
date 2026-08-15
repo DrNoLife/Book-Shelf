@@ -77,7 +77,7 @@ public sealed class AniListSeriesMatcher(
             Candidates = candidates,
             Status = ImportGroupStatus.AutoMatched,
             Reason = ImportReviewReason.None,
-            MatchedAniListId = best.Result.ExternalId,
+            MatchedAniListId = best.Result.AniListId,
             MatchScore = best.Score,
         };
     }

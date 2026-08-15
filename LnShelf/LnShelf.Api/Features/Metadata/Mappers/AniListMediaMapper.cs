@@ -22,7 +22,8 @@ public static class AniListMediaMapper
 
         return new SeriesSearchResult
         {
-            ExternalId = media.Id,
+            Source = MetadataSourceName.AniList,
+            SourceId = media.Id,
             TitleEnglish = ToDisplayTitle(media),
             TitleRomaji = NullIfBlank(media.Title?.Romaji),
             TitleNative = NullIfBlank(media.Title?.Native),

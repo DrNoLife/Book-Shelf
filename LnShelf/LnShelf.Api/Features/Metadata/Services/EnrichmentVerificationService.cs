@@ -19,8 +19,16 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // actually runs. VolumeEnrichmentService and VolumeFactWriter are the two exceptions and
 // are built with `new` — only so the verifying cover cache can be substituted for the one
 // that writes to MinIO. They are otherwise the same classes the nightly sync uses.
+//
+// The series-resolution step goes through ISeriesSearchService rather than straight at
+// AniList, which is what the search endpoint does too. That is not tidiness: with AniList's
+// API disabled, a gate that could only resolve a series through AniList reported FAIL 0/3
+// on a shelf that was working — the fetching it exists to police had simply moved to
+// another source. The report names which source answered, so a pass through the fallback
+// cannot be mistaken for a normal one.
 public sealed class EnrichmentVerificationService(
-    ISeriesMetadataSource metadataSource,
+    ISeriesSearchService searchService,
+    SearchHitResolver hitResolver,
     IReleaseSourceMatcher releaseSourceMatcher,
     IVolumeCatalogueSource catalogueSource,
     IVolumeEnrichmentSource enrichmentSource,
@@ -101,24 +109,28 @@ public sealed class EnrichmentVerificationService(
         Format format,
         CancellationToken cancellationToken)
     {
-        var hits = await metadataSource.SearchAsync(searchTerm, format, cancellationToken);
-        var hit = hits.FirstOrDefault(candidate => candidate.Format == format);
+        var outcome = await searchService.SearchAsync(searchTerm, format, cancellationToken);
+        var hit = outcome.Results.FirstOrDefault(candidate => candidate.Format == format);
 
         if (hit is null)
         {
-            return NotResolved(searchTerm, format, $"the search returned no {format}.");
+            return NotResolved(searchTerm, format, $"the search returned no {format}.", outcome.Source);
         }
 
-        var metadata = await metadataSource.GetSeriesAsync(hit.ExternalId, cancellationToken);
+        var resolved = await hitResolver.ResolveAsync(hit, cancellationToken);
 
-        if (metadata is null)
+        if (resolved is null)
         {
-            return NotResolved(searchTerm, format, $"the search found {hit.ExternalId}, which has no detail.");
+            return NotResolved(
+                searchTerm,
+                format,
+                $"the search found {hit.SourceId}, which has no detail.",
+                outcome.Source);
         }
 
-        var seriesLevel = await VerifySeriesLevelAsync(metadata, cancellationToken);
-        var series = ToInMemorySeries(metadata);
-        var count = await ResolveVolumeCountAsync(series, metadata, cancellationToken);
+        var seriesLevel = await VerifySeriesLevelAsync(resolved, cancellationToken);
+        var series = ToInMemorySeries(resolved);
+        var count = await ResolveVolumeCountAsync(series, resolved, cancellationToken);
 
         AddVolumes(series, count);
 
@@ -130,7 +142,8 @@ public sealed class EnrichmentVerificationService(
         {
             SearchTerm = searchTerm,
             Format = format,
-            ExternalId = metadata.ExternalId,
+            Source = resolved.Source,
+            ExternalId = resolved.SourceId,
             SeriesLevel = seriesLevel,
             VolumeLevel = volumeLevel,
             VolumeCountGround = count.Ground,
@@ -143,21 +156,24 @@ public sealed class EnrichmentVerificationService(
     /// Title, synopsis and cover, straight from the series-level seam — and the cover is
     /// downloaded rather than taken on the source's word.
     /// </summary>
+    // Works on the resolved shape rather than on AniList's, so the same three checks run
+    // against whichever source answered — a MangaUpdates record has a title, a synopsis and
+    // a cover URL of its own, and all three are worth exactly the same scrutiny.
     private async Task<SeriesLevelVerification> VerifySeriesLevelAsync(
-        SeriesMetadata metadata,
+        ResolvedSeries resolved,
         CancellationToken cancellationToken)
     {
         VerifiedImage? cover = null;
 
-        if (Uri.TryCreate(metadata.CoverImageUrl, UriKind.Absolute, out var coverUri))
+        if (Uri.TryCreate(resolved.CoverImageUrl, UriKind.Absolute, out var coverUri))
         {
             cover = await imageProbe.ProbeAsync(coverUri, cancellationToken);
         }
 
         return new SeriesLevelVerification
         {
-            Title = metadata.TitleEnglish,
-            Description = metadata.Description,
+            Title = resolved.TitleEnglish,
+            Description = resolved.Description,
             Cover = cover,
         };
     }
@@ -167,15 +183,20 @@ public sealed class EnrichmentVerificationService(
     /// </summary>
     // Never attached to a DbContext and never saved. The titles matter: the release source
     // is searched on romaji first, and the catalogue is searched on the English title.
-    private static Series ToInMemorySeries(SeriesMetadata metadata) => new()
+    //
+    // The external id is written to the column the resolving source owns, which is also what
+    // makes the count step honest: a series resolved through MangaUpdates arrives already
+    // linked, and nothing then goes matching for a link it has.
+    private static Series ToInMemorySeries(ResolvedSeries resolved) => new()
     {
         Id = Guid.CreateVersion7(),
-        AniListId = metadata.ExternalId,
-        Format = metadata.Format,
-        TitleEnglish = metadata.TitleEnglish,
-        TitleRomaji = metadata.TitleRomaji,
-        TitleNative = metadata.TitleNative,
-        PublicationStatus = metadata.PublicationStatus,
+        AniListId = resolved.Source is MetadataSourceName.AniList ? (int)resolved.SourceId : null,
+        MangaUpdatesId = resolved.Source is MetadataSourceName.MangaUpdates ? resolved.SourceId : null,
+        Format = resolved.Format,
+        TitleEnglish = resolved.TitleEnglish,
+        TitleRomaji = resolved.TitleRomaji,
+        TitleNative = resolved.TitleNative,
+        PublicationStatus = resolved.PublicationStatus,
     };
 
     /// <summary>
@@ -187,9 +208,17 @@ public sealed class EnrichmentVerificationService(
     // as such in the report rather than quietly used.
     private async Task<VolumeCount> ResolveVolumeCountAsync(
         Series series,
-        SeriesMetadata metadata,
+        ResolvedSeries resolved,
         CancellationToken cancellationToken)
     {
+        // The release source itself answered the search, so its count is already in hand
+        // and no title matching is needed to earn it — the id came from that catalogue.
+        if (resolved.ReleaseVolumeCount is { } resolvedCount)
+        {
+            return new VolumeCount(
+                resolvedCount, $"{resolvedCount} from the release source", FromReleaseSource: true);
+        }
+
         var match = await releaseSourceMatcher.MatchAsync(series, new HashSet<long>(), cancellationToken);
 
         if (match.IsLinked && match.MatchedSeries?.VolumeCount is { } releaseCount)
@@ -203,11 +232,11 @@ public sealed class EnrichmentVerificationService(
             ? $"linked, but stated no volume count ({match.Explanation})"
             : $"unlinked ({match.Outcome}: {match.Explanation})";
 
-        if (metadata.Volumes.Count > 0)
+        if (resolved.ListedVolumeCount > 0)
         {
             return new VolumeCount(
-                metadata.Volumes.Count,
-                $"{metadata.Volumes.Count} from the metadata source",
+                resolved.ListedVolumeCount,
+                $"{resolved.ListedVolumeCount} from the metadata source",
                 FromReleaseSource: false)
             {
                 ReleaseSourceNote = note,
@@ -395,11 +424,20 @@ public sealed class EnrichmentVerificationService(
     private static bool Meets(int count, int total, int minimumPercent) =>
         total > 0 && count * 100 >= total * minimumPercent;
 
-    private static SeriesVerification NotResolved(string searchTerm, Format format, string reason) =>
+    /// <param name="source">
+    /// Which source was asked. Reported even on a failure — "MangaUpdates has never heard
+    /// of it" and "AniList has never heard of it" are different facts.
+    /// </param>
+    private static SeriesVerification NotResolved(
+        string searchTerm,
+        Format format,
+        string reason,
+        MetadataSourceName source) =>
         new()
         {
             SearchTerm = searchTerm,
             Format = format,
+            Source = source,
             VolumeCountGround = "none (the series was never resolved)",
             Failure = reason,
             Passed = false,

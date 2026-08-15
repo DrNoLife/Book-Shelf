@@ -28,6 +28,7 @@ public static class MetadataFeatureExtensions
 
             services.AddAniList(configuration);
             services.AddReleaseSource(configuration);
+            services.AddSeriesSearch();
             services.AddVolumeCatalogue(configuration);
             services.AddVolumeEnrichment(configuration);
             services.AddEnrichmentVerification();
@@ -58,6 +59,21 @@ public static class MetadataFeatureExtensions
                 .AddHttpMessageHandler<AniListRateLimitHandler>();
 
             services.AddScoped<ISeriesMetadataSource, AniListSeriesQueryService>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// The search the add flow uses: AniList, with MangaUpdates behind it.
+        /// </summary>
+        // Registered apart from either source, because it belongs to neither. Both the
+        // search endpoint and `enrichment-verify` resolve ISeriesSearchService, so there is
+        // exactly one answer in the app to "what happens when AniList will not serve".
+        private IServiceCollection AddSeriesSearch()
+        {
+            services.AddScoped<IMangaUpdatesSeriesQueryService, MangaUpdatesSeriesQueryService>();
+            services.AddScoped<ISeriesSearchService, FallbackSeriesSearchService>();
+            services.AddScoped<SearchHitResolver>();
             services.AddScoped<SeriesSearchPresentationService>();
 
             return services;

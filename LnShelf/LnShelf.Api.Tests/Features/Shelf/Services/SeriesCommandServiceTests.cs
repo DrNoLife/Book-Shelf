@@ -21,6 +21,11 @@ public sealed class SeriesCommandServiceTests
 
     private const string CoverObjectKey = "anilist/85470.jpg";
 
+    /// <summary>MangaUpdates' series id for Fremd Torturchen — eleven digits, hence a long.</summary>
+    private const long MangaUpdatesId = 17992364412;
+
+    private const string MangaUpdatesCoverObjectKey = "mangaupdates/17992364412.jpg";
+
     private static readonly DateOnly Today = new(2026, 7, 29);
 
     [Fact]
@@ -294,6 +299,165 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
+    public async Task AddFromMangaUpdatesAsync_NewSeries_PersistsWhatMangaUpdatesKnows()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(
+            dbContext, CreateMetadataSource(), mangaUpdatesSource: CreateMangaUpdatesSource());
+
+        var response = await service.AddFromMangaUpdatesAsync(
+            CreateMangaUpdatesRequest(), CancellationToken.None);
+
+        response.ShouldNotBeNull();
+        response.AlreadyTracked.ShouldBeFalse();
+
+        // Romaji, and honestly so: MangaUpdates files this series under "Fremd Torturchen"
+        // and the English name is one unlabelled entry among its alternative titles.
+        response.TitleEnglish.ShouldBe("Fremd Torturchen");
+
+        // Nine volumes out of "9 Volumes + 1 Extra (Complete)".
+        response.VolumeCount.ShouldBe(9);
+
+        var series = await dbContext.Series
+            .Include(candidate => candidate.Volumes)
+            .Include(candidate => candidate.UserState)
+            .SingleAsync(candidate => candidate.Id == response.SeriesId);
+
+        // Linked to the release source on the way in, and with no AniList id at all — which
+        // is what makes the nightly refresh skip matching for it entirely.
+        series.MangaUpdatesId.ShouldBe(MangaUpdatesId);
+        series.AniListId.ShouldBeNull();
+
+        series.PublicationStatus.ShouldBe(PublicationStatus.Completed);
+        series.Author.ShouldBe("AYASATO Keishi");
+        series.Illustrator.ShouldBe("UKAI Saki");
+
+        // The one field AniList never supplies, so this path is the only one that fills it.
+        series.Publisher.ShouldBe("Yen On");
+
+        series.Description.ShouldNotBeNull().ShouldContain("Torturchen");
+        series.CoverObjectKey.ShouldBe(MangaUpdatesCoverObjectKey);
+        series.LastSyncedAt.ShouldNotBeNull();
+
+        // Volumes 1..9, all of them in print: that is what a release source's count means,
+        // and it is a stronger claim than AniList's volume list supports.
+        series.Volumes.Count.ShouldBe(9);
+        series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 9));
+        series.Volumes.ShouldAllBe(volume => volume.IsReleased);
+        series.Volumes.ShouldAllBe(volume => !volume.IsLocalOnly);
+        series.Volumes.ShouldAllBe(volume => volume.ReleaseDate == null);
+
+        series.UserState.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.PlanToStart);
+    }
+
+    [Fact]
+    public async Task AddFromMangaUpdatesAsync_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+        var mangaUpdatesSource = CreateMangaUpdatesSource();
+        var service = CreateService(
+            dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource);
+
+        var first = await service.AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+        var second = await service.AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+
+        first.ShouldNotBeNull();
+        second.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
+        second.SeriesId.ShouldBe(first.SeriesId);
+
+        (await dbContext.Series.CountAsync()).ShouldBe(1);
+        (await dbContext.Volumes.CountAsync()).ShouldBe(9);
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(1);
+
+        await mangaUpdatesSource.Received(1).GetSeriesAsync(MangaUpdatesId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AddFromMangaUpdatesAsync_ASeriesTheNightlySyncAlreadyLinked_IsNotAddedTwice()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // The case the unique index would otherwise catch as a violation: this series was
+        // added from AniList and *linked* to MangaUpdates by a later sync, so it was never
+        // added from MangaUpdates — and pressing Add on its MangaUpdates row must still be a
+        // polite no-op rather than a 500.
+        dbContext.Series.Add(new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 97100,
+            MangaUpdatesId = MangaUpdatesId,
+            TitleEnglish = "Torture Princess: Fremd Torturchen",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Completed,
+        });
+        await dbContext.SaveChangesAsync();
+
+        var mangaUpdatesSource = CreateMangaUpdatesSource();
+
+        var response = await CreateService(
+                dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource)
+            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+
+        response.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
+
+        // The English title the shelf already had, not the romaji one MangaUpdates would have
+        // written: nothing was overwritten, because nothing was written.
+        response.TitleEnglish.ShouldBe("Torture Princess: Fremd Torturchen");
+
+        (await dbContext.Series.CountAsync()).ShouldBe(1);
+
+        // And MangaUpdates was spared the request entirely.
+        await mangaUpdatesSource.DidNotReceiveWithAnyArgs().GetSeriesAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AddFromMangaUpdatesAsync_UnknownId_ReturnsNullAndAddsNothing()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var mangaUpdatesSource = Substitute.For<IMangaUpdatesSeriesQueryService>();
+        mangaUpdatesSource.GetSeriesAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns((MangaUpdatesSeriesMetadata?)null);
+
+        var response = await CreateService(
+                dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource)
+            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+
+        response.ShouldBeNull();
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AddFromMangaUpdatesAsync_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var isbnBackfill = NoStagedIsbns();
+        var sync = Substitute.For<ISeriesSyncService>();
+        sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new SyncRun
+            {
+                Id = Guid.CreateVersion7(),
+                StartedAt = DateTimeOffset.UnixEpoch,
+                Summary = "Fremd Torturchen refreshed · 9 volumes enriched from OpenLibrary",
+            });
+
+        var response = await CreateService(
+                dbContext, CreateMetadataSource(), isbnBackfill, sync, CreateMangaUpdatesSource())
+            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+
+        // The same completion the AniList path gets, in the same order and for the same
+        // reason: enrichment is keyed on ISBN, so the ISBNs go on the volumes first.
+        Received.InOrder(() =>
+        {
+            isbnBackfill.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+            sync.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        });
+
+        response.ShouldNotBeNull().RefreshSummary.ShouldNotBeNull().ShouldContain("9 volumes enriched");
+    }
+
+    [Fact]
     public async Task DeleteAsync_ATrackedSeries_TakesItsVolumesAndAllUserStateWithIt()
     {
         await using var dbContext = CreateDbContext();
@@ -409,10 +573,13 @@ public sealed class SeriesCommandServiceTests
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource,
         IIsbnBackfill? isbnBackfill = null,
-        ISeriesSyncService? seriesSync = null) =>
+        ISeriesSyncService? seriesSync = null,
+        IMangaUpdatesSeriesQueryService? mangaUpdatesSource = null) =>
         new(dbContext,
             metadataSource,
+            mangaUpdatesSource ?? Substitute.For<IMangaUpdatesSeriesQueryService>(),
             CreateCoverCache(),
+            CreateSeriesCoverCache(),
             isbnBackfill ?? NoStagedIsbns(),
             seriesSync ?? NoRefresh(),
             TimeProvider.System,
@@ -457,6 +624,20 @@ public sealed class SeriesCommandServiceTests
         return coverCache;
     }
 
+    /// <inheritdoc cref="CreateCoverCache"/>
+    private static ISeriesCoverCache CreateSeriesCoverCache()
+    {
+        var coverCache = Substitute.For<ISeriesCoverCache>();
+        coverCache.EnsureCachedAsync(
+                MetadataSourceName.MangaUpdates,
+                MangaUpdatesId,
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(MangaUpdatesCoverObjectKey);
+
+        return coverCache;
+    }
+
     private static ISeriesMetadataSource CreateMetadataSource()
     {
         var metadataSource = Substitute.For<ISeriesMetadataSource>();
@@ -485,8 +666,41 @@ public sealed class SeriesCommandServiceTests
         Volumes = [.. Enumerable.Range(1, 26).Select(number => new VolumeMetadata { Number = number })],
     };
 
+    private static IMangaUpdatesSeriesQueryService CreateMangaUpdatesSource()
+    {
+        var source = Substitute.For<IMangaUpdatesSeriesQueryService>();
+        source.GetSeriesAsync(MangaUpdatesId, Arg.Any<CancellationToken>())
+            .Returns(CreateMangaUpdatesMetadata());
+
+        return source;
+    }
+
+    /// <summary>
+    /// The shape MangaUpdatesSeriesMapper produces from the captured Fremd Torturchen
+    /// record — nine volumes from a status of "9 Volumes + 1 Extra (Complete)".
+    /// </summary>
+    private static MangaUpdatesSeriesMetadata CreateMangaUpdatesMetadata() => new()
+    {
+        SourceId = MangaUpdatesId,
+        TitleEnglish = "Fremd Torturchen",
+        Format = Format.LightNovel,
+        PublicationStatus = PublicationStatus.Completed,
+        StartYear = 2016,
+        Description = "\"I am 'Torturchen' Elisabeth Le Fanu, both a proud wolf and a lowly sow.\"",
+        CoverImageUrl = "https://cdn.mangaupdates.com/image/i289956.jpg",
+        Genres = ["Action", "Drama", "Fantasy"],
+        Author = "AYASATO Keishi",
+        Illustrator = "UKAI Saki",
+        Publisher = "Yen On",
+        VolumeCount = 9,
+        RawStatus = "9 Volumes + 1 Extra (Complete)",
+    };
+
     private static AddSeriesRequest CreateRequest() =>
         new() { AniListId = AniListId, Format = Format.LightNovel };
+
+    private static AddSeriesRequest CreateMangaUpdatesRequest() =>
+        new() { MangaUpdatesId = MangaUpdatesId, Format = Format.LightNovel };
 
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()

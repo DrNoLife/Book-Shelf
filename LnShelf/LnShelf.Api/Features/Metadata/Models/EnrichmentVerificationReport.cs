@@ -80,8 +80,19 @@ public sealed record SeriesVerification
 
     public required Format Format { get; init; }
 
-    /// <summary>The metadata source's own id for the series it resolved to.</summary>
-    public int? ExternalId { get; init; }
+    /// <summary>
+    /// Which source resolved the series. Null only for a report built before a search
+    /// happened at all.
+    /// </summary>
+    // Reported because it is no longer a constant: the search falls back to MangaUpdates
+    // when AniList refuses to serve, and a PASS earned through the fallback is a different
+    // statement about the shelf's health than a PASS through AniList. Printing the source
+    // is what keeps the two from reading identically.
+    public MetadataSourceName? Source { get; init; }
+
+    /// <summary>The resolving source's own id for the series it resolved to.</summary>
+    // A long, not an int: MangaUpdates ids are eleven digits.
+    public long? ExternalId { get; init; }
 
     /// <summary>Null when the search resolved to nothing, which is a failure in itself.</summary>
     public SeriesLevelVerification? SeriesLevel { get; init; }

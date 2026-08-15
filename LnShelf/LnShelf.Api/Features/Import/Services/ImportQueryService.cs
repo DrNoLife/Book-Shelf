@@ -60,11 +60,11 @@ public sealed class ImportQueryService(
             // is a deliberate submit-driven search over a handful of results — not
             // the general search endpoint, which must stay cheap.
             var coverObjectKey = await coverCache.EnsureCachedAsync(
-                result.ExternalId, result.CoverImageUrl, cancellationToken);
+                result.AniListId, result.CoverImageUrl, cancellationToken);
 
             candidates.Add(new ImportCandidateResponse
             {
-                AniListId = result.ExternalId,
+                AniListId = result.AniListId,
                 TitleEnglish = result.TitleEnglish,
                 TitleRomaji = result.TitleRomaji,
                 TitleNative = result.TitleNative,

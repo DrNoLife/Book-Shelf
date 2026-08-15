@@ -1,28 +1,16 @@
 namespace LnShelf.Api.Features.Covers.Services;
 
 /// <inheritdoc />
-public sealed class AniListCoverCache(CoverFetcher fetcher, ILogger<AniListCoverCache> logger) : ICoverCache
+// An adapter onto ISeriesCoverCache rather than a second implementation of the same
+// behaviour. The AniList-shaped seam stays because four callers legitimately have an
+// AniList media id in hand and nothing else — the import matcher and the add flow among
+// them — and it should not be their job to name a source they already know.
+public sealed class AniListCoverCache(ISeriesCoverCache seriesCoverCache) : ICoverCache
 {
-    public async Task<string?> EnsureCachedAsync(
+    public Task<string?> EnsureCachedAsync(
         int aniListId,
         string? sourceUrl,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(sourceUrl))
-        {
-            return null;
-        }
-
-        if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out var sourceUri))
-        {
-            logger.LogWarning(
-                "AniList {AniListId} carries an unusable cover URL {SourceUrl}", aniListId, sourceUrl);
-            return null;
-        }
-
-        var objectKey = CoverObjectKey.ForAniList(aniListId, CoverObjectKey.ExtensionFor(sourceUri));
-
-        return await fetcher.EnsureCachedAsync(
-            objectKey, sourceUri, $"AniList {aniListId}", cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        seriesCoverCache.EnsureCachedAsync(
+            MetadataSourceName.AniList, aniListId, sourceUrl, cancellationToken);
 }

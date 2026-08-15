@@ -50,16 +50,80 @@ public sealed class MangaUpdatesSeriesRecord
     /// Free text, and genuinely free: "14 Volumes (Ongoing)", "23 LN Volumes +
     /// 2 SS Volumes (Complete)", "33 Volumes (Complete) \n\nPart 1: 3 Volumes…".
     /// </summary>
+    // Absent from search results entirely — see the class comment — so a search hit
+    // knows neither the volume count nor whether publication has finished.
     public string? Status { get; set; }
 
     public bool Completed { get; set; }
     public bool Licensed { get; set; }
 
     public List<MangaUpdatesAssociatedTitle>? Associated { get; set; }
+
+    /// <summary>
+    /// The synopsis. Present in search results as well as in the full record.
+    /// </summary>
+    // Not HTML, and not plain either: MangaUpdates stores wiki-ish markup, so a
+    // description arrives with real newlines, `**bold**` and `[label](url)` links in it.
+    // HtmlDescriptionSanitizer is still the right edge for it — that is what decodes the
+    // entities and normalises the line structure — but it leaves the link syntax alone,
+    // which is honest: the alternative is a markdown parser for a synopsis field.
+    public string? Description { get; set; }
+
+    public MangaUpdatesImage? Image { get; set; }
+
+    public List<MangaUpdatesGenre>? Genres { get; set; }
+
+    /// <summary>Absent from search results; only the full record carries it.</summary>
+    public List<MangaUpdatesAuthor>? Authors { get; set; }
+
+    /// <inheritdoc cref="Authors"/>
+    public List<MangaUpdatesPublisher>? Publishers { get; set; }
 }
 
 /// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
 public sealed class MangaUpdatesAssociatedTitle
 {
     public string? Title { get; set; }
+}
+
+/// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
+public sealed class MangaUpdatesImage
+{
+    public MangaUpdatesImageUrl? Url { get; set; }
+    public int? Width { get; set; }
+    public int? Height { get; set; }
+}
+
+/// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
+public sealed class MangaUpdatesImageUrl
+{
+    /// <summary>The full-size cover. <see cref="Thumb"/> is 160px wide and no use here.</summary>
+    public string? Original { get; set; }
+
+    public string? Thumb { get; set; }
+}
+
+/// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
+public sealed class MangaUpdatesGenre
+{
+    public string? Genre { get; set; }
+}
+
+/// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
+public sealed class MangaUpdatesAuthor
+{
+    /// <summary>Surname first and upper-cased: "AYASATO Keishi".</summary>
+    public string? Name { get; set; }
+
+    /// <summary>"Author" or "Artist" — which is what separates writer from illustrator.</summary>
+    public string? Type { get; set; }
+}
+
+/// <inheritdoc cref="MangaUpdatesSeriesRecord"/>
+public sealed class MangaUpdatesPublisher
+{
+    public string? PublisherName { get; set; }
+
+    /// <summary>"Original" (the Japanese imprint) or "English".</summary>
+    public string? Type { get; set; }
 }

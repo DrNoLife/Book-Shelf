@@ -22,8 +22,8 @@ public sealed class AniListMediaMapperTests
     {
         var results = MapSearch();
 
-        var novel = results.Single(result => result.ExternalId == AniListFixtures.MushokuTenseiNovelId);
-        var manga = results.Single(result => result.ExternalId == AniListFixtures.MushokuTenseiMangaId);
+        var novel = results.Single(result => result.AniListId == AniListFixtures.MushokuTenseiNovelId);
+        var manga = results.Single(result => result.AniListId == AniListFixtures.MushokuTenseiMangaId);
 
         // Same title, two series, told apart by format — feature-spec §4.2's
         // whole reason for surfacing LN and manga separately.

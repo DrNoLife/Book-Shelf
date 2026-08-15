@@ -17,6 +17,20 @@ public interface ISeriesCommandService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Adds a series from MangaUpdates: the same shelf row, keyed on the MangaUpdates id
+    /// and idempotent on it. What the shelf ends up with differs in what the source knows
+    /// — romaji titles more often than English ones, a volume count instead of a volume
+    /// list, and a real publisher, which AniList never has.
+    /// </summary>
+    // Exists because AniList disabling its public API left the app unable to add anything
+    // at all. It is not a preference: the AniList path stays the first choice, and this is
+    // what the search page's Add button reaches when the results came from the fallback.
+    /// <returns>Null when MangaUpdates has no series with that id.</returns>
+    Task<AddSeriesResponse?> AddFromMangaUpdatesAsync(
+        AddSeriesRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Sets this series' volume view, or clears the override so it follows the global
     /// preference again.
     /// </summary>

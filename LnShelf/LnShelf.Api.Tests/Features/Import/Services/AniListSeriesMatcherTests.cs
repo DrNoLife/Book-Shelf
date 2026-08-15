@@ -137,8 +137,8 @@ public sealed class AniListSeriesMatcherTests
 
         var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
 
-        match.Candidates[0].Result.ExternalId.ShouldBe(85934);
-        match.Candidates[1].Result.ExternalId.ShouldBe(85976);
+        match.Candidates[0].Result.AniListId.ShouldBe(85934);
+        match.Candidates[1].Result.AniListId.ShouldBe(85976);
     }
 
     private static AniListSeriesMatcher CreateMatcher(params SeriesSearchResult[] results) =>
@@ -157,12 +157,13 @@ public sealed class AniListSeriesMatcherTests
     }
 
     private static SeriesSearchResult CreateResult(
-        int externalId,
+        int aniListId,
         string titleEnglish,
         Format format,
         int? volumeCount) => new()
         {
-            ExternalId = externalId,
+            Source = MetadataSourceName.AniList,
+            SourceId = aniListId,
             TitleEnglish = titleEnglish,
             Format = format,
             PublicationStatus = PublicationStatus.Ongoing,

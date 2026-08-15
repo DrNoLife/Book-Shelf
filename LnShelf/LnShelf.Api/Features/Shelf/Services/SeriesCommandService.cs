@@ -4,7 +4,9 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class SeriesCommandService(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
+    IMangaUpdatesSeriesQueryService mangaUpdatesSource,
     ICoverCache coverCache,
+    ISeriesCoverCache seriesCoverCache,
     IIsbnBackfill isbnBackfill,
     ISeriesSyncService seriesSync,
     TimeProvider timeProvider,
@@ -15,36 +17,30 @@ public sealed class SeriesCommandService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.AniListId);
 
-        var existing = await FindTrackedAsync(request.AniListId, cancellationToken);
+        var aniListId = request.AniListId
+            ?? throw new ArgumentException("The request carries no AniList id.", nameof(request));
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(aniListId);
+
+        var existing = await FindTrackedAsync(series => series.AniListId == aniListId, cancellationToken);
         if (existing is not null)
         {
             logger.LogInformation(
                 "AniList series {AniListId} is already tracked as {SeriesId}; nothing written",
-                request.AniListId,
+                aniListId,
                 existing.SeriesId);
 
             return existing;
         }
 
-        var metadata = await metadataSource.GetSeriesAsync(request.AniListId, cancellationToken);
+        var metadata = await metadataSource.GetSeriesAsync(aniListId, cancellationToken);
         if (metadata is null)
         {
             return null;
         }
 
-        if (metadata.Format != request.Format)
-        {
-            // The id already determines the format, so the source wins and the
-            // response reports what was stored. Logged because the only way to
-            // get here is a client working from stale search results.
-            logger.LogWarning(
-                "Add requested {RequestedFormat} for AniList {AniListId}, which is a {SourceFormat}; storing the source's format",
-                request.Format,
-                request.AniListId,
-                metadata.Format);
-        }
+        WarnOnFormatDisagreement(request.Format, metadata.Format, MetadataSourceName.AniList, aniListId);
 
         // Fetched now rather than on first render: the shelf has to work with the
         // AniList CDN down, which means the bytes must already be local.
@@ -65,22 +61,108 @@ public sealed class SeriesCommandService(
             series.Id,
             series.Volumes.Count);
 
-        var refreshSummary = await CompleteAsync(series.Id, cancellationToken);
-
-        return new AddSeriesResponse
-        {
-            SeriesId = series.Id,
-            TitleEnglish = series.TitleEnglish,
-
-            // Re-read from the entity rather than reusing the pre-refresh values: the
-            // refresh can discover volumes AniList did not know about, and reporting the
-            // count from before it ran would be wrong the moment it does.
-            Format = series.Format,
-            VolumeCount = series.Volumes.Count,
-            AlreadyTracked = false,
-            RefreshSummary = refreshSummary,
-        };
+        return ToAddedResponse(series, await CompleteAsync(series.Id, cancellationToken));
     }
+
+    public async Task<AddSeriesResponse?> AddFromMangaUpdatesAsync(
+        AddSeriesRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var mangaUpdatesId = request.MangaUpdatesId
+            ?? throw new ArgumentException("The request carries no MangaUpdates id.", nameof(request));
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mangaUpdatesId);
+
+        // Idempotent on the MangaUpdates id, exactly as the AniList path is on its own:
+        // the unique index on the column is the backstop and this lookup is the behaviour.
+        // It matters more here than there, because a series linked to MangaUpdates by a
+        // nightly sync — never added from it — is still a hit, and adding it again would
+        // otherwise be a unique-index violation rather than a polite no-op.
+        var existing = await FindTrackedAsync(
+            series => series.MangaUpdatesId == mangaUpdatesId, cancellationToken);
+
+        if (existing is not null)
+        {
+            logger.LogInformation(
+                "MangaUpdates series {MangaUpdatesId} is already tracked as {SeriesId}; nothing written",
+                mangaUpdatesId,
+                existing.SeriesId);
+
+            return existing;
+        }
+
+        var metadata = await mangaUpdatesSource.GetSeriesAsync(mangaUpdatesId, cancellationToken);
+        if (metadata is null)
+        {
+            return null;
+        }
+
+        WarnOnFormatDisagreement(
+            request.Format, metadata.Format, MetadataSourceName.MangaUpdates, mangaUpdatesId);
+
+        var coverObjectKey = await seriesCoverCache.EnsureCachedAsync(
+            MetadataSourceName.MangaUpdates, metadata.SourceId, metadata.CoverImageUrl, cancellationToken);
+
+        var series = SeriesMetadataMapper.ToTrackedSeries(
+            metadata, timeProvider.GetUtcNow(), coverObjectKey);
+
+        dbContext.Series.Add(series);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Added {TitleEnglish} ({Format}) from MangaUpdates {MangaUpdatesId} as {SeriesId} "
+            + "with {VolumeCount} volumes from status {RawStatus}",
+            series.TitleEnglish,
+            series.Format,
+            metadata.SourceId,
+            series.Id,
+            series.Volumes.Count,
+            metadata.RawStatus);
+
+        return ToAddedResponse(series, await CompleteAsync(series.Id, cancellationToken));
+    }
+
+    /// <summary>
+    /// The external id already determines the format, so the source wins and the response
+    /// reports what was stored.
+    /// </summary>
+    // Logged because the only way to get here is a client working from stale search
+    // results — worth knowing about, not worth refusing over.
+    private void WarnOnFormatDisagreement(
+        Format requested,
+        Format stored,
+        MetadataSourceName source,
+        long sourceId)
+    {
+        if (requested == stored)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Add requested {RequestedFormat} for {Source} {SourceId}, which is a {SourceFormat}; "
+            + "storing the source's format",
+            requested,
+            source,
+            sourceId,
+            stored);
+    }
+
+    /// <param name="refreshSummary">What the refresh that ran alongside the add managed.</param>
+    // The counts are re-read from the entity rather than from the metadata: the refresh can
+    // discover volumes the source did not know about, and reporting the number from before
+    // it ran would be wrong the moment it does.
+    private static AddSeriesResponse ToAddedResponse(Series series, string? refreshSummary) => new()
+    {
+        SeriesId = series.Id,
+        TitleEnglish = series.TitleEnglish,
+        Format = series.Format,
+        VolumeCount = series.Volumes.Count,
+        AlreadyTracked = false,
+        RefreshSummary = refreshSummary,
+    };
 
     /// <summary>
     /// Everything a newly added series needs beyond AniList: the ISBNs the shelf already
@@ -214,14 +296,19 @@ public sealed class SeriesCommandService(
     }
 
     /// <summary>
-    /// Idempotency as a read, not a conflict. The unique index on
-    /// <c>AniListId</c> is the backstop; this lookup is the behaviour, and it
-    /// also spares AniList a request for a series already on the shelf.
+    /// Idempotency as a read, not a conflict. The unique indexes on the two external id
+    /// columns are the backstop; this lookup is the behaviour, and it also spares the
+    /// source a request for a series already on the shelf.
     /// </summary>
-    private Task<AddSeriesResponse?> FindTrackedAsync(int aniListId, CancellationToken cancellationToken) =>
+    /// <param name="isTheSameSeries">
+    /// Which external id identifies it — one predicate per source, one projection for both.
+    /// </param>
+    private Task<AddSeriesResponse?> FindTrackedAsync(
+        Expression<Func<Series, bool>> isTheSameSeries,
+        CancellationToken cancellationToken) =>
         dbContext.Series
             .AsNoTracking()
-            .Where(series => series.AniListId == aniListId)
+            .Where(isTheSameSeries)
             .Select(series => new AddSeriesResponse
             {
                 SeriesId = series.Id,

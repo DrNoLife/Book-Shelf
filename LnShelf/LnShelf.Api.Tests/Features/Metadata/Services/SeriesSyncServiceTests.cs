@@ -164,7 +164,7 @@ public sealed class SeriesSyncServiceTests
     }
 
     [Fact]
-    public async Task RunAsync_ASeriesWithNoAniListId_IsSkipped()
+    public async Task RunAsync_ASeriesWithNoExternalIdAtAll_IsSkipped()
     {
         await using var dbContext = CreateDbContext();
 
@@ -173,6 +173,7 @@ public sealed class SeriesSyncServiceTests
         {
             Id = Guid.CreateVersion7(),
             AniListId = null,
+            MangaUpdatesId = null,
             TitleEnglish = "Omniscient Reader's Viewpoint",
             Format = Format.WebNovel,
             PublicationStatus = PublicationStatus.Ongoing,
@@ -185,6 +186,31 @@ public sealed class SeriesSyncServiceTests
         run.SeriesRefreshed.ShouldBe(0);
         await matcher.DidNotReceive().MatchAsync(
             Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunAsync_ASeriesAddedFromMangaUpdatesWithNoAniListId_IsStillSwept()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // What a series added while AniList was disabled looks like: linked to the release
+        // source, and with no AniList id ever. Under the old "AniListId != null" sweep it
+        // got its one refresh on add and was then never touched again — which would have
+        // been a silent hole, since the volume enrichment it depends on runs from here.
+        dbContext.Series.Add(new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = null,
+            MangaUpdatesId = MangaUpdatesId,
+            TitleEnglish = "Fremd Torturchen",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Completed,
+        });
+        await dbContext.SaveChangesAsync();
+
+        var run = await CreateService(dbContext, Linked(volumeCount: 9)).RunAsync(CancellationToken.None);
+
+        run.SeriesRefreshed.ShouldBe(1);
     }
 
     [Fact]

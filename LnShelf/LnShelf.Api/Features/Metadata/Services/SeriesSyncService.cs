@@ -21,9 +21,15 @@ public sealed class SeriesSyncService(
 
         // Sync skips any series without an external id (feature-spec §4.2) — a
         // manual WebNovel entry has nothing to refresh against.
+        //
+        // *Either* external id counts. It used to be the AniList one alone, which was the
+        // same test back when every series arrived from AniList; a series added from
+        // MangaUpdates while AniList was disabled has no AniList id at all, and under the
+        // narrower filter would have got its one refresh on add and then never been swept
+        // again.
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
-            .Where(candidate => candidate.AniListId != null)
+            .Where(candidate => candidate.AniListId != null || candidate.MangaUpdatesId != null)
             .OrderBy(candidate => candidate.TitleEnglish)
             .ToListAsync(cancellationToken);
 

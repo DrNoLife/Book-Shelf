@@ -12,6 +12,9 @@ public sealed class EnrichmentVerificationConsoleReportTests
         var lines = EnrichmentVerificationConsoleReport.Render(Report(Passing()));
         var text = string.Join(Environment.NewLine, lines);
 
+        // Which catalogue resolved the series, beside the id it resolved to.
+        text.ShouldContain("[AniList 94846]");
+
         text.ShouldContain("title ok");
         text.ShouldContain("description ok (34 chars)");
         text.ShouldContain("cover ok (600x900)");
@@ -75,6 +78,47 @@ public sealed class EnrichmentVerificationConsoleReportTests
         text.ShouldContain("VERDICT: PASS");
     }
 
+    [Fact]
+    public void Render_ASeriesResolvedThroughTheFallback_NamesMangaUpdatesInItsIdentity()
+    {
+        // A run through the fallback can pass every threshold — the per-volume pipeline does
+        // not care where the title came from — so the source is what stops a degraded PASS
+        // from reading exactly like a healthy one.
+        var throughFallback = Passing() with
+        {
+            Source = MetadataSourceName.MangaUpdates,
+            ExternalId = 17992364412,
+            SeriesLevel = Passing().SeriesLevel! with { Title = "Fremd Torturchen" },
+        };
+
+        var text = string.Join(
+            Environment.NewLine, EnrichmentVerificationConsoleReport.Render(Report(throughFallback)));
+
+        text.ShouldContain("Fremd Torturchen [MangaUpdates 17992364412]");
+        text.ShouldContain("VERDICT: PASS");
+    }
+
+    [Fact]
+    public void Render_ASeriesThatResolvedToNothing_StillNamesTheSourceThatWasAsked()
+    {
+        // "MangaUpdates has never heard of it" and "AniList has never heard of it" are
+        // different facts, and during an AniList outage only one of them is possible.
+        var unresolved = new SeriesVerification
+        {
+            SearchTerm = "86 eighty six",
+            Format = Format.LightNovel,
+            Source = MetadataSourceName.MangaUpdates,
+            VolumeCountGround = "none (the series was never resolved)",
+            Failure = "the search returned no LightNovel.",
+            Passed = false,
+        };
+
+        var text = string.Join(
+            Environment.NewLine, EnrichmentVerificationConsoleReport.Render(Report(unresolved)));
+
+        text.ShouldContain("86 eighty six [MangaUpdates]");
+    }
+
     private static EnrichmentVerificationReport Report(SeriesVerification series) =>
         new() { Format = Format.LightNovel, Series = [series] };
 
@@ -82,6 +126,7 @@ public sealed class EnrichmentVerificationConsoleReportTests
     {
         SearchTerm = "Saga of Tanya the Evil",
         Format = Format.LightNovel,
+        Source = MetadataSourceName.AniList,
         ExternalId = 94846,
         SeriesLevel = new SeriesLevelVerification
         {

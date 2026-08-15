@@ -32,3 +32,15 @@ public sealed class AniListGraphQlError
     public string? Message { get; set; }
     public int? Status { get; set; }
 }
+
+/// <summary>
+/// The errors half of the envelope on its own, for a response whose data half cannot
+/// be typed.
+/// </summary>
+// A failed request is read with this rather than with AniListGraphQlResponse&lt;TData&gt;:
+// when AniList answers 403 with `{"errors":[…],"data":null}` there is no TData to name,
+// and the caller only wants the message anyway.
+public sealed class AniListGraphQlErrorEnvelope
+{
+    public List<AniListGraphQlError>? Errors { get; set; }
+}

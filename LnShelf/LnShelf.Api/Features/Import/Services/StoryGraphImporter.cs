@@ -139,12 +139,12 @@ public sealed class StoryGraphImporter(
         // is the AniList id, so this same cover becomes the series' cover the
         // moment this candidate is chosen.
         var coverObjectKey = await coverCache.EnsureCachedAsync(
-            candidate.Result.ExternalId, candidate.Result.CoverImageUrl, cancellationToken);
+            candidate.Result.AniListId, candidate.Result.CoverImageUrl, cancellationToken);
 
         return new ImportCandidate
         {
             Id = Guid.CreateVersion7(),
-            AniListId = candidate.Result.ExternalId,
+            AniListId = candidate.Result.AniListId,
             TitleEnglish = candidate.Result.TitleEnglish,
             TitleRomaji = candidate.Result.TitleRomaji,
             TitleNative = candidate.Result.TitleNative,
