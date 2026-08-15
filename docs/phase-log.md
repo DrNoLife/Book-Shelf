@@ -6,6 +6,33 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 6.2 — deployed, and proven where it runs (2026-08-15)
+
+`.\deploy.ps1` against the real server: both images built, one tarball shipped,
+stack up on `neko@192.0.2.10:/home/neko/docker/lnshelf` — **69 seconds**
+from invocation to the health check passing through nginx on
+`http://192.0.2.10:8091`.
+
+The production instance was then proven the same way the dev one was, not
+assumed from it:
+
+- `GET /api/changelog` → `currentVersion: "0.13.0"`, all five entries.
+- The owner's core scenario, on the deployed app: `POST /api/series`
+  (Tanya, AniList 94846) → **201 in 4.5 seconds**, refresh summary
+  "14 volumes discovered · 14 confirmed in print · 14 dates written ·
+  14 volume blurbs written · 14 volume covers cached".
+- Read back through the proxy: series synopsis 629 chars, volumes
+  **14/14 covered · 14/14 blurbed · 14/14 dated**, and a real cover served
+  from the server's own MinIO — `200 image/jpeg`, 588 KB.
+- The server keeps Hearth's conventions: per-app dir, server-only override
+  file possible, only port 8091 published (checked free before shipping;
+  Hearth's 8090/5432/9000/9001 untouched).
+
+The Tanya series was left on the deployed shelf as its first entry — it is
+one of the owner's own named test series, and deleting it is one click.
+
+---
+
 ## v0.13.0 — fits in a pocket (2026-08-15)
 
 The mobile/tablet pass. `resize_window` proved a no-op on the dev machine
