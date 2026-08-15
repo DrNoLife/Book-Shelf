@@ -6,6 +6,66 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 3.12 — blurbs in the popover, titles on, and what the browser caught (2026-08-15)
+
+The client-side half of the book-details work, verified in the running app.
+
+- **The volume popover carries the volume's blurb** — muted body text between the
+  header and the read rows, clamped at six lines (a scroll region inside a menu
+  that closes on focus-out is fiddly, and the popover's height decides its
+  placement). The menu widens 208 → 248px only when prose exists, and declares
+  its taller nominal size to `PopoverPlacer` — the placer positions before
+  render, so a taller menu has to say so. A tile mid-grid was photographed
+  flipping above for exactly that reason.
+- **`ShowVolumeTitles` defaults to true** now that 89 of 94 volumes carry one
+  (store default migrated too). **[flagged]** — and the live pass immediately
+  argued back: Apple's titles arrive series-prefixed, so a ~100px caption
+  ellipsis eats the distinctive half. Phase 3.13 (in flight) moves subtitle
+  extraction to the write boundary rather than reverting the default.
+- **A render-breaking bug, found only by looking**: a Razor comment placed
+  *between the attributes* of the synopsis More/Less button is emitted as an
+  attribute name at runtime — `setAttribute('@* … *@')` throws, the render
+  batch aborts, and every series page stopped after the hero with the yellow
+  error bar. Moved the comment; swept every `.razor` in the client for the same
+  shape (this was the only one).
+- **The owner's core scenario, driven through the real UI and measured**:
+  delete Slime, re-add it from search. The add alone delivered
+  **23/23 covers, 22/23 titles, 22/23 blurbs, 22/23 dates** — the catalogue
+  pass covers a whole series in one budget unit, and the follow-up sync had
+  nothing left to add. Vol 23 has no Apple record and falls back to the series
+  cover. The page-control delete could not be automated (the native `confirm`
+  froze the CDP session — known tooling limit, deleted via curl instead);
+  everything else was clicked, not curled.
+- Screenshots in the session scratchpad: library before/after, 86 with titles
+  on, the expanded synopsis, both popover blurbs, the flip-above case, and the
+  list view with titles.
+
+## enrichment-verify — fetching is now a claim the shelf can prove (2026-08-15)
+
+The owner's requirement stated plainly: a system that checks the details can
+actually be fetched, repeatably. `dotnet run --project LnShelf/LnShelf.Api --
+enrichment-verify` runs the REAL pipeline — real seams, real network — against
+three canary series (Tanya, 86, Slime by default; `--series`/`--format` to
+vary), building an in-memory shelf with **no ISBNs on purpose** (the
+freshly-added-series case) and a verifying cover cache that downloads and
+decodes every image without storing a byte. Zero writes, proven byte-identical
+across three runs against both Postgres and MinIO.
+
+- Reports per series: series-level title/description/cover (each downloaded
+  and decoded, dimensions printed), volume-level titled/described/covered/dated
+  n/N, the ground the volume count came from, and PASS/FAIL against thresholds
+  (series needs all three; volumes ≥80% titled/described/covered, ≥70% dated).
+  Exit code 0/1 — cron- and CI-fit.
+- Live: **all three canaries PASS** — Tanya 14/14 on every dimension, 86 full
+  marks with 13/14 dated (the future-date conflict rule withholding, correctly),
+  Slime 22/23 (vol 23 refused by the medium bar). A nonsense series name
+  demonstrated the FAIL path and exit code 1.
+- ASCII `ok`/`MISSING` over ✓/✗, deliberately: the Windows console code page
+  renders U+2713 as `?`, and a verification report that prints `?` where it
+  means "yes" is worse than a plain word.
+
+---
+
 ## v0.12.0 — a version number, and a changelog page to put it on (2026-08-15)
 
 Copied from the Hearth project's convention, adapted to feature slices:
