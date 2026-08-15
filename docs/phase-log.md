@@ -6,6 +6,33 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## subtitle-backfill — the names Open Library still remembers (2026-08-15)
+
+The follow-up 3.13 flagged. Apple Books answers `""` for every volume title
+(0 of 282 live rows carry a subtitle), `""` is a resolved answer the nightly
+pass rightly never re-asks, and the 3.13 repair had nulled the real Open
+Library subtitles. `subtitle-backfill` asks the by-ISBN seam once per
+ISBN-bearing volume whose title is empty and writes only a non-empty subtitle
+back — the `null → "" → subtitle` upgrade `ApplyTitle` already permits, never
+the reverse.
+
+- Live: **asked 65, subtitled 28, failed 0** — 86 vols 2–11 ("Run Through the
+  Battlefront (Start)", "Under Pressure", "Mist"), Overlord 2–9 and 15 ("The
+  Bloody Valkyrie"), Tanya 1–9 ("Deus lo Vult", "In Omnia Paratus"). Second
+  run asked 40, wrote nothing new. Torture Princess and Bookworm genuinely
+  have no subtitles in the catalogue.
+- **A shared write-path bug, found by running it**: Open Library puts the
+  medium marker *between* the number and the subtitle ("…, Vol. 8 (light
+  Novel): In Omnia Paratus"), which the extractor only stripped when trailing —
+  three junk subtitles shipped in the first run and were re-written correctly
+  after the fix. The marker rule is position-independent now, and a wholly
+  parenthesised leftover counts as annotation, not subtitle. 678 tests pass.
+- Idempotency caveat, documented rather than engineered away: volumes whose
+  record has no subtitle stay `""` and are re-asked on a later manual run —
+  a marker state for a twice-run command would be data pollution.
+
+---
+
 ## Phase 3.13 — the details, made presentable (2026-08-15)
 
 Three data-quality defects from the 3.12 browser pass, each fixed on captured
