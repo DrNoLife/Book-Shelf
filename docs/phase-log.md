@@ -6,6 +6,63 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Phase 6.1 — the deployment stack (2026-08-15)
+
+Two images, one published port, one script — modeled on the Hearth project's
+deploy, adapted to this app's nginx-in-front architecture.
+
+- **`Dockerfile.api`** (sdk → aspnet multi-stage, restore-layer caching) and
+  **`Dockerfile.client`** (publish → `nginx:alpine`). Both build from the repo
+  root because `LnShelf.Api.csproj` embeds `docs/seed-library.json` as a linked
+  resource a narrower context cannot reach.
+- **`nginx.conf`** serves the WASM bundle (SPA fallback, `gzip_static`,
+  immutable caching for the fingerprinted `_framework` assets, no-cache for
+  `index.html`) and proxies `/api/` to the api container — resolved at request
+  time (`resolver 127.0.0.11`), because a literal upstream would strand the
+  proxy against a stale IP whenever a deploy replaces only the api container.
+- **`docker-compose.production.yml`** publishes exactly one host port — 8091,
+  the nginx front door. Postgres, MinIO and the API stay on the compose
+  network; the server also runs Hearth, which already owns 8090/5432/9000/9001.
+  `TZ=Europe/Copenhagen` on the api container, because `SyncOptions.Hour` is
+  local time and a container defaults to UTC.
+- **`deploy.ps1`**, Hearth's shape exactly: build both images → `docker save`
+  one tarball → `scp` it and the compose file to
+  `neko@192.0.2.10:/home/neko/docker/lnshelf` → `docker load`,
+  `compose up -d --no-build`, prune → poll `/` and `/api/library` for 200.
+- **Verified locally, not assumed**: both images built Release with warnings as
+  errors; a full stack under `-p lnshelf-prod-test` served the WASM shell,
+  `/api/library` (fresh empty DB through 12 startup migrations), the SPA
+  fallback, and gzip-compressed framework assets; Chrome booted the app with
+  zero console messages; teardown left the dev containers untouched.
+- **Not yet run against the server** — that is deliberately the last step of
+  this phase group, after the remaining feature work lands.
+
+---
+
+## Phase 3.9 — the series can finally say what it is about (2026-08-15)
+
+`Series.Description`, fetched from the AniList `description` field the detail
+query had never asked for.
+
+- Sanitized at the edge (`AniListDescriptionSanitizer`): `<br>` → newline, tags
+  stripped, entities decoded last (order is load-bearing — decoding first lets
+  a literal `&lt;` swallow the sentence), 3+ blank lines collapsed. The
+  `(Source: …)` attribution is kept.
+- Persisted on add; **healed on sync** — `SeriesRefresher` fetches the
+  description for any series that has none, so the existing shelf fills itself
+  on the next run. Runs before the unmatched-series early return, so a series
+  MangaUpdates cannot link still gets its synopsis. A failed AniList call logs
+  a warning and never fails the refresh.
+- Rendered in the series hero: paragraphs split on blank lines, clamped to four
+  lines past ~500 characters with a quiet More/Less toggle. Expansion state is
+  keyed on the series id so navigating between series does not inherit it.
+- 554 tests pass (+29). Migration `SeriesDescription` applied against the dev
+  database. One fixture was hand-amended rather than re-captured (the AniList
+  media fixture predates the field) — the shape is AniList's real one, the
+  prose is not verbatim; flagged in `AniListFixtures.cs`.
+
+---
+
 ## Phase 3.8 — the search query was the bug (2026-07-31)
 
 Slime enriched worse than every other series and the review file said five of its volumes
