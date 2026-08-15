@@ -1,0 +1,102 @@
+# LnShelf production stack (feature-spec §9). Four services, one published port.
+#
+#   deploy.ps1 builds both images locally, ships them, and runs
+#   `docker compose up -d --no-build` on the server against this file.
+#
+# The server also runs Hearth, which already owns host ports 8090, 5432, 9000,
+# 9001 and 6379. Nothing here is published except the client on 8091 — postgres,
+# minio and the API talk to each other over the compose network only, which is
+# also what §2 asks for on its own merits.
+name: lnshelf
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lnshelf
+      POSTGRES_USER: lnshelf
+      # LAN-only stack with no published port, so the compose default is a
+      # placeholder rather than a secret. The server's docker-compose.override.yml
+      # is the place to replace this (and the MinIO pair below) — deploy.ps1 never
+      # overwrites that file.
+      POSTGRES_PASSWORD: lnshelf
+    volumes:
+      - lnshelf-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lnshelf -d lnshelf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Cover storage behind ICoverStore. The bucket is created by MinioCoverStore on
+  # first use, so a cold start needs no provisioning step.
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: lnshelf
+      MINIO_ROOT_PASSWORD: REMOVED-OLD-SECRET
+    volumes:
+      - lnshelf-minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Pinned image tag: deploy.ps1 builds and ships this tag, then runs
+  # `up -d --no-build` to consume it. The build block is only for a local
+  # `docker compose -f docker-compose.production.yml build` — the server has no
+  # source tree.
+  api:
+    image: lnshelf-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Db: "Host=postgres;Port=5432;Database=lnshelf;Username=lnshelf;Password=lnshelf"
+      # Covers:* binds to CoverStoreOptions. Endpoint is S3 style — host and port,
+      # no scheme; UseSsl carries the scheme instead.
+      Covers__Endpoint: "minio:9000"
+      Covers__UseSsl: "false"
+      Covers__AccessKey: "lnshelf"
+      Covers__SecretKey: "REMOVED-OLD-SECRET"
+      Covers__Bucket: "lnshelf-covers"
+      # The nightly sweep is the reason this is deployed at all, so unlike
+      # development it is on. Hour is local time, hence TZ — the container would
+      # otherwise be UTC and sync at 06:00 local in summer.
+      Sync__Enabled: "true"
+      Sync__Hour: "4"
+      TZ: "Europe/Copenhagen"
+    # No healthcheck: the aspnet runtime image ships no curl or wget, and adding
+    # one to the image to satisfy compose is not worth it. deploy.ps1 polls
+    # /api/library through the client instead, which proves more anyway.
+
+  # The only public face: nginx serves the WASM bundle and proxies /api/* to the
+  # API, so the browser sees one origin and the API needs no CORS (§2).
+  client:
+    image: lnshelf-client:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8091:80"
+
+# Auth (§7) is not built yet — this stack is LAN-only until it is.
+volumes:
+  lnshelf-pgdata:
+  lnshelf-minio:

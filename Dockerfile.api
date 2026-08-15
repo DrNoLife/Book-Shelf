@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# Multi-stage build for LnShelf.Api (feature-spec §9).
+#
+# The build context is the repository root, not LnShelf/. LnShelf.Api.csproj
+# embeds ../../docs/seed-library.json as a linked resource, so a context rooted
+# at the solution folder cannot supply everything the publish needs. Both
+# Dockerfiles therefore sit at the root beside the compose file they belong to.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Restore first (props + csproj only) so the package layer survives source edits.
+# The Api references Shared and nothing else; the Client never enters this image.
+COPY LnShelf/Directory.Build.props           LnShelf/
+COPY LnShelf/LnShelf.Shared/LnShelf.Shared.csproj LnShelf/LnShelf.Shared/
+COPY LnShelf/LnShelf.Api/LnShelf.Api.csproj  LnShelf/LnShelf.Api/
+RUN dotnet restore LnShelf/LnShelf.Api/LnShelf.Api.csproj
+
+COPY LnShelf/ LnShelf/
+# The embedded development fixture. Committed under docs/ so it has one home;
+# the csproj links it rather than keeping a copy that could drift.
+COPY docs/seed-library.json docs/
+RUN dotnet publish LnShelf/LnShelf.Api/LnShelf.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app ./
+# Plain HTTP only: TLS terminates at the reverse proxy and nginx reaches the API
+# over the compose network (feature-spec §2).
+ENV ASPNETCORE_HTTP_PORTS=8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "LnShelf.Api.dll"]

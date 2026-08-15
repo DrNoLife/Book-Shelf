@@ -1,0 +1,118 @@
+<#
+.SYNOPSIS
+  One-command deploy of LnShelf to the local server.
+
+.DESCRIPTION
+  Builds both Docker images locally (fast, layer-cached), ships them to the server over the LAN in
+  one tarball, and restarts the stack there — no source upload and no .NET build on the server. The
+  server keeps its own docker-compose.override.yml (credentials, anything host-specific); only the
+  base docker-compose.yml and the images are sent.
+
+  Two images, because the client and the API are separate deployables (feature-spec §2): nginx
+  serves the WASM bundle and proxies /api/* to the API container. Only the client publishes a host
+  port — 8091, since the same server's Hearth stack already owns 8090, 5432, 9000, 9001 and 6379.
+
+  Prerequisites (one-time):
+    - Docker Desktop running locally.
+    - SSH key auth to the server (key at $Key).
+
+.EXAMPLE
+  ./deploy.ps1
+#>
+[CmdletBinding()]
+param(
+    [string]$Server    = '192.0.2.10',
+    [string]$User      = 'neko',
+    [string]$RemoteDir = '/home/neko/docker/lnshelf',
+
+    # A project-specific key if one has been made, otherwise the server's existing Hearth key —
+    # same host, same account, so it already grants what this needs.
+    [string]$Key = $(
+        $projectKey = "$env:USERPROFILE\.ssh\id_lnshelf"
+        if (Test-Path $projectKey) { $projectKey } else { "$env:USERPROFILE\.ssh\id_hearth" }
+    ),
+
+    [string]$Url       = 'http://192.0.2.10:8091',
+    [string]$ApiTag    = 'lnshelf-api:latest',
+    [string]$ClientTag = 'lnshelf-client:latest'
+)
+
+$ErrorActionPreference = 'Stop'
+Set-Location -Path $PSScriptRoot   # repo root (both Dockerfiles + the compose file live here)
+
+$target  = "$User@$Server"
+$sshOpts = @('-i', $Key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10')
+
+function Invoke-Remote([string]$Command) {
+    & ssh @sshOpts $target $Command
+    if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE): $Command" }
+}
+
+# Polls until the endpoint answers 200 or the attempts run out. Startup is not instant: migrations
+# apply on boot, and nginx has to see the API resolve.
+function Wait-ForHttpOk([string]$Uri, [int]$Attempts = 20, [int]$DelaySeconds = 3) {
+    foreach ($attempt in 1..$Attempts) {
+        try {
+            $response = Invoke-WebRequest -Uri $Uri -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -eq 200) { return $true }
+        }
+        catch {
+            # Connection refused / 502 while the stack comes up. Keep waiting.
+        }
+        Start-Sleep -Seconds $DelaySeconds
+    }
+    return $false
+}
+
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+Write-Host '==> Building images locally…' -ForegroundColor Cyan
+& docker build -t $ApiTag -f Dockerfile.api .
+if ($LASTEXITCODE -ne 0) { throw 'docker build (api) failed.' }
+& docker build -t $ClientTag -f Dockerfile.client .
+if ($LASTEXITCODE -ne 0) { throw 'docker build (client) failed.' }
+
+# One tarball for both images: they share the same base layers, so saving them together ships those
+# layers once instead of twice.
+$tar = Join-Path $env:TEMP 'lnshelf-img.tar'
+Write-Host '==> Saving images to a tarball…' -ForegroundColor Cyan
+& docker save $ApiTag $ClientTag -o $tar
+if ($LASTEXITCODE -ne 0) { throw 'docker save failed.' }
+$sizeMb = [math]::Round((Get-Item $tar).Length / 1MB, 1)
+Write-Host "    image tarball: $sizeMb MB"
+
+try {
+    Write-Host '==> Uploading images + compose to server…' -ForegroundColor Cyan
+    Invoke-Remote "mkdir -p '$RemoteDir'"
+    & scp @sshOpts $tar "${target}:$RemoteDir/lnshelf-img.tar"
+    if ($LASTEXITCODE -ne 0) { throw 'scp (images) failed.' }
+    # The server runs it as the plain docker-compose.yml of that directory, so its own
+    # docker-compose.override.yml layers on top without any extra -f arguments.
+    & scp @sshOpts 'docker-compose.production.yml' "${target}:$RemoteDir/docker-compose.yml"
+    if ($LASTEXITCODE -ne 0) { throw 'scp (compose) failed.' }
+
+    Write-Host '==> Loading images + restarting the stack…' -ForegroundColor Cyan
+    Invoke-Remote "cd '$RemoteDir' && docker load -i lnshelf-img.tar && rm -f lnshelf-img.tar && docker compose up -d --no-build && docker image prune -f >/dev/null 2>&1 || true; echo DEPLOYED"
+}
+finally {
+    Remove-Item $tar -ErrorAction SilentlyContinue
+}
+
+Write-Host '==> Verifying…' -ForegroundColor Cyan
+# The shell first — nginx serving index.html. Then the library through the proxy, which is the only
+# check that proves all three of nginx, the API and Postgres are actually talking.
+$shellOk = Wait-ForHttpOk -Uri $Url
+$apiOk   = $shellOk -and (Wait-ForHttpOk -Uri "$Url/api/library" -Attempts 10)
+
+$stopwatch.Stop()
+$seconds = $stopwatch.Elapsed.TotalSeconds
+
+if ($shellOk -and $apiOk) {
+    Write-Host ("==> Deployed in {0:n0}s. {1} is up and the library reads through the proxy. Hard-refresh the browser (cached index.html)." -f $seconds, $Url) -ForegroundColor Green
+}
+elseif ($shellOk) {
+    Write-Warning ("The shell at {0} is up, but {0}/api/library did not return 200. Check the api container: ssh {1} 'cd {2} && docker compose logs api --tail 50'." -f $Url, $target, $RemoteDir)
+}
+else {
+    Write-Warning ("Images shipped and the stack restarted, but {0} did not return 200 yet. Give it a few seconds (migrations run on startup), then hard-refresh. If it stays down: ssh {1} 'cd {2} && docker compose ps'." -f $Url, $target, $RemoteDir)
+}

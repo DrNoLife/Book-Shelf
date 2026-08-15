@@ -1,0 +1,15 @@
+# Keep the Docker build context lean — the SDK stage restores and builds from
+# source, so nothing that a local build produced belongs in the context.
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+.git/
+.github/
+.gitignore
+.claude/
+.research/
+# Development settings are never right in a container, and leaving the client's
+# copy out keeps the dev API base address (http://localhost:5080/) from shipping
+# inside the public WASM bundle. Both files are globbed, so their absence is fine.
+**/appsettings.Development.json

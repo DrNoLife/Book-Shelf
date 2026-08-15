@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1
+# Multi-stage build for LnShelf.Client (feature-spec §9): the SDK publishes the
+# Blazor WASM bundle, nginx serves it and proxies /api/* to the API container.
+# No .NET runtime survives into the final image — it is static files and nginx.
+#
+# Build context is the repository root; see Dockerfile.api for why.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY LnShelf/Directory.Build.props                    LnShelf/
+COPY LnShelf/LnShelf.Shared/LnShelf.Shared.csproj     LnShelf/LnShelf.Shared/
+COPY LnShelf/LnShelf.Client/LnShelf.Client.csproj     LnShelf/LnShelf.Client/
+RUN dotnet restore LnShelf/LnShelf.Client/LnShelf.Client.csproj
+
+COPY LnShelf/ LnShelf/
+RUN dotnet publish LnShelf/LnShelf.Client/LnShelf.Client.csproj -c Release -o /publish --no-restore
+
+FROM nginx:alpine AS runtime
+# The publish output's wwwroot is the whole site: index.html, _framework/, the
+# vendored fonts and css. Everything else in /publish is build residue.
+COPY --from=build /publish/wwwroot /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
