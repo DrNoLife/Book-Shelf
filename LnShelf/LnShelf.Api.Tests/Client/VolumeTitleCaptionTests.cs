@@ -16,22 +16,22 @@ public sealed class VolumeTitleCaptionTests
     [Fact]
     public void ToVolume_AMixOfTitledAndUntitledVolumes_CarriesEachOnesOwnAnswer()
     {
-        // The shape the shelf actually has after one enrichment run: some volumes' ISBNs
-        // resolved to a record with a title, some had no ISBN, some had a record with no
-        // usable title. All three in one series.
+        // The shape the shelf actually has after one enrichment run: some volumes resolved
+        // to a record with a subtitle, some were named and have none of their own, some
+        // nothing has reached yet. All three in one series.
         var series = Series(
-            Volume(1, title: "Overlord, Volume 1: The Undead King"),
+            Volume(1, title: "The Undead King"),
             Volume(2, title: null),
-            Volume(3, title: "Overlord, Volume 3: The Bloody Valkyrie"),
-            Volume(4, title: null));
+            Volume(3, title: "The Bloody Valkyrie"),
+            Volume(4, title: string.Empty));
 
         var volumes = SeriesDetailProjection.ToDetail(series, Today).Volumes;
 
         volumes.Select(volume => volume.Title).ShouldBe(
         [
-            "Overlord, Volume 1: The Undead King",
+            "The Undead King",
             null,
-            "Overlord, Volume 3: The Bloody Valkyrie",
+            "The Bloody Valkyrie",
             null,
         ]);
     }
@@ -42,6 +42,15 @@ public sealed class VolumeTitleCaptionTests
         // Null, not "" and not "Volume 2": the caption prints what it is given, and an
         // invented title is the one thing this feature must never produce.
         SeriesDetailProjection.ToVolume(Volume(2, title: null), Today).Title.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ToVolume_AVolumeNamedWithNoSubtitle_ReachesTheClientAsNoTitleAtAll()
+    {
+        // The three-state column collapses to two on the wire. "" is a fact enrichment
+        // needs — "asked, and there is no subtitle" — and a caption has nothing to do with
+        // it, so the client sees the same null it sees for an unreached volume.
+        SeriesDetailProjection.ToVolume(Volume(2, title: string.Empty), Today).Title.ShouldBeNull();
     }
 
     [Fact]

@@ -65,7 +65,13 @@ public sealed class EnrichmentVerificationService(
     // So 80% is not "most of them work"; it is a fifth of the shelf silently going missing,
     // which is a regression worth a red exit code. Dates get 70% because they are the one
     // field the conflict rule is allowed to refuse.
-    public const int MinimumTitledPercent = 80;
+    //
+    // "Matched" replaced "titled" as the bar once titles began storing a volume's subtitle
+    // rather than the record's whole name. Whether a volume *has* a subtitle is the
+    // publisher's business — Slime has none for any of its twenty-three — so a bar on it
+    // would fail a healthy pipeline. Whether the catalogue named the volume at all is the
+    // thing that was ever being measured, and that is what this counts.
+    public const int MinimumMatchedPercent = 80;
     public const int MinimumDescribedPercent = 80;
     public const int MinimumCoveredPercent = 80;
     public const int MinimumDatedPercent = 70;
@@ -316,6 +322,7 @@ public sealed class EnrichmentVerificationService(
         ArgumentNullException.ThrowIfNull(covers);
 
         var total = 0;
+        var matched = 0;
         var titled = 0;
         var described = 0;
         var covered = 0;
@@ -325,7 +332,14 @@ public sealed class EnrichmentVerificationService(
         {
             total++;
 
+            // Null against empty, which is the whole point of Volume.Title's three states:
+            // the catalogue naming a volume that has no subtitle is a hit, not a miss.
             if (volume.Title is not null)
+            {
+                matched++;
+            }
+
+            if (!string.IsNullOrEmpty(volume.Title))
             {
                 titled++;
             }
@@ -351,6 +365,7 @@ public sealed class EnrichmentVerificationService(
         return new VolumeLevelVerification
         {
             Total = total,
+            Matched = matched,
             Titled = titled,
             Described = described,
             Covered = covered,
@@ -369,7 +384,7 @@ public sealed class EnrichmentVerificationService(
     public static bool Judge(SeriesLevelVerification? seriesLevel, VolumeLevelVerification? volumeLevel) =>
         seriesLevel is { HasTitle: true, HasDescription: true, HasCover: true }
         && volumeLevel is not null
-        && Meets(volumeLevel.Titled, volumeLevel.Total, MinimumTitledPercent)
+        && Meets(volumeLevel.Matched, volumeLevel.Total, MinimumMatchedPercent)
         && Meets(volumeLevel.Described, volumeLevel.Total, MinimumDescribedPercent)
         && Meets(volumeLevel.Covered, volumeLevel.Total, MinimumCoveredPercent)
         && Meets(volumeLevel.Dated, volumeLevel.Total, MinimumDatedPercent);

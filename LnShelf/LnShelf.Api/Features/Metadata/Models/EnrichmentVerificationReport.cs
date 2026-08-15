@@ -40,7 +40,23 @@ public sealed record SeriesLevelVerification
 public sealed record VolumeLevelVerification
 {
     public required int Total { get; init; }
+
+    /// <summary>
+    /// Volumes the catalogue named at all, whether or not the name carried a subtitle.
+    /// </summary>
+    // The measure of whether the pipeline reached a volume, and the one with a threshold on
+    // it. Volume.Title's three states are what make it readable: a named volume with no
+    // subtitle of its own stores "", which counts here and not under Titled.
+    public required int Matched { get; init; }
+
+    /// <summary>
+    /// Of those, the ones whose name carried a subtitle. Informational only.
+    /// </summary>
+    // Deliberately not a threshold. Whole series have no volume subtitles — every volume of
+    // That Time I Got Reincarnated as a Slime is titled only "…, Vol. N" — so a bar here
+    // would fail a pipeline that is working perfectly, on a fact about the publisher.
     public required int Titled { get; init; }
+
     public required int Described { get; init; }
     public required int Covered { get; init; }
     public required int Dated { get; init; }

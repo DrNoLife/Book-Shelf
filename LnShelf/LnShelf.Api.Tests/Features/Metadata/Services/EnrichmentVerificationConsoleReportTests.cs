@@ -15,10 +15,27 @@ public sealed class EnrichmentVerificationConsoleReportTests
         text.ShouldContain("title ok");
         text.ShouldContain("description ok (34 chars)");
         text.ShouldContain("cover ok (600x900)");
-        text.ShouldContain("titled 14/14");
+        text.ShouldContain("matched 14/14");
         text.ShouldContain("dated 13/14");
         text.ShouldContain("largest 1400x2100");
         text.ShouldContain("VERDICT: PASS -- 1 of 1 series");
+    }
+
+    [Fact]
+    public void Render_TheSubtitleCount_IsPrintedApartAndSaidToBeInformational()
+    {
+        var noSubtitles = Passing() with
+        {
+            VolumeLevel = Passing().VolumeLevel! with { Titled = 0 },
+        };
+
+        var text = string.Join(Environment.NewLine, EnrichmentVerificationConsoleReport.Render(Report(noSubtitles)));
+
+        // A series whose publisher gives its volumes no subtitles reads 0 of 14 and is
+        // working perfectly, so the line has to say that nothing is judged against it.
+        text.ShouldContain("0/14 carry a subtitle -- informational, no threshold");
+        text.ShouldNotContain("titled >=");
+        text.ShouldContain("VERDICT: PASS");
     }
 
     [Fact]
@@ -75,7 +92,8 @@ public sealed class EnrichmentVerificationConsoleReportTests
         VolumeLevel = new VolumeLevelVerification
         {
             Total = 14,
-            Titled = 14,
+            Matched = 14,
+            Titled = 9,
             Described = 14,
             Covered = 14,
             Dated = 13,

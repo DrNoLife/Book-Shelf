@@ -53,18 +53,30 @@ public sealed class Volume
     public string? Isbn { get; set; }
 
     /// <summary>
-    /// This volume's own title, when a source supplies one. Null when nothing has
-    /// enriched it, which is most volumes.
+    /// This volume's own subtitle — the part of a source's title that is not the series
+    /// and not the number. Three states, and the difference between the last two matters:
+    /// <list type="bullet">
+    /// <item><c>null</c> — no source has named this volume yet.</item>
+    /// <item><c>""</c> — a source named it and it has no subtitle of its own.</item>
+    /// <item>anything else — the subtitle, e.g. "Run Through the Battlefront (Finish)".</item>
+    /// </list>
     /// </summary>
     // Plain synced metadata, the same class of fact as ReleaseDate, so it needs no
     // special justification under the "derived states are computed, never stored" rule:
-    // it is Open Library's full_title for the edition behind Isbn, and there is nothing
-    // to derive it from.
+    // it is what a store's or a library's own title for the edition says beyond what the
+    // shelf already knows, and there is nothing to derive it from.
     //
-    // Expected to stay null far more often than not, and that is the design rather than
-    // a shortfall — light-novel lines name their volumes "Volume N", which is the number
-    // the caption already prints. The tile's Title parameter was built optional for
-    // exactly this reason and invents nothing when it is absent.
+    // The empty string is a stored answer rather than a blank. Whole series legitimately
+    // have no subtitles — every volume of That Time I Got Reincarnated as a Slime is titled
+    // only "…, Vol. N" — and without a way to record "asked, and the answer was none",
+    // fill-if-null enrichment would re-ask about those volumes on every run forever.
+    // Enrichment therefore treats "" as resolved, and SeriesDetailProjection maps it back
+    // to null on the way out, so the wire contract and the client keep seeing exactly two
+    // states: a subtitle, or nothing to print.
+    //
+    // Expected to be empty far more often than not, and that is the design rather than a
+    // shortfall — the caption already prints the number. The tile's Title parameter was
+    // built optional for exactly this reason and invents nothing when it is absent.
     public string? Title { get; set; }
 
     /// <summary>

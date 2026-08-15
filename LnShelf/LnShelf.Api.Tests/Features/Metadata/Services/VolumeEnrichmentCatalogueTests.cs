@@ -26,7 +26,11 @@ public sealed class VolumeEnrichmentCatalogueTests
             .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
 
         var volume = series.Volumes.Single();
-        volume.Title.ShouldBe("86--EIGHTY-SIX, Vol. 8 (light novel)");
+
+        // Empty, not the record's own name: the store titles this volume "…, Vol. 8 (light
+        // novel)", which is the series and the number the row already holds plus a medium
+        // marker the caption cannot use. Empty says "named, no subtitle" (Volume.Title).
+        volume.Title.ShouldBe(string.Empty);
         volume.Description.ShouldBe("A path to purpose laid with iron rails.");
         volume.ReleaseDate.ShouldBe(new DateOnly(2021, 8, 24));
         volume.CoverObjectKey.ShouldBe("volume/applebooks/abc.jpg");
@@ -116,6 +120,87 @@ public sealed class VolumeEnrichmentCatalogueTests
         series.Volumes.Single().ReleaseDate.ShouldBe(new DateOnly(2026, 12, 8));
         run.DatesMoved.ShouldBe(1);
         run.Discrepancies.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EnrichAsync_AVolumeAlreadyNamedWithNoSubtitle_IsNotAskedAboutAgain()
+    {
+        var series = Series(Volume(8, isReleased: true));
+        var volume = series.Volumes.Single();
+        volume.Title = string.Empty;
+        volume.Description = "Already written down.";
+        volume.CoverObjectKey = "volume/applebooks/abc.jpg";
+        volume.ReleaseDate = new DateOnly(2021, 8, 24);
+
+        var catalogueSource = Catalogue(Record("86--EIGHTY-SIX, Vol. 8 (light novel)"));
+
+        await CreateService(catalogueSource).EnrichAsync(
+            series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // The three-state title earning its keep. Whole series have no subtitles, and a
+        // null-means-unknown column alone would have this shelf re-asking the store about
+        // every one of their volumes for as long as it exists.
+        await catalogueSource.DidNotReceive().GetVolumesAsync(
+            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EnrichAsync_ARealSubtitleAfterTheStoreNamedTheVolume_ReplacesTheEmptyOne()
+    {
+        var series = Series(Volume(8, isReleased: true, isbn: "9781975320775"));
+
+        // The store names the volume but carries no art for this row, which is what keeps the
+        // by-ISBN pass interested in it.
+        var catalogueSource = Catalogue(new CatalogueVolume
+        {
+            SourceRecordKey = "1560603224",
+            Title = "86--EIGHTY-SIX, Vol. 8 (light novel)",
+            ReleaseDate = new DateOnly(2021, 8, 24),
+            ArtworkUrl = null,
+        });
+
+        var enrichmentSource = EnrichmentSource(new VolumeEnrichment
+        {
+            SourceRecordKey = "/books/OL1M",
+            Title = "86—EIGHTY-SIX, Vol. 8: Gun Smoke On The Water",
+            Language = EditionLanguage.English,
+        });
+
+        await CreateService(catalogueSource, enrichmentSource)
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // The one direction fill-if-null is allowed to move in, and it cannot flip back: the
+        // store is first in precedence and measurably never carries a subtitle, so without
+        // this the by-ISBN source's subtitles could never land on a volume it had named.
+        series.Volumes.Single().Title.ShouldBe("Gun Smoke On The Water");
+    }
+
+    [Fact]
+    public async Task EnrichAsync_ArtworkForAVolumeThatIsNotOutYet_IsNotCached()
+    {
+        var series = Series(Volume(14, isReleased: false));
+        var run = Run();
+        var coverCache = CoverCache();
+
+        await CreateService(
+                Catalogue(Record(
+                    "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2026, 12, 8))),
+                coverCache)
+            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+
+        // Observed on this exact record: the store's art for a volume that is not out is a
+        // typographic placeholder, and caching is fill-if-null, so the placeholder would
+        // become the shelf's permanent answer for a volume whose real cover exists later.
+        var volume = series.Volumes.Single();
+        volume.CoverObjectKey.ShouldBeNull();
+        run.VolumeCoversCached.ShouldBe(0);
+
+        await coverCache.DidNotReceive().EnsureCachedAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Uri>(), Arg.Any<CancellationToken>());
+
+        // Everything else the record says is still written. Only the art is withheld.
+        volume.ReleaseDate.ShouldBe(new DateOnly(2026, 12, 8));
+        volume.Title.ShouldBe(string.Empty);
     }
 
     [Fact]

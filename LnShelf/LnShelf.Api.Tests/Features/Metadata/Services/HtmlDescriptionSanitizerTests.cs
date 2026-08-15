@@ -79,6 +79,93 @@ public sealed class HtmlDescriptionSanitizerTests
     public void Sanitize_NothingWorthRendering_IsNull(string? description) =>
         HtmlDescriptionSanitizer.Sanitize(description).ShouldBeNull();
 
+    [Theory]
+    [InlineData("<p>First.</p><p>Second.</p>")]
+    [InlineData("<div>First.</div><div>Second.</div>")]
+    [InlineData("<h2>First.</h2>Second.")]
+    [InlineData("<ul><li>First.</li><li>Second.</li></ul>")]
+    public void Sanitize_ABlockLevelTag_IsAParagraphBoundaryRatherThanNothing(string description)
+    {
+        // Neither source emits these today, which is why they are a safety net rather than
+        // the fix for anything observed: stripped as ordinary tags they would run two
+        // paragraphs into one word, which is the whole defect this file is about.
+        HtmlDescriptionSanitizer.Sanitize(description).ShouldBe("First.\n\nSecond.");
+    }
+
+    [Fact]
+    public void Sanitize_ASentenceWeldedToTheNextParagraph_IsSplitBackApart()
+    {
+        // Apple Books' own row for 86 volume 8, verbatim. The publisher's headline and body
+        // are one string with no tag between them: Apple removed the markup and did not put
+        // anything in its place, so the missing space after the full stop is the only
+        // evidence left that a paragraph ended there.
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
+            "A PATH TO PURPOSE LAID WITH IRON RAILS.An end to the endless war-the possibility "
+            + "of stopping the Legion once and for all.");
+
+        sanitized.ShouldStartWith("A PATH TO PURPOSE LAID WITH IRON RAILS.\n\nAn end to the endless war");
+    }
+
+    [Fact]
+    public void Sanitize_AParagraphBreakInTheMiddleOfTheBlurb_IsRestoredToo()
+    {
+        // 86 volume 1, which lost two of them. This is the second, well past any headline.
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
+            "…or at least, that's what the government claims.In truth, there is no such thing "
+            + "as a bloodless war.");
+
+        sanitized.ShouldNotBeNull().ShouldContain("government claims.\n\nIn truth,");
+    }
+
+    [Theory]
+    // 86 volume 11 and Slime volume 17: an upper-case headline with no closing punctuation.
+    [InlineData(
+        "PRIDE BEFORE THE FALLIt happened all too quickly.",
+        "PRIDE BEFORE THE FALL",
+        "It happened all too quickly.")]
+    [InlineData(
+        "DAYS OF THEIR LIVESThe series's first short story collection.",
+        "DAYS OF THEIR LIVES",
+        "The series's first short story collection.")]
+    // 86 volume 3, the same loss with a sentence-case headline.
+    [InlineData(
+        "Pride is all we haveThe attack Shin foresaw has finally come to pass.",
+        "Pride is all we have",
+        "The attack Shin foresaw has finally come to pass.")]
+    public void Sanitize_AHeadlineWeldedToTheBody_IsSplitBackApart(
+        string description, string headline, string body) =>
+        HtmlDescriptionSanitizer.Sanitize(description).ShouldBe($"{headline}\n\n{body}");
+
+    [Theory]
+    // A hard-wrapped blurb Apple flattened instead: The Saga of Tanya the Evil volume 8,
+    // where the joins are mid-sentence and every one of them would be a wrong break. The
+    // headline rule's sixty-character cap is what keeps it away from this.
+    [InlineData(
+        "When Zettour tries his best to caution against the reckless plan to strike at "
+        + "theFederation's vital resource fields, he soon finds himself promoted.")]
+    // A plural acronym, which is an upper-case letter meeting a capitalised word inside one
+    // token rather than a paragraph boundary.
+    [InlineData("The MMORPGs of that era are long gone now.")]
+    // Initials: one letter before a full stop is a name, not the end of a sentence.
+    [InlineData("A story in the tradition of J.R.R.Tolkien himself.")]
+    // One camel-cased word is not a headline, however it is capitalised.
+    [InlineData("YouTube changed everything for him.")]
+    public void Sanitize_TextThatOnlyLooksWelded_IsLeftExactlyAsItIs(string description) =>
+        HtmlDescriptionSanitizer.Sanitize(description).ShouldBe(description);
+
+    [Fact]
+    public void Sanitize_ASourceThatMarksItsOwnParagraphs_IsNotSecondGuessed()
+    {
+        // The AniList shape, which arrives with its breaks intact. The repair rules look for
+        // a *missing* separator, so a source that supplies one is never touched by them.
+        var sanitized = HtmlDescriptionSanitizer.Sanitize(
+            "A War Without Casualties<br>\n<br>\nThe Republic of San Magnolia has long been "
+            + "under attack.");
+
+        sanitized.ShouldBe(
+            "A War Without Casualties\n\nThe Republic of San Magnolia has long been under attack.");
+    }
+
     [Fact]
     public void Sanitize_ACarriageReturnParagraphBreak_IsOneBlankLineNotTwo()
     {

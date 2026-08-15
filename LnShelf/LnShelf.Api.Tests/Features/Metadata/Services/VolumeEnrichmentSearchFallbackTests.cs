@@ -28,7 +28,9 @@ public sealed class VolumeEnrichmentSearchFallbackTests
 
         var volume = series.Volumes.Single();
         volume.ReleaseDate.ShouldBe(new DateOnly(2018, 12, 11));
-        volume.Title.ShouldBe("That Time I Got Reincarnated As a Slime, Vol. 4 (light Novel)");
+        // The record's whole name is the series, the number and a medium marker — nothing
+        // this volume does not already know — so what is stored is the empty subtitle.
+        volume.Title.ShouldBe(string.Empty);
 
         // Counted as the weaker claim it is: the data came from a name search, not from the
         // identifier the reader gave.

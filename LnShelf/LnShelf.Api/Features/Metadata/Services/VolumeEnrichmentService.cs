@@ -242,8 +242,16 @@ public sealed class VolumeEnrichmentService(
     private static bool NeedsAnything(Volume volume) =>
         volume.ReleaseDate is null
         || volume.CoverObjectKey is null
-        || volume.Title is null
+        || TitleUnresolved(volume)
         || volume.Description is null;
+
+    /// <summary>
+    /// Whether any source has named this volume yet.
+    /// </summary>
+    // The distinction Volume.Title's three states exist for: an empty title is an answer —
+    // "named, and it has no subtitle" — and asking again would spend a request a night on a
+    // question already settled. Only null is a gap.
+    private static bool TitleUnresolved(Volume volume) => volume.Title is null;
 
     /// <summary>
     /// Whether this volume is worth a request to the by-ISBN source. Silent about the ones
@@ -272,7 +280,7 @@ public sealed class VolumeEnrichmentService(
     private static bool ShouldLookUp(Volume volume) =>
         volume.Isbn is not null
         && !Isbn.IsJapaneseEdition(volume.Isbn)
-        && (volume.ReleaseDate is null || volume.CoverObjectKey is null || volume.Title is null);
+        && (volume.ReleaseDate is null || volume.CoverObjectKey is null || TitleUnresolved(volume));
 
     private async Task ApplyByIsbnAsync(
         Series series,

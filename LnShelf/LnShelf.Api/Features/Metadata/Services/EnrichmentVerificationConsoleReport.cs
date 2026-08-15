@@ -44,7 +44,7 @@ public static class EnrichmentVerificationConsoleReport
         }
 
         lines.Add(
-            $"Thresholds: the series needs all three; volumes need titled >={EnrichmentVerificationService.MinimumTitledPercent}%, "
+            $"Thresholds: the series needs all three; volumes need matched >={EnrichmentVerificationService.MinimumMatchedPercent}%, "
             + $"described >={EnrichmentVerificationService.MinimumDescribedPercent}%, "
             + $"covered >={EnrichmentVerificationService.MinimumCoveredPercent}%, "
             + $"dated >={EnrichmentVerificationService.MinimumDatedPercent}%.");
@@ -73,6 +73,20 @@ public static class EnrichmentVerificationConsoleReport
 
         yield return Pad(seriesRow, seriesWidths);
         yield return Pad(volumeRow, volumeWidths);
+
+        // Its own line rather than a fifth column, and labelled, because it is the one
+        // number here that nothing is judged against: a series whose publisher gives its
+        // volumes no subtitles reads 0 of N and is working perfectly.
+        if (series.VolumeLevel is { } counted)
+        {
+            yield return Pad(
+                [
+                    "titled",
+                    $"{Fraction(counted.Titled, counted.Total)} carry a subtitle "
+                    + "-- informational, no threshold",
+                ],
+                seriesWidths);
+        }
 
         if (series.VolumeLevel is { LargestCover: { } largest } volumeLevel)
         {
@@ -123,7 +137,7 @@ public static class EnrichmentVerificationConsoleReport
         return
         [
             "volumes",
-            $"titled {Fraction(level?.Titled, level?.Total)}",
+            $"matched {Fraction(level?.Matched, level?.Total)}",
             $"described {Fraction(level?.Described, level?.Total)}",
             $"covered {Fraction(level?.Covered, level?.Total)}",
             $"dated {Fraction(level?.Dated, level?.Total)}",

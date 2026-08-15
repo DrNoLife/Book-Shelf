@@ -36,7 +36,7 @@ public sealed class VolumeFactWriter(
         ApplyReleaseDate(series, volume, facts, run, today);
         ApplyTitle(volume, facts);
         ApplyDescription(volume, facts, run);
-        await ApplyCoverAsync(volume, facts, run, cancellationToken);
+        await ApplyCoverAsync(volume, facts, run, today, cancellationToken);
     }
 
     /// <summary>
@@ -122,8 +122,20 @@ public sealed class VolumeFactWriter(
     }
 
     /// <summary>
-    /// Fills the title in, and never overwrites one.
+    /// Fills the title in — as this volume's own subtitle, not the record's whole name —
+    /// and never replaces a subtitle already written.
     /// </summary>
+    // Both passes write through the same extractor, because "what a title column holds" is
+    // a rule about the shelf rather than about either source. A store names a volume the way
+    // a shop does ("86—EIGHTY-SIX, Vol. 3: Run Through the Battlefront (Finish)") and the row
+    // being written already knows the series and the number; the leftover is the only new
+    // fact in the string, and the only part that survives a tile caption's ellipsis.
+    //
+    // The empty string is written on purpose and is not a blank: it says the source named
+    // this volume and it has no subtitle of its own, which is the ordinary case for a whole
+    // series (every Slime volume). Without it, fill-if-null would re-ask about those volumes
+    // on every run, forever, for an answer that has already been given (Volume.Title).
+    //
     // Fill-if-null, which is a change: the by-ISBN pass used to let the source's current
     // answer replace the last one it gave. That was defensible with one source and is not
     // with two. There is no per-field provenance column, so nothing records *which* source
@@ -135,14 +147,34 @@ public sealed class VolumeFactWriter(
     // that cannot flip-flop. The cost is that a corrected title upstream never reaches a
     // volume that already has one, which is the cheaper failure: it is fixed by clearing
     // the column, whereas a nightly flip is not fixable at all.
+    //
+    // The one exception, and it cannot flip either because it only ever moves one way: an
+    // empty title accepts a real subtitle. The store is first in precedence and measurably
+    // never carries one — 0 of 282 live Apple titles say anything after the volume number —
+    // so without this, the by-ISBN source's subtitles could never land on a volume the store
+    // had already named, even on the runs where it is asked anyway. null → "" → a subtitle,
+    // and never backwards.
     private static void ApplyTitle(Volume volume, VolumeFacts facts)
     {
-        if (volume.Title is not null || facts.Title is not { } title)
+        if (facts.Title is not { } recordTitle)
         {
             return;
         }
 
-        volume.Title = title;
+        var subtitle = VolumeSubtitleExtractor.Extract(recordTitle, volume.Number);
+
+        if (volume.Title is null)
+        {
+            volume.Title = subtitle;
+            return;
+        }
+
+        // Guarded rather than assigned unconditionally, so a run that learns nothing writes
+        // nothing — re-running a sync has to be able to change no rows at all.
+        if (volume.Title.Length is 0 && subtitle.Length > 0)
+        {
+            volume.Title = subtitle;
+        }
     }
 
     /// <summary>
@@ -170,10 +202,32 @@ public sealed class VolumeFactWriter(
         Volume volume,
         VolumeFacts facts,
         SyncRun run,
+        DateOnly today,
         CancellationToken cancellationToken)
     {
         if (facts.CoverImageUrl is not { } coverImageUrl || volume.CoverObjectKey is not null)
         {
+            return;
+        }
+
+        // Observed on 86 volume 14, due 2026-12-08: the store's artwork for a volume that is
+        // not out yet is a typographic placeholder — the title set in type on a plain field,
+        // with none of the cover art the book will ship with. Cached, it becomes the shelf's
+        // permanent answer for that volume, because caching is fill-if-null and the real
+        // cover arriving at publication would never replace it.
+        //
+        // The record's own date decides, not the volume's: the volume may well have no date
+        // at all, precisely because the conflict rule above refused to write this one.
+        if (facts.ReleaseDate is { } releaseDate && releaseDate > today)
+        {
+            logger.LogInformation(
+                "{RecordKey} from {SourceName} dates volume {VolumeNumber} as {ReleaseDate}, which is not "
+                + "out yet; its artwork is a placeholder and was not cached",
+                facts.SourceRecordKey,
+                facts.SourceName,
+                volume.Number,
+                releaseDate);
+
             return;
         }
 

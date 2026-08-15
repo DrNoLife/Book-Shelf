@@ -85,7 +85,11 @@ public sealed class VolumeEnrichmentServiceTests
             .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
 
         var volume = series.Volumes.Single();
-        volume.Title.ShouldBe("Overlord, Volume 3: The Bloody Valkyrie");
+
+        // Only the part of the record's title that is this volume's own. The series and the
+        // number are already on the row, and in a tile caption they are what the ellipsis
+        // would keep while eating the half that identifies the book.
+        volume.Title.ShouldBe("The Bloody Valkyrie");
         volume.CoverObjectKey.ShouldBe("volume/openlibrary/abc.jpg");
         run.VolumeCoversCached.ShouldBe(1);
     }

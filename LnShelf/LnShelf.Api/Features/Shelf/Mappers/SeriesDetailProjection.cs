@@ -67,11 +67,15 @@ public static class SeriesDetailProjection
             VolumeId = volume.Id,
             Number = volume.Number,
             ReleaseDate = volume.ReleaseDate,
-            Title = volume.Title,
 
-            // Blank-checked like the series synopsis, and unlike Title: a row holding
-            // whitespace must not render an empty blurb panel. Title is left verbatim
-            // because a blank one is refused at the point it is written.
+            // The three-state column collapses to two on the wire. An empty Title means
+            // "a source named this volume and it has no subtitle" (Volume.Title), which is
+            // information enrichment needs and a caption cannot use — so the client is
+            // handed the same null it would get for a volume nothing has reached yet.
+            Title = NullIfBlank(volume.Title),
+
+            // Blank-checked for the same reason: a row holding whitespace must not render
+            // an empty blurb panel.
             Description = NullIfBlank(volume.Description),
 
             // The same three grounds as the library card's Published.

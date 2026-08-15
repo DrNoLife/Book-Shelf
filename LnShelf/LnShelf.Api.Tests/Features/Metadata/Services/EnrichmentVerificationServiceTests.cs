@@ -16,7 +16,7 @@ public sealed class EnrichmentVerificationServiceTests
     {
         var volumes = Volumes(3, volume =>
         {
-            volume.Title = "Vol. 1";
+            volume.Title = "Run Through the Battlefront";
             volume.Description = "A blurb.";
             volume.CoverObjectKey = "verify/whatever";
             volume.ReleaseDate = new DateOnly(2024, 5, 1);
@@ -25,10 +25,24 @@ public sealed class EnrichmentVerificationServiceTests
         var counted = EnrichmentVerificationService.Count(volumes, [AnyImage]);
 
         counted.Total.ShouldBe(3);
+        counted.Matched.ShouldBe(3);
         counted.Titled.ShouldBe(3);
         counted.Described.ShouldBe(3);
         counted.Covered.ShouldBe(3);
         counted.Dated.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Count_AVolumeNamedWithNoSubtitle_IsMatchedButNotTitled()
+    {
+        // Volume.Title's three states, counted apart. Every volume of Slime is titled only
+        // "…, Vol. N", so the catalogue reaching all of them stores "" for all of them —
+        // which is a working pipeline, and would read as a total failure under one count.
+        var counted = EnrichmentVerificationService.Count(
+            Volumes(3, volume => volume.Title = string.Empty), []);
+
+        counted.Matched.ShouldBe(3);
+        counted.Titled.ShouldBe(0);
     }
 
     [Fact]
@@ -37,6 +51,7 @@ public sealed class EnrichmentVerificationServiceTests
         var counted = EnrichmentVerificationService.Count(Volumes(2, _ => { }), []);
 
         counted.Total.ShouldBe(2);
+        counted.Matched.ShouldBe(0);
         counted.Titled.ShouldBe(0);
         counted.Described.ShouldBe(0);
         counted.Covered.ShouldBe(0);
@@ -86,27 +101,37 @@ public sealed class EnrichmentVerificationServiceTests
     }
 
     [Theory]
-    [InlineData(7, 10, 10, 10)]  // titled below 80%
+    [InlineData(7, 10, 10, 10)]  // matched below 80%
     [InlineData(10, 7, 10, 10)]  // described below 80%
     [InlineData(10, 10, 7, 10)]  // covered below 80%
     [InlineData(10, 10, 10, 6)]  // dated below 70%
-    public void Judge_AnyVolumeShareBelowItsBar_Fails(int titled, int described, int covered, int dated)
+    public void Judge_AnyVolumeShareBelowItsBar_Fails(int matched, int described, int covered, int dated)
     {
         EnrichmentVerificationService.Judge(
-                CompleteSeriesLevel(), VolumeLevel(10, titled, described, covered, dated))
+                CompleteSeriesLevel(), VolumeLevel(10, matched, described, covered, dated))
             .ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Judge_EveryVolumeMatchedAndNoneOfThemSubtitled_Passes()
+    {
+        // The Slime case, and the reason "titled" stopped being a threshold: the catalogue
+        // named all ten and the publisher gave none of them a subtitle. Nothing is wrong.
+        var volumeLevel = VolumeLevel(10, 10, 10, 10, 10) with { Titled = 0 };
+
+        EnrichmentVerificationService.Judge(CompleteSeriesLevel(), volumeLevel).ShouldBeTrue();
     }
 
     [Theory]
     [InlineData(10, 8, 8, 8, 7)]     // exactly 80/80/80/70
     [InlineData(5, 4, 4, 4, 4)]      // 80% of five is four, and four passes
     [InlineData(14, 14, 14, 14, 13)] // the measured shape of all three canaries today
-    public void Judge_ExactlyOnTheBar_Passes(int total, int titled, int described, int covered, int dated)
+    public void Judge_ExactlyOnTheBar_Passes(int total, int matched, int described, int covered, int dated)
     {
         // Integer arithmetic decides this, so "exactly on the threshold" has one answer
         // rather than a rounding argument.
         EnrichmentVerificationService.Judge(
-                CompleteSeriesLevel(), VolumeLevel(total, titled, described, covered, dated))
+                CompleteSeriesLevel(), VolumeLevel(total, matched, described, covered, dated))
             .ShouldBeTrue();
     }
 
@@ -152,11 +177,16 @@ public sealed class EnrichmentVerificationServiceTests
         Cover = AnyImage,
     };
 
+    /// <summary>
+    /// Subtitles default to the matched count, so a case that says nothing about them is
+    /// judged on the numbers it does state.
+    /// </summary>
     private static VolumeLevelVerification VolumeLevel(
-        int total, int titled, int described, int covered, int dated) => new()
+        int total, int matched, int described, int covered, int dated) => new()
         {
             Total = total,
-            Titled = titled,
+            Matched = matched,
+            Titled = matched,
             Described = described,
             Covered = covered,
             Dated = dated,
