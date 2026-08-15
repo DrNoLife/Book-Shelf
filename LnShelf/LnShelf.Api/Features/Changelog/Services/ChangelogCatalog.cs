@@ -14,6 +14,15 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.13.0", new DateOnly(2026, 8, 15), "Fits in a pocket",
+        [
+            "The app is usable on a phone and a tablet now: the navigation becomes a slim strip across the " +
+                "top instead of disappearing, and no page ever scrolls sideways.",
+            "The volume menu always fits on screen — it used to hang off the bottom edge on small displays.",
+            "Volume captions show the volume's own subtitle (\"Deus lo Vult\", \"The Bloody Valkyrie\") instead " +
+                "of repeating the series name, and volume blurbs keep their paragraph breaks.",
+            "No more placeholder art: covers are only saved once a volume is actually out.",
+        ]),
         new("0.12.0", new DateOnly(2026, 8, 15), "A changelog that can say so",
         [
             "The app now has a real version number, shown right on this page.",

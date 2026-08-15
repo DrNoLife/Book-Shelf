@@ -6,6 +6,41 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## v0.13.0 — fits in a pocket (2026-08-15)
+
+The mobile/tablet pass. `resize_window` proved a no-op on the dev machine
+(innerWidth pinned at 1310 regardless), so the audit ran inside a same-origin
+iframe sized 400×850 — a genuine 400px CSS viewport where media queries and
+`position: fixed` resolve for real; 768×1024 and 1440×900 the same way.
+
+- **The blocker: below 861px the app had no navigation at all.**
+  `.sidebar { display: none }` deleted Library / Search / Import / Changelog,
+  the shelves and the sync note on every phone and tablet — `/search` was
+  unreachable without typing the URL. The sidebar is a slim horizontal top
+  strip at ≤860 now (51px, no scrolling at 400). Triage, flagged: the strip
+  drops the shelf rows (StatusChips carry every filter they had, minus counts),
+  the sync fine print (the series page keeps its own), the dimmed
+  Upcoming/Stats placeholders, and the wordmark (every page prints its own h1).
+- **The volume popover hung 18px off a phone screen** — `DescribedHeight = 372`
+  never counted the edition row or "Remove cover" (real render: 403px), so no
+  flip happened where one was needed. The constants now sum named parts;
+  verified by sweeping 38 popovers at 400×850 and 14 at 1440×900 — zero
+  off-screen. The same under-count bit desktop by ~9px, so this fixed both.
+- Volume grid `minmax(84px, 1fr)` at ≤860 (was 72–96px fixed): 3×112 on phone,
+  7×94 on tablet, no dead gutter, captions gained room. Search result rows got
+  explicit grid areas (the Add button had fallen into the cover column);
+  toolbar wraps at a new 480px breakpoint instead of breaking its own labels.
+- **Measured, all eight routes**: `scrollWidth == innerWidth` at 400, 768, 861
+  and 1440 — the page never scrolls horizontally. Zero console errors. 683
+  tests pass. 27 before/after screenshots in the session scratchpad.
+
+**Released as v0.13.0.** The final gate — `enrichment-verify` — passed 3 of 3
+canaries (Tanya 14/14 matched/described/covered/dated; 86 full marks with the
+future date withheld; Slime 22/23 with vol 23 refused by the medium bar),
+exit 0.
+
+---
+
 ## subtitle-backfill — the names Open Library still remembers (2026-08-15)
 
 The follow-up 3.13 flagged. Apple Books answers `""` for every volume title
