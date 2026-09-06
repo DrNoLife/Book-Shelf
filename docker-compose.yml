@@ -28,8 +28,10 @@ services:
   # Cover storage sits behind ICoverStore and MinIO is its first implementation.
   # Wired up here so the dev environment matches the deployed one; no code
   # touches it until phase 2's cover cache.
+  # Pinned (not :latest): this bucket holds cached covers and the user's cover
+  # overrides — an unannounced breaking MinIO release must never land silently.
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: lnshelf-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"

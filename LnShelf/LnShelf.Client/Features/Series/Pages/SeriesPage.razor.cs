@@ -1,10 +1,4 @@
-using System.Globalization;
-using LnShelf.Client.Features.Preferences;
 using LnShelf.Client.Features.Sync;
-using LnShelf.Shared.Metadata;
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 
 namespace LnShelf.Client.Features.Series.Pages;
 
@@ -15,6 +9,13 @@ public partial class SeriesPage : IDisposable
 
     [Inject]
     public required SeriesState SeriesState { get; set; }
+
+    /// <summary>
+    /// Menu and select mode. Subscribed to here rather than in the volume section: only
+    /// the page can call StateHasChanged for the whole subtree that reads it.
+    /// </summary>
+    [Inject]
+    public required VolumeSelectionState Selection { get; set; }
 
     [Inject]
     public required SyncState SyncState { get; set; }
@@ -34,6 +35,15 @@ public partial class SeriesPage : IDisposable
     public required NavigationManager Navigation { get; set; }
 
     private SeriesDetailResponse? Series => SeriesState.Series;
+
+    /// <summary>
+    /// True until the series behind *this* route is the one in hand.
+    /// </summary>
+    // The id comparison is the half that matters: the state container is scoped, which
+    // in a WASM app means it survives the navigation with the previous series still in
+    // it, and "Series is null" is only true on the very first page load of a session.
+    private bool IsLoading =>
+        SeriesState.IsLoading || Series is null || Series.SeriesId != SeriesId;
 
     /// <summary>
     /// What pressing the button actually destroys, counted from this series.
@@ -119,6 +129,7 @@ public partial class SeriesPage : IDisposable
     protected override void OnInitialized()
     {
         SeriesState.Changed += OnStateChanged;
+        Selection.Changed += OnStateChanged;
         SyncState.Changed += OnStateChanged;
         Preferences.Changed += OnStateChanged;
     }
@@ -175,6 +186,7 @@ public partial class SeriesPage : IDisposable
     public void Dispose()
     {
         SeriesState.Changed -= OnStateChanged;
+        Selection.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;
         Preferences.Changed -= OnStateChanged;
     }

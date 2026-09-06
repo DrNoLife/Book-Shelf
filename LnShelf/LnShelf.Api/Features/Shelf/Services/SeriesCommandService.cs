@@ -3,215 +3,17 @@ namespace LnShelf.Api.Features.Shelf.Services;
 /// <inheritdoc />
 public sealed class SeriesCommandService(
     LnShelfDbContext dbContext,
-    ISeriesMetadataSource metadataSource,
-    IMangaUpdatesSeriesQueryService mangaUpdatesSource,
-    ICoverCache coverCache,
-    ISeriesCoverCache seriesCoverCache,
-    IIsbnBackfill isbnBackfill,
-    ISeriesSyncService seriesSync,
+    AddSeriesPipeline addSeriesPipeline,
     TimeProvider timeProvider,
     ILogger<SeriesCommandService> logger) : ISeriesCommandService
 {
-    public async Task<AddSeriesResponse?> AddFromAniListAsync(
+    /// <inheritdoc />
+    // The whole of adding a series lives in its own collaborator: it is the only job here
+    // that talks to a metadata source, and the only one that is source-specific at all.
+    public Task<AddSeriesResponse?> AddAsync(
         AddSeriesRequest request,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var aniListId = request.AniListId
-            ?? throw new ArgumentException("The request carries no AniList id.", nameof(request));
-
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(aniListId);
-
-        var existing = await FindTrackedAsync(series => series.AniListId == aniListId, cancellationToken);
-        if (existing is not null)
-        {
-            logger.LogInformation(
-                "AniList series {AniListId} is already tracked as {SeriesId}; nothing written",
-                aniListId,
-                existing.SeriesId);
-
-            return existing;
-        }
-
-        var metadata = await metadataSource.GetSeriesAsync(aniListId, cancellationToken);
-        if (metadata is null)
-        {
-            return null;
-        }
-
-        WarnOnFormatDisagreement(request.Format, metadata.Format, MetadataSourceName.AniList, aniListId);
-
-        // Fetched now rather than on first render: the shelf has to work with the
-        // AniList CDN down, which means the bytes must already be local.
-        var coverObjectKey = await coverCache.EnsureCachedAsync(
-            metadata.ExternalId, metadata.CoverImageUrl, cancellationToken);
-
-        var series = SeriesMetadataMapper.ToTrackedSeries(
-            metadata, timeProvider.GetUtcNow(), coverObjectKey);
-
-        dbContext.Series.Add(series);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Added {TitleEnglish} ({Format}) from AniList {AniListId} as {SeriesId} with {VolumeCount} volumes",
-            series.TitleEnglish,
-            series.Format,
-            metadata.ExternalId,
-            series.Id,
-            series.Volumes.Count);
-
-        return ToAddedResponse(series, await CompleteAsync(series.Id, cancellationToken));
-    }
-
-    public async Task<AddSeriesResponse?> AddFromMangaUpdatesAsync(
-        AddSeriesRequest request,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var mangaUpdatesId = request.MangaUpdatesId
-            ?? throw new ArgumentException("The request carries no MangaUpdates id.", nameof(request));
-
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mangaUpdatesId);
-
-        // Idempotent on the MangaUpdates id, exactly as the AniList path is on its own:
-        // the unique index on the column is the backstop and this lookup is the behaviour.
-        // It matters more here than there, because a series linked to MangaUpdates by a
-        // nightly sync — never added from it — is still a hit, and adding it again would
-        // otherwise be a unique-index violation rather than a polite no-op.
-        var existing = await FindTrackedAsync(
-            series => series.MangaUpdatesId == mangaUpdatesId, cancellationToken);
-
-        if (existing is not null)
-        {
-            logger.LogInformation(
-                "MangaUpdates series {MangaUpdatesId} is already tracked as {SeriesId}; nothing written",
-                mangaUpdatesId,
-                existing.SeriesId);
-
-            return existing;
-        }
-
-        var metadata = await mangaUpdatesSource.GetSeriesAsync(mangaUpdatesId, cancellationToken);
-        if (metadata is null)
-        {
-            return null;
-        }
-
-        WarnOnFormatDisagreement(
-            request.Format, metadata.Format, MetadataSourceName.MangaUpdates, mangaUpdatesId);
-
-        var coverObjectKey = await seriesCoverCache.EnsureCachedAsync(
-            MetadataSourceName.MangaUpdates, metadata.SourceId, metadata.CoverImageUrl, cancellationToken);
-
-        var series = SeriesMetadataMapper.ToTrackedSeries(
-            metadata, timeProvider.GetUtcNow(), coverObjectKey);
-
-        dbContext.Series.Add(series);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Added {TitleEnglish} ({Format}) from MangaUpdates {MangaUpdatesId} as {SeriesId} "
-            + "with {VolumeCount} volumes from status {RawStatus}",
-            series.TitleEnglish,
-            series.Format,
-            metadata.SourceId,
-            series.Id,
-            series.Volumes.Count,
-            metadata.RawStatus);
-
-        return ToAddedResponse(series, await CompleteAsync(series.Id, cancellationToken));
-    }
-
-    /// <summary>
-    /// The external id already determines the format, so the source wins and the response
-    /// reports what was stored.
-    /// </summary>
-    // Logged because the only way to get here is a client working from stale search
-    // results — worth knowing about, not worth refusing over.
-    private void WarnOnFormatDisagreement(
-        Format requested,
-        Format stored,
-        MetadataSourceName source,
-        long sourceId)
-    {
-        if (requested == stored)
-        {
-            return;
-        }
-
-        logger.LogWarning(
-            "Add requested {RequestedFormat} for {Source} {SourceId}, which is a {SourceFormat}; "
-            + "storing the source's format",
-            requested,
-            source,
-            sourceId,
-            stored);
-    }
-
-    /// <param name="refreshSummary">What the refresh that ran alongside the add managed.</param>
-    // The counts are re-read from the entity rather than from the metadata: the refresh can
-    // discover volumes the source did not know about, and reporting the number from before
-    // it ran would be wrong the moment it does.
-    private static AddSeriesResponse ToAddedResponse(Series series, string? refreshSummary) => new()
-    {
-        SeriesId = series.Id,
-        TitleEnglish = series.TitleEnglish,
-        Format = series.Format,
-        VolumeCount = series.Volumes.Count,
-        AlreadyTracked = false,
-        RefreshSummary = refreshSummary,
-    };
-
-    /// <summary>
-    /// Everything a newly added series needs beyond AniList: the ISBNs the shelf already
-    /// knows for it, then a refresh against the release and enrichment sources.
-    /// </summary>
-    // AniList supplies titles, a cover and a volume *list* — and nothing else that is true
-    // about the volumes themselves. Without this, a freshly added series sits with no
-    // in-print flags, no dates, no volume art and no titles until the nightly job runs,
-    // which is what "I added a series and no real data arrived" was.
-    //
-    // The ISBN adoption comes first and on purpose: enrichment is keyed on ISBN, so a
-    // re-added series whose staged ISBNs have not been restored yet would be skipped
-    // volume by volume and the refresh would find nothing to do.
-    //
-    // Never fatal. The series is already on the shelf by the time this runs, and failing
-    // the add because MangaUpdates was down would be the wrong trade — the refresh is an
-    // improvement on the add, not part of it.
-    private async Task<string?> CompleteAsync(Guid seriesId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var adopted = await isbnBackfill.RunForSeriesAsync(seriesId, cancellationToken);
-
-            if (adopted.Written > 0)
-            {
-                logger.LogInformation(
-                    "Adopted {IsbnCount} ISBN(s) from import staging for {SeriesId}",
-                    adopted.Written,
-                    seriesId);
-            }
-
-            var run = await seriesSync.RunForSeriesAsync(seriesId, cancellationToken);
-
-            return run?.Summary;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Could not refresh {SeriesId} on add; the nightly sync will pick it up",
-                seriesId);
-
-            return null;
-        }
-    }
+        CancellationToken cancellationToken) =>
+        addSeriesPipeline.RunAsync(request, cancellationToken);
 
     public async Task<SeriesDetailResponse?> SetVolumeViewAsync(
         Guid seriesId,
@@ -220,8 +22,95 @@ public sealed class SeriesCommandService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Loaded with its volumes because the answer is the refreshed detail response:
-        // the page then redraws from one round trip, as the bulk endpoint already does.
+        var detail = await WriteUserStateAsync(
+            seriesId,
+            state => state.VolumeViewOverride = request.View,
+            cancellationToken);
+
+        if (detail is not null)
+        {
+            logger.LogInformation(
+                "Series {SeriesId} volume view override is now {VolumeViewOverride}",
+                seriesId,
+                request.View?.ToString() ?? "the global preference");
+        }
+
+        return detail;
+    }
+
+    public async Task<SeriesDetailResponse?> SetStateAsync(
+        Guid seriesId,
+        UpdateSeriesStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var detail = await WriteUserStateAsync(
+            seriesId,
+            state =>
+            {
+                // Partial update, on the same rule PreferencesService follows: every null
+                // leaves that field alone, so saving a note does not have to send the
+                // tracking status back just to avoid clobbering it. An empty Notes is
+                // therefore how a note is cleared — a blank one reads as absent on the way
+                // out (SeriesDetailProjection), so the two agree.
+                state.TrackingStatus = request.TrackingStatus ?? state.TrackingStatus;
+                state.Notes = request.Notes ?? state.Notes;
+            },
+            cancellationToken);
+
+        if (detail is not null)
+        {
+            logger.LogInformation(
+                "Series {SeriesId} is now {TrackingStatus}{NoteChange}",
+                seriesId,
+                detail.TrackingStatus,
+                request.Notes is null ? string.Empty : " with a note");
+        }
+
+        return detail;
+    }
+
+    public async Task<bool> MarkSeenAsync(Guid seriesId, CancellationToken cancellationToken)
+    {
+        var state = await dbContext.SeriesUserStates
+            .FirstOrDefaultAsync(candidate => candidate.SeriesId == seriesId, cancellationToken);
+
+        if (state is null)
+        {
+            // No user-state row means nothing has ever been recorded about this series, so
+            // the flag it would carry is already false and there is nothing to clear. All
+            // that is left to answer is whether the series exists at all.
+            return await dbContext.Series
+                .AnyAsync(candidate => candidate.Id == seriesId, cancellationToken);
+        }
+
+        if (!state.HasNewVolume)
+        {
+            // Already acknowledged, and this is the common case: the page calls this on
+            // every visit, and most visits are to a series with no new volume waiting.
+            return true;
+        }
+
+        state.HasNewVolume = false;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Series {SeriesId} new-volume badge acknowledged", seriesId);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Applies one change to a series' user state and answers with the refreshed series.
+    /// </summary>
+    // Loaded with its volumes because the answer is the whole detail response: the page
+    // then redraws from one round trip, as the bulk endpoint already does.
+    /// <returns>Null when no series has that id.</returns>
+    private async Task<SeriesDetailResponse?> WriteUserStateAsync(
+        Guid seriesId,
+        Action<SeriesUserState> change,
+        CancellationToken cancellationToken)
+    {
         var series = await dbContext.Series
             .Include(candidate => candidate.UserState)
             .Include(candidate => candidate.Volumes).ThenInclude(volume => volume.UserState)
@@ -232,20 +121,14 @@ public sealed class SeriesCommandService(
             return null;
         }
 
-        // A series with no user-state row has never been touched; choosing a view is a
+        // A series with no user-state row has never been touched; any of these writes is a
         // touch, and it is the same row every other per-series preference lives on.
-        var state = series.UserState ??= new SeriesUserState { SeriesId = series.Id };
-        state.VolumeViewOverride = request.View;
+        change(series.UserState ??= new SeriesUserState { SeriesId = series.Id });
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation(
-            "Series {SeriesId} volume view override is now {VolumeViewOverride}",
-            seriesId,
-            request.View?.ToString() ?? "the global preference");
-
         return SeriesDetailProjection.ToDetail(
-            series, DateOnly.FromDateTime(timeProvider.GetLocalNow().Date));
+            series, timeProvider.Today());
     }
 
     public async Task<bool> DeleteAsync(Guid seriesId, CancellationToken cancellationToken)
@@ -294,28 +177,4 @@ public sealed class SeriesCommandService(
 
         return true;
     }
-
-    /// <summary>
-    /// Idempotency as a read, not a conflict. The unique indexes on the two external id
-    /// columns are the backstop; this lookup is the behaviour, and it also spares the
-    /// source a request for a series already on the shelf.
-    /// </summary>
-    /// <param name="isTheSameSeries">
-    /// Which external id identifies it — one predicate per source, one projection for both.
-    /// </param>
-    private Task<AddSeriesResponse?> FindTrackedAsync(
-        Expression<Func<Series, bool>> isTheSameSeries,
-        CancellationToken cancellationToken) =>
-        dbContext.Series
-            .AsNoTracking()
-            .Where(isTheSameSeries)
-            .Select(series => new AddSeriesResponse
-            {
-                SeriesId = series.Id,
-                TitleEnglish = series.TitleEnglish,
-                Format = series.Format,
-                VolumeCount = series.Volumes.Count,
-                AlreadyTracked = true,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
 }

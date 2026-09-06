@@ -13,12 +13,8 @@ public sealed class SeriesUserState
     public DateOnly? StartedAt { get; set; }
     public DateOnly? LastReadAt { get; set; }
 
-    public TitleLanguage? TitleLanguageOverride { get; set; }
-    public CoverSource? CoverSourceOverride { get; set; }
-
     /// <summary>
-    /// This series' volume view. Null means "follow the global preference" — the same
-    /// shape as the two override columns above it.
+    /// This series' volume view. Null means "follow the global preference".
     /// </summary>
     public VolumeView? VolumeViewOverride { get; set; }
 

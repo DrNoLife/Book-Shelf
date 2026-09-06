@@ -19,7 +19,7 @@ public static class ShelfSeedData
     /// </summary>
     private static readonly DateOnly ReleaseAnchor = new(2026, 7, 29);
 
-    /// <summary>Months between generated volumes, roughly a real LN cadence.</summary>
+    /// <summary>Days between generated volumes, roughly a real LN cadence.</summary>
     private const int ReleaseIntervalDays = 120;
 
     /// <summary>The newest released volume landed this long before the anchor.</summary>

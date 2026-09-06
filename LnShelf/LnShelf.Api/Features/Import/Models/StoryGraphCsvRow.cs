@@ -7,7 +7,7 @@ namespace LnShelf.Api.Features.Import.Models;
 /// </summary>
 // A dirty boundary model, so: a class, permissive nullability, strings where the
 // file has strings, and only the columns the shelf reads out of the 23 StoryGraph
-// writes. Mapped to StoryGraphBook and never travelling further inward
+// writes. Mapped to ImportedBook and never travelling further inward
 // (CLAUDE.md — Types: records vs classes).
 //
 // Every column is [Optional]: StoryGraph has changed its export header before,
@@ -21,6 +21,14 @@ public sealed class StoryGraphCsvRow
     [Name("Authors")]
     [Optional]
     public string? Authors { get; set; }
+
+    /// <summary>
+    /// Everyone else credited, as "Name (Role), Name (Role)" — translators,
+    /// editors, and the illustrator the format tie-break needs.
+    /// </summary>
+    [Name("Contributors")]
+    [Optional]
+    public string? Contributors { get; set; }
 
     [Name("ISBN/UID")]
     [Optional]

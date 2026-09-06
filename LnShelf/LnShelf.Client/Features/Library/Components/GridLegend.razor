@@ -1,12 +1,12 @@
 @* The text channel for everything the cards say with colour and shape. Without
    it the bar segments and dots would be colour-only information. *@
 
-<ul class="legend">
-    <li class="legend__item"><span class="swatch swatch--read"></span>read</li>
-    <li class="legend__item"><span class="swatch swatch--owned"></span>owned, unread</li>
-    <li class="legend__item"><span class="swatch swatch--tobuy"></span>to buy</li>
-    <li class="legend__item"><StatusDot Value="PublicationStatus.Ongoing" />ongoing</li>
-    <li class="legend__item"><StatusDot Value="PublicationStatus.Completed" />completed</li>
-    <li class="legend__item"><StatusDot Value="PublicationStatus.Hiatus" />hiatus</li>
-    <li class="legend__item"><span class="swatch swatch--new"></span>new volume out</li>
-</ul>
+<Legend>
+    <LegendItem Swatch="swatch--read" Words="read" />
+    <LegendItem Swatch="swatch--owned" Words="owned, unread" />
+    <LegendItem Swatch="swatch--tobuy" Words="to buy" />
+    <LegendItem Words="ongoing"><Mark><StatusDot Value="PublicationStatus.Ongoing" /></Mark></LegendItem>
+    <LegendItem Words="completed"><Mark><StatusDot Value="PublicationStatus.Completed" /></Mark></LegendItem>
+    <LegendItem Words="hiatus"><Mark><StatusDot Value="PublicationStatus.Hiatus" /></Mark></LegendItem>
+    <LegendItem Swatch="swatch--new" Words="new volume out" />
+</Legend>

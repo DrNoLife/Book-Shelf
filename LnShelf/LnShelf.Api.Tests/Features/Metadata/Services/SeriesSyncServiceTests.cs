@@ -1,5 +1,6 @@
 using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
@@ -357,7 +358,7 @@ public sealed class SeriesSyncServiceTests
 
         // Knows nothing by default: these tests are about the release-source half of the
         // run, and the enrichment half has its own file.
-        enrichmentSource ??= EnrichmentSource();
+        enrichmentSource ??= NoEnrichment();
 
         var enrichmentOptions = Options.Create(new OpenLibraryOptions { MaximumLookupsPerRun = 60 });
 
@@ -365,13 +366,11 @@ public sealed class SeriesSyncServiceTests
             matcher,
             releaseSource,
             NoMetadata(),
-            new VolumeEnrichmentService(
+            VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 enrichmentSource,
                 NoCandidates(),
-                new VolumeFactWriter(
-                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-                NullLogger<VolumeEnrichmentService>.Instance),
+                VolumeEnrichmentPipeline.Writer()),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
 
@@ -384,15 +383,6 @@ public sealed class SeriesSyncServiceTests
             enrichmentOptions,
             TimeProvider.System,
             NullLogger<SeriesSyncService>.Instance);
-    }
-
-    private static IVolumeEnrichmentSource EnrichmentSource(VolumeEnrichment? enrichment = null)
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(enrichment);
-
-        return source;
     }
 
     private static async Task SeedSeriesAsync(
@@ -441,31 +431,6 @@ public sealed class SeriesSyncServiceTests
         var source = Substitute.For<ISeriesMetadataSource>();
         source.GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns((SeriesMetadata?)null);
-
-        return source;
-    }
-
-    /// <summary>
-    /// A search that offers nothing: these tests are about the release-source half of a
-    /// run, and the search fallback has its own file.
-    /// </summary>
-    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
-    private static IVolumeCatalogueSource NoCatalogue()
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns([]);
-
-        return source;
-    }
-
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
 
         return source;
     }

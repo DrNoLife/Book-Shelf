@@ -1,3 +1,5 @@
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -314,13 +316,8 @@ public sealed class VolumeEnrichmentServiceTests
         var source = EnrichmentSource(Enrichment());
 
         var budget = Budget(10);
-        await new VolumeEnrichmentService(
-                catalogueSource,
-                source,
-                NoCandidates(),
-                new VolumeFactWriter(
-                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-                NullLogger<VolumeEnrichmentService>.Instance)
+        await VolumeEnrichmentPipeline
+            .Create(catalogueSource, source, NoCandidates(), VolumeEnrichmentPipeline.Writer())
             .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
 
         var spent = 10 - budget.Remaining;
@@ -361,10 +358,7 @@ public sealed class VolumeEnrichmentServiceTests
             title: "Overlord, Volume 3: The Bloody Valkyrie",
             withCover: true);
 
-        var coverCache = Substitute.For<IVolumeCoverCache>();
-        coverCache.EnsureCachedAsync(
-                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Uri>(), Arg.Any<CancellationToken>())
-            .Returns("volume/openlibrary/abc.jpg");
+        var coverCache = CoverCache();
 
         await CreateService(enrichment, coverCache).EnrichAsync(
             series, Run(), Today, Budget(10), CancellationToken.None);
@@ -417,51 +411,12 @@ public sealed class VolumeEnrichmentServiceTests
 
     private static VolumeEnrichmentService CreateService(
         IVolumeEnrichmentSource source,
-        IVolumeCoverCache? coverCache = null,
-        IIsbnCandidateSource? candidateSource = null) =>
-        new(
+        IVolumeCoverCache? coverCache = null) =>
+        VolumeEnrichmentPipeline.Create(
             NoCatalogue(),
             source,
-            candidateSource ?? NoCandidates(),
-            new VolumeFactWriter(
-                coverCache ?? Substitute.For<IVolumeCoverCache>(),
-                NullLogger<VolumeFactWriter>.Instance),
-            NullLogger<VolumeEnrichmentService>.Instance);
-
-    /// <summary>A store catalogue that knows nothing, so these tests stay about the by-ISBN path.</summary>
-    // It still costs the one request the catalogue pass always spends, which is why the
-    // budget assertions here start from one rather than from zero.
-    private static IVolumeCatalogueSource NoCatalogue()
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns([]);
-
-        return source;
-    }
-
-    /// <summary>A search that offers nothing, so these tests stay about the by-ISBN path.</summary>
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
-
-        return source;
-    }
-
-    private static LookupBudget Budget(int maximum) => new(maximum);
-
-    private static IVolumeEnrichmentSource EnrichmentSource(VolumeEnrichment? enrichment)
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(enrichment);
-
-        return source;
-    }
+            NoCandidates(),
+            VolumeEnrichmentPipeline.Writer(coverCache));
 
     private static VolumeEnrichment Enrichment(
         DateOnly? releaseDate = null,
@@ -482,36 +437,8 @@ public sealed class VolumeEnrichmentServiceTests
             Language = language,
         };
 
-    private static SyncRun Run() => new()
-    {
-        Id = Guid.CreateVersion7(),
-        StartedAt = new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero),
-    };
+    private static SyncRun Run() => VolumeEnrichmentTestContext.Run(Today);
 
-    private static Series Series(params Volume[] volumes)
-    {
-        var series = new Series
-        {
-            Id = Guid.CreateVersion7(),
-            AniListId = 85976,
-            TitleEnglish = "Overlord",
-            Format = Format.LightNovel,
-            PublicationStatus = PublicationStatus.Ongoing,
-        };
-
-        foreach (var volume in volumes)
-        {
-            series.Volumes.Add(volume);
-        }
-
-        return series;
-    }
-
-    private static Volume Volume(int number, string? isbn, bool isReleased) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        Number = number,
-        Isbn = isbn,
-        IsReleased = isReleased,
-    };
+    private static Series Series(params Volume[] volumes) =>
+        VolumeEnrichmentTestContext.Series("Overlord", volumes, aniListId: 85976);
 }

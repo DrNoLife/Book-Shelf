@@ -27,8 +27,12 @@ public sealed class SeriesSyncService(
         // MangaUpdates while AniList was disabled has no AniList id at all, and under the
         // narrower filter would have got its one refresh on add and then never been swept
         // again.
+        // The user state comes along because the refresh raises HasNewVolume on it — the
+        // one field sync writes (CLAUDE.md). Without the Include it would be null here and
+        // the badge would never appear.
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
+            .Include(candidate => candidate.UserState)
             .Where(candidate => candidate.AniListId != null || candidate.MangaUpdatesId != null)
             .OrderBy(candidate => candidate.TitleEnglish)
             .ToListAsync(cancellationToken);
@@ -55,6 +59,7 @@ public sealed class SeriesSyncService(
     {
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
+            .Include(candidate => candidate.UserState)
             .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
 
         if (series is null)

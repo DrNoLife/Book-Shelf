@@ -57,12 +57,4 @@ public sealed record ConsoleCommandLine
 
         return null;
     }
-
-    /// <summary>Whether <c>--name</c> was given at all.</summary>
-    public bool HasFlag(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-
-        return Arguments.Contains($"--{name}", StringComparer.OrdinalIgnoreCase);
-    }
 }

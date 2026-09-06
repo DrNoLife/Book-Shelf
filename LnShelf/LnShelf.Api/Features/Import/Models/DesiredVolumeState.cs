@@ -16,6 +16,12 @@ public sealed record DesiredVolumeState
     public DateOnly? ReadAt { get; init; }
 
     /// <summary>
+    /// The volume's own subtitle as the export spelled it, or null when no row for
+    /// this volume carried one.
+    /// </summary>
+    public string? Subtitle { get; init; }
+
+    /// <summary>
     /// The ISBN of the edition the export named, normalised. Null when the export
     /// gave none — which is how three of the real file's 76 rows arrive.
     /// </summary>

@@ -1,4 +1,7 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+﻿@* NotFound lives in Layout/ rather than a root Pages/ folder: CLAUDE.md's client layout
+   is Features/<Name>/Pages, Layout/ and Components/, and an unknown route is the shell's
+   answer, not a feature's. *@
+<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Layout.NotFound)">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />

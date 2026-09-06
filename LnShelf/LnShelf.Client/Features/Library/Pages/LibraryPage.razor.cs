@@ -1,8 +1,3 @@
-using LnShelf.Client.Features.Preferences;
-using LnShelf.Shared.Preferences;
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-
 namespace LnShelf.Client.Features.Library.Pages;
 
 public partial class LibraryPage : IDisposable
@@ -65,7 +60,12 @@ public partial class LibraryPage : IDisposable
 
         // The density and sort come from the server row, so they are read before the
         // grid is drawn — a grid that re-flows a moment after landing reads as a bug.
-        await Preferences.LoadAsync();
+        // Guarded, as the series page's is: the container is scoped, so a second visit
+        // to the library already has them.
+        if (!Preferences.HasLoaded)
+        {
+            await Preferences.LoadAsync();
+        }
         LibraryState.SetSort(Preferences.LibrarySort);
 
         await LibraryState.LoadAsync();

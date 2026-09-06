@@ -42,7 +42,7 @@ public static class MangaUpdatesSeriesMapper
             StartYear = ToYear(record.Year),
             IsCompleted = record.Completed,
             VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
-            RawStatus = NullIfBlank(record.Status),
+            RawStatus = record.Status.NullIfBlank(),
         };
     }
 
@@ -84,7 +84,7 @@ public static class MangaUpdatesSeriesMapper
             VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
 
             StartYear = ToYear(record.Year),
-            CoverImageUrl = NullIfBlank(record.Image?.Url?.Original),
+            CoverImageUrl = record.Image?.Url?.Original.NullIfBlank(),
         };
     }
 
@@ -118,13 +118,13 @@ public static class MangaUpdatesSeriesMapper
             // inward should ever hold a source's markup.
             Description = HtmlDescriptionSanitizer.Sanitize(record.Description),
 
-            CoverImageUrl = NullIfBlank(record.Image?.Url?.Original),
+            CoverImageUrl = record.Image?.Url?.Original.NullIfBlank(),
             Genres = ToGenres(record.Genres),
             Author = FindAuthor(record.Authors, "Author"),
             Illustrator = FindAuthor(record.Authors, "Artist"),
             Publisher = FindPublisher(record.Publishers),
             VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
-            RawStatus = NullIfBlank(record.Status),
+            RawStatus = record.Status.NullIfBlank(),
         };
     }
 
@@ -192,7 +192,7 @@ public static class MangaUpdatesSeriesMapper
             return [];
         }
 
-        return [.. genres.Select(entry => NullIfBlank(entry.Genre)).OfType<string>()];
+        return [.. genres.Select(entry => entry.Genre.NullIfBlank()).OfType<string>()];
     }
 
     /// <param name="type">
@@ -202,7 +202,7 @@ public static class MangaUpdatesSeriesMapper
     private static string? FindAuthor(List<MangaUpdatesAuthor>? authors, string type) =>
         authors?
             .Where(author => string.Equals(author.Type, type, StringComparison.OrdinalIgnoreCase))
-            .Select(author => NullIfBlank(author.Name))
+            .Select(author => author.Name.NullIfBlank())
             .OfType<string>()
             .FirstOrDefault();
 
@@ -220,7 +220,7 @@ public static class MangaUpdatesSeriesMapper
         }
 
         var named = publishers
-            .Select(publisher => (Name: NullIfBlank(publisher.PublisherName), publisher.Type))
+            .Select(publisher => (Name: publisher.PublisherName.NullIfBlank(), publisher.Type))
             .Where(publisher => publisher.Name is not null)
             .ToList();
 
@@ -242,7 +242,4 @@ public static class MangaUpdatesSeriesMapper
     /// <summary>The year arrives as a string, and sometimes as an empty one.</summary>
     private static int? ToYear(string? year) =>
         int.TryParse(year, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

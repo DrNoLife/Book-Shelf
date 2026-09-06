@@ -30,78 +30,6 @@
   color: var(--muted);
 }
 
-.volumes__controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.volumes__hint {
-  font-size: 11px;
-  color: var(--faint);
-  margin-right: 4px;
-}
-
-/* design.md's secondary button. */
-.control {
-  padding: 7px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 7px;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-
-.control:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
-.control:disabled { opacity: 0.45; cursor: default; }
-
-/* The "follow default" escape hatch sits beside the toggle it undoes, quieter than
-   the buttons that do something to the volumes. */
-.control--quiet { color: var(--faint); font-weight: 400; }
-
-/* --- the view toggle: the library toolbar's treatment, reused verbatim ---------- */
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  background: var(--surf);
-  border: 1px solid var(--line-2);
-  border-radius: 7px;
-}
-
-.toggle__button {
-  display: grid;
-  place-items: center;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 5px;
-  color: var(--faint);
-  background: transparent;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.toggle__button:hover:not(:disabled) { color: var(--muted); }
-
-.toggle__button--on {
-  background: var(--raise);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-}
-
-/* Select mode active: the chip treatment, reused rather than invented. */
-.control--on {
-  border-color: transparent;
-  background: var(--acc);
-  color: var(--on-acc);
-  font-weight: 600;
-}
-
-.control--on:hover { color: var(--on-acc); border-color: transparent; }
-
 /* Tiles are small and numerous, so the grid fills rather than pinning a count. */
 .grid {
   display: grid;
@@ -110,53 +38,7 @@
   justify-content: start;
 }
 
-/* --- legend ------------------------------------------------------------------ */
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 18px;
-  font-size: 11px;
-  color: var(--faint);
-}
-
-.legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.swatch {
-  width: 14px;
-  height: 5px;
-  border-radius: 2px;
-  background: var(--track);
-}
-
-.swatch--read { background: var(--acc); }
-.swatch--owned { background: var(--acc-deep); }
-
-.swatch--reading {
-  background: transparent;
-  box-shadow: 0 0 0 1.5px var(--acc);
-  height: 8px;
-  width: 8px;
-  border-radius: 2px;
-}
-
-.swatch--tobuy { background: var(--track); opacity: 0.5; }
-
-.swatch--unreleased {
-  background: repeating-linear-gradient(135deg, #221d2b 0 3px, transparent 3px 6px);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  height: 8px;
-  width: 12px;
-}
-
 @media (max-width: 860px) {
-  .volumes__hint { display: none; }
-
   /* The 96px cap stopped paying for itself once the viewport was narrow: three tracks of
      96 in a 360px row left 48px of dead gutter (84px of it at tablet width) and shrank the
      captions for nothing. The cap comes off and the tiles share the width evenly — the

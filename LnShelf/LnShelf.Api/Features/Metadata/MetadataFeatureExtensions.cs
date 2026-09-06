@@ -1,8 +1,6 @@
 using System.Net.Http.Headers;
 using LnShelf.Api.Commands;
 using LnShelf.Api.Features.Metadata.Commands;
-using LnShelf.Api.Features.Metadata.Models;
-using LnShelf.Api.Features.Metadata.Services;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace LnShelf.Api.Features.Metadata;
@@ -40,13 +38,13 @@ public static class MetadataFeatureExtensions
         /// <summary>AniList behind <c>ISeriesMetadataSource</c>.</summary>
         private IServiceCollection AddAniList(IConfiguration configuration)
         {
-            services.Configure<AniListOptions>(configuration.GetSection(AniListOptions.SectionName));
-
-            // Singleton: the permit pool is the shared 90-per-minute budget, and
-            // the handler chain is rebuilt periodically, so the limiter cannot
-            // live on the handler.
-            services.AddSingleton<AniListRateLimiter>();
-            services.AddTransient<AniListRateLimitHandler>();
+            // Validated at startup, like every options type in this slice: these numbers size
+            // request budgets and timeouts, and a bad one is otherwise found by a request that
+            // behaves oddly rather than by a boot that refuses.
+            services.AddOptions<AniListOptions>()
+                .Bind(configuration.GetSection(AniListOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddHttpClient<AniListGraphQlClient>((provider, httpClient) =>
                 {
@@ -56,7 +54,7 @@ public static class MetadataFeatureExtensions
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
                 })
-                .AddHttpMessageHandler<AniListRateLimitHandler>();
+                .AddSourcePoliteness(MetadataRateLimiting.AniList);
 
             services.AddScoped<ISeriesMetadataSource, AniListSeriesQueryService>();
 
@@ -82,11 +80,10 @@ public static class MetadataFeatureExtensions
         /// <summary>MangaUpdates behind <c>IReleaseSource</c> (feature-spec §4.2).</summary>
         private IServiceCollection AddReleaseSource(IConfiguration configuration)
         {
-            services.Configure<MangaUpdatesOptions>(configuration.GetSection(MangaUpdatesOptions.SectionName));
-
-            // Its own pool: the two APIs have unrelated budgets.
-            services.AddSingleton<MangaUpdatesRateLimiter>();
-            services.AddTransient<MangaUpdatesRateLimitHandler>();
+            services.AddOptions<MangaUpdatesOptions>()
+                .Bind(configuration.GetSection(MangaUpdatesOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddHttpClient<MangaUpdatesClient>((provider, httpClient) =>
                 {
@@ -96,7 +93,11 @@ public static class MetadataFeatureExtensions
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
                 })
-                .AddHttpMessageHandler<MangaUpdatesRateLimitHandler>();
+                .AddSourcePoliteness(MetadataRateLimiting.MangaUpdates);
+
+            // One cached `series/search` for both readers of it — the link search here and
+            // the add-flow search in AddSeriesSearch ask the endpoint the same question.
+            services.AddScoped<MangaUpdatesSearchCache>();
 
             services.AddScoped<IReleaseSource, MangaUpdatesReleaseSource>();
             services.AddScoped<IReleaseSourceMatcher, ReleaseSourceMatcher>();
@@ -107,11 +108,10 @@ public static class MetadataFeatureExtensions
         /// <summary>Apple Books behind <c>IVolumeCatalogueSource</c>.</summary>
         private IServiceCollection AddVolumeCatalogue(IConfiguration configuration)
         {
-            services.Configure<AppleBooksOptions>(configuration.GetSection(AppleBooksOptions.SectionName));
-
-            // Its own pool: the four APIs have unrelated budgets.
-            services.AddSingleton<AppleBooksRateLimiter>();
-            services.AddTransient<AppleBooksRateLimitHandler>();
+            services.AddOptions<AppleBooksOptions>()
+                .Bind(configuration.GetSection(AppleBooksOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddHttpClient<AppleBooksClient>((provider, httpClient) =>
                 {
@@ -121,7 +121,7 @@ public static class MetadataFeatureExtensions
                     // Infinite here, and enforced per request inside the handler instead —
                     // the same arrangement as Open Library's, for the same reason:
                     // HttpClient.Timeout also covers the wait for a rate-limit permit. See
-                    // AppleBooksRateLimitHandler.
+                    // PoliteRateLimitHandler.
                     httpClient.Timeout = Timeout.InfiniteTimeSpan;
 
                     // The endpoint answers `text/javascript` whatever is asked for, which is
@@ -131,7 +131,7 @@ public static class MetadataFeatureExtensions
 
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
                 })
-                .AddHttpMessageHandler<AppleBooksRateLimitHandler>();
+                .AddSourcePoliteness(MetadataRateLimiting.AppleBooks);
 
             services.AddScoped<IVolumeCatalogueSource, AppleBooksVolumeCatalogueSource>();
 
@@ -141,12 +141,10 @@ public static class MetadataFeatureExtensions
         /// <summary>Open Library behind <c>IVolumeEnrichmentSource</c> (the enrichment verdict, §3).</summary>
         private IServiceCollection AddVolumeEnrichment(IConfiguration configuration)
         {
-            services.Configure<OpenLibraryOptions>(configuration.GetSection(OpenLibraryOptions.SectionName));
-
-            // Its own pool, and the smallest: Open Library is a donated catalogue with
-            // a documented ceiling, unrelated to the other two APIs' budgets.
-            services.AddSingleton<OpenLibraryRateLimiter>();
-            services.AddTransient<OpenLibraryRateLimitHandler>();
+            services.AddOptions<OpenLibraryOptions>()
+                .Bind(configuration.GetSection(OpenLibraryOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddHttpClient<OpenLibraryClient>((provider, httpClient) =>
                 {
@@ -156,7 +154,7 @@ public static class MetadataFeatureExtensions
                     // Infinite here, and enforced per request inside the handler instead.
                     // HttpClient.Timeout also covers the wait for a rate-limit permit, and
                     // at twelve requests a minute that wait is minutes — see
-                    // OpenLibraryRateLimitHandler.
+                    // PoliteRateLimitHandler.
                     httpClient.Timeout = Timeout.InfiniteTimeSpan;
 
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -165,7 +163,7 @@ public static class MetadataFeatureExtensions
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
                         LnShelfUserAgent.WithContact(openLibrary.ContactEmail));
                 })
-                .AddHttpMessageHandler<OpenLibraryRateLimitHandler>();
+                .AddSourcePoliteness(MetadataRateLimiting.OpenLibrary);
 
             services.AddScoped<IVolumeEnrichmentSource, OpenLibraryVolumeEnrichmentSource>();
             services.AddScoped<IIsbnCandidateSource, OpenLibraryIsbnCandidateSource>();
@@ -174,6 +172,40 @@ public static class MetadataFeatureExtensions
             // writer is what both of its passes route every write through.
             services.AddScoped<VolumeEnrichmentService>();
             services.AddScoped<VolumeFactWriter>();
+
+            // The two passes the service runs in order, and the two judgements they share:
+            // which record is this series' volume N, and whether a guessed ISBN proves it.
+            services.AddScoped<CatalogueTitleArbiter>();
+            services.AddScoped<CatalogueVolumeMatcher>();
+            services.AddScoped<IsbnVolumeEnricher>();
+            services.AddScoped<IsbnCandidateVerifier>();
+
+            // The one thing the verification run needs that DI cannot express on its own:
+            // the same pipeline, with the cover cache swapped for one that measures bytes
+            // instead of storing them (VerificationEnrichmentRunner). Everything else still
+            // comes from the container.
+            //
+            // Written out rather than reflected up with ActivatorUtilities, so that adding a
+            // dependency to any of these three breaks the build here instead of the command
+            // at run time.
+            services.AddScoped<VolumeEnrichmentFactory>(provider => coverCache =>
+            {
+                var factWriter = new VolumeFactWriter(
+                    coverCache, provider.GetRequiredService<ILogger<VolumeFactWriter>>());
+
+                var isbnEnricher = new IsbnVolumeEnricher(
+                    provider.GetRequiredService<IVolumeEnrichmentSource>(),
+                    provider.GetRequiredService<IIsbnCandidateSource>(),
+                    provider.GetRequiredService<IsbnCandidateVerifier>(),
+                    factWriter,
+                    provider.GetRequiredService<ILogger<IsbnVolumeEnricher>>());
+
+                return new VolumeEnrichmentService(
+                    provider.GetRequiredService<IVolumeCatalogueSource>(),
+                    provider.GetRequiredService<CatalogueTitleArbiter>(),
+                    isbnEnricher,
+                    factWriter);
+            });
 
             // The one-shots: discovery proposes into a file, apply writes what survives
             // review. Two commands because a person sits between them.
@@ -211,6 +243,8 @@ public static class MetadataFeatureExtensions
             });
 
             services.AddScoped<EnrichmentVerificationService>();
+            services.AddScoped<VerificationVolumeCountResolver>();
+            services.AddScoped<VerificationEnrichmentRunner>();
             services.AddScoped<IConsoleCommand, EnrichmentVerifyCommand>();
 
             return services;
@@ -218,7 +252,14 @@ public static class MetadataFeatureExtensions
 
         private IServiceCollection AddSync(IConfiguration configuration)
         {
-            services.Configure<SyncOptions>(configuration.GetSection(SyncOptions.SectionName));
+            // The one worth spelling out: Sync__Hour is set in the production compose file, and
+            // a value outside 0-23 used to bind cleanly and then throw from inside the nightly
+            // loop — which .NET answers by stopping the whole host. Now it refuses to boot,
+            // naming the field.
+            services.AddOptions<SyncOptions>()
+                .Bind(configuration.GetSection(SyncOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             // What happens to one series, shared by the nightly sweep and the refresh that
             // runs when a series is added (feature-spec §4.2 — "same code path").

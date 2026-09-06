@@ -6,23 +6,20 @@ public sealed class SeriesDetailQueryService(LnShelfDbContext dbContext, TimePro
 {
     public async Task<SeriesDetailResponse?> GetAsync(Guid seriesId, CancellationToken cancellationToken)
     {
-        var series = await LoadAsync(dbContext, seriesId, cancellationToken);
+        var series = await LoadAsync(seriesId, cancellationToken);
         if (series is null)
         {
             return null;
         }
 
-        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
+        var today = timeProvider.Today();
         var detail = SeriesDetailProjection.ToDetail(series, today);
 
         return detail with { Relation = await LoadRelationAsync(series, today, cancellationToken) };
     }
 
     /// <summary>The whole page's data in one query — no per-volume round trips.</summary>
-    internal static Task<Series?> LoadAsync(
-        LnShelfDbContext dbContext,
-        Guid seriesId,
-        CancellationToken cancellationToken) =>
+    private Task<Series?> LoadAsync(Guid seriesId, CancellationToken cancellationToken) =>
         dbContext.Series
             .AsNoTracking()
             .Include(series => series.UserState)

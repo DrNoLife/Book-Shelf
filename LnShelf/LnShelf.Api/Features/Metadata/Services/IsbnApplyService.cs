@@ -18,9 +18,13 @@ public sealed class IsbnApplyService(LnShelfDbContext dbContext, ILogger<IsbnApp
 
         var seriesIds = instructions.Select(instruction => instruction.SeriesId).ToHashSet();
 
+        // Keyed by the pair the file names a volume with, so applying a hundred reviewed
+        // rows is a hundred lookups rather than a hundred scans of every volume of every
+        // series mentioned. Tracked, not AsNoTracking: these are the rows being written.
         var volumes = await dbContext.Volumes
             .Where(volume => seriesIds.Contains(volume.SeriesId))
-            .ToListAsync(cancellationToken);
+            .ToDictionaryAsync(
+                volume => (volume.SeriesId, volume.Number), cancellationToken);
 
         var written = 0;
         var alreadyRecorded = 0;
@@ -28,10 +32,7 @@ public sealed class IsbnApplyService(LnShelfDbContext dbContext, ILogger<IsbnApp
 
         foreach (var instruction in instructions)
         {
-            var volume = volumes.FirstOrDefault(candidate =>
-                candidate.SeriesId == instruction.SeriesId && candidate.Number == instruction.VolumeNumber);
-
-            if (volume is null)
+            if (!volumes.TryGetValue((instruction.SeriesId, instruction.VolumeNumber), out var volume))
             {
                 logger.LogWarning(
                     "Reviewed ISBN {Isbn} names series {SeriesId} volume {VolumeNumber}, which the shelf "

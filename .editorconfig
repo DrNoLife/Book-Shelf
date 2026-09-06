@@ -1,0 +1,99 @@
+# LnShelf — editor and `dotnet format` settings.
+#
+# This file describes the code as it already is; it is not a migration plan.
+# Every code-style rule is `suggestion`, so an editor nudges and `dotnet format`
+# leaves it alone — the build must never go red over a style opinion
+# (`EnforceCodeStyleInBuild` is deliberately NOT set in Directory.Build.props).
+# The one exception is IDE0005 (unused using directive), which is a real defect
+# by the same standard as any other warning, and is cheap to keep at zero.
+
+root = true
+
+[*]
+charset = utf-8
+# The index is 100% LF (`git ls-files --eol`) and CI runs
+# `dotnet format --verify-no-changes` on Linux, so LF is the only choice that
+# can pass there. core.autocrlf handles the Windows working copy.
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Markup, config and stylesheets are all two-space in this repo.
+[*.{json,yml,yaml,csproj,props,targets,slnx,css,html,xml}]
+indent_size = 2
+
+# Two trailing spaces are a hard line break in Markdown.
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+
+# ---- Usings ----
+csharp_using_directive_placement = outside_namespace:suggestion
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+# The one rule allowed to be a warning: a using nobody needs is dead code.
+# It cannot fail the build (no GenerateDocumentationFile, no
+# EnforceCodeStyleInBuild), but `dotnet format` fixes it and CI's
+# --verify-no-changes keeps it fixed.
+dotnet_diagnostic.IDE0005.severity = warning
+
+# ---- Namespaces and types ----
+csharp_style_namespace_declarations = file_scoped:suggestion
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+dotnet_style_readonly_field = true:suggestion
+
+# ---- `this.` qualification: never used here ----
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# ---- var ----
+# There is not one explicit built-in-type local in the solution; `var` is the
+# house style everywhere.
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# ---- Modern C# the house style asks for (CLAUDE.md "Prefer:") ----
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_prefer_extended_property_pattern = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_prefer_range_operator = true:suggestion
+csharp_style_prefer_index_operator = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+csharp_style_deconstructed_variable_declaration = true:suggestion
+
+# ---- Bodies and braces ----
+csharp_prefer_braces = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors = false:suggestion
+csharp_style_expression_bodied_operators = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_indexers = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_lambdas = true:suggestion
+
+# ---- Generated code is nobody's style problem ----
+[LnShelf/LnShelf.Api/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0005.severity = none

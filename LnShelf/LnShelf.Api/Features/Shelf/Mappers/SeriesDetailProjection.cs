@@ -36,11 +36,11 @@ public static class SeriesDetailProjection
 
             // Blank-checked like Notes: a row holding whitespace must not render a
             // synopsis block containing nothing.
-            Description = NullIfBlank(series.Description),
+            Description = series.Description.NullIfBlank(),
             CoverObjectKey = series.CoverObjectKey,
             AniListId = series.AniListId,
             MangaUpdatesId = series.MangaUpdatesId,
-            Notes = NullIfBlank(series.UserState?.Notes),
+            Notes = series.UserState?.Notes.NullIfBlank(),
             StartedAt = series.UserState?.StartedAt,
             LastReadAt = series.UserState?.LastReadAt,
             HasNewVolume = series.UserState?.HasNewVolume ?? false,
@@ -72,11 +72,11 @@ public static class SeriesDetailProjection
             // "a source named this volume and it has no subtitle" (Volume.Title), which is
             // information enrichment needs and a caption cannot use — so the client is
             // handed the same null it would get for a volume nothing has reached yet.
-            Title = NullIfBlank(volume.Title),
+            Title = volume.Title.NullIfBlank(),
 
             // Blank-checked for the same reason: a row holding whitespace must not render
             // an empty blurb panel.
-            Description = NullIfBlank(volume.Description),
+            Description = volume.Description.NullIfBlank(),
 
             // The same three grounds as the library card's Published.
             IsOut = (volume.ReleaseDate is not null && volume.ReleaseDate <= today)
@@ -142,7 +142,4 @@ public static class SeriesDetailProjection
             Average = decimal.Round(total / priced.Count, 0, MidpointRounding.AwayFromZero),
         };
     }
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

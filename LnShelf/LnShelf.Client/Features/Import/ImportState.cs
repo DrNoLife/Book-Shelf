@@ -1,8 +1,4 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
-using LnShelf.Shared.Import;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace LnShelf.Client.Features.Import;
 
@@ -202,28 +198,10 @@ public sealed class ImportState(HttpClient httpClient)
             return true;
         }
 
-        var problem = await ReadProblemAsync(response, cancellationToken);
+        // Not every failure carries a ProblemDetails body — a 413 from the server's own
+        // request-size limit does not — so the status code is the fallback.
+        var problem = await response.ReadProblemAsync(cancellationToken);
         Message = problem ?? $"The API answered {(int)response.StatusCode} {response.StatusCode}.";
         return false;
     }
-
-    private static async Task<string?> ReadProblemAsync(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>(cancellationToken);
-            return problem?.Detail ?? problem?.Title;
-        }
-        catch (Exception exception) when (exception is HttpRequestException or JsonException or NotSupportedException)
-        {
-            // Not every failure carries a ProblemDetails body — a 413 from the
-            // server's own request-size limit does not.
-            return null;
-        }
-    }
-
-    /// <summary>The bits of RFC 9457 ProblemDetails this client reads.</summary>
-    private sealed record ProblemResponse(string? Title, string? Detail);
 }

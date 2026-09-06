@@ -1,5 +1,3 @@
-using LnShelf.Shared.Shelf;
-
 namespace LnShelf.Client.Components;
 
 /// <summary>

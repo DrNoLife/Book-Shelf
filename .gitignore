@@ -59,8 +59,10 @@ docker-compose.override.yml
 
 # ---- Claude Code ----
 # CLAUDE.md and .claude/rules/ are checked in — the local permission file is
-# machine-specific.
+# machine-specific, and the agent harness's scratch worktrees are whole copies
+# of this repo that must never end up inside it.
 .claude/settings.local.json
+.claude/worktrees/
 
 # ---- OS junk ----
 .DS_Store

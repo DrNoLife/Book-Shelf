@@ -1,8 +1,5 @@
 using LnShelf.Api.Commands;
-using LnShelf.Api.Features.Import.Abstractions;
 using LnShelf.Api.Features.Import.Commands;
-using LnShelf.Api.Features.Import.Models;
-using LnShelf.Api.Features.Import.Services;
 
 namespace LnShelf.Api.Features.Import;
 
@@ -15,14 +12,26 @@ public static class ImportFeatureExtensions
     {
         public IServiceCollection AddImport(IConfiguration configuration)
         {
-            services.Configure<ImportOptions>(configuration.GetSection(ImportOptions.SectionName));
+            // Validated on start, not on first use: every one of these is a
+            // threshold, and a mistyped environment variable would otherwise show up
+            // as a matcher that accepts everything or offers nothing — working
+            // software with the wrong opinions.
+            services.AddOptions<ImportOptions>()
+                .Bind(configuration.GetSection(ImportOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddScoped<StoryGraphCsvReader>();
+            services.AddScoped<GoodreadsCsvReader>();
             services.AddScoped<ISeriesMatcher, AniListSeriesMatcher>();
+            services.AddScoped<ImportBatchBuilder>();
 
-            // StoryGraph is the first IShelfImporter. A Goodreads or MyAnimeList
-            // export becomes a second registration behind the same seam.
+            // Both registered under the seam, neither of them "the" importer: the
+            // resolver asks each one whether it recognises the uploaded file. A
+            // MyAnimeList export is one more line here and nothing else.
             services.AddScoped<IShelfImporter, StoryGraphImporter>();
+            services.AddScoped<IShelfImporter, GoodreadsImporter>();
+            services.AddScoped<ImportSourceResolver>();
 
             services.AddScoped<ImportShelfWriter>();
             services.AddScoped<IImportQueryService, ImportQueryService>();

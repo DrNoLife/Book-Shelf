@@ -1,3 +1,5 @@
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -19,7 +21,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var series = Series(Volume(4, HeldIsbn));
         var run = Run();
 
-        var enrichmentSource = EnrichmentSource(
+        var enrichmentSource = EnrichmentSourcePerIsbn(
             (HeldIsbn, null),
             (IndexedIsbn, Edition("That Time I Got Reincarnated As a Slime, Vol. 4 (light Novel)", new DateOnly(2018, 12, 11))));
 
@@ -49,7 +51,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var run = Run();
 
         // The neighbouring volume, which a loose search returns constantly.
-        var enrichmentSource = EnrichmentSource(
+        var enrichmentSource = EnrichmentSourcePerIsbn(
             (HeldIsbn, null),
             (IndexedIsbn, Edition("That Time I Got Reincarnated As a Slime 5", new DateOnly(2019, 3, 19))));
 
@@ -67,7 +69,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var series = Series(Volume(4, HeldIsbn));
         var run = Run();
 
-        var enrichmentSource = EnrichmentSource(
+        var enrichmentSource = EnrichmentSourcePerIsbn(
             (HeldIsbn, null),
             (IndexedIsbn, Edition(
                 "That Time I Got Reincarnated as a Slime 4 (manga)", new DateOnly(2018, 12, 11))));
@@ -86,7 +88,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
     {
         var series = Series(Volume(4, HeldIsbn));
 
-        var enrichmentSource = EnrichmentSource((HeldIsbn, null));
+        var enrichmentSource = EnrichmentSourcePerIsbn((HeldIsbn, null));
 
         await CreateService(enrichmentSource, Candidates(JapaneseIsbn))
             .EnrichAsync(series, Run(), Today, new LookupBudget(10), CancellationToken.None);
@@ -104,7 +106,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var candidateSource = Candidates(IndexedIsbn);
 
         await CreateService(
-                EnrichmentSource((HeldIsbn, Edition("Slime, Vol. 4 (light Novel)", new DateOnly(2018, 12, 11)))),
+                EnrichmentSourcePerIsbn((HeldIsbn, Edition("Slime, Vol. 4 (light Novel)", new DateOnly(2018, 12, 11)))),
                 candidateSource)
             .EnrichAsync(series, Run(), Today, new LookupBudget(10), CancellationToken.None);
 
@@ -121,7 +123,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var budget = new LookupBudget(10);
 
         await CreateService(
-                EnrichmentSource((HeldIsbn, null), (IndexedIsbn, Edition("Slime, Vol. 4 (light Novel)", null))),
+                EnrichmentSourcePerIsbn((HeldIsbn, null), (IndexedIsbn, Edition("Slime, Vol. 4 (light Novel)", null))),
                 Candidates(IndexedIsbn))
             .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
 
@@ -138,7 +140,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var candidateSource = Candidates(IndexedIsbn);
 
         // Exactly enough for the catalogue request and the direct lookup, and nothing more.
-        await CreateService(EnrichmentSource((HeldIsbn, null)), candidateSource)
+        await CreateService(EnrichmentSourcePerIsbn((HeldIsbn, null)), candidateSource)
             .EnrichAsync(series, Run(), Today, new LookupBudget(2), CancellationToken.None);
 
         await candidateSource.DidNotReceive()
@@ -148,54 +150,11 @@ public sealed class VolumeEnrichmentSearchFallbackTests
     private static VolumeEnrichmentService CreateService(
         IVolumeEnrichmentSource enrichmentSource,
         IIsbnCandidateSource candidateSource) =>
-        new(
+        VolumeEnrichmentPipeline.Create(
             NoCatalogue(),
             enrichmentSource,
             candidateSource,
-            new VolumeFactWriter(
-                Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-            NullLogger<VolumeEnrichmentService>.Instance);
-
-    /// <summary>
-    /// A store catalogue that knows nothing, so this file stays about the by-ISBN fallback.
-    /// </summary>
-    // It also costs nothing: an empty answer means the catalogue pass writes nothing, and
-    // the budget assertions below count only the ISBN pass's own requests plus the one the
-    // catalogue always spends.
-    private static IVolumeCatalogueSource NoCatalogue()
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns([]);
-
-        return source;
-    }
-
-    private static IIsbnCandidateSource Candidates(params string[] isbns)
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new IsbnCandidates { WorksFound = 1, Isbns = isbns });
-
-        return source;
-    }
-
-    private static IVolumeEnrichmentSource EnrichmentSource(
-        params (string Isbn, VolumeEnrichment? Edition)[] editions)
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((VolumeEnrichment?)null);
-
-        foreach (var (isbn, edition) in editions)
-        {
-            source.GetByIsbnAsync(isbn, Arg.Any<CancellationToken>()).Returns(edition);
-        }
-
-        return source;
-    }
+            VolumeEnrichmentPipeline.Writer());
 
     private static VolumeEnrichment Edition(string title, DateOnly? releaseDate) => new()
     {
@@ -207,36 +166,9 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         Language = EditionLanguage.English,
     };
 
-    private static SyncRun Run() => new()
-    {
-        Id = Guid.CreateVersion7(),
-        StartedAt = new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero),
-    };
+    private static SyncRun Run() => VolumeEnrichmentTestContext.Run(Today);
 
-    private static Series Series(params Volume[] volumes)
-    {
-        var series = new Series
-        {
-            Id = Guid.CreateVersion7(),
-            AniListId = 86355,
-            TitleEnglish = "That Time I Got Reincarnated as a Slime",
-            Format = Format.LightNovel,
-            PublicationStatus = PublicationStatus.Ongoing,
-        };
-
-        foreach (var volume in volumes)
-        {
-            series.Volumes.Add(volume);
-        }
-
-        return series;
-    }
-
-    private static Volume Volume(int number, string isbn) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        Number = number,
-        Isbn = isbn,
-        IsReleased = true,
-    };
+    private static Series Series(params Volume[] volumes) =>
+        VolumeEnrichmentTestContext.Series(
+            "That Time I Got Reincarnated as a Slime", volumes, aniListId: 86355);
 }

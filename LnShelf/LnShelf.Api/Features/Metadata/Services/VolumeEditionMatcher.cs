@@ -41,32 +41,42 @@ public static class VolumeEditionMatcher
         string seriesTitle,
         Format format,
         string? recordTitle,
+        out int volumeNumber) =>
+        TryMatchVolumeNumber(
+            NormalizedTitle.From(seriesTitle),
+            format,
+            NormalizedTitle.From(recordTitle),
+            out volumeNumber);
+
+    /// <summary>
+    /// The same rule, for a caller that has already folded both titles.
+    /// </summary>
+    // The catalogue pass folds the series title once and each record's title once, rather
+    // than paying for both on every record. Same judgement, same answers — see
+    // <see cref="NormalizedTitle"/> for why it is a type and not a naming convention.
+    public static bool TryMatchVolumeNumber(
+        NormalizedTitle seriesTitle,
+        Format format,
+        NormalizedTitle recordTitle,
         out int volumeNumber)
     {
         volumeNumber = 0;
 
-        if (recordTitle is null)
-        {
-            // Nothing to check it against. A record with no title of any kind is not
-            // evidence that it is the right book.
-            return false;
-        }
-
-        var normalizedRecord = TitleNormalizer.Normalize(recordTitle);
-        var normalizedSeries = TitleNormalizer.Normalize(seriesTitle);
-
-        if (normalizedSeries.Length is 0)
+        // Nothing to check it against, either way round. A record with no title of any
+        // kind is not evidence that it is the right book, and a series with no folded
+        // title of its own would be found inside every record there is.
+        if (recordTitle.IsEmpty || seriesTitle.IsEmpty)
         {
             return false;
         }
 
-        var seriesAt = normalizedRecord.IndexOf(normalizedSeries, StringComparison.Ordinal);
+        var seriesAt = recordTitle.Value.IndexOf(seriesTitle.Value, StringComparison.Ordinal);
         if (seriesAt < 0)
         {
             return false;
         }
 
-        if (NamesTheOtherMedium(normalizedRecord, format))
+        if (NamesTheOtherMedium(recordTitle.Value, format))
         {
             return false;
         }
@@ -74,7 +84,7 @@ public static class VolumeEditionMatcher
         // Only the part after the series title, which is where a volume number lives.
         // Searching the whole title would let "86—EIGHTY-SIX" satisfy a request for
         // volume 86.
-        var remainder = normalizedRecord[(seriesAt + normalizedSeries.Length)..];
+        var remainder = recordTitle.Value[(seriesAt + seriesTitle.Value.Length)..];
 
         return TryReadLeadingVolumeNumber(remainder, out volumeNumber);
     }
@@ -131,18 +141,18 @@ public static class VolumeEditionMatcher
     }
 
     /// <param name="recordTitle">A record's own title, which is all the evidence there is.</param>
-    public static bool ConfirmsMedium(Format format, string? recordTitle)
-    {
-        var normalized = TitleNormalizer.Normalize(recordTitle);
+    public static bool ConfirmsMedium(Format format, string? recordTitle) =>
+        ConfirmsMedium(format, NormalizedTitle.From(recordTitle));
 
-        return format switch
+    /// <summary>The same question, for a caller that has already folded the record's title.</summary>
+    public static bool ConfirmsMedium(Format format, NormalizedTitle recordTitle) =>
+        format switch
         {
             Format.LightNovel or Format.WebNovel =>
-                normalized.Contains("light novel", StringComparison.Ordinal),
-            Format.Manga => TitleNormalizer.Tokenize(normalized).Contains("manga"),
+                recordTitle.Value.Contains("light novel", StringComparison.Ordinal),
+            Format.Manga => TitleNormalizer.Tokenize(recordTitle.Value).Contains("manga"),
             _ => false,
         };
-    }
 
     /// <summary>
     /// Whether the record is plainly the other medium of the same story.

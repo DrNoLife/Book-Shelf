@@ -1,5 +1,3 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Features.Import.Services;
 
 /// <summary>
@@ -109,6 +107,19 @@ public sealed class ImportShelfWriter(
         // export naming a different edition is not grounds for replacing the first.
         volume.Isbn ??= desired.Isbn;
 
+        // Fill-if-null, and only with something. The export's title already names the
+        // volume ("Overlord, Vol. 3: The Bloody Valkyrie"), which is the same fact the
+        // subtitle backfill spends an Open Library lookup per volume to learn — so
+        // taking it here is free. It must never overwrite: a synced or enriched title is
+        // a source's own answer, and Volume.Title's "" specifically means "a source was
+        // asked and this volume has no subtitle", which a silent CSV is no evidence
+        // against.
+        if (volume.Title is null && desired.Subtitle is not null)
+        {
+            volume.Title = desired.Subtitle;
+            counters.VolumeSubtitlesWritten++;
+        }
+
         volume.UserState ??= new VolumeUserState { VolumeId = volume.Id };
         var state = volume.UserState;
 
@@ -120,7 +131,14 @@ public sealed class ImportShelfWriter(
             state.ReadStatus = desired.ReadStatus;
         }
 
-        state.ReadAt ??= desired.ReadAt;
+        // Earlier wins, rather than fill-if-null. The only date that gets here without
+        // an import is the Today() the app stamps when a volume is ticked read, and a
+        // stamp that says "today" because that is when the box was ticked must not beat
+        // the export's record of when the book was actually read. The rule is two-level:
+        // within one import the *latest* read of a volume is its read date
+        // (DesiredVolumeStateMerger.Combine), and against what is already on the shelf
+        // the *earliest* of the two survives. Neither level ever writes null over a date.
+        state.ReadAt = Earliest(state.ReadAt, desired.ReadAt);
 
         if (desired.Owned && !state.Owned)
         {
@@ -157,13 +175,25 @@ public sealed class ImportShelfWriter(
         var earliest = states.Select(state => state.ReadAt).Where(date => date is not null).Min();
         var latest = states.Select(state => state.ReadAt).Where(date => date is not null).Max();
 
-        userState.StartedAt ??= earliest;
+        // Same rule as the per-volume ReadAt, for the same reason plus one: importing an
+        // older export after a newer one could otherwise never move the start date back
+        // to where the reading actually began.
+        userState.StartedAt = Earliest(userState.StartedAt, earliest);
 
         if (latest is not null && (userState.LastReadAt is null || latest > userState.LastReadAt))
         {
             userState.LastReadAt = latest;
         }
     }
+
+    /// <summary>The earlier of the two, and never null when either is set.</summary>
+    private static DateOnly? Earliest(DateOnly? left, DateOnly? right) =>
+        (left, right) switch
+        {
+            (null, var other) => other,
+            (var other, null) => other,
+            _ => left < right ? left : right,
+        };
 
     private static TrackingStatus ChooseTrackingStatus(Series series, List<DesiredVolumeState> states)
     {

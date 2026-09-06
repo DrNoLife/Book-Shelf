@@ -25,13 +25,19 @@ public static class AniListMediaMapper
             Source = MetadataSourceName.AniList,
             SourceId = media.Id,
             TitleEnglish = ToDisplayTitle(media),
-            TitleRomaji = NullIfBlank(media.Title?.Romaji),
-            TitleNative = NullIfBlank(media.Title?.Native),
+            TitleRomaji = media.Title?.Romaji.NullIfBlank(),
+            TitleNative = media.Title?.Native.NullIfBlank(),
             Format = format,
             PublicationStatus = ToPublicationStatus(media.Status),
             VolumeCount = media.Volumes,
             StartYear = media.StartDate?.Year,
-            CoverImageUrl = NullIfBlank(media.CoverImage?.Large),
+            CoverImageUrl = media.CoverImage?.Large.NullIfBlank(),
+
+            // The same two credits the detail mapping reads, off the six staff edges
+            // the search query asks for. Null for a source that publishes no staff
+            // at all, and for a sparse AniList entry that has none.
+            Author = AniListStaffMapper.FindAuthor(media.Staff),
+            Illustrator = AniListStaffMapper.FindIllustrator(media.Staff),
         };
     }
 
@@ -49,12 +55,12 @@ public static class AniListMediaMapper
         {
             ExternalId = media.Id,
             TitleEnglish = ToDisplayTitle(media),
-            TitleRomaji = NullIfBlank(media.Title?.Romaji),
-            TitleNative = NullIfBlank(media.Title?.Native),
+            TitleRomaji = media.Title?.Romaji.NullIfBlank(),
+            TitleNative = media.Title?.Native.NullIfBlank(),
             Format = format,
             PublicationStatus = ToPublicationStatus(media.Status),
             StartYear = media.StartDate?.Year,
-            CoverImageUrl = NullIfBlank(media.CoverImage?.Large),
+            CoverImageUrl = media.CoverImage?.Large.NullIfBlank(),
 
             // Cleaned here rather than on the way out: nothing inward should ever hold
             // AniList's markup, and the sanitizer is what makes `asHtml: false` true.
@@ -102,9 +108,9 @@ public static class AniListMediaMapper
     /// rather than the card rendering blank.
     /// </summary>
     private static string ToDisplayTitle(AniListMedia media) =>
-        NullIfBlank(media.Title?.English)
-        ?? NullIfBlank(media.Title?.Romaji)
-        ?? NullIfBlank(media.Title?.Native)
+        media.Title?.English.NullIfBlank()
+        ?? media.Title?.Romaji.NullIfBlank()
+        ?? media.Title?.Native.NullIfBlank()
         ?? throw new InvalidOperationException($"AniList media {media.Id} carries no title at all.");
 
     /// <summary>
@@ -130,7 +136,4 @@ public static class AniListMediaMapper
 
         return volumes;
     }
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value;
 }

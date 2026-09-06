@@ -6,6 +6,70 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Sweep — the repo read end to end (2026-09-06)
+
+Not a feature phase. Six reviewers read every line of the four projects in
+parallel; what follows is what they found already broken, half-built or copied.
+
+**Ten defects.** A StoryGraph date *range* (`2026/07/21-2026/07/26`) parsed to null,
+surviving only because those rows also carry `Last Date Read`. Import wrote `ReadAt`
+fill-if-null, so the `Today()` stamped when a box is ticked beat the export's real
+date. Publication status was written at add time and never again, so a finished
+series stayed `Ongoing` forever. The volume-count discrepancy row named AniList the
+winner in the branch that had just created volumes up to MangaUpdates' count.
+`WebpEncoder` defaults to lossless, so `CoverQuality` had never done anything.
+Adding from the search page emptied the result list under the button (one `IsBusy`
+doing two jobs). The series page rendered the *previous* series under the new URL —
+its state container is scoped and survives navigation. Preferences save failures
+were shown to nobody. "Last read" was frozen at import time, because nothing stamped
+`LastReadAt` when a volume was read. Open Library and Apple Books shipped
+`CacheDuration: 24:00:00` — 24 days, not one — caught by `[Range]`; now one day.
+
+**Four half-built features finished.** `HasNewVolume` — the one sanctioned stored
+flag — was seed-fixture-only; sync sets it when an already-synced series' volume
+flips to released and `POST /api/series/{id}/seen` clears it on visit. `PUT
+/api/series/{id}/state`, spec'd in §6 and never built, backs a tracking-status
+control and an editable note. The library card shows the latest *covered* volume's
+art; read dates reach the screen.
+
+**Simplifications, behaviour-preserving.** Two near-identical add-series methods
+became `IAddSeriesFlow` + one pipeline, so a third source is a new file rather than
+an edit to two. Four copy-pasted rate limiters and four handlers became
+`SourceRateLimiter` + `PoliteRateLimitHandler`. The 574-line
+`VolumeEnrichmentService` and 467-line `EnrichmentVerificationService` split into
+named collaborators; two divergent ISBN-candidate verifications became one. The
+client's 490-line `SeriesState` split three ways and its `Replace()` re-derivation
+was deleted — every series-scoped write answers with the whole series now. Five
+primary-button copies and three segmented controls became shared primitives, and
+two never-read override columns were dropped.
+
+**Import.** `IShelfImporter` is a real seam at last: implementations register as a
+set and `ImportSourceResolver` picks one by sniffing the header, so Goodreads
+exports import beside StoryGraph's. Where the title leaves the LN and the manga
+tied, the export's credits break it — illustrator first, author second, the rest
+to the queue. Subtitles the CSV already carried are written into volume titles
+instead of re-fetched by ISBN.
+
+**Infrastructure.** Options types validate at startup, MinIO is pinned, the API
+container runs non-root, a GitHub Actions workflow builds/tests/format-checks, and
+a repo-root `.editorconfig` makes `dotnet format` mean something without turning
+the build red. 773 → **1146 tests**, all passing; 0 warnings; format clean; two
+migrations, `DropUnusedUserStateOverrides` and `ImportRowSubtitle`.
+
+**Veto material [flagged].** Import read dates are earlier-wins — technically an
+import overruling stored state, but the value it overrules was stamped by the app,
+not typed by the reader. The library card takes the latest volume's cover, and the
+dead `TitleLanguageOverride`/`CoverSourceOverride` columns went with it (design.md's
+latest/first setting can bring them back when built). MangaUpdates `IsCompleted ==
+true` sets `Completed`; false leaves AniList's value alone — the boolean cannot say
+Hiatus or Cancelled — and records a discrepancy when the stored value already says
+Completed. One `Retry-After` rule for all four sources: advertised and positive is
+honoured, else that source's `MaximumRetryDelay`. The release source searches
+Manga|Manhwa|Manhua now, matching the mapper. And the Goodreads importer has never
+seen a real export.
+
+---
+
 ## v0.14.0 — when AniList sleeps (2026-08-15)
 
 The owner searched "Torture princess" and got a bare 500. The cause was

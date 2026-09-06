@@ -1,6 +1,4 @@
 using LnShelf.Client.Features.Library;
-using LnShelf.Shared.Metadata;
-using Microsoft.AspNetCore.Components;
 
 namespace LnShelf.Client.Features.Search.Pages;
 

@@ -9,7 +9,7 @@
             <span>Back to library</span>
         </NavLink>
 
-        @if (Series is not null)
+        @if (!IsLoading && Series is not null)
         {
             <SeriesHero Series="Series" />
         }
@@ -20,7 +20,10 @@
         {
             <p class="notice">Could not reach the API.</p>
         }
-        else if (Series is null)
+        @* The loaded series has to be *this* series: the container outlives the
+           navigation, so following the hero's relation link used to leave the previous
+           series' hero, counts and volume grid on screen under the new URL. *@
+        else if (IsLoading || Series is null)
         {
             <p class="notice">Loading the series…</p>
         }
@@ -31,22 +34,18 @@
                 <p class="notice notice--warning">@message</p>
             }
 
+            @* A preference that failed to save says so where the control that failed
+               lives — silently reverting on the next load is the bug. *@
+            @if (Preferences.Message is { } preferenceMessage)
+            {
+                <p class="notice notice--warning">@preferenceMessage</p>
+            }
+
             <VolumeGrid Series="Series" />
 
             @* NOTES left, SYNC right, as the mockup lays out the foot of the page. *@
             <div class="series__foot">
-                <section class="notes">
-                    <p class="eyebrow">Notes</p>
-                    @if (Series.Notes is { } notes)
-                    {
-                        <p class="notes__body">@notes</p>
-                    }
-                    else
-                    {
-                        @* The one wry line per view, in fine print, never in a control. *@
-                        <p class="notes__empty">Nothing written down. The shelf is not judging.</p>
-                    }
-                </section>
+                <SeriesNotes Series="Series" />
 
                 <aside class="sync">
                     <p class="eyebrow">Sync</p>

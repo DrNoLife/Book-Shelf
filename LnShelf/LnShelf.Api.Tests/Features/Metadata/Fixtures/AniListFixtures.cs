@@ -14,11 +14,19 @@ namespace LnShelf.Api.Tests.Features.Metadata.Fixtures;
 //                                                    all three tracked formats, perPage 20
 //   anilist-media-85470-mushoku-tensei-novel.json    SeriesDetail, id 85470 (the light novel)
 //
-// One amendment, flagged rather than hidden: the media fixture's `description` was added
-// by hand when the field joined the detail query, because the capture predates it. The
-// text is not AniList's verbatim synopsis — the *shape* is, and the shape is what the
-// mapping is tested against: `<br>` pairs for paragraph breaks, an <i> note, an &mdash;
-// entity and a trailing "(Source: …)" attribution, all of which arrive with asHtml: false.
+// Two amendments, flagged rather than hidden, both because a field joined a query after
+// the capture:
+//
+//   * the media fixture's `description`. The text is not AniList's verbatim synopsis —
+//     the *shape* is, and the shape is what the mapping is tested against: `<br>` pairs
+//     for paragraph breaks, an <i> note, an &mdash; entity and a trailing "(Source: …)"
+//     attribution, all of which arrive with asHtml: false.
+//
+//   * `staff` edges on two of the search fixture's twenty entries — the Mushoku Tensei
+//     novel and its manga adaptation, carrying the credits AniList publishes for them
+//     (the novel's pair is the same one the captured detail fixture asserts). Two rather
+//     than twenty on purpose: an entry with no staff at all is what a sparse AniList row
+//     looks like, and the mapping has to leave those two fields null rather than fail.
 //
 // Deserialization goes through AniListGraphQlClient.JsonOptions, so the tests
 // exercise production's own serializer configuration too.

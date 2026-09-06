@@ -34,6 +34,28 @@
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The host's real configuration files, linked rather than copied so this project
+       cannot drift from what actually ships. OptionsValidationTests reads these to catch a
+       value that parses but binds to something startup validation would refuse — a
+       CacheDuration written "24:00:00" (24 days, not one) was exactly that shape of bug. -->
+  <ItemGroup>
+    <Content Include="..\LnShelf.Api\appsettings.json"
+             Link="Fixtures\appsettings.json"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\LnShelf.Api\appsettings.Development.json"
+             Link="Fixtures\appsettings.Development.json"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The Goodreads export is synthetic, and says so in GoodreadsExportFixture:
+       no real one exists in the repo, so it is built from the published column
+       list rather than captured. It lives here rather than in docs/ precisely so
+       it is not mistaken for the owner's own data. -->
+  <ItemGroup>
+    <Content Include="Features\Import\Fixtures\goodreads-export.csv"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LnShelf.Api\LnShelf.Api.csproj" />
 

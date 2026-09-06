@@ -1,6 +1,5 @@
 using LnShelf.Api.Data;
 using LnShelf.Api.Errors;
-using LnShelf.Api.Features.Covers.Models;
 using LnShelf.Api.Features.Covers.Services;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
@@ -12,6 +11,9 @@ namespace LnShelf.Api.Tests.Features.Shelf.Services;
 /// The per-volume writes behind the tile: the read cycle, the owned toggle, and the
 /// bulk "mark 1–N" an imported collection needs.
 /// </summary>
+// Every write answers with the whole series, so the assertions about one volume read it
+// back out of that response. That is the point of the shape: the counts the hero renders
+// come from the same round trip as the tile, and cannot disagree with it.
 public sealed class VolumeCommandServiceTests
 {
     [Fact]
@@ -21,15 +23,63 @@ public sealed class VolumeCommandServiceTests
         var series = await SeedAsync(dbContext, volumeCount: 3);
         var volume = series.Volumes.Single(candidate => candidate.Number == 1);
 
-        var response = await CreateService(dbContext).SetReadAsync(
+        var detail = await CreateService(dbContext).SetReadAsync(
             volume.Id, new SetVolumeReadRequest { Status = ReadStatus.Read }, CancellationToken.None);
 
-        response.ShouldNotBeNull();
+        var response = Written(detail, volume.Id);
         response.ReadStatus.ShouldBe(ReadStatus.Read);
         response.ReadAt.ShouldNotBeNull();
 
         // Absence of a row means Unread and NotOwned; touching it is what creates one.
         (await dbContext.VolumeUserStates.CountAsync()).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// The whole reason the single-volume writes answer with the series: the counts the
+    /// hero renders are refreshed by the same round trip that moved the tile.
+    /// </summary>
+    // The client used to recompute these from its own copy of the projection's rule, which
+    // is the duplication CLAUDE.md's "derived states are computed in queries" forbids.
+    [Fact]
+    public async Task SetReadAsync_OneVolume_AnswersWithTheSeriesAndItsRefreshedCounts()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 4);
+
+        var detail = await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 2).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.SeriesId.ShouldBe(series.Id);
+        detail.Volumes.Count.ShouldBe(4);
+        detail.Counts.Read.ShouldBe(1);
+
+        // Every volume is in print and none is owned, so the whole series is still to buy
+        // and the CTA still names the first one.
+        detail.Counts.ToBuy.ShouldBe(4);
+        detail.Counts.NextToBuyNumber.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SetOwnedAsync_OneVolume_AnswersWithTheSeriesAndItsRefreshedCounts()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 3);
+
+        var detail = await CreateService(dbContext).SetOwnedAsync(
+            series.Volumes.Single(candidate => candidate.Number == 1).Id,
+            new SetVolumeOwnedRequest { Owned = true },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.Counts.Owned.ShouldBe(1);
+
+        // Owned and unread is backlog; the volume also leaves the to-buy list, so the CTA
+        // moves on to the next one.
+        detail.Counts.Backlog.ShouldBe(1);
+        detail.Counts.NextToBuyNumber.ShouldBe(2);
     }
 
     [Fact]
@@ -43,11 +93,11 @@ public sealed class VolumeCommandServiceTests
         await service.SetReadAsync(
             volume.Id, new SetVolumeReadRequest { Status = ReadStatus.Read }, CancellationToken.None);
 
-        var response = await service.SetReadAsync(
+        var detail = await service.SetReadAsync(
             volume.Id, new SetVolumeReadRequest { Status = ReadStatus.Unread }, CancellationToken.None);
 
         // A read date on an unread volume is a lie the stats page would later believe.
-        response.ShouldNotBeNull().ReadAt.ShouldBeNull();
+        Written(detail, volume.Id).ReadAt.ShouldBeNull();
     }
 
     [Fact]
@@ -61,12 +111,12 @@ public sealed class VolumeCommandServiceTests
         await service.SetOwnedAsync(
             volume.Id, new SetVolumeOwnedRequest { Owned = true }, CancellationToken.None);
 
-        var response = await service.SetReadAsync(
+        var detail = await service.SetReadAsync(
             volume.Id, new SetVolumeReadRequest { Status = ReadStatus.Reading }, CancellationToken.None);
 
         // The tile needs this: a reading tile has to be one of the four in-print states,
         // never a hatched "not out" one.
-        response.ShouldNotBeNull().IsOut.ShouldBeTrue();
+        Written(detail, volume.Id).IsOut.ShouldBeTrue();
     }
 
     [Fact]
@@ -74,11 +124,12 @@ public sealed class VolumeCommandServiceTests
     {
         await using var dbContext = CreateDbContext();
         var series = await SeedAsync(dbContext, volumeCount: 1);
+        var volumeId = series.Volumes.Single().Id;
 
-        var response = await CreateService(dbContext).SetOwnedAsync(
-            series.Volumes.Single().Id, new SetVolumeOwnedRequest { Owned = true }, CancellationToken.None);
+        var detail = await CreateService(dbContext).SetOwnedAsync(
+            volumeId, new SetVolumeOwnedRequest { Owned = true }, CancellationToken.None);
 
-        response.ShouldNotBeNull();
+        var response = Written(detail, volumeId);
         response.Owned.ShouldBeTrue();
         response.OwnedFormat.ShouldBe(OwnedFormat.Physical);
     }
@@ -96,10 +147,10 @@ public sealed class VolumeCommandServiceTests
             new SetVolumeOwnedRequest { Owned = true, Format = OwnedFormat.Digital, PurchasePrice = 111m },
             CancellationToken.None);
 
-        var response = await service.SetOwnedAsync(
+        var detail = await service.SetOwnedAsync(
             volumeId, new SetVolumeOwnedRequest { Owned = false }, CancellationToken.None);
 
-        response.ShouldNotBeNull();
+        var response = Written(detail, volumeId);
         response.Owned.ShouldBeFalse();
         response.OwnedFormat.ShouldBeNull();
 
@@ -231,6 +282,31 @@ public sealed class VolumeCommandServiceTests
             .ShouldBeNull();
     }
 
+    /// <summary>
+    /// The three remaining single-volume writes on an id that is not there. Null is what
+    /// the controller turns into the 404.
+    /// </summary>
+    [Fact]
+    public async Task TheSingleVolumeWrites_OnAnUnknownVolume_ReturnNull()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, Substitute.For<ICoverStore>());
+        var missing = Guid.CreateVersion7();
+
+        (await service.SetOwnedAsync(
+            missing, new SetVolumeOwnedRequest { Owned = true }, CancellationToken.None)).ShouldBeNull();
+
+        (await service.SetCoverAsync(missing, CreatePng(40, 60), CancellationToken.None)).ShouldBeNull();
+
+        (await service.RemoveCoverAsync(missing, CancellationToken.None)).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The volume a write was about, read back out of the series it answers with.
+    /// </summary>
+    private static VolumeResponse Written(SeriesDetailResponse? detail, Guid volumeId) =>
+        detail.ShouldNotBeNull().Volumes.Single(volume => volume.VolumeId == volumeId);
+
     private static VolumeCommandService CreateService(
         LnShelfDbContext dbContext,
         ICoverStore? coverStore = null) =>
@@ -254,10 +330,10 @@ public sealed class VolumeCommandServiceTests
         await dbContext.SaveChangesAsync();
 
         var coverStore = Substitute.For<ICoverStore>();
-        var response = await CreateService(dbContext, coverStore).SetCoverAsync(
+        var detail = await CreateService(dbContext, coverStore).SetCoverAsync(
             volume.Id, CreatePng(600, 900), CancellationToken.None);
 
-        response.ShouldNotBeNull();
+        var response = Written(detail, volume.Id);
         response.HasCoverOverride.ShouldBeTrue();
         response.CoverObjectKey.ShouldBe($"override/volume/{volume.Id}.webp");
 
@@ -319,11 +395,104 @@ public sealed class VolumeCommandServiceTests
         var service = CreateService(dbContext, Substitute.For<ICoverStore>());
         await service.SetCoverAsync(volume.Id, CreatePng(400, 600), CancellationToken.None);
 
-        var response = await service.RemoveCoverAsync(volume.Id, CancellationToken.None);
+        var detail = await service.RemoveCoverAsync(volume.Id, CancellationToken.None);
 
-        response.ShouldNotBeNull();
+        var response = Written(detail, volume.Id);
         response.HasCoverOverride.ShouldBeFalse();
         response.CoverObjectKey.ShouldBe("anilist/94846.jpg");
+    }
+
+    /// <summary>
+    /// The series' "last read" date follows the volumes being read. Without this the
+    /// library's Last-read sort and the hero line stay frozen at import time forever.
+    /// </summary>
+    [Fact]
+    public async Task SetReadAsync_AVolumeBecomingRead_MovesTheSeriesLastReadDateToToday()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 3);
+
+        await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 2).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        (await dbContext.SeriesUserStates.SingleAsync()).LastReadAt
+            .ShouldBe(DateOnly.FromDateTime(DateTime.Now.Date));
+    }
+
+    /// <summary>
+    /// Forward only: "last read" is the most recent reading, not the most recent edit.
+    /// </summary>
+    // The case this guards is ordinary — ticking off an old volume you finished months ago
+    // — and getting it wrong would silently rewrite the shelf's reading history.
+    [Fact]
+    public async Task SetReadAsync_ASeriesReadMoreRecentlyThanToday_KeepsTheLaterDate()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 2);
+
+        var later = DateOnly.FromDateTime(DateTime.Now.Date).AddDays(3);
+        series.UserState.ShouldNotBeNull().LastReadAt = later;
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 1).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        (await dbContext.SeriesUserStates.SingleAsync()).LastReadAt.ShouldBe(later);
+    }
+
+    [Fact]
+    public async Task SetReadAsync_AVolumeGoingBackToUnread_LeavesTheSeriesDateAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        var stamped = new DateOnly(2021, 11, 23);
+        series.UserState.ShouldNotBeNull().LastReadAt = stamped;
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single().Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Unread },
+            CancellationToken.None);
+
+        // Un-ticking one volume does not mean the series was never read; the date belongs
+        // to the reading, not to the row's last edit.
+        (await dbContext.SeriesUserStates.SingleAsync()).LastReadAt.ShouldBe(stamped);
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_MarkingVolumesRead_MovesTheSeriesLastReadDateToToday()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 8);
+
+        await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 5, Read = ReadStatus.Read },
+            CancellationToken.None);
+
+        (await dbContext.SeriesUserStates.SingleAsync()).LastReadAt
+            .ShouldBe(DateOnly.FromDateTime(DateTime.Now.Date));
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_MarkingVolumesOwnedOnly_LeavesTheSeriesDateAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 4);
+
+        await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 4, Owned = true },
+            CancellationToken.None);
+
+        // Buying is not reading. An import that marks a shelf owned must not claim the
+        // whole thing was read today.
+        (await dbContext.SeriesUserStates.SingleAsync()).LastReadAt.ShouldBeNull();
     }
 
     /// <summary>A real PNG, because the normalizer decodes what it is given.</summary>

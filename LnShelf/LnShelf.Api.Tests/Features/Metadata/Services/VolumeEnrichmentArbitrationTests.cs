@@ -1,3 +1,5 @@
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -226,16 +228,6 @@ public sealed class VolumeEnrichmentArbitrationTests
         ],
     });
 
-    private static IVolumeCatalogueSource CatalogueByTitle(Dictionary<string, CatalogueVolume[]> answers)
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns(call => answers.TryGetValue(call.ArgAt<string>(0), out var records) ? records : []);
-
-        return source;
-    }
-
     /// <param name="onlyFor">
     /// The one title this store answers under. Null means it answers the same for every title,
     /// which is how "the store knows nothing about this series" is written.
@@ -262,70 +254,19 @@ public sealed class VolumeEnrichmentArbitrationTests
     };
 
     private static VolumeEnrichmentService CreateService(IVolumeCatalogueSource catalogueSource) =>
-        new(
+        VolumeEnrichmentPipeline.Create(
             catalogueSource,
             NoEnrichment(),
             NoCandidates(),
-            new VolumeFactWriter(
-                Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-            NullLogger<VolumeEnrichmentService>.Instance);
+            VolumeEnrichmentPipeline.Writer());
 
-    /// <summary>The by-ISBN source knows nothing: this file is about which title is asked.</summary>
-    private static IVolumeEnrichmentSource NoEnrichment()
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((VolumeEnrichment?)null);
+    private static SyncRun Run() => VolumeEnrichmentTestContext.Run(Today);
 
-        return source;
-    }
-
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
-
-        return source;
-    }
-
-    private static LookupBudget Budget(int maximum) => new(maximum);
-
-    private static SyncRun Run() => new()
-    {
-        Id = Guid.CreateVersion7(),
-        StartedAt = new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero),
-    };
-
-    private static Series Series(string titleEnglish, string[] alternativeTitles, params Volume[] volumes)
-    {
-        var series = new Series
-        {
-            Id = Guid.CreateVersion7(),
-            MangaUpdatesId = 48702062318,
-            TitleEnglish = titleEnglish,
-            AlternativeTitles = alternativeTitles,
-            Format = Format.LightNovel,
-            PublicationStatus = PublicationStatus.Completed,
-        };
-
-        foreach (var volume in volumes)
-        {
-            series.Volumes.Add(volume);
-        }
-
-        return series;
-    }
-
-    /// <summary>
-    /// A volume as a MangaUpdates-added series arrives: in print on the count's word, with no
-    /// ISBN, no date and no name.
-    /// </summary>
-    private static Volume Volume(int number) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        Number = number,
-        IsReleased = true,
-    };
+    private static Series Series(string titleEnglish, string[] alternativeTitles, params Volume[] volumes) =>
+        VolumeEnrichmentTestContext.Series(
+            titleEnglish,
+            volumes,
+            mangaUpdatesId: 48702062318,
+            alternativeTitles: alternativeTitles,
+            publicationStatus: PublicationStatus.Completed);
 }

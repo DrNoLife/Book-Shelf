@@ -14,6 +14,26 @@
             "english": "Mushoku Tensei: Jobless Reincarnation",
             "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
             "native": "\u7121\u8077\u8ee2\u751f \uff5e\u7570\u4e16\u754c\u884c\u3063\u305f\u3089\u672c\u6c17\u3060\u3059\uff5e"
+          },
+          "staff": {
+            "edges": [
+              {
+                "role": "Story",
+                "node": {
+                  "name": {
+                    "full": "Rifujin na Magonote"
+                  }
+                }
+              },
+              {
+                "role": "Art",
+                "node": {
+                  "name": {
+                    "full": "Yuka Fujikawa"
+                  }
+                }
+              }
+            ]
           }
         },
         {
@@ -28,6 +48,26 @@
             "english": "Mushoku Tensei: Jobless Reincarnation",
             "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
             "native": "\u7121\u8077\u8ee2\u751f \uff5e\u7570\u4e16\u754c\u884c\u3063\u305f\u3089\u672c\u6c17\u3060\u3059\uff5e"
+          },
+          "staff": {
+            "edges": [
+              {
+                "role": "Story ",
+                "node": {
+                  "name": {
+                    "full": "Rifujin na Magonote"
+                  }
+                }
+              },
+              {
+                "role": "Art",
+                "node": {
+                  "name": {
+                    "full": "Sirotaka"
+                  }
+                }
+              }
+            ]
           }
         },
         {

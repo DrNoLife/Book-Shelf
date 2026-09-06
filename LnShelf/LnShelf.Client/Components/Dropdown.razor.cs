@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-
 namespace LnShelf.Client.Components;
 
 /// <summary>One row of a <see cref="Dropdown"/>.</summary>
@@ -27,6 +24,13 @@ public partial class Dropdown
     /// </summary>
     [Parameter]
     public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// Inert, and visibly so — the same rule SegmentedControl follows. A control that
+    /// vanishes while a write is in flight reads as a bug; one that dims does not.
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
 
     private bool IsOpen { get; set; }
 
@@ -59,7 +63,7 @@ public partial class Dropdown
     // Blazor sees focusout before the new focus lands, so the check is deferred by a
     // yield; without it, clicking an option would close the menu before its own click
     // handler ran.
-    private async Task OnFocusOutAsync(FocusEventArgs args)
+    private async Task OnFocusOutAsync()
     {
         await Task.Yield();
         if (IsOpen)

@@ -1,5 +1,3 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Features.Shelf.Services;
 
 /// <inheritdoc />
@@ -10,28 +8,35 @@ public sealed class VolumeCommandService(
     TimeProvider timeProvider,
     ILogger<VolumeCommandService> logger) : IVolumeCommandService
 {
-    public async Task<VolumeResponse?> SetReadAsync(
+    public async Task<SeriesDetailResponse?> SetReadAsync(
         Guid volumeId,
         SetVolumeReadRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
-        if (volume is null)
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
         {
             return null;
         }
 
         var state = EnsureState(volume);
+        var becameRead = request.Status is ReadStatus.Read && state.ReadStatus is not ReadStatus.Read;
         state.ReadStatus = request.Status;
 
         // A read date is stamped when a volume becomes read and cleared when it stops
         // being read: keeping a stale date on an unread volume would be a lie the
         // stats page would later believe.
         state.ReadAt = request.Status is ReadStatus.Read
-            ? state.ReadAt ?? Today()
+            ? state.ReadAt ?? timeProvider.Today()
             : null;
+
+        if (becameRead)
+        {
+            // The series is already loaded with its user state here, so no second read.
+            StampLastRead(series.UserState ??= new SeriesUserState { SeriesId = series.Id }, timeProvider.Today());
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -39,10 +44,10 @@ public sealed class VolumeCommandService(
             "Volume {VolumeNumber} of {SeriesId} is now {ReadStatus}",
             volume.Number, volume.SeriesId, request.Status);
 
-        return SeriesDetailProjection.ToVolume(volume, Today());
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
 
-    public async Task<VolumeResponse?> SetOwnedAsync(
+    public async Task<SeriesDetailResponse?> SetOwnedAsync(
         Guid volumeId,
         SetVolumeOwnedRequest request,
         CancellationToken cancellationToken)
@@ -54,8 +59,8 @@ public sealed class VolumeCommandService(
             throw new InvalidInputException("A purchase price cannot be negative.");
         }
 
-        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
-        if (volume is null)
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
         {
             return null;
         }
@@ -68,7 +73,7 @@ public sealed class VolumeCommandService(
             // Physical is the default a book shelf assumes; the format only means
             // anything while the volume is owned.
             state.OwnedFormat = request.Format ?? state.OwnedFormat ?? OwnedFormat.Physical;
-            state.PurchasedAt ??= Today();
+            state.PurchasedAt ??= timeProvider.Today();
 
             if (request.PurchasePrice is not null)
             {
@@ -89,7 +94,7 @@ public sealed class VolumeCommandService(
             "Volume {VolumeNumber} of {SeriesId} is now {OwnedState}",
             volume.Number, volume.SeriesId, request.Owned ? "owned" : "not owned");
 
-        return SeriesDetailProjection.ToVolume(volume, Today());
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
 
     public async Task<SeriesDetailResponse?> SetBulkAsync(
@@ -116,6 +121,7 @@ public sealed class VolumeCommandService(
         }
 
         var affected = series.Volumes.Where(volume => volume.Number <= request.ThroughNumber).ToList();
+        var anyBecameRead = false;
 
         foreach (var volume in affected)
         {
@@ -123,8 +129,11 @@ public sealed class VolumeCommandService(
 
             if (request.Read is { } readStatus)
             {
+                anyBecameRead |=
+                    readStatus is ReadStatus.Read && state.ReadStatus is not ReadStatus.Read;
+
                 state.ReadStatus = readStatus;
-                state.ReadAt = readStatus is ReadStatus.Read ? state.ReadAt ?? Today() : null;
+                state.ReadAt = readStatus is ReadStatus.Read ? state.ReadAt ?? timeProvider.Today() : null;
             }
 
             if (request.Owned is { } owned)
@@ -134,6 +143,12 @@ public sealed class VolumeCommandService(
             }
         }
 
+        if (anyBecameRead)
+        {
+            // The series is already loaded with its user state here, so no second read.
+            StampLastRead(series.UserState ??= new SeriesUserState { SeriesId = series.Id }, timeProvider.Today());
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
@@ -141,10 +156,10 @@ public sealed class VolumeCommandService(
             + "read={Read} owned={Owned}",
             seriesId, request.ThroughNumber, affected.Count, series.Volumes.Count, request.Read, request.Owned);
 
-        return SeriesDetailProjection.ToDetail(series, Today());
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
 
-    public async Task<VolumeResponse?> SetCoverAsync(
+    public async Task<SeriesDetailResponse?> SetCoverAsync(
         Guid volumeId,
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken)
@@ -154,8 +169,8 @@ public sealed class VolumeCommandService(
             throw new InvalidInputException("That file is empty.");
         }
 
-        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
-        if (volume is null)
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
         {
             return null;
         }
@@ -179,13 +194,15 @@ public sealed class VolumeCommandService(
             "Volume {VolumeNumber} of {SeriesId} has a cover override at {ObjectKey}",
             volume.Number, volume.SeriesId, objectKey);
 
-        return SeriesDetailProjection.ToVolume(volume, Today());
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
 
-    public async Task<VolumeResponse?> RemoveCoverAsync(Guid volumeId, CancellationToken cancellationToken)
+    public async Task<SeriesDetailResponse?> RemoveCoverAsync(
+        Guid volumeId,
+        CancellationToken cancellationToken)
     {
-        var volume = await LoadVolumeAsync(volumeId, cancellationToken);
-        if (volume is null)
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
         {
             return null;
         }
@@ -203,7 +220,7 @@ public sealed class VolumeCommandService(
             "Volume {VolumeNumber} of {SeriesId} is back to its synced cover",
             volume.Number, volume.SeriesId);
 
-        return SeriesDetailProjection.ToVolume(volume, Today());
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
 
     /// <summary>
@@ -213,10 +230,40 @@ public sealed class VolumeCommandService(
     private static VolumeUserState EnsureState(Volume volume) =>
         volume.UserState ??= new VolumeUserState { VolumeId = volume.Id };
 
-    private Task<Volume?> LoadVolumeAsync(Guid volumeId, CancellationToken cancellationToken) =>
-        dbContext.Volumes
-            .Include(volume => volume.UserState)
-            .FirstOrDefaultAsync(volume => volume.Id == volumeId, cancellationToken);
+    /// <summary>
+    /// Moves the series' "last read" date up to today.
+    /// </summary>
+    // Forward only, because "last read" is the most recent reading and not the most recent
+    // edit: a series read out of order, or an old volume ticked off long after the fact,
+    // must not drag the date backwards under the library's Last-read sort.
+    //
+    // Stamped here rather than derived from the volumes, and that is not a stored derived
+    // state: a volume's ReadAt is itself only stamped the first time it is marked, so
+    // re-reading a series moves this date while leaving every volume's own date alone.
+    private static void StampLastRead(SeriesUserState state, DateOnly today)
+    {
+        if (state.LastReadAt is null || state.LastReadAt < today)
+        {
+            state.LastReadAt = today;
+        }
+    }
 
-    private DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
+    /// <summary>The volume being written, within the series that was loaded for it.</summary>
+    private static Volume? Find(Series series, Guid volumeId) =>
+        series.Volumes.FirstOrDefault(volume => volume.Id == volumeId);
+
+    /// <summary>
+    /// The whole series a volume belongs to, in the shape the detail response needs.
+    /// </summary>
+    // The same load the bulk path does, because every one of these writes answers with the
+    // same response. Loading the volume alone was cheaper per call and cost a second read
+    // anyway the moment the series' user state had to be stamped — and it left the counts
+    // to be recomputed by whoever was holding the previous response.
+    private Task<Series?> LoadSeriesForVolumeAsync(Guid volumeId, CancellationToken cancellationToken) =>
+        dbContext.Series
+            .Include(series => series.UserState)
+            .Include(series => series.Volumes).ThenInclude(volume => volume.UserState)
+            .FirstOrDefaultAsync(
+                series => series.Volumes.Any(volume => volume.Id == volumeId), cancellationToken);
 }
+

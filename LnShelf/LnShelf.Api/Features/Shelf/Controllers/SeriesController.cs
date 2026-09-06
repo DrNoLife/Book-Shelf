@@ -48,10 +48,38 @@ public sealed class SeriesController(
     }
 
     /// <summary>
+    /// Sets the series' tracking status and note. Every omitted field is left alone.
+    /// Answers with the refreshed series.
+    /// </summary>
+    [HttpPut("{seriesId:guid}/state")]
+    public async Task<ActionResult<SeriesDetailResponse>> SetStateAsync(
+        Guid seriesId,
+        [FromBody] UpdateSeriesStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var detail = await seriesCommandService.SetStateAsync(seriesId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
+    /// Acknowledges the new-volume badge: the user has now seen this series.
+    /// </summary>
+    // 204 rather than the refreshed series, unlike the other writes here. This one is not
+    // an edit the reader made — it is the page reporting that it rendered — and answering
+    // with a whole series the client already holds would make every visit pay for a
+    // response nobody reads.
+    [HttpPost("{seriesId:guid}/seen")]
+    public async Task<IActionResult> MarkSeenAsync(Guid seriesId, CancellationToken cancellationToken)
+    {
+        var seen = await seriesCommandService.MarkSeenAsync(seriesId, cancellationToken);
+        return seen ? NoContent() : NotFound();
+    }
+
+    /// <summary>
     /// Adds a series to the shelf from whichever source the request names, with its
     /// volumes and a default user-state row (feature-spec §6).
     /// </summary>
-    // One endpoint for both sources rather than two routes, deliberately. The search page
+    // One endpoint for every source rather than a route each, deliberately. The search page
     // has one row shape and one Add button; what differs is which id the row was carrying.
     // A second route would duplicate this method's whole contract — the 201/200 idempotency
     // evidence and the 404 shape — to express a fact the body already states.
@@ -60,7 +88,10 @@ public sealed class SeriesController(
     // alreadyTracked every time after. No Location header yet — GET /api/series/{id} is
     // phase 3, and pointing at a route that does not exist would be a lie in a header.
     //
-    // A request naming neither source or both is a 400, from AddSeriesSource.
+    // A request naming neither source or both is a 400, from AddSeriesSource; so is one
+    // naming a source no IAddSeriesFlow is registered for. Which flow runs is the command
+    // service's lookup, not a switch here — nothing about dispatching to a metadata source
+    // is a controller's business.
     [HttpPost]
     public async Task<ActionResult<AddSeriesResponse>> AddAsync(
         [FromBody] AddSeriesRequest request,
@@ -68,17 +99,15 @@ public sealed class SeriesController(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var source = AddSeriesSource.Of(request);
-
-        var response = source switch
-        {
-            MetadataSourceName.MangaUpdates =>
-                await seriesCommandService.AddFromMangaUpdatesAsync(request, cancellationToken),
-            _ => await seriesCommandService.AddFromAniListAsync(request, cancellationToken),
-        };
+        var response = await seriesCommandService.AddAsync(request, cancellationToken);
 
         if (response is null)
         {
+            // Re-derived rather than carried down and back: it is a pure read of the two
+            // ids on the request, and the add already ran without needing the controller
+            // to have decided anything.
+            var source = AddSeriesSource.Of(request);
+
             var sourceId = request.AniListId?.ToString(CultureInfo.InvariantCulture)
                            ?? request.MangaUpdatesId?.ToString(CultureInfo.InvariantCulture);
 

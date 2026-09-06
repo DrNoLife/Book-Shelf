@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LnShelf.Api.Features.Import.Models;
 
 /// <summary>
@@ -5,14 +7,22 @@ namespace LnShelf.Api.Features.Import.Models;
 /// configuration rather than constants because the right numbers are only
 /// knowable against a real export.
 /// </summary>
+// The ranges are validated on start (ImportFeatureExtensions). A typo in an
+// environment variable is a boot-time failure that names the setting, not a
+// matcher that quietly accepts everything or offers nothing — every one of these
+// numbers is a threshold whose wrong value looks like working software.
 public sealed class ImportOptions
 {
     public const string SectionName = "Import";
 
     /// <summary>Candidates kept per group for the review queue to show.</summary>
+    // Zero would leave the queue with nothing to click; twenty is already more
+    // rows than a person reads before scrolling.
+    [Range(1, 20)]
     public int CandidatesPerGroup { get; set; } = 5;
 
     /// <summary>Below this, the best candidate is never accepted unseen.</summary>
+    [Range(0, 100)]
     public int AutoMatchMinimumScore { get; set; } = 92;
 
     /// <summary>
@@ -20,13 +30,21 @@ public sealed class ImportOptions
     /// that sends a light novel and its identically-titled manga to review
     /// instead of picking one.
     /// </summary>
+    [Range(0, 100)]
     public int AutoMatchMinimumMargin { get; set; } = 8;
 
     /// <summary>Below this, a candidate is not worth showing at all.</summary>
+    [Range(0, 100)]
     public int CandidateMinimumScore { get; set; } = 55;
 
     /// <summary>Upload guards. A StoryGraph export is tens of kilobytes.</summary>
+    // Floored at a kilobyte so a mistyped zero cannot refuse every real file, and
+    // capped well under the controller's own 8 MB request limit's order of
+    // magnitude: raising this past what the framework will accept would only move
+    // the refusal somewhere less legible.
+    [Range(1024, 64 * 1024 * 1024)]
     public long MaximumFileBytes { get; set; } = 8 * 1024 * 1024;
 
+    [Range(1, 100_000)]
     public int MaximumRowCount { get; set; } = 10_000;
 }

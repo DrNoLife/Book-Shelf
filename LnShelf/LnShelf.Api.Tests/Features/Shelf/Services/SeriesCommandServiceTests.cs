@@ -1,8 +1,7 @@
 using LnShelf.Api.Data;
+using LnShelf.Api.Errors;
 using LnShelf.Shared.Preferences;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
 
 namespace LnShelf.Api.Tests.Features.Shelf.Services;
 
@@ -29,12 +28,12 @@ public sealed class SeriesCommandServiceTests
     private static readonly DateOnly Today = new(2026, 7, 29);
 
     [Fact]
-    public async Task AddFromAniListAsync_NewSeries_PersistsTheSeriesItsVolumesAndDefaultUserState()
+    public async Task AddAsync_AniList_NewSeries_PersistsTheSeriesItsVolumesAndDefaultUserState()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
-        var response = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var response = await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         response.ShouldNotBeNull();
         response.AlreadyTracked.ShouldBeFalse();
@@ -68,14 +67,14 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
+    public async Task AddAsync_AniList_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
     {
         await using var dbContext = CreateDbContext();
         var metadataSource = CreateMetadataSource();
         var service = CreateService(dbContext, metadataSource);
 
-        var first = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
-        var second = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var first = await service.AddAsync(CreateRequest(), CancellationToken.None);
+        var second = await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         first.ShouldNotBeNull();
         second.ShouldNotBeNull();
@@ -95,7 +94,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_UnknownAniListId_ReturnsNullAndAddsNothing()
+    public async Task AddAsync_AniList_UnknownAniListId_ReturnsNullAndAddsNothing()
     {
         await using var dbContext = CreateDbContext();
         var metadataSource = Substitute.For<ISeriesMetadataSource>();
@@ -103,20 +102,20 @@ public sealed class SeriesCommandServiceTests
             .Returns((SeriesMetadata?)null);
 
         var response = await CreateService(dbContext, metadataSource)
-            .AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+            .AddAsync(CreateRequest(), CancellationToken.None);
 
         response.ShouldBeNull();
         (await dbContext.Series.CountAsync()).ShouldBe(0);
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_RequestedFormatDisagreesWithTheSource_StoresTheSourcesFormat()
+    public async Task AddAsync_AniList_RequestedFormatDisagreesWithTheSource_StoresTheSourcesFormat()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
         // The id is the light novel's; the caller claims manga.
-        var response = await service.AddFromAniListAsync(
+        var response = await service.AddAsync(
             new AddSeriesRequest { AniListId = AniListId, Format = Format.Manga },
             CancellationToken.None);
 
@@ -125,12 +124,12 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_NewSeries_IsNotBehindBecauseNoReleaseDatesAreKnownYet()
+    public async Task AddAsync_AniList_NewSeries_IsNotBehindBecauseNoReleaseDatesAreKnownYet()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
-        await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
@@ -167,7 +166,7 @@ public sealed class SeriesCommandServiceTests
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
-        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         var detail = await service.SetVolumeViewAsync(
             added.ShouldNotBeNull().SeriesId,
@@ -183,7 +182,7 @@ public sealed class SeriesCommandServiceTests
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
-        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
         var seriesId = added.ShouldNotBeNull().SeriesId;
 
         await service.SetVolumeViewAsync(
@@ -215,7 +214,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
+    public async Task AddAsync_AniList_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
     {
         await using var dbContext = CreateDbContext();
 
@@ -239,7 +238,7 @@ public sealed class SeriesCommandServiceTests
             });
 
         var response = await CreateService(dbContext, CreateMetadataSource(), isbnBackfill, sync)
-            .AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+            .AddAsync(CreateRequest(), CancellationToken.None);
 
         // The order is the whole point: enrichment is keyed on ISBN, so the ISBNs have to be
         // on the volumes before the refresh looks at them. Adopting after would enrich
@@ -256,7 +255,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_ASeriesAlreadyTracked_DoesNotRefreshItAgain()
+    public async Task AddAsync_AniList_ASeriesAlreadyTracked_DoesNotRefreshItAgain()
     {
         await using var dbContext = CreateDbContext();
 
@@ -264,8 +263,8 @@ public sealed class SeriesCommandServiceTests
         var sync = NoRefresh();
         var service = CreateService(dbContext, CreateMetadataSource(), isbnBackfill, sync);
 
-        await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
-        var second = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        await service.AddAsync(CreateRequest(), CancellationToken.None);
+        var second = await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         second.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
 
@@ -276,7 +275,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromAniListAsync_ARefreshThatThrows_StillAddsTheSeries()
+    public async Task AddAsync_AniList_ARefreshThatThrows_StillAddsTheSeries()
     {
         await using var dbContext = CreateDbContext();
 
@@ -285,7 +284,7 @@ public sealed class SeriesCommandServiceTests
             .Returns<Task<SyncRun?>>(_ => throw new HttpRequestException("MangaUpdates is down"));
 
         var response = await CreateService(dbContext, CreateMetadataSource(), NoStagedIsbns(), sync)
-            .AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+            .AddAsync(CreateRequest(), CancellationToken.None);
 
         // The series is on the shelf by the time the refresh runs, so failing the add would
         // be the wrong trade — the refresh is an improvement on the add, not part of it.
@@ -299,13 +298,13 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromMangaUpdatesAsync_NewSeries_PersistsWhatMangaUpdatesKnows()
+    public async Task AddAsync_MangaUpdates_NewSeries_PersistsWhatMangaUpdatesKnows()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(
             dbContext, CreateMetadataSource(), mangaUpdatesSource: CreateMangaUpdatesSource());
 
-        var response = await service.AddFromMangaUpdatesAsync(
+        var response = await service.AddAsync(
             CreateMangaUpdatesRequest(), CancellationToken.None);
 
         response.ShouldNotBeNull();
@@ -351,15 +350,15 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromMangaUpdatesAsync_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
+    public async Task AddAsync_MangaUpdates_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
     {
         await using var dbContext = CreateDbContext();
         var mangaUpdatesSource = CreateMangaUpdatesSource();
         var service = CreateService(
             dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource);
 
-        var first = await service.AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
-        var second = await service.AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+        var first = await service.AddAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+        var second = await service.AddAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
 
         first.ShouldNotBeNull();
         second.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
@@ -373,7 +372,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromMangaUpdatesAsync_ASeriesTheNightlySyncAlreadyLinked_IsNotAddedTwice()
+    public async Task AddAsync_MangaUpdates_ASeriesTheNightlySyncAlreadyLinked_IsNotAddedTwice()
     {
         await using var dbContext = CreateDbContext();
 
@@ -396,7 +395,7 @@ public sealed class SeriesCommandServiceTests
 
         var response = await CreateService(
                 dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource)
-            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+            .AddAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
 
         response.ShouldNotBeNull().AlreadyTracked.ShouldBeTrue();
 
@@ -411,7 +410,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
-    public async Task AddFromMangaUpdatesAsync_UnknownId_ReturnsNullAndAddsNothing()
+    public async Task AddAsync_MangaUpdates_UnknownId_ReturnsNullAndAddsNothing()
     {
         await using var dbContext = CreateDbContext();
 
@@ -421,14 +420,14 @@ public sealed class SeriesCommandServiceTests
 
         var response = await CreateService(
                 dbContext, CreateMetadataSource(), mangaUpdatesSource: mangaUpdatesSource)
-            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+            .AddAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
 
         response.ShouldBeNull();
         (await dbContext.Series.CountAsync()).ShouldBe(0);
     }
 
     [Fact]
-    public async Task AddFromMangaUpdatesAsync_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
+    public async Task AddAsync_MangaUpdates_ANewSeries_AdoptsItsStagedIsbnsThenRefreshesIt()
     {
         await using var dbContext = CreateDbContext();
 
@@ -444,7 +443,7 @@ public sealed class SeriesCommandServiceTests
 
         var response = await CreateService(
                 dbContext, CreateMetadataSource(), isbnBackfill, sync, CreateMangaUpdatesSource())
-            .AddFromMangaUpdatesAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
+            .AddAsync(CreateMangaUpdatesRequest(), CancellationToken.None);
 
         // The same completion the AniList path gets, in the same order and for the same
         // reason: enrichment is keyed on ISBN, so the ISBNs go on the volumes first.
@@ -463,7 +462,7 @@ public sealed class SeriesCommandServiceTests
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
-        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
         var seriesId = added.ShouldNotBeNull().SeriesId;
 
         // Give it the state a real series accumulates, so the delete has something to lose.
@@ -509,7 +508,7 @@ public sealed class SeriesCommandServiceTests
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
-        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
         var deletedId = added.ShouldNotBeNull().SeriesId;
 
         // The manga adaptation of the light novel being removed. RelatedSeriesId is a plain
@@ -543,7 +542,7 @@ public sealed class SeriesCommandServiceTests
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext, CreateMetadataSource());
 
-        var added = await service.AddFromAniListAsync(CreateRequest(), CancellationToken.None);
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
 
         var keeper = new Series
         {
@@ -569,6 +568,211 @@ public sealed class SeriesCommandServiceTests
         (await dbContext.VolumeUserStates.CountAsync()).ShouldBe(1);
     }
 
+    [Fact]
+    public async Task AddAsync_ASourceNoFlowIsRegisteredFor_IsRefusedRatherThanRoutedElsewhere()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // The regression this guards: the controller used to switch on the source with a
+        // `_ =>` falling through to AniList, so a request naming a source nothing could add
+        // from added the wrong series instead of saying so.
+        var pipeline = new AddSeriesPipeline(
+            dbContext,
+            [],
+            NoStagedIsbns(),
+            NoRefresh(),
+            NullLogger<AddSeriesPipeline>.Instance);
+
+        var act = async () => await pipeline.RunAsync(CreateRequest(), CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task SetStateAsync_ATrackingStatusAndANote_AreStoredAndComeBackOnTheDetail()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var added = await service.AddAsync(CreateRequest(), CancellationToken.None);
+
+        var detail = await service.SetStateAsync(
+            added.ShouldNotBeNull().SeriesId,
+            new UpdateSeriesStateRequest
+            {
+                TrackingStatus = TrackingStatus.Reading,
+                Notes = "Waiting on the Yen On reprint of volume 4.",
+            },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Reading);
+        detail.Notes.ShouldBe("Waiting on the Yen On reprint of volume 4.");
+
+        var state = await dbContext.SeriesUserStates.SingleAsync();
+        state.TrackingStatus.ShouldBe(TrackingStatus.Reading);
+        state.Notes.ShouldBe("Waiting on the Yen On reprint of volume 4.");
+    }
+
+    /// <summary>
+    /// Partial update: every omitted field is left alone, so the status dropdown and the
+    /// note box can each save only what they changed.
+    /// </summary>
+    [Fact]
+    public async Task SetStateAsync_AFieldLeftNull_LeavesWhatWasThereAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        await service.SetStateAsync(
+            seriesId,
+            new UpdateSeriesStateRequest { TrackingStatus = TrackingStatus.Reading, Notes = "Re-reading." },
+            CancellationToken.None);
+
+        // Only the status this time; the note must survive it.
+        var detail = await service.SetStateAsync(
+            seriesId,
+            new UpdateSeriesStateRequest { TrackingStatus = TrackingStatus.Completed },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Completed);
+        detail.Notes.ShouldBe("Re-reading.");
+    }
+
+    /// <summary>
+    /// With null meaning "unchanged", the empty string is how a note is erased — and a
+    /// blank note already reads as no note on the way out.
+    /// </summary>
+    [Fact]
+    public async Task SetStateAsync_AnEmptyNote_ClearsIt()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        await service.SetStateAsync(
+            seriesId, new UpdateSeriesStateRequest { Notes = "Lend to Anders." }, CancellationToken.None);
+
+        var detail = await service.SetStateAsync(
+            seriesId, new UpdateSeriesStateRequest { Notes = string.Empty }, CancellationToken.None);
+
+        detail.ShouldNotBeNull().Notes.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SetStateAsync_ASeriesThatWasNeverTouched_GetsItsUserStateRow()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // An imported or hand-seeded series can reach the shelf with no user-state row at
+        // all; setting its status is exactly the touch that row records.
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 999,
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+        };
+        dbContext.Series.Add(series);
+        await dbContext.SaveChangesAsync();
+
+        var detail = await CreateService(dbContext, CreateMetadataSource()).SetStateAsync(
+            series.Id,
+            new UpdateSeriesStateRequest { TrackingStatus = TrackingStatus.Dropped },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Dropped);
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Dropped);
+    }
+
+    [Fact]
+    public async Task SetStateAsync_UnknownSeries_ReturnsNullAndWritesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var detail = await CreateService(dbContext, CreateMetadataSource()).SetStateAsync(
+            Guid.CreateVersion7(),
+            new UpdateSeriesStateRequest { TrackingStatus = TrackingStatus.Reading },
+            CancellationToken.None);
+
+        detail.ShouldBeNull();
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task MarkSeenAsync_ASeriesWithTheBadgeUp_PutsItDown()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        // What sync does when a volume of an already-synced series flips to released.
+        (await dbContext.SeriesUserStates.SingleAsync()).HasNewVolume = true;
+        await dbContext.SaveChangesAsync();
+
+        (await service.MarkSeenAsync(seriesId, CancellationToken.None)).ShouldBeTrue();
+
+        (await dbContext.SeriesUserStates.SingleAsync()).HasNewVolume.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task MarkSeenAsync_ABadgeThatIsAlreadyDown_IsStillASuccess()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        // The common case by far: the page calls this on every visit, and most visits are
+        // to a series with nothing new waiting.
+        (await service.MarkSeenAsync(seriesId, CancellationToken.None)).ShouldBeTrue();
+        (await dbContext.SeriesUserStates.SingleAsync()).HasNewVolume.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task MarkSeenAsync_ASeriesWithNoUserStateRow_SucceedsWithoutWritingOne()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 999,
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+        };
+        dbContext.Series.Add(series);
+        await dbContext.SaveChangesAsync();
+
+        (await CreateService(dbContext, CreateMetadataSource())
+            .MarkSeenAsync(series.Id, CancellationToken.None)).ShouldBeTrue();
+
+        // No row means the badge is already down, so acknowledging it must not invent one
+        // — a visit is not a preference.
+        (await dbContext.SeriesUserStates.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task MarkSeenAsync_UnknownSeries_IsFalseRatherThanAFailure()
+    {
+        await using var dbContext = CreateDbContext();
+
+        (await CreateService(dbContext, CreateMetadataSource())
+            .MarkSeenAsync(Guid.CreateVersion7(), CancellationToken.None)).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The service wired with both real add flows — the composition the app runs.
+    /// </summary>
+    // The flows are the real implementations rather than substitutes, because they are
+    // what the source-specific half of an add *is*: which id names the series, which row
+    // already holds it, and what gets built. Substituting them would leave these tests
+    // asserting only the pipeline, which is the half that was never in doubt.
     private static SeriesCommandService CreateService(
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource,
@@ -576,12 +780,19 @@ public sealed class SeriesCommandServiceTests
         ISeriesSyncService? seriesSync = null,
         IMangaUpdatesSeriesQueryService? mangaUpdatesSource = null) =>
         new(dbContext,
-            metadataSource,
-            mangaUpdatesSource ?? Substitute.For<IMangaUpdatesSeriesQueryService>(),
-            CreateCoverCache(),
-            CreateSeriesCoverCache(),
-            isbnBackfill ?? NoStagedIsbns(),
-            seriesSync ?? NoRefresh(),
+            new AddSeriesPipeline(
+                dbContext,
+                [
+                    new AniListAddSeriesFlow(metadataSource, CreateCoverCache(), TimeProvider.System),
+                    new MangaUpdatesAddSeriesFlow(
+                        mangaUpdatesSource ?? Substitute.For<IMangaUpdatesSeriesQueryService>(),
+                        CreateSeriesCoverCache(),
+                        TimeProvider.System,
+                        NullLogger<MangaUpdatesAddSeriesFlow>.Instance),
+                ],
+                isbnBackfill ?? NoStagedIsbns(),
+                seriesSync ?? NoRefresh(),
+                NullLogger<AddSeriesPipeline>.Instance),
             TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
 

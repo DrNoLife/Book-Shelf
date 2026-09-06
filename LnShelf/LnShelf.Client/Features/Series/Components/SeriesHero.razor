@@ -24,8 +24,9 @@
             <FormatBadge Value="Series.Format" />
             <span class="hero__status">
                 <StatusDot Value="Series.PublicationStatus" />
-                <span>@Series.PublicationStatus</span>
+                <span>@Series.PublicationStatus.Words</span>
             </span>
+            <TrackingStatusControl Series="Series" />
             <span class="hero__facts">@FactsLine</span>
 
             <span class="hero__links">

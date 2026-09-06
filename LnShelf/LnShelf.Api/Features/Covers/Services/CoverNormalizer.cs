@@ -45,7 +45,13 @@ public sealed class CoverNormalizer(IOptions<CoverStoreOptions> options, ILogger
             image.Metadata.XmpProfile = null;
 
             using var output = new MemoryStream();
-            await image.SaveAsync(output, new WebpEncoder { Quality = options.Value.CoverQuality }, cancellationToken);
+
+            // ImageSharp's WebpEncoder defaults to lossless, which ignores Quality
+            // entirely and stores the image at close to its raw RGB size.
+            await image.SaveAsync(
+                output,
+                new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = options.Value.CoverQuality },
+                cancellationToken);
 
             var normalized = output.ToArray();
 

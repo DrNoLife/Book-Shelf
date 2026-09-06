@@ -1,0 +1,77 @@
+@* The volume section's controls: how the volumes are drawn, and the bulk marks. Its
+   own component because the section beneath it has five jobs already and this is the
+   one that is only ever about the header. *@
+
+<div class="volumes__controls">
+    @* Printed, not hovered: design.md forbids hover-only information, and these are
+       the only clues that a tile is interactive. *@
+    <p class="volumes__hint">Click opens the menu · shift-click toggles owned · ←↑↓→ + space cycles read</p>
+
+    @* Tiles or list, for this series. Choosing here sets an override on the series;
+       the global default lives in preferences, and "Follow" gives it back. *@
+    <SegmentedControl TValue="VolumeView"
+                      Options="ViewOptions"
+                      Value="View"
+                      ValueChanged="OnViewChosenAsync"
+                      AriaLabel="Volume view" />
+
+    @* Only offered where there is something to show. A control that does nothing on
+       90% of the shelf is worse than no control (design.md — control audit), and the
+       shelf's titles arrive from a source with partial coverage. *@
+    @if (HasAnyTitle)
+    {
+        <button type="button"
+                class="control @(Preferences.ShowVolumeTitles ? "control--on" : null)"
+                aria-pressed="@Preferences.ShowVolumeTitles.ToAriaState()"
+                title="@TitlesTitle"
+                @onclick="OnTitlesToggledAsync">
+            Titles
+        </button>
+    }
+
+    @if (Series.VolumeViewOverride is not null)
+    {
+        @* The override is visible and reversible — a series quietly ignoring the global
+           preference with no way to say so would be the bug. *@
+        <button type="button"
+                class="control control--quiet"
+                title="@($"This series is set to {View}; follow the {Preferences.VolumeView} default instead")"
+                @onclick="OnFollowGlobalAsync">
+            Follow default
+        </button>
+    }
+
+    <button type="button"
+            class="control @(Selection.IsSelectMode ? "control--on" : null)"
+            aria-pressed="@Selection.IsSelectMode.ToAriaState()"
+            disabled="@(View == VolumeView.List)"
+            title="@SelectTitle"
+            @onclick="() => Selection.ToggleSelectMode()">
+        @(Selection.IsSelectMode ? "Done" : "Select")
+    </button>
+
+    @if (Selection.IsSelectMode)
+    {
+        <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
+                @onclick="MarkSelectedReadAsync">
+            @MarkSelectedReadLabel
+        </button>
+        <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
+                @onclick="MarkSelectedOwnedAsync">
+            @MarkSelectedOwnedLabel
+        </button>
+    }
+    else
+    {
+        @* The counts are computed into the labels, the way design.md computes the next
+           needed volume into "Vol 12 on Saxo". *@
+        <button type="button" class="control" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
+                @onclick="MarkReadThroughAsync">
+            Mark 1–@ReadThrough read
+        </button>
+        <button type="button" class="control" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
+                @onclick="MarkOwnedThroughAsync">
+            Mark 1–@OwnedThrough owned
+        </button>
+    }
+</div>

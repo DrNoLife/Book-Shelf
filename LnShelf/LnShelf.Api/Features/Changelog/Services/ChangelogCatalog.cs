@@ -1,5 +1,3 @@
-using LnShelf.Api.Features.Changelog.Models;
-
 namespace LnShelf.Api.Features.Changelog.Services;
 
 /// <summary>
@@ -14,6 +12,24 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.15.0", new DateOnly(2026, 9, 6), "The dates were already there",
+        [
+            "The shelf has known since day one when you read each volume — it just never said. The volume " +
+                "menu now shows \"Read 23 Nov 2021\", and an import keeps the earliest real date instead of " +
+                "letting a placeholder win. Date ranges in a StoryGraph export no longer get lost on the way in.",
+            "Goodreads exports import too; the file's own header says which kind it is. When a light novel " +
+                "and its manga share a title, the illustrator (then the author) settles which one you meant, " +
+                "and the review queue shows the exact rows it read.",
+            "The series page can finally say what you think of it: set Reading, Plan to start, Completed or " +
+                "Dropped, and edit the note. Ticking a volume read moves \"last read\" along with it.",
+            "The new-volume glow works now — the nightly sync lights it when a volume you haven't seen is " +
+                "out, and opening the series clears it. Library cards show the latest volume's cover, and a " +
+                "series that finishes publishing is marked Completed.",
+            "Fixes on the way past: search results no longer vanish while a series is being added, moving " +
+                "from one series to another no longer shows the old one first, a failed preferences save " +
+                "says so, cached covers are stored at the configured quality instead of about five times " +
+                "larger, and two catalogue caches that were meant to last a day lasted twenty-four.",
+        ]),
         new("0.14.0", new DateOnly(2026, 8, 15), "When AniList sleeps",
         [
             "AniList disabled its whole public API today — and search stopped answering. Now, when AniList " +

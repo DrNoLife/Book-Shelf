@@ -33,7 +33,7 @@
                     <section class="entry" @key="entry.Version">
                         <p class="entry__meta">
                             <span class="entry__version">v@(entry.Version)</span>
-                            <span class="entry__date tabular">@FormatDate(entry.Date)</span>
+                            <span class="entry__date tabular">@entry.Date.Full</span>
                         </p>
                         <h2 class="entry__title">@entry.Title</h2>
                         <ul class="entry__changes">

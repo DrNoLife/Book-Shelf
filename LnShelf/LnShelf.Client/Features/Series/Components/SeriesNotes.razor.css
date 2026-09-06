@@ -1,0 +1,54 @@
+.notes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* The note is its own edit affordance — a bordered block, the same one it reads as at
+   rest, that firms up when it is pointed at. No Edit button beside it: the shelf has one
+   control per thing, and the thing here is the note. */
+.notes__open,
+.notes__input {
+  width: 100%;
+  max-width: 80ch;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.notes__open {
+  border: 1px solid var(--line);
+  background: var(--surf);
+  color: var(--text);
+
+  /* A note keeps the line breaks it was written with. */
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+
+.notes__open:hover,
+.notes__open:focus-visible {
+  border-color: var(--line-3);
+}
+
+.notes__open:focus-visible,
+.notes__input:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 2px;
+}
+
+/* Border, background and colour come from app.css's global textarea reset. */
+.notes__input {
+  resize: vertical;
+}
+
+.notes__empty,
+.notes__hint {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--faint);
+}

@@ -296,9 +296,21 @@ Features/
     Controllers/
     Data/           (EF entity configurations for this slice)
   Metadata/         (AniList + MangaUpdates clients, sync job)
+  Covers/           (MinIO-backed cover cache + user overrides, behind ICoverStore)
+  Preferences/      (the single user-preferences row)
   Import/           (StoryGraph CSV pipeline, match queue)
-  Releases/         (upcoming view queries, notifications)
+  Changelog/        (app version + release notes, served to the client)
+  Releases/         (upcoming view queries, notifications — phase 5, not yet created)
 ```
+
+Two exceptions to feature-slice-first, both above `Features/` because every slice
+reaches them: `LnShelf.Api/Matching/` (`TitleNormalizer`, `TitleSimilarityScorer`)
+— a title-matching primitive Import and Metadata both depend on, not one slice's
+concern — and `LnShelf.Api/Extensions/` (`StringExtensions.NullIfBlank`,
+`TimeProviderExtensions.Today`), the C# 14 `extension`-block primitives that were
+copied privately into half a dozen classes before they lived in one place. Keep
+both folders for genuinely cross-slice primitives only; anything a single slice
+owns belongs in that slice.
 
 **Blazor client slice** — same principle, UI-shaped subfolders:
 

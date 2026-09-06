@@ -1,5 +1,3 @@
-using LnShelf.Api.Features.Covers.Models;
-using LnShelf.Api.Features.Covers.Services;
 using Minio;
 
 namespace LnShelf.Api.Features.Covers;
@@ -13,7 +11,13 @@ public static class CoversFeatureExtensions
     {
         public IServiceCollection AddCovers(IConfiguration configuration)
         {
-            services.Configure<CoverStoreOptions>(configuration.GetSection(CoverStoreOptions.SectionName));
+            // Validated at startup rather than bound and hoped for: a bad cover size or a
+            // missing bucket name otherwise surfaces the first time somebody adds a series,
+            // which can be hours after the deployment that caused it.
+            services.AddOptions<CoverStoreOptions>()
+                .Bind(configuration.GetSection(CoverStoreOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             services.AddSingleton<IMinioClient>(provider =>
             {

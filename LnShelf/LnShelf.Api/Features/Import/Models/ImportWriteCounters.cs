@@ -11,4 +11,9 @@ public sealed class ImportWriteCounters
     public int SeriesUpdated { get; set; }
     public int LocalOnlyVolumesCreated { get; set; }
     public int VolumeStatesWritten { get; set; }
+
+    /// <summary>Volumes whose subtitle the export supplied and nothing else had.</summary>
+    // Logged rather than reported on the wire: it is evidence about the metadata the
+    // import saved a lookup on, which is a maintainer's question, not the user's.
+    public int VolumeSubtitlesWritten { get; set; }
 }

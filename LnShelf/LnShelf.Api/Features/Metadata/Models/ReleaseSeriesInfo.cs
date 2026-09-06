@@ -12,6 +12,11 @@ public sealed record ReleaseSeriesCandidate
     public required string Title { get; init; }
 
     /// <summary>The source's own medium word — "Novel", "Manga", "Doujinshi".</summary>
+    // Kept deliberately, along with StartYear, although nothing in production reads either
+    // yet. They are wire fidelity: the two fields a person disambiguating a bad link asks
+    // about first ("is this the novel or the manga, and is it the right decade?"), and the
+    // matcher is where that will be answered. Dropping them would mean re-deriving them from
+    // a record the matcher no longer has.
     public string? SourceType { get; init; }
 
     public int? StartYear { get; init; }

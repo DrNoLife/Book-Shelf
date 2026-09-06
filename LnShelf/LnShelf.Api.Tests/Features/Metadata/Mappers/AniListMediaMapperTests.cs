@@ -118,6 +118,51 @@ public sealed class AniListMediaMapperTests
     }
 
     [Fact]
+    public void ToSearchResult_TheCapturedMushokuSearch_TellsTheNovelAndTheMangaApartByTheirArtist()
+    {
+        var results = MapSearch();
+
+        var novel = results.Single(result => result.AniListId == AniListFixtures.MushokuTenseiNovelId);
+        var manga = results.Single(result => result.AniListId == AniListFixtures.MushokuTenseiMangaId);
+
+        // The adaptation credits the novelist as Story, so the author is the same on
+        // both and settles nothing. The artist is what differs — which is why the
+        // search query asks for staff at all.
+        novel.Author.ShouldBe("Rifujin na Magonote");
+        manga.Author.ShouldBe("Rifujin na Magonote");
+
+        novel.Illustrator.ShouldBe("Sirotaka");
+        manga.Illustrator.ShouldBe("Yuka Fujikawa");
+    }
+
+    [Fact]
+    public void ToSearchResult_AnEntryWithNoStaff_LeavesAuthorAndIllustratorNull()
+    {
+        // Sparse AniList rows have no staff edges at all, and most of the captured
+        // page is exactly that. A missing credit is null, never an exception.
+        var withoutStaff = MapSearch()
+            .Where(result => result.AniListId
+                is not AniListFixtures.MushokuTenseiNovelId
+                and not AniListFixtures.MushokuTenseiMangaId)
+            .ToList();
+
+        withoutStaff.ShouldNotBeEmpty();
+        withoutStaff.ShouldAllBe(result => result.Author == null && result.Illustrator == null);
+    }
+
+    [Fact]
+    public void ToSearchResult_ASingleMangakaCreditedAsStoryAndArt_IsBothAuthorAndIllustrator()
+    {
+        var media = CreateMedia(format: "MANGA");
+        media.Staff = CreateStaff(("Story & Art", "Kentarou Miura"));
+
+        var result = AniListMediaMapper.ToSearchResult(media).ShouldNotBeNull();
+
+        result.Author.ShouldBe("Kentarou Miura");
+        result.Illustrator.ShouldBe("Kentarou Miura");
+    }
+
+    [Fact]
     public void ToSearchResult_TheCapturedMushokuSearch_CarriesNoSynopsisAtAll()
     {
         // The search query deliberately does not ask for one — a row prints a title, a

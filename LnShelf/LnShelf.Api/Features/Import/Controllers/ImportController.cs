@@ -1,11 +1,9 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Features.Import.Controllers;
 
 [ApiController]
 [Route("api/import")]
 public sealed class ImportController(
-    IShelfImporter shelfImporter,
+    ImportSourceResolver importSourceResolver,
     IImportQueryService importQueryService,
     IImportCommandService importCommandService,
     IOptions<ImportOptions> options) : ControllerBase
@@ -25,7 +23,7 @@ public sealed class ImportController(
     {
         if (file is null || file.Length == 0)
         {
-            throw new InvalidInputException("Attach a StoryGraph CSV export as 'file'.");
+            throw new InvalidInputException("Attach a library export CSV as 'file'.");
         }
 
         if (file.Length > options.Value.MaximumFileBytes)
@@ -35,7 +33,12 @@ public sealed class ImportController(
         }
 
         await using var content = file.OpenReadStream();
-        var batch = await shelfImporter.CreateBatchAsync(file.FileName, content, cancellationToken);
+
+        // Which product wrote the file is read out of the file, not posted by the
+        // client: the browser bundle stays ignorant of which sources exist, and a
+        // new source is one more IShelfImporter and no change here.
+        var importer = await importSourceResolver.ResolveAsync(content, cancellationToken);
+        var batch = await importer.CreateBatchAsync(file.FileName, content, cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, batch);
     }

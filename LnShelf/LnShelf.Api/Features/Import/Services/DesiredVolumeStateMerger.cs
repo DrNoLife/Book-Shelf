@@ -32,6 +32,7 @@ public static class DesiredVolumeStateMerger
                     Owned = ImportOwnershipRule.IsOwned(row.OwnedInExport, row.ReadStatus, group.TreatReadAsOwned),
                     OwnedFormat = row.OwnedFormat,
                     ReadAt = row.ReadAt,
+                    Subtitle = row.Subtitle.NullIfBlank(),
                     Isbn = Isbn.Normalize(row.Isbn),
                 };
 
@@ -51,6 +52,12 @@ public static class DesiredVolumeStateMerger
     // Never the other way round. Two rows for one volume mean two editions of the
     // same book, and the shelf should reflect the best of what the reader did with
     // it — not whichever row the file happened to list last.
+    //
+    // Latest here, earliest in ImportShelfWriter, and the two are not in tension: within
+    // one export, two rows for one volume are two readings of it and the newest is what
+    // the shelf shows; against a date already on the shelf, the earliest survives because
+    // the value it is competing with is a system-stamped "today". Level one asks which
+    // reading, level two asks which record of it is real.
     public static DesiredVolumeState Combine(DesiredVolumeState left, DesiredVolumeState right)
     {
         ArgumentNullException.ThrowIfNull(left);
@@ -69,6 +76,12 @@ public static class DesiredVolumeStateMerger
             OwnedFormat = ChooseOwnedFormat(left, right),
 
             ReadAt = Latest(left.ReadAt, right.ReadAt),
+
+            // Whichever row had one. Japanese subtitles are already gone by here
+            // (StoryGraphBookMapper), so any two that survive to meet are two English
+            // spellings of the same book's subtitle and there is nothing to choose
+            // between them.
+            Subtitle = left.Subtitle ?? right.Subtitle,
 
             Isbn = ChooseIsbn(left.Isbn, right.Isbn),
         };

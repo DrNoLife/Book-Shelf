@@ -23,7 +23,7 @@
         <FormatBadge Value="Result.Format" />
         <span class="row__status">
             <StatusDot Value="Result.PublicationStatus" />
-            <span>@Result.PublicationStatus</span>
+            <span>@Result.PublicationStatus.Words</span>
         </span>
         <span class="row__volumes tabular">@VolumeLabel</span>
         @if (Result.StartYear is { } startYear)

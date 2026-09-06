@@ -122,3 +122,33 @@ notification — which un-parks only if spike #1 delivers dates.
 - `docs/design.md` gained two rulings mid-build (tile focus-visible, the
   multi-select chip) — fold them into the document properly next time it's
   open for edits.
+
+Deferred by the 2026-09-06 sweep, each checked against the code as it now stands:
+
+- Neither importer reads Read Count, star rating/review or Date Added — ratings
+  are Stats territory (§4.7) and "shelved" is not "read".
+- `ICoverCache` / `AniListCoverCache` still name a metadata source from inside
+  `Features/Covers` — rename source-neutral, or write down why the exception stands.
+- `SeriesRefresher` is 378 lines after the publication-status and discrepancy
+  fixes; past the size signal, so the next edit to it extracts rather than adds.
+- `OpenLibraryOptions.MaximumLookupsPerRun` / `MaximumLookupsOnDemand` also fund
+  Apple Books title attempts: a series with no remembered catalogue title can
+  spend 9 attempts against an on-demand budget of 8 before one ISBN lookup. Split
+  them into their own `EnrichmentOptions` section.
+- `CoverStoreOptions.AccessKey` / `SecretKey` and `OpenLibraryOptions.ContactEmail`
+  are deliberately not `[Required]` — empty is the working dev default. Revisit if
+  a production start should ever fail loudly on them instead.
+- The nginx client container still runs as root; non-root needs port and pid-path
+  changes. The API container is already `USER $APP_UID`.
+- The Goodreads importer was built against the documented header and a fixture, not
+  against a real export — confirm the column names on the first real one.
+- `ImportSourceResolver` needs a seekable upload stream to sniff the header. True
+  for a bound `IFormFile`; a streaming upload path would have to buffer first.
+- `ConsoleCommandLine.Option` returns null for a trailing `--out` with no value, so
+  `isbn-discover` silently writes to its default path instead of complaining.
+- Tests run on EF InMemory, which cannot prove unique indexes, cascade deletes or
+  anything else Postgres does — those are covered by configuration review only.
+- Central Package Management (`Directory.Packages.props`) not adopted; four
+  projects still carry their own `PackageReference` versions.
+- feature-spec §7's internal proxy header (`X-LnShelf-Internal`) is designed and
+  documented but implemented nowhere — neither nginx nor the API knows the name.

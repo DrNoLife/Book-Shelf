@@ -7,26 +7,18 @@ namespace LnShelf.Api.Features.Shelf.Abstractions;
 public interface ISeriesCommandService
 {
     /// <summary>
-    /// Adds a series from AniList, with its volume list and a default user-state
-    /// row. Idempotent: a series already tracked comes back unchanged, never a
-    /// second row.
+    /// Adds a series from whichever source the request names, with its volume list and a
+    /// default user-state row. Idempotent: a series already tracked comes back unchanged,
+    /// never a second row.
     /// </summary>
-    /// <returns>Null when AniList has no series with that id.</returns>
-    Task<AddSeriesResponse?> AddFromAniListAsync(
-        AddSeriesRequest request,
-        CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Adds a series from MangaUpdates: the same shelf row, keyed on the MangaUpdates id
-    /// and idempotent on it. What the shelf ends up with differs in what the source knows
-    /// — romaji titles more often than English ones, a volume count instead of a volume
-    /// list, and a real publisher, which AniList never has.
-    /// </summary>
-    // Exists because AniList disabling its public API left the app unable to add anything
-    // at all. It is not a preference: the AniList path stays the first choice, and this is
-    // what the search page's Add button reaches when the results came from the fallback.
-    /// <returns>Null when MangaUpdates has no series with that id.</returns>
-    Task<AddSeriesResponse?> AddFromMangaUpdatesAsync(
+    // One method for every source rather than one per source: which catalogue the id came
+    // from is the request's business and <see cref="IAddSeriesFlow"/>'s, and a third
+    // source must not be an edit here.
+    /// <returns>Null when the source has no series with that id.</returns>
+    /// <exception cref="Errors.InvalidInputException">
+    /// The request names neither source or both, or names one nothing can add from.
+    /// </exception>
+    Task<AddSeriesResponse?> AddAsync(
         AddSeriesRequest request,
         CancellationToken cancellationToken);
 
@@ -39,6 +31,28 @@ public interface ISeriesCommandService
         Guid seriesId,
         SetSeriesVolumeViewRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the series' tracking status and notes — the user state the library filters
+    /// read and the hero prints (feature-spec §6).
+    /// </summary>
+    // Answers with the whole series for the reason the bulk endpoint does: the page
+    // redraws from one response rather than following the write with a read.
+    /// <returns>The refreshed series, or null when no series has that id.</returns>
+    Task<SeriesDetailResponse?> SetStateAsync(
+        Guid seriesId,
+        UpdateSeriesStateRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Clears the new-volume badge — the user has now seen the series.
+    /// </summary>
+    // The clearing half of HasNewVolume, the one stored flag CLAUDE.md sanctions:
+    // last-visit acknowledgment is an event, and this is the event. Sync sets it; only
+    // a visit puts it back down.
+    /// <returns>False when no series has that id — everything else is a success,
+    /// including a badge that was already down.</returns>
+    Task<bool> MarkSeenAsync(Guid seriesId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Removes a series from the shelf, with its volumes and every piece of user state

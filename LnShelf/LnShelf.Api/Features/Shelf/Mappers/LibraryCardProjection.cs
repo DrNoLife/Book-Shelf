@@ -28,10 +28,34 @@ public static class LibraryCardProjection
                 : TrackingStatus.PlanToStart,
             HasNewVolume = series.UserState != null && series.UserState.HasNewVolume,
 
-            // The series cover. design.md's "latest volume, or first by setting"
-            // needs per-volume art to choose between, which arrives with
-            // MangaUpdates in phase 2; until then there is exactly one cover.
-            CoverObjectKey = series.CoverObjectKey,
+            // design.md: the card shows the latest volume's cover. "Latest" here is the
+            // highest-numbered volume that actually has art — not simply the highest —
+            // because a series is commonly tracking volumes the enrichment pass has never
+            // reached, and picking the last of those would leave the shelf's most complete
+            // series showing placeholders.
+            //
+            // The three grounds are the same ones, in the same order, that
+            // SeriesDetailProjection.ToVolume uses for a tile: a user-supplied cover always
+            // wins and sync never replaces it (CLAUDE.md — Cover overrides are user data),
+            // then the volume's own synced art, then the series' cover.
+            //
+            // Spelled out inside the expression rather than shared with that method, for
+            // the reason IsOut is spelled out four times below: this has to survive
+            // translation to SQL, and a helper call would not.
+            //
+            // design.md also offers the reader a latest/first setting. It is not built, and
+            // the column that used to stand in for it was deleted rather than left dead —
+            // it can come back with the control that needs it.
+            CoverObjectKey = series.Volumes
+                .Where(volume =>
+                    (volume.UserState != null && volume.UserState.CoverOverrideObjectKey != null)
+                    || volume.CoverObjectKey != null)
+                .OrderByDescending(volume => volume.Number)
+                .Select(volume =>
+                    volume.UserState != null && volume.UserState.CoverOverrideObjectKey != null
+                        ? volume.UserState.CoverOverrideObjectKey
+                        : volume.CoverObjectKey)
+                .FirstOrDefault() ?? series.CoverObjectKey,
 
             Read = series.Volumes.Count(volume =>
                 volume.UserState != null && volume.UserState.ReadStatus == ReadStatus.Read),

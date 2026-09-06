@@ -1,5 +1,4 @@
 using LnShelf.Api.Commands;
-using LnShelf.Api.Errors;
 
 namespace LnShelf.Api.Features.Metadata.Commands;
 

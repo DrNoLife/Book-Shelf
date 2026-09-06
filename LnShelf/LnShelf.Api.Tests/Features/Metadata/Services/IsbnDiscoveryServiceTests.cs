@@ -96,6 +96,28 @@ public sealed class IsbnDiscoveryServiceTests
     }
 
     [Fact]
+    public async Task RunAsync_AJapaneseIsbnWhoseRecordNamesEnglish_IsStillNotProposed()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedAsync(dbContext, [(2, null, true)]);
+
+        var enrichmentSource = Enrichments((JapaneseIsbn, EditionLanguage.English, "Kadokawa"));
+
+        var rows = await CreateService(dbContext, Candidates(JapaneseIsbn), enrichmentSource)
+            .RunAsync(CancellationToken.None);
+
+        // What discovery proposes is written into Volume.Isbn, and the nightly pass refuses
+        // to look a Japanese ISBN up — so proposing one would leave that volume permanently
+        // unenrichable. Judged from the registration group, which costs no request at all.
+        var row = rows.ShouldHaveSingleItem();
+        row.Isbn.ShouldBeNull();
+        row.Outcome.ShouldBe(IsbnDiscoveryOutcome.NoEnglishEdition);
+
+        await enrichmentSource.DidNotReceive()
+            .GetByIsbnAsync(JapaneseIsbn, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task RunAsync_ASearchThatFindsNothing_StillWritesARow()
     {
         await using var dbContext = CreateDbContext();
@@ -173,7 +195,11 @@ public sealed class IsbnDiscoveryServiceTests
         LnShelfDbContext dbContext,
         IIsbnCandidateSource candidateSource,
         IVolumeEnrichmentSource enrichmentSource) =>
-        new(dbContext, candidateSource, enrichmentSource, NullLogger<IsbnDiscoveryService>.Instance);
+        new(
+            dbContext,
+            candidateSource,
+            new IsbnCandidateVerifier(enrichmentSource),
+            NullLogger<IsbnDiscoveryService>.Instance);
 
     /// <summary>A search that offers exactly these ISBNs, in this order.</summary>
     private static IIsbnCandidateSource Candidates(params string[] isbns)

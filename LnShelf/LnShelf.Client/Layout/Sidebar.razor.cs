@@ -1,8 +1,5 @@
 using LnShelf.Client.Features.Library;
 using LnShelf.Client.Features.Sync;
-using LnShelf.Shared.Metadata;
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
 
 namespace LnShelf.Client.Layout;
 
@@ -53,8 +50,8 @@ public partial class Sidebar : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        LibraryState.Changed += OnLibraryStateChanged;
-        SyncState.Changed += OnLibraryStateChanged;
+        LibraryState.Changed += OnStateChanged;
+        SyncState.Changed += OnStateChanged;
 
         // The shell owns this fetch: the footer shows on every page, including ones
         // that never load a library.
@@ -66,11 +63,11 @@ public partial class Sidebar : IDisposable
 
     public void Dispose()
     {
-        LibraryState.Changed -= OnLibraryStateChanged;
-        SyncState.Changed -= OnLibraryStateChanged;
+        LibraryState.Changed -= OnStateChanged;
+        SyncState.Changed -= OnStateChanged;
     }
 
-    private void OnLibraryStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
     private sealed record ShelfRow(
         string Label,

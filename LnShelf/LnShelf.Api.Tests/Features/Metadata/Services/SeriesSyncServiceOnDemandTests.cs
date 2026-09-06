@@ -1,5 +1,6 @@
 using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
@@ -169,13 +170,11 @@ public sealed class SeriesSyncServiceOnDemandTests
             matcher,
             releaseSource,
             NoMetadata(),
-            new VolumeEnrichmentService(
+            VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 enrichmentSource,
                 NoCandidates(),
-                new VolumeFactWriter(
-                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-                NullLogger<VolumeEnrichmentService>.Instance),
+                VolumeEnrichmentPipeline.Writer()),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
 
@@ -239,31 +238,6 @@ public sealed class SeriesSyncServiceOnDemandTests
         var source = Substitute.For<ISeriesMetadataSource>();
         source.GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns((SeriesMetadata?)null);
-
-        return source;
-    }
-
-    /// <summary>
-    /// A search that offers nothing: these tests are about the release-source half of a
-    /// run, and the search fallback has its own file.
-    /// </summary>
-    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
-    private static IVolumeCatalogueSource NoCatalogue()
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns([]);
-
-        return source;
-    }
-
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
 
         return source;
     }

@@ -8,7 +8,7 @@
         <label class="upload__button">
             <Icon Name="IconName.FileArrowUp" Size="14" />
             <span>@(HasFile ? FileName : "Choose a CSV")</span>
-            <InputFile class="upload__input" OnChange="OnFileChangedAsync" accept=".csv,text/csv" />
+            <InputFile class="upload__input" OnChange="OnFileChanged" accept=".csv,text/csv" />
         </label>
 
         <button type="button" class="primary" disabled="@(!HasFile || IsBusy)" @onclick="OnReadAsync">
@@ -35,7 +35,7 @@
 
     private string FileName => SelectedFile?.Name ?? string.Empty;
 
-    private void OnFileChangedAsync(InputFileChangeEventArgs args) => SelectedFile = args.File;
+    private void OnFileChanged(InputFileChangeEventArgs args) => SelectedFile = args.File;
 
     private Task OnReadAsync() =>
         SelectedFile is null ? Task.CompletedTask : Submitted.InvokeAsync(SelectedFile);

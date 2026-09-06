@@ -1,9 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using LnShelf.Shared;
-using LnShelf.Shared.Metadata;
-using LnShelf.Shared.Shelf;
 
 namespace LnShelf.Client.Features.Search;
 
@@ -28,7 +23,17 @@ public sealed class SeriesSearchState(HttpClient httpClient)
     /// </summary>
     public string? DegradedNote { get; private set; }
 
-    public bool IsBusy { get; private set; }
+    /// <summary>
+    /// The two are separate because the page renders them differently: "Searching…"
+    /// replaces the result list, and an add must not make the list it was pressed in
+    /// disappear until the POST comes back.
+    /// </summary>
+    public bool IsSearching { get; private set; }
+
+    public bool IsAdding { get; private set; }
+
+    /// <summary>True while either call is in flight — what a control is disabled on.</summary>
+    public bool IsBusy => IsSearching || IsAdding;
 
     /// <summary>What just happened, in one line, for the page to print.</summary>
     public string? Message { get; private set; }
@@ -50,7 +55,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
             return;
         }
 
-        IsBusy = true;
+        IsSearching = true;
         Message = null;
         Changed?.Invoke();
 
@@ -88,7 +93,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         }
         finally
         {
-            IsBusy = false;
+            IsSearching = false;
             Changed?.Invoke();
         }
     }
@@ -100,7 +105,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        IsBusy = true;
+        IsAdding = true;
         Message = null;
         Changed?.Invoke();
 
@@ -119,7 +124,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
 
             if (!response.IsSuccessStatusCode)
             {
-                var problem = await ReadProblemAsync(response, cancellationToken);
+                var problem = await response.ReadProblemAsync(cancellationToken);
 
                 Message = problem is null
                     ? $"Could not add {result.TitleEnglish}: {(int)response.StatusCode} {response.StatusCode}."
@@ -150,7 +155,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         }
         finally
         {
-            IsBusy = false;
+            IsAdding = false;
             Changed?.Invoke();
         }
     }
@@ -161,36 +166,10 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         DegradedNote = null;
         HasSearched = true;
 
-        var problem = await ReadProblemAsync(response, cancellationToken);
+        var problem = await response.ReadProblemAsync(cancellationToken);
 
         Message = problem is null
             ? $"Search failed: {(int)response.StatusCode} {response.StatusCode}."
             : $"Search failed: {problem}";
-    }
-
-    /// <summary>
-    /// The API's own account of the failure, or null when it did not give one.
-    /// </summary>
-    // Best-effort by design: a proxy or a dev-server can answer a failure with HTML, and a
-    // second failure while reading the first must not replace a bad status code with a
-    // deserialization message nobody can act on.
-    private static async Task<string?> ReadProblemAsync(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var problem = await response.Content.ReadFromJsonAsync<ApiProblemResponse>(cancellationToken);
-
-            return problem?.Message;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception) when (exception is HttpRequestException or JsonException or NotSupportedException)
-        {
-            return null;
-        }
     }
 }

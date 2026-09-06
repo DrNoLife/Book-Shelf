@@ -80,20 +80,11 @@
   gap: 8px;
 }
 
-/* --- controls, to design.md's button specs --- */
+/* --- controls ---
+   .primary and .secondary are global primitives (wwwroot/css/app.css). The ownership
+   toggle is this card's own control, so it stays here — matched to .secondary because
+   it sits in the same row. */
 
-.primary {
-  padding: 8px 13px;
-  border-radius: 7px;
-  background: var(--acc);
-  color: var(--on-acc);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.primary:disabled { opacity: 0.45; cursor: default; }
-
-.secondary,
 .toggle {
   padding: 7px 12px;
   border: 1px solid var(--line-2);
@@ -104,10 +95,8 @@
   background: none;
 }
 
-.secondary:hover:not(:disabled),
 .toggle:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
 
-.secondary:disabled,
 .toggle:disabled { opacity: 0.45; cursor: default; }
 
 /* The chip treatment reused rather than a new checkbox style invented. */
@@ -162,6 +151,48 @@
   font-size: 11.5px;
   color: var(--faint);
 }
+
+/* --- the books themselves ---
+   The header and the rows share one grid definition, so a label cannot drift off the
+   column it names — the same rule the volume list and the library rows follow. */
+
+.books {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.books__head,
+.book {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 62px 64px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 2px;
+  font-size: 11.5px;
+}
+
+.book { color: var(--muted); }
+
+.cell { min-width: 0; }
+
+.cell--title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.cell--read,
+.cell--owned { color: var(--faint); }
+
+/* A title the parser found no volume in. Persimmon as text weight, never as a fill —
+   it is a thing to look at, not a thing to press. */
+.cell--unparsed { color: var(--acc-soft); }
 
 @media (max-width: 620px) {
   .group__state { align-items: flex-start; text-align: left; }

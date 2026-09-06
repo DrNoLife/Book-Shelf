@@ -6,5 +6,17 @@ namespace LnShelf.Api.Features.Import.Abstractions;
 /// </summary>
 public interface ISeriesMatcher
 {
-    Task<SeriesMatch> MatchAsync(string seriesTitle, CancellationToken cancellationToken);
+    /// <param name="author">
+    /// Who the export says wrote the series, when it says. Null otherwise.
+    /// </param>
+    /// <param name="illustrator">
+    /// Who the export says drew it, when it says. Null otherwise — this is the
+    /// credit that separates a light novel from its own manga adaptation, so it
+    /// is the one worth carrying through.
+    /// </param>
+    Task<SeriesMatch> MatchAsync(
+        string seriesTitle,
+        string? author,
+        string? illustrator,
+        CancellationToken cancellationToken);
 }

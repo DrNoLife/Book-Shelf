@@ -1,0 +1,9 @@
+@* The text channel for everything a surface says with colour and shape. Without a
+   legend the swatches and dots would be colour-only information, which design.md
+   forbids outright. *@
+
+<ul class="legend">@ChildContent</ul>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

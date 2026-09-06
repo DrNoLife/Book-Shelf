@@ -1,0 +1,26 @@
+@* One entry: a mark and the words for it. The mark is either one of the shared
+   swatches, named by its state, or a component the caller supplies — the library's
+   legend names publication statuses, which are dots rather than swatches. *@
+
+<li class="legend__item">
+    @if (Swatch is { } swatch)
+    {
+        <span class="swatch @swatch"></span>
+    }
+    else
+    {
+        @Mark
+    }
+    @Words
+</li>
+
+@code {
+    /// <summary>A swatch modifier: "swatch--read", "swatch--tobuy", and so on.</summary>
+    [Parameter] public string? Swatch { get; set; }
+
+    /// <summary>The mark, where it is a component rather than a swatch.</summary>
+    [Parameter] public RenderFragment? Mark { get; set; }
+
+    /// <summary>The fixed terminology, never a synonym (design.md).</summary>
+    [Parameter] public required string Words { get; set; }
+}

@@ -13,7 +13,6 @@
   /* Lines — warm off-white at low alpha, not gray borders */
   --line:   rgba(244, 240, 234, 0.10);   /* default hairline */
   --line-2: rgba(244, 240, 234, 0.18);   /* interactive borders */
-  --line-3: rgba(244, 240, 234, 0.30);   /* hover on an interactive border */
 
   /* Text — one hue, three strengths */
   --text:  #f4f0ea;                      /* warm off-white */
@@ -41,8 +40,11 @@
    --------------------------------------------------------------------------- */
 
 :root {
+  --line-3:            rgba(244, 240, 234, 0.30); /* hover on an interactive border */
+
   --on-acc:            #1a0c07;                  /* text on any persimmon fill */
   --cover-placeholder: #1a1620;                  /* coverless tile */
+  --hatch:             #221d2b;                  /* the "not out" hatch stripe */
 
   --badge-manga-bg:    rgba(20, 17, 25, 0.82);
   --badge-manga-ring:  rgba(244, 240, 234, 0.28);
@@ -54,7 +56,11 @@
   --dot-halo:          rgba(8, 7, 11, 0.55);     /* so a dot reads on any cover */
 
   --glow-new:          rgba(255, 90, 54, 0.75);  /* new-volume card edge */
+  --glow-reading:      rgba(255, 90, 54, 0.45);  /* the reading tile's halo */
   --acc-wash:          rgba(255, 90, 54, 0.10);  /* active nav / chip tint */
+
+  --shadow-lift:       rgba(8, 7, 11, 0.55);     /* menus and popovers, lifted */
+  --shadow-mark:       rgba(8, 7, 11, 0.9);      /* a tile mark over light artwork */
 
   --sidebar-top:       #17131e;
   --sidebar-bottom:    #120f17;
@@ -177,6 +183,64 @@ input:-webkit-autofill:focus {
   color: var(--faint);
 }
 
+/* --- the three primitives every page reaches for ---
+
+   Buttons and notices are global rather than per-component for the reason the eyebrow
+   is: they belong to the design, not to a feature. Copied into five and six scoped
+   stylesheets respectively they had already drifted — two button paddings and three
+   notice paddings, none of them design.md's. */
+
+/* design.md, Controls: --acc fill, --on-acc text, 600 12.5px, radius 7, padding 8×13. */
+.primary {
+  padding: 8px 13px;
+  border-radius: 7px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.primary:disabled { opacity: 0.45; cursor: default; }
+
+/* design.md, Controls: transparent, 1px --line-2 border, --muted text, 500 12.5px. */
+.secondary {
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.secondary:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
+
+.secondary:disabled { opacity: 0.45; cursor: default; }
+
+/* One line of state, in body text. Pages add their own padding where the surrounding
+   layout needs it; the type and the colour are fixed here. */
+.notice {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* A refusal. Persimmon as text weight, never as a fill — a warning is not an action
+   (design.md's colour discipline). */
+.notice--warning { color: var(--acc-soft); }
+
+/* Success and failure both land here, so the line is stated rather than tinted; the
+   words carry which one it was. */
+.notice--message {
+  padding: 8px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--surf);
+  color: var(--text);
+}
+
+/* Fine print — the one wry line per view, and the quiet notes beside it. */
+.notice--quiet { font-size: 11px; color: var(--faint); }
+
 /* Counts must line up across cards. */
 .tabular { font-variant-numeric: tabular-nums; }
 
@@ -195,4 +259,12 @@ input:-webkit-autofill:focus {
   border-top: 1px solid var(--acc);
   color: var(--text);
   font-size: 12.5px;
+}
+
+/* The template ships this link unstyled, so it rendered as a bare browser-blue anchor
+   on the one bar the user sees when everything else has gone wrong. */
+#blazor-error-ui .reload {
+  margin-left: 0.5rem;
+  color: var(--acc-soft);
+  text-decoration: underline;
 }

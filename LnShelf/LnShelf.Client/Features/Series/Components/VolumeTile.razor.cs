@@ -1,9 +1,3 @@
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
-
 namespace LnShelf.Client.Features.Series.Components;
 
 public partial class VolumeTile
@@ -91,6 +85,15 @@ public partial class VolumeTile
     }
 
     /// <summary>
+    /// "Read 23 Nov 2021" when the shelf knows when this volume was finished.
+    /// </summary>
+    // The tile's caption is spoken for — design.md fixes what goes after "Vol N", and a
+    // read date is not on that list — so this rides the tooltip. It is never the only
+    // channel: the same line is printed in the volume menu, which is a tap away.
+    private string? ReadDateText =>
+        Volume.ReadAt is { } readAt ? $"Read {readAt.Full}" : null;
+
+    /// <summary>
     /// The override already arrives as the volume's cover key (the projection prefers
     /// it), so the tile only has to defeat the browser cache when there is one.
     /// </summary>
@@ -135,7 +138,7 @@ public partial class VolumeTile
 
                 // Spoken with the year the caption has no room for.
                 VolumeTileState.Unreleased => Volume.ReleaseDate is { } releaseDate
-                    ? $"due {VolumeTileStateMap.FullDate(releaseDate)}"
+                    ? $"due {releaseDate.Full}"
                     : "not out yet",
                 VolumeTileState.Announced => "announced, no date",
                 _ => string.Empty,
@@ -177,7 +180,7 @@ public partial class VolumeTile
             : MenuRequested.InvokeAsync(Volume);
     }
 
-    private Task OnContextMenuAsync(MouseEventArgs args) => OwnedToggled.InvokeAsync(Volume);
+    private Task OnContextMenuAsync() => OwnedToggled.InvokeAsync(Volume);
 
     private Task OnKeyDownAsync(KeyboardEventArgs args)
     {

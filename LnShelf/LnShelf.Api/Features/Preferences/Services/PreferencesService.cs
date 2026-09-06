@@ -1,3 +1,6 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+using LnShelf.Api.Features.Preferences.Mappers;
+
 namespace LnShelf.Api.Features.Preferences.Services;
 
 /// <inheritdoc />
@@ -12,7 +15,7 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
 
         // Absent means "never changed anything", which is the defaults — not an error
         // and not a reason to write a row before the user has an opinion.
-        return ToResponse(preferences ?? new UserPreferences());
+        return PreferencesMapper.ToResponse(preferences ?? new UserPreferences());
     }
 
     public async Task<PreferencesResponse> UpdateAsync(
@@ -47,16 +50,6 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
             preferences.GridDensity, preferences.LibrarySort, preferences.LibraryView,
             preferences.VolumeView, preferences.ShowVolumeTitles, preferences.DefaultLibraryFilter);
 
-        return ToResponse(preferences);
+        return PreferencesMapper.ToResponse(preferences);
     }
-
-    private static PreferencesResponse ToResponse(UserPreferences preferences) => new()
-    {
-        GridDensity = preferences.GridDensity,
-        LibrarySort = preferences.LibrarySort,
-        LibraryView = preferences.LibraryView,
-        VolumeView = preferences.VolumeView,
-        ShowVolumeTitles = preferences.ShowVolumeTitles,
-        DefaultLibraryFilter = preferences.DefaultLibraryFilter,
-    };
 }

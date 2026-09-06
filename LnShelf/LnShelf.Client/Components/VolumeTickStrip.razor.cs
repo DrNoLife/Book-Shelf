@@ -1,6 +1,3 @@
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-
 namespace LnShelf.Client.Components;
 
 public partial class VolumeTickStrip
@@ -17,7 +14,14 @@ public partial class VolumeTickStrip
     [Parameter]
     public int Cap { get; set; } = 24;
 
-    private VolumeTickStripLayout Layout => VolumeTickStripLayout.For(Ticks, Cap);
+    /// <summary>
+    /// The visible ticks and the tail, computed once per parameter change.
+    /// </summary>
+    // The markup reads this three times, and a library card renders one strip each —
+    // rebuilding the layout per read meant three passes per card per render.
+    private VolumeTickStripLayout Layout { get; set; } = VolumeTickStripLayout.For([], 24);
+
+    protected override void OnParametersSet() => Layout = VolumeTickStripLayout.For(Ticks, Cap);
 
     private static string TickClass(VolumeTickKind kind) => kind switch
     {

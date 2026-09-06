@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+
 namespace LnShelf.Api.Features.Preferences.Controllers;
 
 [ApiController]

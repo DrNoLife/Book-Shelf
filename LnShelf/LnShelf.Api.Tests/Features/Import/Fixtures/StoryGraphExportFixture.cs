@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
-
 namespace LnShelf.Api.Tests.Features.Import.Fixtures;
 
 /// <summary>
@@ -18,17 +16,23 @@ internal static class StoryGraphExportFixture
     /// <summary>Distinct series those books collapse into.</summary>
     public const int ExpectedGroupCount = 11;
 
-    public static async Task<IReadOnlyList<StoryGraphBook>> ReadAsync()
+    /// <summary>The export as the test run sees it on disk.</summary>
+    public static string FilePath =>
+        Path.Combine(AppContext.BaseDirectory, "Features", "Import", "Fixtures", FileName);
+
+    /// <summary>The file itself, for tests that feed the importer rather than the reader.</summary>
+    public static Stream OpenRead() => File.OpenRead(FilePath);
+
+    public static async Task<IReadOnlyList<ImportedBook>> ReadAsync()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Features", "Import", "Fixtures", FileName);
-        await using var stream = File.OpenRead(path);
+        await using var stream = OpenRead();
 
         var reader = new StoryGraphCsvReader(NullLogger<StoryGraphCsvReader>.Instance);
         return await reader.ReadAsync(stream, CancellationToken.None);
     }
 
     /// <summary>The books of one series, keyed the way the importer groups them.</summary>
-    public static async Task<IReadOnlyList<StoryGraphBook>> ReadGroupAsync(string seriesKey)
+    public static async Task<IReadOnlyList<ImportedBook>> ReadGroupAsync(string seriesKey)
     {
         var books = await ReadAsync();
         return [.. books.Where(book => book.SeriesKey == seriesKey)];

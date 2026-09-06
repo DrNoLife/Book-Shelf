@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace LnShelf.Api.Features.Metadata.Services;

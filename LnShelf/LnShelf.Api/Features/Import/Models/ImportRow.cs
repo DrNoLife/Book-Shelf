@@ -21,6 +21,15 @@ public sealed class ImportRow
     /// <summary>Null when the title carried no volume number at all.</summary>
     public int? VolumeNumber { get; set; }
 
+    /// <summary>
+    /// The volume's own subtitle, as the export's title spelled it. Null when the
+    /// title carried none.
+    /// </summary>
+    // Staged rather than used at upload time because the commit is a separate request:
+    // it is read back off this row to fill Volume.Title, which the enrichment sources
+    // otherwise spend a lookup per volume to recover.
+    public string? Subtitle { get; set; }
+
     public ReadStatus ReadStatus { get; set; }
 
     /// <summary>

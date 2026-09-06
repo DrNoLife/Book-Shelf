@@ -40,7 +40,7 @@
 
             <span class="cell cell--status">
                 <StatusDot Value="card.PublicationStatus" />
-                <span class="row__status-label">@PublicationLabel(card.PublicationStatus)</span>
+                <span class="row__status-label">@card.PublicationStatus.Words</span>
             </span>
 
             <span class="cell cell--next">
@@ -58,7 +58,7 @@
                 }
                 else if (card.NextReleaseDate is { } nextRelease)
                 {
-                    <span class="row__date tabular">@FormatDate(nextRelease)</span>
+                    <span class="row__date tabular">@nextRelease.Full</span>
                 }
                 else
                 {
@@ -77,15 +77,4 @@
     private static string CountsTitle(LibraryCardResponse card) =>
         $"{card.Read} read · {card.Owned} owned · {card.Published} out";
 
-    private static string PublicationLabel(PublicationStatus status) => status switch
-    {
-        PublicationStatus.Ongoing => "Ongoing",
-        PublicationStatus.Completed => "Completed",
-        PublicationStatus.Hiatus => "Hiatus",
-        PublicationStatus.Cancelled => "Cancelled",
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown publication status."),
-    };
-
-    private static string FormatDate(DateOnly date) =>
-        date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 }

@@ -1,5 +1,3 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Features.Import.Services;
 
 /// <inheritdoc />
@@ -135,12 +133,14 @@ public sealed class ImportCommandService(
 
         logger.LogInformation(
             "Committed batch {BatchId}: {SeriesCreated} series created, {SeriesUpdated} updated, "
-            + "{LocalOnlyVolumesCreated} local-only volumes added, {VolumeStatesWritten} volume states written",
+            + "{LocalOnlyVolumesCreated} local-only volumes added, {VolumeStatesWritten} volume states written, "
+            + "{VolumeSubtitlesWritten} subtitles taken from the export",
             response.BatchId,
             response.SeriesCreated,
             response.SeriesUpdated,
             response.LocalOnlyVolumesCreated,
-            response.VolumeStatesWritten);
+            response.VolumeStatesWritten,
+            counters.VolumeSubtitlesWritten);
 
         return response;
     }

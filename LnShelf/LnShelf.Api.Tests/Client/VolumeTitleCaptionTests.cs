@@ -106,16 +106,19 @@ public sealed class VolumeTitleCaptionTests
     [Fact]
     public void VolumeGridMarkup_TheToggle_IsOfferedOnlyWhereAVolumeHasATitle()
     {
-        var markup = ClientSource.ReadAllText(
-            Path.Combine("Features", "Series", "Components", "VolumeGrid.razor"));
+        // The control lives in the section's toolbar and the tile in the section itself,
+        // so the two halves of this rule are now two files.
+        var toolbar = ClientSource.ReadAllText(
+            Path.Combine("Features", "Series", "Components", "VolumeGridToolbar.razor"));
 
         // A control that does nothing on most of the shelf is worse than no control
         // (the phase 3.3.1 control audit).
-        markup.ShouldContain("@if (HasAnyTitle)");
+        toolbar.ShouldContain("@if (HasAnyTitle)");
 
         // And the tile only ever receives a title when the preference is on, so the
         // toggle cannot be out of step with what is drawn.
-        markup.ShouldContain("Preferences.ShowVolumeTitles ? volume.Title : null");
+        ClientSource.ReadAllText(Path.Combine("Features", "Series", "Components", "VolumeGrid.razor"))
+            .ShouldContain("Preferences.ShowVolumeTitles ? volume.Title : null");
     }
 
     private static Series Series(params Volume[] volumes)

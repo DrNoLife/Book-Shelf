@@ -44,10 +44,10 @@ public static class EnrichmentVerificationConsoleReport
         }
 
         lines.Add(
-            $"Thresholds: the series needs all three; volumes need matched >={EnrichmentVerificationService.MinimumMatchedPercent}%, "
-            + $"described >={EnrichmentVerificationService.MinimumDescribedPercent}%, "
-            + $"covered >={EnrichmentVerificationService.MinimumCoveredPercent}%, "
-            + $"dated >={EnrichmentVerificationService.MinimumDatedPercent}%.");
+            $"Thresholds: the series needs all three; volumes need matched >={VerificationVerdict.MinimumMatchedPercent}%, "
+            + $"described >={VerificationVerdict.MinimumDescribedPercent}%, "
+            + $"covered >={VerificationVerdict.MinimumCoveredPercent}%, "
+            + $"dated >={VerificationVerdict.MinimumDatedPercent}%.");
 
         var passed = report.Series.Count(series => series.Passed);
         lines.Add($"VERDICT: {Verdict(report.Passed)} -- {passed} of {report.Series.Count} series");

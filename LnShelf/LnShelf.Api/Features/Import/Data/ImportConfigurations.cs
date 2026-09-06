@@ -62,6 +62,9 @@ public sealed class ImportRowConfiguration : IEntityTypeConfiguration<ImportRow>
         builder.Property(row => row.Author).HasMaxLength(400);
         builder.Property(row => row.Isbn).HasMaxLength(32);
 
+        // Capped where Volume.Title is capped: this is the value that ends up there.
+        builder.Property(row => row.Subtitle).HasMaxLength(400);
+
         builder.Property(row => row.ReadStatus).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(row => row.OwnedFormat).HasConversion<string>().HasMaxLength(32);
     }

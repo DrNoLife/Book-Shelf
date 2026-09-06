@@ -24,45 +24,23 @@
         @* Two views of the same set. Words rather than icons: "rows" and "covers" are
            not shapes anyone recognises, and the quiet raised fill keeps this from
            competing with the format tabs' persimmon pill. *@
-        <div class="toggle" role="group" aria-label="Library view">
-            <button type="button"
-                    class="toggle__button toggle__button--wide @(View == LibraryView.Rows ? "toggle__button--on" : "")"
-                    aria-pressed="@((View == LibraryView.Rows).ToAriaState())"
-                    title="Rows — one line per series"
-                    @onclick="() => OnViewChangedAsync(LibraryView.Rows)">
-                Rows
-            </button>
-            <button type="button"
-                    class="toggle__button toggle__button--wide @(View == LibraryView.Covers ? "toggle__button--on" : "")"
-                    aria-pressed="@((View == LibraryView.Covers).ToAriaState())"
-                    title="Covers — the cover grid"
-                    @onclick="() => OnViewChangedAsync(LibraryView.Covers)">
-                Covers
-            </button>
-        </div>
+        <SegmentedControl TValue="LibraryView"
+                          Options="ViewOptions"
+                          Value="View"
+                          ValueChanged="OnViewChangedAsync"
+                          AriaLabel="Library view" />
 
-        @* Two channels, not colour alone: the pressed button carries the raised fill
+        @* Two channels, not colour alone: the pressed segment carries the raised fill
            and the icon differs between the two densities. Disabled rather than hidden in
            the rows view: a control that vanishes reads as a bug, one that says why it is
            inert does not. *@
-        <div class="toggle" role="group" aria-label="Grid density">
-            <button type="button"
-                    class="toggle__button @(Density == GridDensity.Comfortable ? "toggle__button--on" : "")"
-                    aria-pressed="@((Density == GridDensity.Comfortable).ToAriaState())"
-                    disabled="@IsDensityDisabled"
-                    title="@DensityTitle("Comfortable")"
-                    @onclick="() => OnDensityChangedAsync(GridDensity.Comfortable)">
-                <Icon Name="IconName.SquaresFour" Size="14" />
-            </button>
-            <button type="button"
-                    class="toggle__button @(Density == GridDensity.Compact ? "toggle__button--on" : "")"
-                    aria-pressed="@((Density == GridDensity.Compact).ToAriaState())"
-                    disabled="@IsDensityDisabled"
-                    title="@DensityTitle("Compact")"
-                    @onclick="() => OnDensityChangedAsync(GridDensity.Compact)">
-                <Icon Name="IconName.GridNine" Size="14" />
-            </button>
-        </div>
+        <SegmentedControl TValue="GridDensity"
+                          Options="DensityOptions"
+                          Value="Density"
+                          ValueChanged="OnDensityChangedAsync"
+                          AriaLabel="Grid density"
+                          Disabled="IsDensityDisabled"
+                          DisabledTitle="density applies to the covers view" />
 
         <NavLink class="bar__add" href="search">
             <Icon Name="IconName.Plus" Size="13" />
@@ -92,8 +70,17 @@
     /// <summary>Density is a grid setting, and the rows view has no grid.</summary>
     private bool IsDensityDisabled => View == LibraryView.Rows;
 
-    private string DensityTitle(string density) =>
-        IsDensityDisabled ? $"{density} — density applies to the covers view" : density;
+    private static readonly IReadOnlyList<SegmentedOption<LibraryView>> ViewOptions =
+    [
+        new(LibraryView.Rows, "Rows", "Rows — one line per series"),
+        new(LibraryView.Covers, "Covers", "Covers — the cover grid"),
+    ];
+
+    private static readonly IReadOnlyList<SegmentedOption<GridDensity>> DensityOptions =
+    [
+        new(GridDensity.Comfortable, null, "Comfortable", IconName.SquaresFour),
+        new(GridDensity.Compact, null, "Compact", IconName.GridNine),
+    ];
 
     /// <summary>Labels say what the order is, not what the enum is called.</summary>
     private static readonly IReadOnlyList<DropdownOption> SortOptions =

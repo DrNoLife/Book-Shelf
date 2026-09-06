@@ -1,0 +1,34 @@
+@* NOTES, at the foot of the page as the mockup lays it out — but writable, because a
+   note the reader cannot write is furniture. The note itself is the edit affordance:
+   click it, then Ctrl+Enter or click away to save, Escape to put it back. *@
+
+<section class="notes">
+    <p class="eyebrow">Notes</p>
+
+    @if (IsEditing)
+    {
+        <textarea class="notes__input"
+                  rows="4"
+                  placeholder="Whatever is worth remembering about this one."
+                  @ref="_input"
+                  @bind="Draft"
+                  @bind:event="oninput"
+                  @onkeydown="OnKeyDownAsync"
+                  @onblur="OnBlurAsync"></textarea>
+
+        @* Printed, not discovered: design.md forbids hiding what a control does behind
+           the interaction that would reveal it. *@
+        <p class="notes__hint">Ctrl+Enter saves · clicking away saves · Escape cancels · an empty note clears it</p>
+    }
+    else if (Series.Notes is { } notes)
+    {
+        <button type="button" class="notes__open" title="Edit this note" @onclick="StartEditing">@notes</button>
+    }
+    else
+    {
+        @* The one wry line per view, in fine print — and beside a control that says
+           plainly what it does, never inside one. *@
+        <p class="notes__empty">Nothing written down. The shelf is not judging.</p>
+        <button type="button" class="secondary" @onclick="StartEditing">Add a note</button>
+    }
+</section>

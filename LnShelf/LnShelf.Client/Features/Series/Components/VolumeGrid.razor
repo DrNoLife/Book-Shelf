@@ -2,7 +2,7 @@
 
 @* The centrepiece. This section owns keyboard navigation because it is the only thing
    that knows the layout, and it owns the choice between tiles and list; the tiles and
-   rows own their own state and marks. *@
+   rows own their own state and marks, and the header's controls own themselves. *@
 
 <section class="volumes">
 
@@ -12,91 +12,7 @@
             <p class="volumes__count tabular">@CountLine</p>
         </div>
 
-        <div class="volumes__controls">
-            @* Printed, not hovered: design.md forbids hover-only information, and
-               these are the only clues that a tile is interactive. *@
-            <p class="volumes__hint">Click opens the menu · shift-click toggles owned · ←↑↓→ + space cycles read</p>
-
-            @* Tiles or list, for this series. Choosing here sets an override on the
-               series; the global default lives in preferences, and "Follow" gives it
-               back. *@
-            <div class="toggle" role="group" aria-label="Volume view">
-                <button type="button"
-                        class="toggle__button @(View == VolumeView.Tiles ? "toggle__button--on" : null)"
-                        aria-pressed="@((View == VolumeView.Tiles).ToAriaState())"
-                        title="@ViewTitle(VolumeView.Tiles)"
-                        @onclick="() => OnViewChosenAsync(VolumeView.Tiles)">
-                    Tiles
-                </button>
-                <button type="button"
-                        class="toggle__button @(View == VolumeView.List ? "toggle__button--on" : null)"
-                        aria-pressed="@((View == VolumeView.List).ToAriaState())"
-                        title="@ViewTitle(VolumeView.List)"
-                        @onclick="() => OnViewChosenAsync(VolumeView.List)">
-                    List
-                </button>
-            </div>
-
-            @* Only offered where there is something to show. A control that does nothing
-               on 90% of the shelf is worse than no control (design.md — control audit),
-               and the shelf's titles arrive from a source with partial coverage. *@
-            @if (HasAnyTitle)
-            {
-                <button type="button"
-                        class="control @(Preferences.ShowVolumeTitles ? "control--on" : null)"
-                        aria-pressed="@Preferences.ShowVolumeTitles.ToAriaState()"
-                        title="@TitlesTitle"
-                        @onclick="OnTitlesToggledAsync">
-                    Titles
-                </button>
-            }
-
-            @if (Series.VolumeViewOverride is not null)
-            {
-                @* The override is visible and reversible — a series quietly ignoring the
-                   global preference with no way to say so would be the bug. *@
-                <button type="button"
-                        class="control control--quiet"
-                        title="@($"This series is set to {View}; follow the {Preferences.VolumeView} default instead")"
-                        @onclick="OnFollowGlobalAsync">
-                    Follow default
-                </button>
-            }
-
-            <button type="button"
-                    class="control @(SeriesState.IsSelectMode ? "control--on" : null)"
-                    aria-pressed="@SeriesState.IsSelectMode.ToAriaState()"
-                    disabled="@(View == VolumeView.List)"
-                    title="@SelectTitle"
-                    @onclick="() => SeriesState.ToggleSelectMode()">
-                @(SeriesState.IsSelectMode ? "Done" : "Select")
-            </button>
-
-            @if (SeriesState.IsSelectMode)
-            {
-                <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
-                        @onclick="MarkSelectedReadAsync">
-                    @MarkSelectedReadLabel
-                </button>
-                <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
-                        @onclick="MarkSelectedOwnedAsync">
-                    @MarkSelectedOwnedLabel
-                </button>
-            }
-            else
-            {
-                @* The counts are computed into the labels, the way design.md computes
-                   the next needed volume into "Vol 12 on Saxo". *@
-                <button type="button" class="control" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
-                        @onclick="MarkReadThroughAsync">
-                    Mark 1–@ReadThrough read
-                </button>
-                <button type="button" class="control" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
-                        @onclick="MarkOwnedThroughAsync">
-                    Mark 1–@OwnedThrough owned
-                </button>
-            }
-        </div>
+        <VolumeGridToolbar Series="Series" />
     </header>
 
     @* The measured element for both renderings: the popover placement and the arrow
@@ -121,8 +37,8 @@
                     <VolumeTile @ref="_tiles[volume.VolumeId]"
                                 Volume="volume"
                                 Title="@(Preferences.ShowVolumeTitles ? volume.Title : null)"
-                                IsSelectMode="SeriesState.IsSelectMode"
-                                IsSelected="SeriesState.SelectedVolumeIds.Contains(volume.VolumeId)"
+                                IsSelectMode="Selection.IsSelectMode"
+                                IsSelected="Selection.SelectedVolumeIds.Contains(volume.VolumeId)"
                                 IsInteractive="!SeriesState.IsSaving"
                                 CoverVersion="SeriesState.CoverVersion"
                                 MenuRequested="OnMenuRequestedAsync"
@@ -153,13 +69,13 @@
        ARIA states phase 3.3.1 found. *@
     @if (View != VolumeView.List)
     {
-        <div class="legend">
-            <span class="legend__item"><span class="swatch swatch--read"></span>read</span>
-            <span class="legend__item"><span class="swatch swatch--reading"></span>reading</span>
-            <span class="legend__item"><span class="swatch swatch--owned"></span>owned, unread</span>
-            <span class="legend__item"><span class="swatch swatch--tobuy"></span>to buy — dimmed and desaturated</span>
-            <span class="legend__item"><span class="swatch swatch--unreleased"></span>not out yet</span>
-        </div>
+        <Legend>
+            <LegendItem Swatch="swatch--read" Words="read" />
+            <LegendItem Swatch="swatch--reading" Words="reading" />
+            <LegendItem Swatch="swatch--owned" Words="owned, unread" />
+            <LegendItem Swatch="swatch--tobuy" Words="to buy — dimmed and desaturated" />
+            <LegendItem Swatch="swatch--unreleased" Words="not out yet" />
+        </Legend>
     }
 
 </section>

@@ -187,6 +187,10 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("Subtitle")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
                     b.Property<int?>("VolumeNumber")
                         .HasColumnType("integer");
 
@@ -449,10 +453,6 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("SeriesId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CoverSourceOverride")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
                     b.Property<bool>("HasNewVolume")
                         .HasColumnType("boolean");
 
@@ -468,10 +468,6 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<DateOnly?>("StartedAt")
                         .HasColumnType("date");
-
-                    b.Property<string>("TitleLanguageOverride")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("TrackingStatus")
                         .IsRequired()

@@ -1,5 +1,3 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Features.Shelf.Controllers;
 
 [ApiController]
@@ -13,13 +11,13 @@ public sealed class VolumesController(
     /// state in the cycle is; this records it.
     /// </summary>
     [HttpPut("{volumeId:guid}/read")]
-    public async Task<ActionResult<VolumeResponse>> SetReadAsync(
+    public async Task<ActionResult<SeriesDetailResponse>> SetReadAsync(
         Guid volumeId,
         [FromBody] SetVolumeReadRequest request,
         CancellationToken cancellationToken)
     {
-        var volume = await volumeCommandService.SetReadAsync(volumeId, request, cancellationToken);
-        return volume is null ? NotFound() : Ok(volume);
+        var detail = await volumeCommandService.SetReadAsync(volumeId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
     }
 
     /// <summary>
@@ -28,7 +26,7 @@ public sealed class VolumesController(
     /// </summary>
     [HttpPut("{volumeId:guid}/cover")]
     [RequestSizeLimit(8 * 1024 * 1024)]
-    public async Task<ActionResult<VolumeResponse>> SetCoverAsync(
+    public async Task<ActionResult<SeriesDetailResponse>> SetCoverAsync(
         Guid volumeId,
         IFormFile file,
         CancellationToken cancellationToken)
@@ -50,28 +48,28 @@ public sealed class VolumesController(
             await source.CopyToAsync(buffer, cancellationToken);
         }
 
-        var volume = await volumeCommandService.SetCoverAsync(volumeId, buffer.ToArray(), cancellationToken);
-        return volume is null ? NotFound() : Ok(volume);
+        var detail = await volumeCommandService.SetCoverAsync(volumeId, buffer.ToArray(), cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
     }
 
     /// <summary>Reverts to whatever a metadata source supplied.</summary>
     [HttpDelete("{volumeId:guid}/cover")]
-    public async Task<ActionResult<VolumeResponse>> RemoveCoverAsync(
+    public async Task<ActionResult<SeriesDetailResponse>> RemoveCoverAsync(
         Guid volumeId,
         CancellationToken cancellationToken)
     {
-        var volume = await volumeCommandService.RemoveCoverAsync(volumeId, cancellationToken);
-        return volume is null ? NotFound() : Ok(volume);
+        var detail = await volumeCommandService.RemoveCoverAsync(volumeId, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
     }
 
     /// <summary>Toggles ownership, with an optional format and price.</summary>
     [HttpPut("{volumeId:guid}/owned")]
-    public async Task<ActionResult<VolumeResponse>> SetOwnedAsync(
+    public async Task<ActionResult<SeriesDetailResponse>> SetOwnedAsync(
         Guid volumeId,
         [FromBody] SetVolumeOwnedRequest request,
         CancellationToken cancellationToken)
     {
-        var volume = await volumeCommandService.SetOwnedAsync(volumeId, request, cancellationToken);
-        return volume is null ? NotFound() : Ok(volume);
+        var detail = await volumeCommandService.SetOwnedAsync(volumeId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
     }
 }

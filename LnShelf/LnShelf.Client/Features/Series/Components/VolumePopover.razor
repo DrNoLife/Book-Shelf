@@ -13,7 +13,7 @@
         <span>Vol @Volume.Number</span>
         @if (Volume.ReleaseDate is { } releaseDate)
         {
-            <span class="menu__date tabular">@releaseDate.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span>
+            <span class="menu__date tabular">@releaseDate.Full</span>
         }
     </p>
 
@@ -50,6 +50,13 @@
                 <span class="item__check"><Icon Name="IconName.Check" Size="11" /></span>
             }
         </button>
+    }
+
+    @* When it was read, where the shelf knows — the tile's caption has no room for it
+       and design.md fixes what may go there, so this is its home. *@
+    @if (Volume.ReadAt is { } readAt)
+    {
+        <p class="menu__note tabular">Read @readAt.Full</p>
     }
 
     <div class="hairline"></div>

@@ -9,14 +9,7 @@
     [Parameter]
     public required PublicationStatus Value { get; set; }
 
-    private string Label => Value switch
-    {
-        PublicationStatus.Ongoing => "Ongoing",
-        PublicationStatus.Completed => "Completed",
-        PublicationStatus.Hiatus => "Hiatus",
-        PublicationStatus.Cancelled => "Cancelled",
-        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown publication status."),
-    };
+    private string Label => Value.Words;
 
     private string ModifierClass => Value switch
     {

@@ -1,14 +1,18 @@
+using static LnShelf.Api.Tests.Features.Import.Fixtures.SeriesMatcherFixture;
+
 namespace LnShelf.Api.Tests.Features.Import.Services;
 
 /// <summary>
-/// The auto-match decision. The rule that matters most is the one that refuses to
-/// decide: a light novel and its manga adaptation carry the same AniList title, and
-/// nothing in a book export says which was read.
+/// The auto-match decision, taken on the title alone. The rule that matters most
+/// is the one that refuses to decide: a light novel and its manga adaptation carry
+/// the same AniList title, and nothing in a book export's title says which was
+/// read.
 /// </summary>
+// The credit tie-break that can rescue some of those is its own class —
+// AniListSeriesMatcherCreditTieBreakTests. Everything here passes no credits at
+// all, which is the shape of a source that publishes none.
 public sealed class AniListSeriesMatcherTests
 {
-    private static readonly ImportOptions DefaultOptions = new();
-
     [Fact]
     public async Task MatchAsync_ALightNovelAndItsMangaTiedOnTitle_GoesToReview()
     {
@@ -18,7 +22,8 @@ public sealed class AniListSeriesMatcherTests
             CreateResult(85976, "Overlord", Format.LightNovel, volumeCount: 18),
             CreateResult(85934, "Overlord", Format.Manga, volumeCount: 19));
 
-        var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Overlord", author: null, illustrator: null, CancellationToken.None);
 
         match.Status.ShouldBe(ImportGroupStatus.NeedsReview);
         match.Reason.ShouldBe(ImportReviewReason.FormatAmbiguous);
@@ -41,7 +46,8 @@ public sealed class AniListSeriesMatcherTests
                 Format.Manga,
                 volumeCount: 7));
 
-        var match = await matcher.MatchAsync("Ascendance of a Bookworm: Part 1", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Ascendance of a Bookworm: Part 1", author: null, illustrator: null, CancellationToken.None);
 
         match.Status.ShouldBe(ImportGroupStatus.AutoMatched);
         match.Reason.ShouldBe(ImportReviewReason.None);
@@ -54,7 +60,8 @@ public sealed class AniListSeriesMatcherTests
     {
         var matcher = CreateMatcher();
 
-        var match = await matcher.MatchAsync("Vesten mod vesten", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Vesten mod vesten", author: null, illustrator: null, CancellationToken.None);
 
         match.Status.ShouldBe(ImportGroupStatus.NeedsReview);
         match.Reason.ShouldBe(ImportReviewReason.NoCandidate);
@@ -70,7 +77,8 @@ public sealed class AniListSeriesMatcherTests
         var matcher = CreateMatcher(
             CreateResult(120957, "86—EIGHTY-SIX: Operation High School", Format.Manga, volumeCount: 2));
 
-        var match = await matcher.MatchAsync("86—EIGHTY-SIX", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "86—EIGHTY-SIX", author: null, illustrator: null, CancellationToken.None);
 
         match.Status.ShouldBe(ImportGroupStatus.NeedsReview);
         match.Reason.ShouldBe(ImportReviewReason.LowConfidence);
@@ -89,7 +97,8 @@ public sealed class AniListSeriesMatcherTests
         var matcher = CreateMatcher(
             CreateResult(101951, "Overlord: The Undead King Oh!", Format.Manga, volumeCount: 5));
 
-        var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Overlord", author: null, illustrator: null, CancellationToken.None);
 
         match.Status.ShouldBe(ImportGroupStatus.NeedsReview);
         match.Reason.ShouldBe(ImportReviewReason.NoCandidate);
@@ -103,7 +112,8 @@ public sealed class AniListSeriesMatcherTests
             CreateResult(1, "Overlord", Format.LightNovel, volumeCount: 18),
             CreateResult(2, "Overlord à la Carte", Format.Manga, volumeCount: 3));
 
-        var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Overlord", author: null, illustrator: null, CancellationToken.None);
 
         // Only the real one survives, so it wins by a clear margin.
         match.Candidates.Count.ShouldBe(1);
@@ -120,7 +130,8 @@ public sealed class AniListSeriesMatcherTests
             CreateResult(2, "Overlord", Format.Manga, volumeCount: 19),
             CreateResult(3, "Overlord Anthology", Format.Manga, volumeCount: 1));
 
-        var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Overlord", author: null, illustrator: null, CancellationToken.None);
 
         match.Candidates.Count.ShouldBe(2);
         match.Candidates.ShouldAllBe(candidate => candidate.Score == 100);
@@ -135,38 +146,10 @@ public sealed class AniListSeriesMatcherTests
             CreateResult(85934, "Overlord", Format.Manga, volumeCount: 19),
             CreateResult(85976, "Overlord", Format.LightNovel, volumeCount: 18));
 
-        var match = await matcher.MatchAsync("Overlord", CancellationToken.None);
+        var match = await matcher.MatchAsync(
+            "Overlord", author: null, illustrator: null, CancellationToken.None);
 
         match.Candidates[0].Result.AniListId.ShouldBe(85934);
         match.Candidates[1].Result.AniListId.ShouldBe(85976);
     }
-
-    private static AniListSeriesMatcher CreateMatcher(params SeriesSearchResult[] results) =>
-        CreateMatcher(DefaultOptions, results);
-
-    private static AniListSeriesMatcher CreateMatcher(ImportOptions options, params SeriesSearchResult[] results)
-    {
-        var metadataSource = Substitute.For<ISeriesMetadataSource>();
-        metadataSource.SearchAsync(Arg.Any<string>(), Arg.Any<Format?>(), Arg.Any<CancellationToken>())
-            .Returns(results);
-
-        return new AniListSeriesMatcher(
-            metadataSource,
-            Microsoft.Extensions.Options.Options.Create(options),
-            NullLogger<AniListSeriesMatcher>.Instance);
-    }
-
-    private static SeriesSearchResult CreateResult(
-        int aniListId,
-        string titleEnglish,
-        Format format,
-        int? volumeCount) => new()
-        {
-            Source = MetadataSourceName.AniList,
-            SourceId = aniListId,
-            TitleEnglish = titleEnglish,
-            Format = format,
-            PublicationStatus = PublicationStatus.Ongoing,
-            VolumeCount = volumeCount,
-        };
 }

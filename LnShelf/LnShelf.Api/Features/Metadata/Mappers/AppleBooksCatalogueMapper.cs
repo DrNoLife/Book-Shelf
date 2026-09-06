@@ -45,7 +45,7 @@ public static class AppleBooksCatalogueMapper
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        if (NullIfBlank(result.TrackName) is not { } title)
+        if (result.TrackName.NullIfBlank() is not { } title)
         {
             return null;
         }
@@ -84,7 +84,7 @@ public static class AppleBooksCatalogueMapper
     private static string ToRecordKey(AppleBooksSearchResult result) =>
         result.TrackId is { } trackId
             ? trackId.ToString(CultureInfo.InvariantCulture)
-            : NullIfBlank(result.ArtworkUrl100) ?? "unknown";
+            : result.ArtworkUrl100.NullIfBlank() ?? "unknown";
 
     /// <summary>
     /// The date part of the timestamp, read as text rather than converted.
@@ -112,7 +112,7 @@ public static class AppleBooksCatalogueMapper
     /// <summary>The same artwork at cover size, or exactly what Apple gave when it cannot be.</summary>
     private static Uri? ToArtworkUrl(string? artworkUrl100)
     {
-        if (NullIfBlank(artworkUrl100) is not { } url)
+        if (artworkUrl100.NullIfBlank() is not { } url)
         {
             return null;
         }
@@ -126,7 +126,4 @@ public static class AppleBooksCatalogueMapper
 
         return Uri.TryCreate(upgraded, UriKind.Absolute, out var uri) ? uri : null;
     }
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

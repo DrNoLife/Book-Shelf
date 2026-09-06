@@ -1,7 +1,3 @@
-using System.Globalization;
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-
 namespace LnShelf.Client.Features.Series.Components;
 
 public partial class SeriesHero
@@ -136,15 +132,12 @@ public partial class SeriesHero
         get
         {
             var parts = new List<string>();
-            if (Series.StartedAt is { } started) parts.Add($"Started {FormatDate(started)}");
-            if (Series.LastReadAt is { } lastRead) parts.Add($"last read {FormatDate(lastRead)}");
+            if (Series.StartedAt is { } started) parts.Add($"Started {started.Full}");
+            if (Series.LastReadAt is { } lastRead) parts.Add($"last read {lastRead.Full}");
 
             return parts.Count == 0 ? null : string.Join(" · ", parts);
         }
     }
-
-    private static string FormatDate(DateOnly date) =>
-        date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 
     private static string RelationLabel(SeriesRelationResponse relation) => relation.Format switch
     {

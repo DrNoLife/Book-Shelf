@@ -19,13 +19,6 @@ public static class CoverObjectKey
         $"{Slug(source.ToString())}/{sourceId}{extension}";
 
     /// <summary>
-    /// Keyed on the AniList media id, so a cover cached while reviewing an import
-    /// candidate is already the series' cover the moment that candidate is chosen.
-    /// </summary>
-    public static string ForAniList(int aniListId, string extension) =>
-        ForSeriesSource(MetadataSourceName.AniList, aniListId, extension);
-
-    /// <summary>
     /// A user-supplied cover for one volume. Keyed on the volume, so an override
     /// replaces itself rather than accumulating files.
     /// </summary>

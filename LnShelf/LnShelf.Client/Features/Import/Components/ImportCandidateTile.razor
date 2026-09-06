@@ -28,7 +28,7 @@
     <span class="candidate__title">@Candidate.TitleEnglish</span>
 
     <span class="candidate__meta tabular">
-        @VolumeLabel · @Candidate.PublicationStatus.ToString().ToLowerInvariant()
+        @VolumeLabel · @Candidate.PublicationStatus.Words.ToLowerInvariant()
         @if (Candidate.StartYear is { } startYear)
         {
             @($" · {startYear}")

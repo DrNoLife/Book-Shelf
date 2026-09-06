@@ -1,6 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
-using LnShelf.Shared.Metadata;
 
 namespace LnShelf.Client.Features.Sync;
 

@@ -1,0 +1,42 @@
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* One set of swatches for both legends. They were drawn twice with different radii,
+   and the volume grid's set carried two shapes the library's did not. */
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--track);
+}
+
+.swatch--read { background: var(--acc); }
+.swatch--owned { background: var(--acc-deep); }
+
+/* Reading keeps its ring identity from the tile, at swatch size. */
+.swatch--reading {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  box-shadow: 0 0 0 1.5px var(--acc);
+}
+
+/* Dimmed, because the tile it stands for literally is. */
+.swatch--tobuy { background: var(--track); opacity: 0.5; }
+
+/* The hatch fill, at swatch size — the "not out" shape. */
+.swatch--unreleased {
+  width: 12px;
+  height: 8px;
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.swatch--new {
+  background: var(--acc);
+  box-shadow: 0 0 8px var(--glow-new);
+}

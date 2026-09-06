@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Restore
+        run: dotnet restore LnShelf/LnShelf.slnx
+
+      - name: Build
+        run: dotnet build LnShelf/LnShelf.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test LnShelf/LnShelf.slnx --no-build -c Release
+
+      - name: Format check
+        run: dotnet format LnShelf/LnShelf.slnx --verify-no-changes --no-restore

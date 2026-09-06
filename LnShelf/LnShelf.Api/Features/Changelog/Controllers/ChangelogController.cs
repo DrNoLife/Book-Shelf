@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Changelog.Mappers;
+
 namespace LnShelf.Api.Features.Changelog.Controllers;
 
 /// <summary>
@@ -11,18 +13,5 @@ public sealed class ChangelogController : ControllerBase
 {
     [HttpGet]
     public ActionResult<ChangelogResponse> Get() =>
-        Ok(new ChangelogResponse
-        {
-            CurrentVersion = AppVersion.Current,
-            Entries =
-            [
-                .. ChangelogCatalog.Entries.Select(entry => new ChangelogEntryResponse
-                {
-                    Version = entry.Version,
-                    Date = entry.Date,
-                    Title = entry.Title,
-                    Changes = entry.Changes,
-                }),
-            ],
-        });
+        Ok(ChangelogMapper.ToResponse(ChangelogCatalog.Entries, AppVersion.Current));
 }

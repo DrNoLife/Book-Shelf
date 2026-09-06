@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using LnShelf.Api.Features.Metadata.Models.OpenLibrary;
 
 namespace LnShelf.Api.Features.Metadata.Services;

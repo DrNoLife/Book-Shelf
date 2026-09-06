@@ -15,6 +15,13 @@ internal static class AniListQueries
     // every one of them matches the substring equally well. Popularity within
     // the search filter puts the light novel and the manga first, which is the
     // behaviour a search box needs.
+    //
+    // staff is asked for here at six edges rather than the detail query's twelve.
+    // It is what tells a light novel apart from its manga adaptation, which share
+    // every title AniList publishes: the adaptation credits the novel's author as
+    // Story, so only the artist separates them. Six edges is enough to reach both
+    // credits before the translators start, and it rides along on a search the
+    // import already pays for — the alternative is a detail request per candidate.
     public const string SeriesSearch =
         """
         query SeriesSearch($search: String!, $formats: [MediaFormat], $perPage: Int!) {
@@ -27,6 +34,12 @@ internal static class AniListQueries
               startDate { year }
               title { english romaji native }
               coverImage { large }
+              staff(perPage: 6, sort: RELEVANCE) {
+                edges {
+                  role
+                  node { name { full } }
+                }
+              }
             }
           }
         }

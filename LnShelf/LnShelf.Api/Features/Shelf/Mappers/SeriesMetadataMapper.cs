@@ -6,6 +6,30 @@ namespace LnShelf.Api.Features.Shelf.Mappers;
 /// </summary>
 public static class SeriesMetadataMapper
 {
+    /// <summary>
+    /// The metadata-owned fields of a series, in the shape the shelf stores them.
+    /// </summary>
+    // A clean record standing between the two source shapes and the entity, so the
+    // field-by-field copy onto Series exists once instead of once per source. What differs
+    // between the sources is what fills this in, not what lands on the row: MangaUpdates
+    // has a publisher and a bag of associated titles, AniList has romaji and native ones,
+    // and each maps its own absences to null before getting here.
+    private sealed record SeriesFacts
+    {
+        public required Format Format { get; init; }
+        public required string TitleEnglish { get; init; }
+        public string? TitleRomaji { get; init; }
+        public string? TitleNative { get; init; }
+        public required string[] AlternativeTitles { get; init; }
+        public required PublicationStatus PublicationStatus { get; init; }
+        public string? Publisher { get; init; }
+        public int? StartYear { get; init; }
+        public required IReadOnlyList<string> Genres { get; init; }
+        public string? Author { get; init; }
+        public string? Illustrator { get; init; }
+        public string? Description { get; init; }
+    }
+
     /// <param name="syncedAt">
     /// Supplied by the caller from <c>TimeProvider</c>, the same way
     /// <see cref="LibraryCardProjection"/> takes "today".
@@ -34,7 +58,7 @@ public static class SeriesMetadataMapper
             UserState = new SeriesUserState { TrackingStatus = TrackingStatus.PlanToStart },
         };
 
-        ApplyMetadata(series, metadata, syncedAt, coverObjectKey);
+        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
 
         foreach (var volume in metadata.Volumes)
         {
@@ -60,6 +84,8 @@ public static class SeriesMetadataMapper
     //   AniList path leaves IsReleased alone.
     // - MangaUpdatesId is set and AniListId stays null, so the nightly refresh skips
     //   matching for this series entirely: it is already linked to the release source.
+    //
+    // The fields both sources do describe go through the same Apply the AniList path uses.
     public static Series ToTrackedSeries(
         MangaUpdatesSeriesMetadata metadata,
         DateTimeOffset syncedAt,
@@ -76,29 +102,10 @@ public static class SeriesMetadataMapper
             AniListId = null,
             MangaUpdatesId = metadata.SourceId,
 
-            Format = metadata.Format,
-            TitleEnglish = metadata.TitleEnglish,
-
-            // The whole reason this column exists. MangaUpdates files this series under
-            // whichever title its editors chose — often the romaji one — and the English
-            // name the US storefront lists it under is one unlabelled entry among the
-            // Russian and Arabic ones. Stored so the volume catalogue can be asked under
-            // each in turn until one is recognised.
-            AlternativeTitles = SeriesKnownTitles.Alternatives(
-                metadata.TitleEnglish, metadata.AssociatedTitles),
-
-            PublicationStatus = metadata.PublicationStatus,
-            Publisher = metadata.Publisher,
-            StartYear = metadata.StartYear,
-            Genres = [.. metadata.Genres],
-            Author = metadata.Author,
-            Illustrator = metadata.Illustrator,
-            Description = metadata.Description,
-            CoverObjectKey = coverObjectKey,
-            LastSyncedAt = syncedAt,
-
             UserState = new SeriesUserState { TrackingStatus = TrackingStatus.PlanToStart },
         };
+
+        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
 
         for (var number = 1; number <= (metadata.VolumeCount ?? 0); number++)
         {
@@ -127,9 +134,7 @@ public static class SeriesMetadataMapper
     /// Refreshes the metadata-owned fields of a series that already exists.
     /// </summary>
     // Nothing here touches SeriesUserState or VolumeUserState: local Postgres owns
-    // user state and metadata never writes it (CLAUDE.md — External metadata). A
-    // cover key of null leaves the existing one alone rather than clearing it,
-    // because a failed fetch is not evidence that the cover is gone.
+    // user state and metadata never writes it (CLAUDE.md — External metadata).
     public static void ApplyMetadata(
         Series series,
         SeriesMetadata metadata,
@@ -139,30 +144,85 @@ public static class SeriesMetadataMapper
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        series.Format = metadata.Format;
-        series.TitleEnglish = metadata.TitleEnglish;
-        series.TitleRomaji = metadata.TitleRomaji;
-        series.TitleNative = metadata.TitleNative;
+        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
+    }
+
+    private static SeriesFacts ToFacts(SeriesMetadata metadata) => new()
+    {
+        Format = metadata.Format,
+        TitleEnglish = metadata.TitleEnglish,
+        TitleRomaji = metadata.TitleRomaji,
+        TitleNative = metadata.TitleNative,
 
         // Romaji only. TitleNative is deliberately left out: it is the Japanese title in
         // Japanese script, and the US storefront the catalogue pass searches cannot match a
         // word of it — storing it would buy nothing and cost a request per sweep.
-        //
-        // Overwritten rather than filled if empty, on the same rule as Genres: this is
-        // metadata the source owns, so whatever it says now is the answer. A series added
-        // before the column existed keeps an empty one until it is re-applied, which costs it
-        // nothing — its stored title is already the English one AniList supplies, and that is
-        // the first title the catalogue is asked under.
-        series.AlternativeTitles = SeriesKnownTitles.Alternatives(
-            metadata.TitleEnglish, [metadata.TitleRomaji]);
+        AlternativeTitles = SeriesKnownTitles.Alternatives(
+            metadata.TitleEnglish, [metadata.TitleRomaji]),
 
-        series.PublicationStatus = metadata.PublicationStatus;
-        series.Publisher = metadata.Publisher;
-        series.StartYear = metadata.StartYear;
-        series.Genres = [.. metadata.Genres];
-        series.Author = metadata.Author;
-        series.Illustrator = metadata.Illustrator;
-        series.Description = metadata.Description;
+        PublicationStatus = metadata.PublicationStatus,
+        Publisher = metadata.Publisher,
+        StartYear = metadata.StartYear,
+        Genres = metadata.Genres,
+        Author = metadata.Author,
+        Illustrator = metadata.Illustrator,
+        Description = metadata.Description,
+    };
+
+    private static SeriesFacts ToFacts(MangaUpdatesSeriesMetadata metadata) => new()
+    {
+        Format = metadata.Format,
+        TitleEnglish = metadata.TitleEnglish,
+
+        // MangaUpdates publishes neither, so they stay null — and on the only path that
+        // reaches here, a series being added for the first time, null is what was already
+        // there.
+        TitleRomaji = null,
+        TitleNative = null,
+
+        // The whole reason the column exists. MangaUpdates files this series under
+        // whichever title its editors chose — often the romaji one — and the English name
+        // the US storefront lists it under is one unlabelled entry among the Russian and
+        // Arabic ones. Stored so the volume catalogue can be asked under each in turn until
+        // one is recognised.
+        AlternativeTitles = SeriesKnownTitles.Alternatives(
+            metadata.TitleEnglish, metadata.AssociatedTitles),
+
+        PublicationStatus = metadata.PublicationStatus,
+        Publisher = metadata.Publisher,
+        StartYear = metadata.StartYear,
+        Genres = metadata.Genres,
+        Author = metadata.Author,
+        Illustrator = metadata.Illustrator,
+        Description = metadata.Description,
+    };
+
+    /// <summary>
+    /// The one copy of metadata onto a series row, for a new series and a refreshed one
+    /// alike.
+    /// </summary>
+    // Overwritten rather than filled-if-empty, and that is the rule for every field here:
+    // this is metadata the source owns, so whatever it says now is the answer. A cover key
+    // of null is the single exception — it leaves the existing one alone rather than
+    // clearing it, because a failed fetch is not evidence that the cover is gone.
+    private static void Apply(
+        Series series,
+        SeriesFacts facts,
+        DateTimeOffset syncedAt,
+        string? coverObjectKey)
+    {
+        series.Format = facts.Format;
+        series.TitleEnglish = facts.TitleEnglish;
+        series.TitleRomaji = facts.TitleRomaji;
+        series.TitleNative = facts.TitleNative;
+        series.AlternativeTitles = facts.AlternativeTitles;
+        series.PublicationStatus = facts.PublicationStatus;
+        series.Publisher = facts.Publisher;
+        series.StartYear = facts.StartYear;
+        series.Genres = [.. facts.Genres];
+        series.Author = facts.Author;
+        series.Illustrator = facts.Illustrator;
+        series.Description = facts.Description;
         series.LastSyncedAt = syncedAt;
 
         if (coverObjectKey is not null)

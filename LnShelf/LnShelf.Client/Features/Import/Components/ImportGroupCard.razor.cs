@@ -1,6 +1,3 @@
-using LnShelf.Shared.Import;
-using Microsoft.AspNetCore.Components;
-
 namespace LnShelf.Client.Features.Import.Components;
 
 public partial class ImportGroupCard
@@ -19,6 +16,7 @@ public partial class ImportGroupCard
     [Inject]
     public required ImportState ImportState { get; set; }
 
+    private bool IsRowsOpen { get; set; }
     private bool IsSearchOpen { get; set; }
     private bool IsSearching { get; set; }
     private bool HasSearched { get; set; }
@@ -75,6 +73,25 @@ public partial class ImportGroupCard
             Skip: Group.Status is ImportGroupStatus.Skipped,
             !Group.TreatReadAsOwned));
 
+    private string RowsLabel => IsRowsOpen
+        ? "Hide the books"
+        : Group.RowCount == 1 ? "Show the 1 book" : $"Show the {Group.RowCount} books";
+
+    private void ToggleRows() => IsRowsOpen = !IsRowsOpen;
+
+    /// <summary>The volume number as it was parsed, or a plain admission that it was not.</summary>
+    // "no volume" rather than a guess or a dash: the whole point of the panel is that a
+    // wrong or missing parse is visible before anything is written to the shelf.
+    private static string VolumeLabel(ImportRowResponse row) =>
+        row.VolumeNumber is { } number ? $"Vol {number}" : "no volume";
+
+    private static string ReadLabel(ImportRowResponse row) => row.ReadStatus switch
+    {
+        ReadStatus.Read => "Read",
+        ReadStatus.Reading => "Reading",
+        _ => "Unread",
+    };
+
     private void ToggleManualSearch()
     {
         IsSearchOpen = !IsSearchOpen;
@@ -98,6 +115,3 @@ public partial class ImportGroupCard
         IsSearching = false;
     }
 }
-
-/// <summary>One decision about one group, as the card reports it upward.</summary>
-public sealed record ImportDecision(Guid GroupId, int? AniListId, bool Skip, bool TreatReadAsOwned);

@@ -180,7 +180,7 @@ The series/volume tracking domain.
   strip metadata. One size class in v1 (the grid renders it at two scales;
   thumbnails are a measured-need optimization, not a default).
 
-### 4.4 Import (StoryGraph)
+### 4.4 Import (StoryGraph + Goodreads)
 
 - Upload StoryGraph CSV export → staging table → per-row title matching
   against AniList search with confidence score.
@@ -195,6 +195,27 @@ The series/volume tracking domain.
   not duplicated (keyed on AniList id after match).
 - Every mismatch found during the real import becomes a regression test case
   (testing.md).
+
+**Two sources behind one seam** (**[added 2026-09-06]**). The upload carries no
+source parameter: `ImportSourceResolver` reads the file's header line and hands it
+to the one `IShelfImporter` that recognises it (none, or more than one, is a 400 —
+guessing would stage the user's history through the wrong reader). Goodreads
+exports are read alongside StoryGraph's, using nine of that file's 24 columns:
+Title (with Goodreads' `(light novel)`-style edition marker stripped before the
+shared title parser sees it), Author, Additional Authors (first entry taken as the
+illustrator), ISBN13 then ISBN as fallback (both unwrapped from the `="…"` Excel
+armour Goodreads writes), Binding → owned format, Date Read, Exclusive Shelf →
+read status, and Owned Copies (any positive count is owned). Date Added, Read
+Count, ratings and reviews are deliberately not read. Read dates are
+**earlier-wins** against what is already on the shelf and are never overwritten
+with null: the only read date that reaches a volume without an import is the
+`Today()` the app stamps when a box is ticked, and that must not beat the export's
+record of when the book was actually read — the same rule moves `StartedAt` back
+when an older export is imported later. Where the title alone leaves the LN and
+the manga tied (the usual outcome), the export's own credits break it: the
+illustrator is tried first and the author second, against the tied contenders
+only, and anything still ambiguous goes to the review queue rather than being
+guessed.
 
 ### 4.5 Releases
 
@@ -222,20 +243,22 @@ The series/volume tracking domain.
   volume released, new volume announced, release date moved.
 - Notification preferences: global on/off + per-series mute. Nothing fancier.
 
-### 4.6 Settings
+### 4.6 Preferences
 
-One user-preferences row: title language (english/romaji/native), cover
-source (latest/first), default library filter (Behind vs All — the UI's
-opinionated default, made a setting per the mockup critique), grid density
-(compact/detailed — the mockup's toggle), sync hour, notification config.
-Exposed as one GET/PUT.
+One user-preferences row: grid density (comfortable/compact — the mockup's
+toggle), library view (covers/rows), library sort (most behind/alphabetical/
+recently updated/last read), volume view (tiles/list), and default library
+filter (Behind vs the rest of the status set — the UI's opinionated default,
+made a setting per the mockup critique). Exposed as one GET/PUT.
 
 `ShowVolumeTitles` joins the list (**[added 2026-07-31]**): whether a volume's own
-title is printed beside its number, off by default. Shelf-wide rather than per
-series, because "do I want volume titles" is a question about how the reader reads
-the shelf — and a series whose volumes have no titles shows none regardless, which
-is the per-series answer arriving for free. The toggle appears on the series page
-only where a volume actually has one.
+title is printed beside its number, **on by default** (**[changed 2026-08-15]**
+— it started off, until the catalogue pass made volume titles real data across
+most of the shelf, and a default that hides data the app already fetched serves
+nobody). Shelf-wide rather than per series, because "do I want volume titles" is
+a question about how the reader reads the shelf — and a series whose volumes have
+no titles shows none regardless, which is the per-series answer arriving for
+free. The toggle appears on the series page only where a volume actually has one.
 
 ### 4.7 Stats (post-v1, seam only — with one exception)
 
@@ -290,8 +313,11 @@ Volume
 
 SeriesUserState
   SeriesId (PK/FK), TrackingStatus (Reading|PlanToStart|Completed|Dropped),
-  Notes, StartedAt, LastReadAt, TitleLanguageOverride (nullable),
-  CoverSourceOverride (nullable), NotificationsMuted, HasNewVolume
+  Notes, StartedAt, LastReadAt, VolumeViewOverride (nullable),
+  NotificationsMuted, HasNewVolume
+  -- [amended 2026-09-06] TitleLanguageOverride and CoverSourceOverride were
+  -- dropped: neither was ever read or written, and a column nothing fills is
+  -- a promise the UI does not keep. Re-add them with the setting that needs them.
 
   -- HasNewVolume is the ONE sanctioned exception to "derived states are
   -- computed, never stored": it is not derivable — it encodes last-visit
@@ -330,12 +356,21 @@ SyncDiscrepancyValue
   -- and can still say it about four.
 
 ImportBatch
-  Id, UploadedAt, FileName, RowCount, AutoMatched, NeedsReview, Skipped,
-  CommittedAt (nullable)
+  Id, UploadedAt, FileName, RowCount, CommittedAt (nullable)
+
+ImportGroup  (one per series in the file — the unit the review queue works in)
+  Id, ImportBatchId (FK), SeriesKey, SeriesTitle, Status, Reason,
+  MatchedAniListId (nullable), MatchScore (nullable), TreatReadAsOwned
+  -- the per-row match of the original sketch became per-group: a book export's
+  -- rows are volumes of a series, and answering "which series is this?" once is
+  -- one question instead of twelve identical ones.
 
 ImportRow (staging)
-  Id, ImportBatchId (FK), RawTitle, RawAuthor, Isbn, ReadStatus, Rating,
-  MatchedAniListId (nullable), Confidence, Resolution (Auto|Manual|Skipped)
+  Id, ImportGroupId (FK), LineNumber, RawTitle, Author, Isbn, VolumeNumber,
+  Subtitle, ReadStatus, OwnedInExport, OwnedFormat, ReadAt
+  -- [amended 2026-09-06] No Rating column: ratings and reviews are Stats
+  -- territory (§4.7), post-v1. Subtitle is carried from the export's own title
+  -- so the shelf does not spend Open Library requests re-deriving it.
 
 UserPreferences  (single row)
 ```
@@ -351,7 +386,8 @@ GET    /api/library?format=&filter=&sort=          one-round-trip card query
 GET    /api/series/{id}                            detail incl. volume grid
 POST   /api/series          { aniListId, format }  add tracked series
 POST   /api/series/manual   { title, format }      no external id (WN, §4.2)
-PUT    /api/series/{id}/state                      tracking status, notes, prefs
+PUT    /api/series/{id}/state  { trackingStatus?, notes? }  partial: null = leave alone
+POST   /api/series/{id}/seen                       204; clears HasNewVolume
 DELETE /api/series/{id}
 
 PUT    /api/volumes/{id}/read      { status }
@@ -377,6 +413,16 @@ GET/PUT /api/preferences
 ```
 
 Query/command service split behind each controller per CLAUDE.md.
+
+Every series-scoped write answers with the whole `SeriesDetailResponse`, not with
+the one thing it changed — `PUT /api/series/{id}/state`, `PUT /api/series/{id}/volume-view`,
+`POST /api/series/{id}/volumes/bulk` and the four single-volume writes
+(`PUT /api/volumes/{id}/read`, `PUT /api/volumes/{id}/owned`, `PUT|DELETE
+/api/volumes/{id}/cover`). One volume's read status moves the series' derived
+counts, its next-to-buy and its "last read", so a client that patched its own copy
+from a narrow response would be re-deriving the server's rules and drifting from
+them. `POST /api/series/{id}/seen` is the exception at 204: it reports that the page
+rendered, not an edit the reader made.
 
 ## 7. Auth
 
@@ -412,23 +458,24 @@ Caching exists to protect and speed up the *external* edges:
 | AniList search results (query+format key) | ~1 h | search-as-you-type must not chew the 90 req/min budget; import matching hits identical queries repeatedly |
 | AniList/MangaUpdates series detail during import | ~1 h | review queue re-renders candidates constantly |
 | Open Library edition by ISBN | ~24 h | an edition record that has existed for years is not about to change, and one run can ask for the same ISBN twice — discovery verifies a candidate that enrichment then reads again |
-| `/api/sync/latest` | until next run | sidebar hits it on every navigation |
-| Cover existence/headers | ~24 h | avoids MinIO stat calls on grid render (bytes themselves are client-cached via ETag/Cache-Control) |
+| `/api/sync/latest` | until next run | sidebar hits it on every navigation (designed, not yet implemented — the endpoint exists but reads straight from Postgres, uncached) |
+| Cover existence/headers | ~24 h | avoids MinIO stat calls on grid render (bytes themselves are client-cached via ETag/Cache-Control) (designed, not yet implemented) |
 
 Invalidation is by key on the obvious writes (sync completion evicts
-`sync/latest`; override upload evicts that cover's entry). Nothing else gets
-cached until something is measurably slow (testing.md: measure, don't vibe).
+`sync/latest`; override upload evicts that cover's entry) once those two rows
+above are actually built. Nothing else gets cached until something is
+measurably slow (testing.md: measure, don't vibe).
 
 ## 9. Compose topology (production shape)
 
 ```yaml
 services:
   client:   # nginx: serves WASM publish output, proxies /api → api
-    ports: ["443:443"]        # or behind the house-wide reverse proxy
+    ports: ["8091:80"]        # or behind the house-wide reverse proxy
     depends_on: [api]
   api:
-    environment: [ConnectionStrings__Db, Minio__*, Sync__Hour,
-                  LnShelf__InternalHeaderSecret]   # §7's X-LnShelf-Internal
+    environment: [ConnectionStrings__Db, Covers__*, Sync__Hour,
+                  LnShelf__InternalHeaderSecret]   # §7's X-LnShelf-Internal (designed, not yet implemented)
     depends_on: [postgres, minio]
   postgres:
     volumes: [pgdata:/var/lib/postgresql/data]
@@ -446,5 +493,5 @@ overrides are precious — include the bucket in the backup).
 
 Unchanged from CLAUDE.md; this spec slots in as: phases 1–2 build §4.1–4.3
 and §8's search cache, phase 3 is the UI over §6, phase 4 is §4.4, phase 5
-is §4.5, phase 6 is §2/§9. Settings (§4.6) rides along with phase 3. Stats
+is §4.5, phase 6 is §2/§9. Preferences (§4.6) rides along with phase 3. Stats
 stays a seam.

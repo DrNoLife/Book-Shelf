@@ -25,7 +25,7 @@ public static class OpenLibraryEditionMapper
         {
             SourceRecordKey = edition.Key ?? "unknown",
             ReleaseDate = OpenLibraryPublishDateParser.Parse(edition.PublishDate),
-            RawPublishDate = NullIfBlank(edition.PublishDate),
+            RawPublishDate = edition.PublishDate.NullIfBlank(),
 
             // The first cover, of however many editions of the artwork exist. There is
             // no field saying which is the front, and the first is the one Open
@@ -35,7 +35,9 @@ public static class OpenLibraryEditionMapper
                 : null,
 
             Title = ChooseTitle(edition),
-            Publisher = edition.Publishers?.Select(NullIfBlank).FirstOrDefault(name => name is not null),
+            Publisher = edition.Publishers?
+                .Select(name => name.NullIfBlank())
+                .FirstOrDefault(name => name is not null),
 
             Language = ToLanguage(languages),
         };
@@ -68,14 +70,14 @@ public static class OpenLibraryEditionMapper
     // Princess" while their full_title carries "Vol. 8".
     private static string? ChooseTitle(OpenLibraryEdition edition)
     {
-        var full = NullIfBlank(edition.FullTitle);
+        var full = edition.FullTitle.NullIfBlank();
         if (full is not null)
         {
             return full;
         }
 
-        var title = NullIfBlank(edition.Title);
-        var subtitle = NullIfBlank(edition.Subtitle);
+        var title = edition.Title.NullIfBlank();
+        var subtitle = edition.Subtitle.NullIfBlank();
 
         return (title, subtitle) switch
         {
@@ -84,7 +86,4 @@ public static class OpenLibraryEditionMapper
             _ => $"{title}: {subtitle}",
         };
     }
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

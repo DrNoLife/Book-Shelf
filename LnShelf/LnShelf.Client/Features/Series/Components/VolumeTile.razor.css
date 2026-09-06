@@ -54,7 +54,7 @@
   display: grid;
   place-items: center;
   color: var(--acc-soft);
-  filter: drop-shadow(0 1px 2px rgba(8, 7, 11, 0.9));
+  filter: drop-shadow(0 1px 2px var(--shadow-mark));
 }
 
 /* --- the six states, each with two channels --------------------------------- */
@@ -64,11 +64,11 @@
 
 /* Reading: ring + glow + book-open icon + the "Reading" label under the tile. */
 .tile--reading {
-  box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px rgba(255, 90, 54, 0.45);
+  box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px var(--glow-reading);
 }
 
 .tile--reading:hover:not(:disabled) {
-  box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px rgba(255, 90, 54, 0.45);
+  box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px var(--glow-reading);
 }
 
 .tile--reading .tile__strip { background: var(--acc); }
@@ -85,13 +85,13 @@
   filter: grayscale(0.9);
 }
 
-.tile--tobuy { background: #141019; }
+.tile--tobuy { background: var(--cover-placeholder); }
 
 /* Unreleased: hatch fill and an inset ring, with the date as its label. */
 .tile__hatch {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(135deg, #221d2b 0 5px, transparent 5px 10px);
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px);
 }
 
 .tile--unreleased { box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -115,7 +115,7 @@
   height: 16px;
   border-radius: 50%;
   border: 1.5px solid var(--acc-soft);
-  background: rgba(8, 7, 11, 0.55);
+  background: var(--dot-halo);
   color: var(--on-acc);
 }
 

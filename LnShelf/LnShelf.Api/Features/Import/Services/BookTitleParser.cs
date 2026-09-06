@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace LnShelf.Api.Features.Import.Services;
@@ -42,7 +41,7 @@ public static partial class BookTitleParser
             {
                 SeriesTitle = commaMatch.Groups["series"].Value.Trim(),
                 VolumeNumber = int.Parse(commaMatch.Groups["volume"].ValueSpan, CultureInfo.InvariantCulture),
-                Subtitle = NullIfBlank(commaMatch.Groups["subtitle"].Value),
+                Subtitle = commaMatch.Groups["subtitle"].Value.NullIfBlank(),
             };
         }
 
@@ -56,7 +55,7 @@ public static partial class BookTitleParser
             {
                 SeriesTitle = cjkMatch.Groups["series"].Value.Trim(),
                 VolumeNumber = int.Parse(cjkMatch.Groups["volume"].ValueSpan, CultureInfo.InvariantCulture),
-                Subtitle = NullIfBlank(cjkMatch.Groups["subtitle"].Value),
+                Subtitle = cjkMatch.Groups["subtitle"].Value.NullIfBlank(),
             };
         }
 
@@ -70,9 +69,6 @@ public static partial class BookTitleParser
     /// </summary>
     private static string StripTrailingBracket(string title) =>
         TrailingBracketPattern().Replace(title, string.Empty);
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     [GeneratedRegex(@"\s*\[[^\]]*\]\s*$", RegexOptions.CultureInvariant)]
     private static partial Regex TrailingBracketPattern();

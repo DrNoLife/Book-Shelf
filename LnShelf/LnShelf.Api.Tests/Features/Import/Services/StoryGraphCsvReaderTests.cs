@@ -156,6 +156,37 @@ public sealed class StoryGraphCsvReaderTests
     }
 
     [Fact]
+    public async Task ReadAsync_TheRowWhoseDatesReadIsARange_KeepsTheLatestDate()
+    {
+        var books = await StoryGraphExportFixture.ReadAsync();
+
+        // The one row in the real file with a range: Dates Read is
+        // "2026/07/21-2026/07/26". It survived only because Last Date Read happens to
+        // be filled too, and the moment a row has the range and no Last Date Read the
+        // date was lost silently.
+        var tanyaVolume13 = books.Single(book =>
+            book.RawTitle.StartsWith("The Saga of Tanya the Evil, Vol. 13", StringComparison.Ordinal));
+
+        tanyaVolume13.ReadAt.ShouldBe(new DateOnly(2026, 7, 26));
+    }
+
+    [Fact]
+    public async Task ReadAsync_TheRealExport_CarriesTheEnglishVolumeSubtitles()
+    {
+        var books = await StoryGraphExportFixture.ReadAsync();
+
+        var overlordVolume3 = books.Single(book =>
+            book.RawTitle == "Overlord, Vol. 3: The Bloody Valkyrie");
+
+        overlordVolume3.Subtitle.ShouldBe("The Bloody Valkyrie");
+
+        // The Japanese rows name their volumes too, but in the wrong language for an
+        // English shelf entry, so none of them carries a subtitle inward.
+        books.Where(book => book.SeriesKey == TitleNormalizer.Normalize("オーバーロード"))
+            .ShouldAllBe(book => book.Subtitle == null);
+    }
+
+    [Fact]
     public async Task ReadAsync_TheRealExport_KeepsIsbnsWhereTheyExist()
     {
         var books = await StoryGraphExportFixture.ReadAsync();

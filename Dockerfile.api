@@ -24,6 +24,9 @@ RUN dotnet publish LnShelf/LnShelf.Api/LnShelf.Api.csproj -c Release -o /app --n
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app ./
+# Non-root: the base image defines APP_UID (the unprivileged "app" user) for
+# exactly this. Safe because the listening port (8080) is unprivileged too.
+USER $APP_UID
 # Plain HTTP only: TLS terminates at the reverse proxy and nginx reaches the API
 # over the compose network (feature-spec §2).
 ENV ASPNETCORE_HTTP_PORTS=8080

@@ -55,6 +55,21 @@ public sealed record SeriesSearchResult
     public int? StartYear { get; init; }
 
     /// <summary>
+    /// Who wrote it, when the source credits anyone. Null otherwise.
+    /// </summary>
+    public string? Author { get; init; }
+
+    /// <summary>
+    /// Who drew it, when the source credits anyone. Null otherwise.
+    /// </summary>
+    // Carried on a *search* hit, not just on the full series, for one reason: it is
+    // the only field that separates a light novel from its own manga adaptation.
+    // They share every title AniList publishes and the adaptation credits the
+    // novelist as Story, so the artist is what breaks the tie — and the import's
+    // review queue exists almost entirely because of that tie.
+    public string? Illustrator { get; init; }
+
+    /// <summary>
     /// The source's CDN URL. Server-side only — it exists so the cover cache can
     /// fetch the image once; the browser never sees it (design.md).
     /// </summary>

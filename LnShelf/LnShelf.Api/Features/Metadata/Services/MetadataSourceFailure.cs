@@ -1,5 +1,4 @@
 using System.Net;
-using LnShelf.Api.Errors;
 
 namespace LnShelf.Api.Features.Metadata.Services;
 

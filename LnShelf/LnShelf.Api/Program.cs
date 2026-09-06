@@ -1,9 +1,7 @@
 using LnShelf.Api.Commands;
-using LnShelf.Api.Errors;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
-using LnShelf.Api.Features.Preferences;
 using LnShelf.Api.Features.Shelf;
 
 // A leading bare word is a one-shot maintenance job rather than a request to serve

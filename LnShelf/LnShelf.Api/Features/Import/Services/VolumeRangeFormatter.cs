@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace LnShelf.Api.Features.Import.Services;
 
 /// <summary>

@@ -1,3 +1,5 @@
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -133,13 +135,11 @@ public sealed class SeriesRefresherDescriptionTests
             matcher,
             releaseSource,
             metadataSource,
-            new VolumeEnrichmentService(
+            VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 NoEnrichment(),
                 NoCandidates(),
-                new VolumeFactWriter(
-                    Substitute.For<IVolumeCoverCache>(), NullLogger<VolumeFactWriter>.Instance),
-                NullLogger<VolumeEnrichmentService>.Instance),
+                VolumeEnrichmentPipeline.Writer()),
             TimeProvider.System,
             NullLogger<SeriesRefresher>.Instance);
     }
@@ -192,37 +192,5 @@ public sealed class SeriesRefresherDescriptionTests
         }
 
         return series;
-    }
-
-    /// <summary>Volume enrichment answers nothing: this file is about the synopsis.</summary>
-    private static IVolumeEnrichmentSource NoEnrichment()
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((VolumeEnrichment?)null);
-
-        return source;
-    }
-
-    /// <summary>A store catalogue that knows nothing, so this file stays about its own subject.</summary>
-    private static IVolumeCatalogueSource NoCatalogue()
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns([]);
-
-        return source;
-    }
-
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
-
-        return source;
     }
 }

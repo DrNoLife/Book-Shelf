@@ -17,7 +17,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class IsbnDiscoveryService(
     LnShelfDbContext dbContext,
     IIsbnCandidateSource candidateSource,
-    IVolumeEnrichmentSource enrichmentSource,
+    IsbnCandidateVerifier candidateVerifier,
     ILogger<IsbnDiscoveryService> logger)
 {
     /// <summary>
@@ -141,54 +141,45 @@ public sealed class IsbnDiscoveryService(
 
         foreach (var candidate in candidates.Isbns)
         {
-            var enrichment = await enrichmentSource.GetByIsbnAsync(candidate, cancellationToken);
+            // Every candidate goes through the same verifier the nightly search fallback
+            // uses: not indexed, another language, a Japanese registration group or the
+            // wrong volume all come back as nothing to say.
+            var verified = await candidateVerifier.VerifyAsync(
+                target.SeriesTitle, target.VolumeNumber, target.Format, candidate, cancellationToken);
 
-            if (enrichment is null || enrichment.Language is EditionLanguage.Other)
-            {
-                continue;
-            }
-
-            // The record has to name this series, this volume number and the right medium.
-            // The searches that feed this are deliberately loose — they have to be, or they
-            // find nothing — so this is what keeps a manga volume out of a light novel's
-            // row, and a neighbouring volume out of this one's.
-            if (!VolumeEditionMatcher.Matches(
-                    target.SeriesTitle, target.VolumeNumber, target.Format, enrichment))
+            if (verified is null)
             {
                 continue;
             }
 
             // A record that names English *and* names this medium is the answer. Take it and
             // stop asking — an explicit statement beats every inference below it.
-            if (enrichment.Language is EditionLanguage.English
-                && VolumeEditionMatcher.ConfirmsMedium(target.Format, enrichment))
+            if (verified is { NamesEnglish: true, ConfirmsMedium: true })
             {
                 return target.ToRow(
                     IsbnDiscoveryOutcome.ConfirmedEnglish,
                     $"{candidates.Isbns.Count} candidate(s) offered; this record names English "
                     + $"and says it is a {target.Format}.",
-                    candidate,
-                    enrichment);
+                    verified.Isbn,
+                    verified.Record);
             }
 
             // English, the right volume, but silent about the medium. Kept as a fallback and
             // labelled, because this is where a manga volume gets proposed for a light novel.
-            if (enrichment.Language is EditionLanguage.English)
+            if (verified.NamesEnglish)
             {
-                unconfirmed ??= enrichment;
-                unconfirmedIsbn ??= candidate;
+                unconfirmed ??= verified.Record;
+                unconfirmedIsbn ??= verified.Isbn;
                 continue;
             }
 
-            // Unstated: usable only on the publisher's word, and never for a
-            // Japanese-registered ISBN. Kept as the answer of last resort while the
-            // search carries on looking for a record that actually says English.
-            if (likelyIsbn is null
-                && !Isbn.IsJapaneseEdition(candidate)
-                && EnglishPublishers.Includes(enrichment.Publisher))
+            // Unstated: usable only on the publisher's word. Kept as the answer of last
+            // resort while the search carries on looking for a record that actually says
+            // English.
+            if (likelyIsbn is null && EnglishPublishers.Includes(verified.Record.Publisher))
             {
-                likely = enrichment;
-                likelyIsbn = candidate;
+                likely = verified.Record;
+                likelyIsbn = verified.Isbn;
             }
         }
 

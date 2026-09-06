@@ -1,6 +1,3 @@
-using System.Net.Http.Json;
-using LnShelf.Shared.Preferences;
-
 namespace LnShelf.Client.Features.Preferences;
 
 /// <summary>

@@ -41,7 +41,10 @@
             <p class="notice notice--quiet">@degradedNote</p>
         }
 
-        @if (SearchState.IsBusy)
+        @* Gated on the search alone. Adding a series also puts a request in flight, and
+           gating this on "busy" meant pressing Add replaced the whole result list with
+           "Searching…" until the POST came back. *@
+        @if (SearchState.IsSearching)
         {
             @* Source-neutral, because which source answers is no longer fixed: the search
                falls back to a second catalogue, and the note above says so when it did. *@

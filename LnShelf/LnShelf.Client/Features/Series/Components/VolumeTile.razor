@@ -4,12 +4,15 @@
 @inject ApiUrlBuilder ApiUrl
 
 <div class="tile-wrap" @ref="_wrapElement">
+    @* A plain button. It used to declare role="checkbox" with aria-checked bound to
+       Read, from when a click cycled the read state; a click now opens a menu, and a
+       checkbox that opens a menu is a contradiction for assistive tech. Everything the
+       aria-checked said is spoken in full by AccessibleLabel. *@
     <button type="button"
             class="tile @StateClass @(IsSelected ? "tile--selected" : null)"
-            role="checkbox"
-            aria-checked="@((Volume.ReadStatus == ReadStatus.Read).ToAriaState())"
             aria-label="@AccessibleLabel"
             aria-haspopup="@(IsSelectMode ? null : "menu")"
+            title="@ReadDateText"
             data-volume="@Volume.Number"
             disabled="@(!IsInteractive)"
             @onclick="OnClickAsync"

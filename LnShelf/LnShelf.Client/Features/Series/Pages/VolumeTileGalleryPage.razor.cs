@@ -1,5 +1,3 @@
-using LnShelf.Shared.Shelf;
-
 namespace LnShelf.Client.Features.Series.Pages;
 
 public partial class VolumeTileGalleryPage

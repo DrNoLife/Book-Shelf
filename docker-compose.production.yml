@@ -32,8 +32,10 @@ services:
 
   # Cover storage behind ICoverStore. The bucket is created by MinioCoverStore on
   # first use, so a cold start needs no provisioning step.
+  # Pinned (not :latest): this bucket holds cached covers and the user's cover
+  # overrides — an unannounced breaking MinIO release must never land silently.
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:

@@ -16,9 +16,9 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // the cover cache handed to the writer stores nothing (VerifyingVolumeCoverCache).
 //
 // Every seam is constructor-injected from the container, so what is checked is what the app
-// actually runs. VolumeEnrichmentService and VolumeFactWriter are the two exceptions and
-// are built with `new` — only so the verifying cover cache can be substituted for the one
-// that writes to MinIO. They are otherwise the same classes the nightly sync uses.
+// actually runs — including the enrichment pipeline itself, which
+// VerificationEnrichmentRunner builds from the container with only the cover cache
+// substituted.
 //
 // The series-resolution step goes through ISeriesSearchService rather than straight at
 // AniList, which is what the search endpoint does too. That is not tidiness: with AniList's
@@ -29,15 +29,10 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class EnrichmentVerificationService(
     ISeriesSearchService searchService,
     SearchHitResolver hitResolver,
-    IReleaseSourceMatcher releaseSourceMatcher,
-    IVolumeCatalogueSource catalogueSource,
-    IVolumeEnrichmentSource enrichmentSource,
-    IIsbnCandidateSource candidateSource,
+    VerificationVolumeCountResolver volumeCountResolver,
+    VerificationEnrichmentRunner enrichmentRunner,
     VerificationImageProbe imageProbe,
-    TimeProvider timeProvider,
-    ILogger<EnrichmentVerificationService> logger,
-    ILogger<VolumeEnrichmentService> enrichmentLogger,
-    ILogger<VolumeFactWriter> factWriterLogger)
+    ILogger<EnrichmentVerificationService> logger)
 {
     /// <summary>
     /// The three series checked when none are named.
@@ -57,32 +52,6 @@ public sealed class EnrichmentVerificationService(
     ];
 
     public const Format DefaultFormat = Format.LightNovel;
-
-    /// <summary>Generous, because a verification run is not competing with anything.</summary>
-    public const int LookupAllowance = 100;
-
-    /// <summary>
-    /// The bars a series has to clear. Series level is all-or-nothing; volume level is a
-    /// share, because a store's catalogue genuinely does miss the odd volume.
-    /// </summary>
-    // Set against measured reality rather than aspiration. Apple Books answered with a
-    // title, a blurb and artwork for 100% of the volumes of all three canaries, and with a
-    // date for at least 13 of 14 — the missing one being a future volume whose date the
-    // conflict rule withholds on purpose (phase 3.10 observed exactly that on 86 vol 14).
-    //
-    // So 80% is not "most of them work"; it is a fifth of the shelf silently going missing,
-    // which is a regression worth a red exit code. Dates get 70% because they are the one
-    // field the conflict rule is allowed to refuse.
-    //
-    // "Matched" replaced "titled" as the bar once titles began storing a volume's subtitle
-    // rather than the record's whole name. Whether a volume *has* a subtitle is the
-    // publisher's business — Slime has none for any of its twenty-three — so a bar on it
-    // would fail a healthy pipeline. Whether the catalogue named the volume at all is the
-    // thing that was ever being measured, and that is what this counts.
-    public const int MinimumMatchedPercent = 80;
-    public const int MinimumDescribedPercent = 80;
-    public const int MinimumCoveredPercent = 80;
-    public const int MinimumDatedPercent = 70;
 
     public async Task<EnrichmentVerificationReport> RunAsync(
         IReadOnlyList<string> searchTerms,
@@ -130,13 +99,13 @@ public sealed class EnrichmentVerificationService(
 
         var seriesLevel = await VerifySeriesLevelAsync(resolved, cancellationToken);
         var series = ToInMemorySeries(resolved);
-        var count = await ResolveVolumeCountAsync(series, resolved, cancellationToken);
+        var count = await volumeCountResolver.ResolveAsync(series, resolved, cancellationToken);
 
         AddVolumes(series, count);
 
         var volumeLevel = count.Volumes is 0
             ? null
-            : await EnrichAsync(series, cancellationToken);
+            : await enrichmentRunner.RunAsync(series, cancellationToken);
 
         return new SeriesVerification
         {
@@ -156,7 +125,7 @@ public sealed class EnrichmentVerificationService(
             CatalogueTitle = series.CatalogueTitle,
             KnownTitleCount = 1 + series.AlternativeTitles.Length,
 
-            Passed = Judge(seriesLevel, volumeLevel),
+            Passed = VerificationVerdict.Judge(seriesLevel, volumeLevel),
         };
     }
 
@@ -215,93 +184,6 @@ public sealed class EnrichmentVerificationService(
     };
 
     /// <summary>
-    /// How many volumes to check, and on whose authority.
-    /// </summary>
-    // The precedence order is the shelf's own (CLAUDE.md gives volume counts to
-    // MangaUpdates), with one addition for the case neither series-level source can answer:
-    // the store's own highest confirmed volume number. That ground is weaker and is named
-    // as such in the report rather than quietly used.
-    private async Task<VolumeCount> ResolveVolumeCountAsync(
-        Series series,
-        ResolvedSeries resolved,
-        CancellationToken cancellationToken)
-    {
-        // The release source itself answered the search, so its count is already in hand
-        // and no title matching is needed to earn it — the id came from that catalogue.
-        if (resolved.ReleaseVolumeCount is { } resolvedCount)
-        {
-            return new VolumeCount(
-                resolvedCount, $"{resolvedCount} from the release source", FromReleaseSource: true);
-        }
-
-        var match = await releaseSourceMatcher.MatchAsync(series, new HashSet<long>(), cancellationToken);
-
-        if (match.IsLinked && match.MatchedSeries?.VolumeCount is { } releaseCount)
-        {
-            return new VolumeCount(releaseCount, $"{releaseCount} from the release source", FromReleaseSource: true);
-        }
-
-        // Non-fatal by design: an unlinked series still has volumes, and the point of the
-        // run is what the per-volume sources can say about them.
-        var note = match.IsLinked
-            ? $"linked, but stated no volume count ({match.Explanation})"
-            : $"unlinked ({match.Outcome}: {match.Explanation})";
-
-        if (resolved.ListedVolumeCount > 0)
-        {
-            return new VolumeCount(
-                resolved.ListedVolumeCount,
-                $"{resolved.ListedVolumeCount} from the metadata source",
-                FromReleaseSource: false)
-            {
-                ReleaseSourceNote = note,
-            };
-        }
-
-        var catalogueCount = await HighestConfirmedCatalogueNumberAsync(series, cancellationToken);
-
-        return new VolumeCount(
-            catalogueCount,
-            catalogueCount is 0
-                ? "none (no source named a volume count)"
-                : $"{catalogueCount} from the store catalogue's highest confirmed volume",
-            FromReleaseSource: false)
-        {
-            ReleaseSourceNote = note,
-        };
-    }
-
-    /// <summary>
-    /// The highest volume number the store catalogue positively confirms for this series.
-    /// </summary>
-    // The same two filters the enrichment pass applies, for the same reason: a store search
-    // answers with spin-offs, the other medium and unrelated series that share a word.
-    // Cheap, because the catalogue source caches its answer for a day — the enrichment pass
-    // that follows reads the same response rather than asking again.
-    private async Task<int> HighestConfirmedCatalogueNumberAsync(
-        Series series,
-        CancellationToken cancellationToken)
-    {
-        var catalogue = await catalogueSource.GetVolumesAsync(
-            series.TitleEnglish, series.Format, cancellationToken);
-
-        var highest = 0;
-
-        foreach (var record in catalogue)
-        {
-            if (VolumeEditionMatcher.TryMatchVolumeNumber(
-                    series.TitleEnglish, series.Format, record.Title, out var number)
-                && VolumeEditionMatcher.ConfirmsMedium(series.Format, record.Title)
-                && number > highest)
-            {
-                highest = number;
-            }
-        }
-
-        return highest;
-    }
-
-    /// <summary>
     /// Volumes 1..N, bare — no ISBN, no title, no date.
     /// </summary>
     // No ISBNs on purpose. That is what a freshly added series looks like, and it means the
@@ -311,7 +193,7 @@ public sealed class EnrichmentVerificationService(
     // precisely what the real refresh does with one. It matters to the result: the writer
     // refuses a future date on a volume the count already calls in print, so marking these
     // released is what makes the report honest about dates rather than flattering.
-    private static void AddVolumes(Series series, VolumeCount count)
+    private static void AddVolumes(Series series, VerificationVolumeCount count)
     {
         for (var number = 1; number <= count.Volumes; number++)
         {
@@ -323,121 +205,6 @@ public sealed class EnrichmentVerificationService(
             });
         }
     }
-
-    private async Task<VolumeLevelVerification> EnrichAsync(Series series, CancellationToken cancellationToken)
-    {
-        var coverCache = new VerifyingVolumeCoverCache(imageProbe);
-
-        var enrichment = new VolumeEnrichmentService(
-            catalogueSource,
-            enrichmentSource,
-            candidateSource,
-            new VolumeFactWriter(coverCache, factWriterLogger),
-            enrichmentLogger);
-
-        // A run object nobody saves. The writer counts into it and hangs discrepancy rows
-        // off it, both of which are wanted behaviour — and both are thrown away with it.
-        var run = new SyncRun { Id = Guid.CreateVersion7(), StartedAt = timeProvider.GetUtcNow() };
-        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
-
-        await enrichment.EnrichAsync(series, run, today, new LookupBudget(LookupAllowance), cancellationToken);
-
-        logger.LogInformation(
-            "{TitleEnglish}: enriched {VolumeCount} volume(s), {Failures} failure(s), {Gaps} gap(s)",
-            series.TitleEnglish,
-            series.Volumes.Count,
-            run.EnrichmentFailures,
-            run.EnrichmentGaps);
-
-        return Count(series.Volumes, coverCache.Verified);
-    }
-
-    /// <summary>
-    /// Turns one series' enriched volumes into the numbers the report prints.
-    /// </summary>
-    // Public and static so the counting can be asserted without a network: it is the half
-    // of this class that decides what "covered" means, and that judgement should not only
-    // ever be exercised against the live internet.
-    public static VolumeLevelVerification Count(
-        IEnumerable<Volume> volumes,
-        IReadOnlyList<VerifiedImage> covers)
-    {
-        ArgumentNullException.ThrowIfNull(volumes);
-        ArgumentNullException.ThrowIfNull(covers);
-
-        var total = 0;
-        var matched = 0;
-        var titled = 0;
-        var described = 0;
-        var covered = 0;
-        var dated = 0;
-
-        foreach (var volume in volumes)
-        {
-            total++;
-
-            // Null against empty, which is the whole point of Volume.Title's three states:
-            // the catalogue naming a volume that has no subtitle is a hit, not a miss.
-            if (volume.Title is not null)
-            {
-                matched++;
-            }
-
-            if (!string.IsNullOrEmpty(volume.Title))
-            {
-                titled++;
-            }
-
-            if (volume.Description is not null)
-            {
-                described++;
-            }
-
-            // The key, not a URL: it is set only where the cover cache returned one, and
-            // the verifying cache only returns one for bytes that decoded as an image.
-            if (volume.CoverObjectKey is not null)
-            {
-                covered++;
-            }
-
-            if (volume.ReleaseDate is not null)
-            {
-                dated++;
-            }
-        }
-
-        return new VolumeLevelVerification
-        {
-            Total = total,
-            Matched = matched,
-            Titled = titled,
-            Described = described,
-            Covered = covered,
-            Dated = dated,
-            CoverByteCount = covers.Sum(cover => cover.ByteCount),
-            LargestCover = covers.MaxBy(cover => (long)cover.Width * cover.Height),
-        };
-    }
-
-    /// <summary>
-    /// Whether one series' result clears the bars.
-    /// </summary>
-    // Public and static for the same reason Count is: the thresholds are the whole point of
-    // the command, and a threshold that can only be exercised by running the real internet
-    // is a threshold nobody can change safely.
-    public static bool Judge(SeriesLevelVerification? seriesLevel, VolumeLevelVerification? volumeLevel) =>
-        seriesLevel is { HasTitle: true, HasDescription: true, HasCover: true }
-        && volumeLevel is not null
-        && Meets(volumeLevel.Matched, volumeLevel.Total, MinimumMatchedPercent)
-        && Meets(volumeLevel.Described, volumeLevel.Total, MinimumDescribedPercent)
-        && Meets(volumeLevel.Covered, volumeLevel.Total, MinimumCoveredPercent)
-        && Meets(volumeLevel.Dated, volumeLevel.Total, MinimumDatedPercent);
-
-    /// <summary>Integer arithmetic, so a share exactly on its threshold passes.</summary>
-    // A double comparison would work here too, and would leave a reader wondering whether
-    // 4 of 5 really is >= 0.8. This one cannot be wondered about.
-    private static bool Meets(int count, int total, int minimumPercent) =>
-        total > 0 && count * 100 >= total * minimumPercent;
 
     /// <param name="source">
     /// Which source was asked. Reported even on a failure — "MangaUpdates has never heard
@@ -457,11 +224,4 @@ public sealed class EnrichmentVerificationService(
             Failure = reason,
             Passed = false,
         };
-
-    /// <summary>How many volumes are being checked, and who said so.</summary>
-    private sealed record VolumeCount(int Volumes, string Ground, bool FromReleaseSource)
-    {
-        /// <summary>Set when the release source did not supply the count. Non-fatal.</summary>
-        public string? ReleaseSourceNote { get; init; }
-    }
 }

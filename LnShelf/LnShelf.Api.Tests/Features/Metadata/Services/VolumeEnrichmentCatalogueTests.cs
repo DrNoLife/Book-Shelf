@@ -1,3 +1,5 @@
+using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -411,23 +413,11 @@ public sealed class VolumeEnrichmentCatalogueTests
         IVolumeCatalogueSource catalogueSource,
         IVolumeEnrichmentSource? enrichmentSource = null,
         IVolumeCoverCache? coverCache = null) =>
-        new(
+        VolumeEnrichmentPipeline.Create(
             catalogueSource,
             enrichmentSource ?? NoEnrichment(),
             NoCandidates(),
-            new VolumeFactWriter(
-                coverCache ?? CoverCache(), NullLogger<VolumeFactWriter>.Instance),
-            NullLogger<VolumeEnrichmentService>.Instance);
-
-    private static IVolumeCatalogueSource Catalogue(params CatalogueVolume[] records)
-    {
-        var source = Substitute.For<IVolumeCatalogueSource>();
-        source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns(records);
-
-        return source;
-    }
+            VolumeEnrichmentPipeline.Writer(coverCache ?? CoverCache()));
 
     private static CatalogueVolume Record(
         string title,
@@ -443,70 +433,8 @@ public sealed class VolumeEnrichmentCatalogueTests
                 + "16e240f6-0ea7-ceb3-4907-234c5f20018a/9781975320775.jpg/1000x1500bb.jpg"),
         };
 
-    private static IVolumeCoverCache CoverCache()
-    {
-        var cache = Substitute.For<IVolumeCoverCache>();
-        cache.EnsureCachedAsync(
-                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Uri>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo => $"volume/{callInfo.ArgAt<string>(1).ToLowerInvariant()}/abc.jpg");
+    private static SyncRun Run() => VolumeEnrichmentTestContext.Run(Today);
 
-        return cache;
-    }
-
-    /// <summary>The by-ISBN source knows nothing: this file is about the catalogue pass.</summary>
-    private static IVolumeEnrichmentSource NoEnrichment() => EnrichmentSource(null);
-
-    private static IVolumeEnrichmentSource EnrichmentSource(VolumeEnrichment? enrichment)
-    {
-        var source = Substitute.For<IVolumeEnrichmentSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(enrichment);
-
-        return source;
-    }
-
-    private static IIsbnCandidateSource NoCandidates()
-    {
-        var source = Substitute.For<IIsbnCandidateSource>();
-        source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(IsbnCandidates.None);
-
-        return source;
-    }
-
-    private static LookupBudget Budget(int maximum) => new(maximum);
-
-    private static SyncRun Run() => new()
-    {
-        Id = Guid.CreateVersion7(),
-        StartedAt = new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero),
-    };
-
-    private static Series Series(params Volume[] volumes)
-    {
-        var series = new Series
-        {
-            Id = Guid.CreateVersion7(),
-            AniListId = 97883,
-            TitleEnglish = "86―EIGHTY-SIX",
-            Format = Format.LightNovel,
-            PublicationStatus = PublicationStatus.Ongoing,
-        };
-
-        foreach (var volume in volumes)
-        {
-            series.Volumes.Add(volume);
-        }
-
-        return series;
-    }
-
-    private static Volume Volume(int number, bool isReleased, string? isbn = null) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        Number = number,
-        Isbn = isbn,
-        IsReleased = isReleased,
-    };
+    private static Series Series(params Volume[] volumes) =>
+        VolumeEnrichmentTestContext.Series("86―EIGHTY-SIX", volumes, aniListId: 97883);
 }

@@ -1,4 +1,4 @@
-using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace LnShelf.Api.Features.Import.Mappers;
 
@@ -6,12 +6,9 @@ namespace LnShelf.Api.Features.Import.Mappers;
 /// Dirty CSV row → clean book. The dirty→clean edge for StoryGraph
 /// (CLAUDE.md — Mapping).
 /// </summary>
-public static class StoryGraphBookMapper
+public static partial class StoryGraphBookMapper
 {
-    /// <summary>StoryGraph writes dates as 2021/11/23, and several separated by commas.</summary>
-    private static readonly string[] DateFormats = ["yyyy/MM/dd", "yyyy-MM-dd"];
-
-    public static StoryGraphBook ToBook(StoryGraphCsvRow row, int lineNumber)
+    public static ImportedBook ToBook(StoryGraphCsvRow row, int lineNumber)
     {
         ArgumentNullException.ThrowIfNull(row);
 
@@ -19,15 +16,17 @@ public static class StoryGraphBookMapper
         var parsedTitle = BookTitleParser.Parse(rawTitle);
         var readStatus = ToReadStatus(row.ReadStatus);
 
-        return new StoryGraphBook
+        return new ImportedBook
         {
             LineNumber = lineNumber,
             RawTitle = rawTitle,
             SeriesTitle = parsedTitle.SeriesTitle,
             SeriesKey = TitleNormalizer.Normalize(parsedTitle.SeriesTitle),
             VolumeNumber = parsedTitle.VolumeNumber,
-            Author = NullIfBlank(row.Authors),
-            Isbn = NullIfBlank(row.Isbn),
+            Subtitle = ToSubtitle(parsedTitle.Subtitle),
+            Author = row.Authors.NullIfBlank(),
+            Illustrator = ToIllustrator(row.Contributors),
+            Isbn = row.Isbn.NullIfBlank(),
             ReadStatus = readStatus,
             OwnedInExport = ToOwnedInExport(row.Owned),
             OwnedFormat = ToOwnedFormat(row.Format),
@@ -70,39 +69,58 @@ public static class StoryGraphBookMapper
         };
 
     /// <summary>
-    /// "Last Date Read" first, then the latest of "Dates Read" — a re-read leaves
-    /// several dates in that column and the newest is the one the shelf shows.
+    /// The parsed subtitle, unless it is in Japanese script.
     /// </summary>
-    private static DateOnly? ToReadAt(StoryGraphCsvRow row) =>
-        ParseDate(row.LastDateRead) ?? LatestDate(row.DatesRead);
+    // The parser reports what the title said, which for "オーバーロード1 不死者の王" is a
+    // Japanese subtitle. This decides what the shelf will *show*, and the shelf entry is
+    // the English one: a Japanese subtitle under an English volume is the same defect
+    // DesiredVolumeStateMerger.ChooseIsbn exists to avoid. Dropped here, at the one edge
+    // that turns the export into the shelf's own terms, so nothing downstream has to
+    // re-ask the question.
+    private static string? ToSubtitle(string? subtitle) =>
+        subtitle is not null && JapaneseScriptPattern().IsMatch(subtitle) ? null : subtitle;
 
-    private static DateOnly? LatestDate(string? datesRead)
+    /// <summary>
+    /// The first contributor StoryGraph credits as the illustrator.
+    /// </summary>
+    // StoryGraph writes the column as "Name (Role), Name (Role)" and its role
+    // vocabulary is freeform, so this matches the two spellings the real export
+    // uses. A contributor with no role at all is somebody's editor as often as the
+    // artist, and guessing there would feed the matcher a name that is not the one
+    // AniList credits.
+    private static string? ToIllustrator(string? contributors)
     {
-        if (string.IsNullOrWhiteSpace(datesRead))
+        if (contributors.NullIfBlank() is not { } credited)
         {
             return null;
         }
 
-        DateOnly? latest = null;
-        foreach (var candidate in datesRead.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (var contributor in credited.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
-            var parsed = ParseDate(candidate);
-            if (parsed is not null && (latest is null || parsed > latest))
+            if (IllustratorRolePattern().Match(contributor) is { Success: true } match)
             {
-                latest = parsed;
+                return match.Groups["name"].Value.NullIfBlank();
             }
         }
 
-        return latest;
+        return null;
     }
 
-    private static DateOnly? ParseDate(string? value) =>
-        !string.IsNullOrWhiteSpace(value)
-        && DateOnly.TryParseExact(
-            value.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
-            ? parsed
-            : null;
+    /// <summary>
+    /// "Last Date Read" first, then the latest of "Dates Read" — a re-read leaves
+    /// several dates in that column and the newest is the one the shelf shows.
+    /// </summary>
+    private static DateOnly? ToReadAt(StoryGraphCsvRow row) =>
+        ExportDateParser.LatestDate(row.LastDateRead) ?? ExportDateParser.LatestDate(row.DatesRead);
 
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    // The same three blocks BookTitleParser matches a Japanese title on.
+    [GeneratedRegex(
+        @"[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex JapaneseScriptPattern();
+
+    [GeneratedRegex(
+        @"^(?<name>.+?)\s*\((?:Illustrator|Illustrations|Artist|Art)\)\s*$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex IllustratorRolePattern();
 }

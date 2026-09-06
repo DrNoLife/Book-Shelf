@@ -36,6 +36,17 @@
     }
 
     <div class="group__actions">
+        @* The books themselves, on request. "vols 1–9, 12" above is the compressed
+           claim; this is what it was compressed from, so a title the parser read wrongly
+           is visible before anything reaches the shelf. Collapsed by default: eleven
+           groups of nine rows each is a wall, not a review queue. *@
+        <button type="button"
+                class="secondary"
+                aria-expanded="@IsRowsOpen.ToAriaState()"
+                @onclick="ToggleRows">
+            @RowsLabel
+        </button>
+
         @* StoryGraph records no ownership at all, so this rule is doing real work
            and has to be visible and reversible where it applies. *@
         <button type="button"
@@ -57,6 +68,35 @@
             @(IsSearchOpen ? "Close search" : "Search AniList")
         </button>
     </div>
+
+    @if (IsRowsOpen)
+    {
+        <ul class="books">
+            <li class="books__head" aria-hidden="true">
+                <span class="cell cell--volume eyebrow">Volume</span>
+                <span class="cell cell--title eyebrow">As the export wrote it</span>
+                <span class="cell cell--read eyebrow">Read</span>
+                <span class="cell cell--owned eyebrow">Owned</span>
+            </li>
+
+            @foreach (var row in Group.Rows)
+            {
+                <li class="book" @key="row.LineNumber">
+                    <span class="cell cell--volume tabular @(row.VolumeNumber is null ? "cell--unparsed" : null)">
+                        @VolumeLabel(row)
+                    </span>
+                    <span class="cell cell--title">@row.RawTitle</span>
+                    <span class="cell cell--read">@ReadLabel(row)</span>
+                    <span class="cell cell--owned">
+                        @if (row.Owned)
+                        {
+                            @(row.OwnedFormat?.ToString() ?? "Owned")
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    }
 
     @if (IsSearchOpen)
     {

@@ -17,6 +17,10 @@ public sealed class SubtitleBackfillCommand(SubtitleBackfillService backfill) : 
 
     public async Task<int> RunAsync(ConsoleCommandLine commandLine, CancellationToken cancellationToken)
     {
+        // Guarded like its three siblings even though this command reads no options: the
+        // seam promises a command line, and a null one is a caller bug either way.
+        ArgumentNullException.ThrowIfNull(commandLine);
+
         var report = await backfill.RunAsync(cancellationToken);
 
         // Printed as well as logged: a one-shot's whole output is the lines the person who

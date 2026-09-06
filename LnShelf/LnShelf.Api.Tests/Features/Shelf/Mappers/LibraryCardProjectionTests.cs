@@ -510,6 +510,90 @@ public sealed class LibraryCardProjectionTests
         ToCard(series).NextReleaseDate.ShouldBeNull();
     }
 
+    /// <summary>
+    /// design.md: the card shows the latest volume's cover — the highest-numbered volume
+    /// that actually has art, so a series tracking volumes enrichment has never reached
+    /// still shows the newest cover it has rather than a placeholder.
+    /// </summary>
+    [Fact]
+    public void ToCard_VolumesWithArt_ShowsTheHighestNumberedOne()
+    {
+        var series = CreateSeriesWithCovers(
+            (1, null, null), (2, "volume/openlibrary/b.jpg", null), (3, null, null));
+
+        ToCard(series).CoverObjectKey.ShouldBe("volume/openlibrary/b.jpg");
+    }
+
+    [Fact]
+    public void ToCard_AVolumeCoverOverride_WinsOverThatVolumesSyncedArt()
+    {
+        // Overrides are user data and always win (CLAUDE.md), on the card exactly as on
+        // the tile.
+        var series = CreateSeriesWithCovers(
+            (1, "volume/openlibrary/a.jpg", null),
+            (2, "volume/openlibrary/b.jpg", "override/volume/b.jpg"));
+
+        ToCard(series).CoverObjectKey.ShouldBe("override/volume/b.jpg");
+    }
+
+    [Fact]
+    public void ToCard_AnOverrideOnAVolumeWithNoSyncedArt_IsStillTheLatestCover()
+    {
+        var series = CreateSeriesWithCovers(
+            (1, "volume/openlibrary/a.jpg", null), (2, null, "override/volume/b.jpg"));
+
+        ToCard(series).CoverObjectKey.ShouldBe("override/volume/b.jpg");
+    }
+
+    [Fact]
+    public void ToCard_NoVolumeWithArt_FallsBackToTheSeriesCover()
+    {
+        // The common case on a shelf enrichment has not reached: one series cover from
+        // AniList and nothing per volume.
+        var series = CreateSeriesWithCovers((1, null, null), (2, null, null));
+
+        ToCard(series).CoverObjectKey.ShouldBe("anilist/85470.jpg");
+    }
+
+    [Fact]
+    public void ToCard_NoArtAnywhere_HasNoCover()
+    {
+        var series = CreateSeriesWithCovers((1, null, null));
+        series.CoverObjectKey = null;
+
+        // design.md's coverless placeholder is what a series with no art at all renders.
+        ToCard(series).CoverObjectKey.ShouldBeNull();
+    }
+
+    private static Series CreateSeriesWithCovers(
+        params (int Number, string? VolumeCover, string? Override)[] volumes)
+    {
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            TitleEnglish = "Test Series",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+            CoverObjectKey = "anilist/85470.jpg",
+            UserState = new SeriesUserState { TrackingStatus = TrackingStatus.Reading },
+        };
+
+        foreach (var volume in volumes)
+        {
+            series.Volumes.Add(new Volume
+            {
+                Id = Guid.CreateVersion7(),
+                Number = volume.Number,
+                CoverObjectKey = volume.VolumeCover,
+                UserState = volume.Override is null
+                    ? null
+                    : new VolumeUserState { CoverOverrideObjectKey = volume.Override },
+            });
+        }
+
+        return series;
+    }
+
     private static Series CreateSeriesWithOneVolume(ReadStatus? readStatus, bool owned, int? releaseDaysFromToday)
     {
         var series = new Series

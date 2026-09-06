@@ -9,7 +9,7 @@ public sealed class LibraryQueryService(LnShelfDbContext dbContext, TimeProvider
         LibraryFilter filter,
         CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
+        var today = timeProvider.Today();
 
         var query = dbContext.Series.AsNoTracking();
         if (format is not null)

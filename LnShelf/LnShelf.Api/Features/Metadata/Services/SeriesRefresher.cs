@@ -35,13 +35,19 @@ public sealed class SeriesRefresher(
         ArgumentNullException.ThrowIfNull(linkedExternalIds);
         ArgumentNullException.ThrowIfNull(budget);
 
+        // Read before anything below writes it. A series' *first* refresh is the one that
+        // runs the moment it is added, and its whole backlist arriving then is not news —
+        // see FlagNewVolume.
+        var refreshedBefore = series.LastSyncedAt is not null;
+
         var info = series.MangaUpdatesId is { } externalId
             ? await releaseSource.GetSeriesAsync(externalId, cancellationToken)
             : await LinkAsync(series, run, linkedExternalIds, cancellationToken);
 
         if (info is not null)
         {
-            ApplyVolumeCount(series, info, run);
+            ApplyVolumeCount(series, info, run, refreshedBefore);
+            ApplyPublicationStatus(series, info, run);
         }
 
         // Enrichment runs whether or not the release source had anything to say: it reads
@@ -59,8 +65,9 @@ public sealed class SeriesRefresher(
             return;
         }
 
-        // Metadata only. Nothing in this class touches SeriesUserState or VolumeUserState —
-        // sync never writes user state (CLAUDE.md).
+        // Metadata. The single exception in this class is HasNewVolume (see FlagNewVolume);
+        // no other SeriesUserState or VolumeUserState field is ever written here, because
+        // sync does not own user state (CLAUDE.md).
         series.LastSyncedAt = timeProvider.GetUtcNow();
     }
 
@@ -75,7 +82,7 @@ public sealed class SeriesRefresher(
             return;
         }
 
-        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().Date);
+        var today = timeProvider.Today();
 
         // The budget is handed over rather than a number: one volume can cost several
         // requests when its own ISBN is not the one that got indexed, and only the
@@ -148,19 +155,7 @@ public sealed class SeriesRefresher(
         {
             // Recorded rather than retried silently: an unmatched series is a
             // question for a person, and this row is how it gets asked.
-            run.Discrepancies.Add(new SyncDiscrepancy
-            {
-                Id = Guid.CreateVersion7(),
-                SeriesId = series.Id,
-                SeriesTitle = series.TitleEnglish,
-                Field = SyncDiscrepancyField.SeriesLink,
-                ResolvedWith = null,
-                Note = $"{match.Outcome}: {match.Explanation}",
-            }
-                .Says(MetadataSourceName.AniList, series.TitleEnglish)
-                .Says(
-                    MetadataSourceName.MangaUpdates,
-                    match.Score is { } score ? $"best match scored {score}" : null));
+            run.Discrepancies.Add(SyncDiscrepancies.SeriesLink(series, match));
 
             return null;
         }
@@ -173,45 +168,45 @@ public sealed class SeriesRefresher(
     }
 
     /// <summary>
-    /// Applies the release source's volume count: marks those volumes published,
-    /// creates any the shelf is missing, and records a disagreement if the counts
-    /// differ.
+    /// Applies the release source's volume count: creates any volumes the shelf is
+    /// missing, marks the counted ones published, and records a disagreement if the
+    /// counts differ.
     /// </summary>
-    // The conflict rule (CLAUDE.md) gives volume counts to MangaUpdates and everything
-    // else to AniList, so a volume-count disagreement is recorded and resolved in
-    // AniList's favour rather than acted on — nothing is deleted.
-    private void ApplyVolumeCount(Series series, ReleaseSeriesInfo info, SyncRun run)
+    // The conflict rule (CLAUDE.md) gives volume counts to MangaUpdates, so a source
+    // counting *more* than the shelf tracks is believed and the missing volumes are
+    // created. A source counting fewer is recorded and not acted on — nothing is ever
+    // deleted — which leaves that disagreement resolved in the shelf's favour.
+    private void ApplyVolumeCount(Series series, ReleaseSeriesInfo info, SyncRun run, bool refreshedBefore)
     {
         if (info.VolumeCount is not { } sourceCount)
         {
             return;
         }
 
-        MarkReleased(series, sourceCount, run);
-
         var trackedCount = series.Volumes.Count;
-        if (sourceCount == trackedCount)
+
+        if (sourceCount != trackedCount)
         {
-            return;
+            run.Discrepancies.Add(SyncDiscrepancies.VolumeCount(series, info, sourceCount, trackedCount));
         }
 
-        run.Discrepancies.Add(new SyncDiscrepancy
+        if (sourceCount > trackedCount)
         {
-            Id = Guid.CreateVersion7(),
-            SeriesId = series.Id,
-            SeriesTitle = series.TitleEnglish,
-            Field = SyncDiscrepancyField.VolumeCount,
-            ResolvedWith = MetadataSourceName.AniList,
-            Note = $"MangaUpdates status: {info.RawStatus}",
-        }
-            .Says(MetadataSourceName.AniList, trackedCount.ToString(CultureInfo.InvariantCulture))
-            .Says(MetadataSourceName.MangaUpdates, sourceCount.ToString(CultureInfo.InvariantCulture)));
-
-        if (sourceCount <= trackedCount)
-        {
-            return;
+            CreateMissingVolumes(series, run, sourceCount, trackedCount);
         }
 
+        // Once, and after any new volumes exist, so the ones just created are covered by
+        // the same pass rather than by a second identical loop.
+        var newlyReleased = MarkReleased(series, sourceCount, run);
+
+        if (refreshedBefore && newlyReleased > 0)
+        {
+            FlagNewVolume(series);
+        }
+    }
+
+    private void CreateMissingVolumes(Series series, SyncRun run, int sourceCount, int trackedCount)
+    {
         var highestTracked = series.Volumes.Count == 0
             ? 0
             : series.Volumes.Max(volume => volume.Number);
@@ -240,29 +235,89 @@ public sealed class SeriesRefresher(
             releaseSource.SourceName,
             sourceCount,
             trackedCount);
+    }
 
-        // The volumes just created are within the source's count, so they are out too.
-        MarkReleased(series, sourceCount, run);
+    /// <summary>
+    /// Applies the release source's word on whether publication has finished.
+    /// </summary>
+    // Publication status belongs to MangaUpdates by the precedence list (CLAUDE.md), and
+    // until this existed it was written once at add time and never again — a series that
+    // finished publishing afterwards stayed Ongoing forever.
+    //
+    // Only the "finished" direction is written. The source's answer is a boolean, and a
+    // false cannot tell Ongoing from Hiatus from Cancelled; overwriting AniList's richer
+    // value with a guess would lose information the shelf already had. So a disagreement
+    // in that direction is recorded for a person and nothing is written.
+    private void ApplyPublicationStatus(Series series, ReleaseSeriesInfo info, SyncRun run)
+    {
+        if (info.IsCompleted)
+        {
+            if (series.PublicationStatus is PublicationStatus.Completed)
+            {
+                return;
+            }
+
+            logger.LogInformation(
+                "{TitleEnglish}: {SourceName} says publication has finished; {PreviousStatus} becomes Completed",
+                series.TitleEnglish,
+                releaseSource.SourceName,
+                series.PublicationStatus);
+
+            series.PublicationStatus = PublicationStatus.Completed;
+            return;
+        }
+
+        if (series.PublicationStatus is not PublicationStatus.Completed)
+        {
+            return;
+        }
+
+        run.Discrepancies.Add(SyncDiscrepancies.Status(series, info));
     }
 
     /// <summary>
     /// Marks volumes 1..<paramref name="sourceCount"/> as published, because that is
     /// what a release source's count means.
     /// </summary>
+    /// <returns>How many volumes this call flipped, which is how many are newly in print.</returns>
     // This is what stands in for release dates on the volumes no ISBN reaches. It is not a
     // date and does not pretend to be one: it records that the source says these volumes
     // exist in print, which is exactly what "to buy" needs to know. Volumes beyond the
     // count are left alone — Overlord's 17 and 18 are tracked from AniList but MangaUpdates
     // counts 16, so 17 and 18 are not to-buy.
-    private static void MarkReleased(Series series, int sourceCount, SyncRun run)
+    private static int MarkReleased(Series series, int sourceCount, SyncRun run)
     {
+        var newlyReleased = 0;
+
         foreach (var volume in series.Volumes)
         {
             if (volume.Number <= sourceCount && !volume.IsReleased)
             {
                 volume.IsReleased = true;
                 run.VolumesMarkedReleased++;
+                newlyReleased++;
             }
+        }
+
+        return newlyReleased;
+    }
+
+    /// <summary>
+    /// Raises the badge that says a volume the reader has not seen yet is out.
+    /// </summary>
+    // The one place sync writes user state, and CLAUDE.md sanctions exactly this field:
+    // HasNewVolume is last-visit acknowledgment — an event — rather than something derivable
+    // from read, owned and released, and sync is the only thing that witnesses the event.
+    // Nothing else on the row is touched, and it is never cleared here: clearing is the
+    // reader's act, and the Shelf slice owns it.
+    //
+    // Only when the row already exists. Creating one is the Shelf slice's job, and a series
+    // with no user state has nobody tracking it to notify.
+    private static void FlagNewVolume(Series series)
+    {
+        if (series.UserState is { } userState)
+        {
+            userState.HasNewVolume = true;
         }
     }
 }

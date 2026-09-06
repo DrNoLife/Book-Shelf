@@ -8,7 +8,7 @@
   background: var(--raise);
   border: 1px solid var(--line-2);
   border-radius: 8px;
-  box-shadow: 0 12px 28px rgba(8, 7, 11, 0.55);
+  box-shadow: 0 12px 28px var(--shadow-lift);
 }
 
 /* A menu carrying a blurb is wider — prose at 208px is four words to a line. The width
@@ -49,6 +49,14 @@
 }
 
 .blurb__paragraph + .blurb__paragraph { margin-top: 6px; }
+
+/* The read date, where the shelf knows one. A quiet line rather than a row: it is a
+   fact about the volume, not something to press. */
+.menu__note {
+  padding: 4px 8px 2px;
+  font-size: 11px;
+  color: var(--faint);
+}
 
 .menu__foot {
   padding: 6px 8px 3px;
@@ -107,10 +115,19 @@
   place-items: center;
 }
 
+/* The same colour vocabulary as every other surface: --acc is done, --acc-deep is in
+   hand but not done, and Reading keeps its ring identity from the tile. These three
+   were inverted here — read wore the receded value and owned wore a line colour — so
+   one volume spoke two colour languages a single click apart. */
 .swatch--unread { background: var(--surf); }
-.swatch--reading { background: var(--acc); box-shadow: none; }
-.swatch--read { background: var(--acc-deep); box-shadow: none; }
-.swatch--owned { background: var(--line-3); box-shadow: none; }
+
+.swatch--reading {
+  background: transparent;
+  box-shadow: 0 0 0 1.5px var(--acc);
+}
+
+.swatch--read { background: var(--acc); box-shadow: none; }
+.swatch--owned { background: var(--acc-deep); box-shadow: none; }
 
 /* --- edition --- */
 

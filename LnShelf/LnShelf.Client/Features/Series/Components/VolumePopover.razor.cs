@@ -1,8 +1,3 @@
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
-
 namespace LnShelf.Client.Features.Series.Components;
 
 public partial class VolumePopover
@@ -34,13 +29,23 @@ public partial class VolumePopover
     /// <summary>"Remove cover", which only a volume carrying an override shows.</summary>
     private const double RemoveCoverRowHeight = 32;
 
+    /// <summary>"Read 23 Nov 2021", which only a volume with a read date shows.</summary>
+    private const double ReadDateNoteHeight = 21;
+
     /// <summary>The nominal size this volume's menu will take, blurb or no blurb.</summary>
     public static double WidthFor(VolumeResponse volume) =>
         HasBlurb(volume) ? DescribedWidth : Width;
 
     public static double HeightFor(VolumeResponse volume)
     {
+        ArgumentNullException.ThrowIfNull(volume);
+
         var height = HasBlurb(volume) ? DescribedHeight : Height;
+
+        if (volume.ReadAt is not null)
+        {
+            height += ReadDateNoteHeight;
+        }
 
         if (volume.Owned)
         {
@@ -172,7 +177,7 @@ public partial class VolumePopover
     /// Click-away and focus-away close the menu. The yield lets the clicked item's own
     /// handler run first, which would otherwise be cancelled by the re-render.
     /// </summary>
-    private async Task OnFocusOutAsync(FocusEventArgs args)
+    private async Task OnFocusOutAsync()
     {
         await Task.Yield();
 

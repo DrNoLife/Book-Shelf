@@ -1,7 +1,3 @@
-using LnShelf.Shared.Shelf;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-
 namespace LnShelf.Client.Features.Series.Components;
 
 public partial class VolumeList

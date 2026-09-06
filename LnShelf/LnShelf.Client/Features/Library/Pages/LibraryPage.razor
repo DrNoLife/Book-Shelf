@@ -32,6 +32,13 @@
     </div>
 
     <div class="library__body">
+        @* A preference that failed to save says so where the control that failed lives
+           — silently reverting on the next load is the bug. *@
+        @if (Preferences.Message is { } preferenceMessage)
+        {
+            <p class="notice notice--warning">@preferenceMessage</p>
+        }
+
         @if (LibraryState.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>
