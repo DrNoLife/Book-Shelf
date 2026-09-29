@@ -35,17 +35,27 @@ public sealed class SeriesState(SeriesDetailClient client)
 
         try
         {
-            Series = await client.GetAsync(seriesId, cancellationToken);
+            var loaded = await client.GetAsync(seriesId, cancellationToken);
+
+            // A response that lands after its load was superseded is dropped whole; the
+            // newer load owns the flags now, so none of them is touched on the way out.
+            cancellationToken.ThrowIfCancellationRequested();
+            Series = loaded;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
         }
         catch (HttpRequestException)
         {
+            // Cleared, not kept: after a delete the route's series is gone, and a hero for
+            // it drawn over "could not load" would be the stale copy this load replaced.
+            Series = null;
             LoadFailed = true;
         }
-        finally
-        {
-            IsLoading = false;
-            Changed?.Invoke();
-        }
+
+        IsLoading = false;
+        Changed?.Invoke();
 
         // Visiting the series *is* the acknowledgement (CLAUDE.md — HasNewVolume is
         // last-visit state, not a derivation). Awaited rather than dropped, but only after
@@ -122,6 +132,41 @@ public sealed class SeriesState(SeriesDetailClient client)
             : Task.CompletedTask;
 
     /// <summary>
+    /// Applies a read status, ownership, or both to exactly these volumes — the select
+    /// mode's marks when the selection is not a run from volume 1.
+    /// </summary>
+    // One single-volume write per volume, in sequence, keeping the last whole-series
+    // answer. The bulk endpoint only speaks "1–N", and widening it for a hobby shelf's
+    // occasional scattered selection was more API than a handful of sequential PUTs.
+    // A refusal part-way stops the loop with the volumes before it written, and the
+    // message says so through RunAsync like every other failed write.
+    public Task MarkVolumesAsync(
+        IReadOnlyList<VolumeResponse> volumes,
+        ReadStatus? read,
+        bool? owned,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+
+        return RunAsync(async () =>
+        {
+            foreach (var volume in volumes)
+            {
+                if (read is { } status)
+                {
+                    ReplaceSeries(await client.SetReadAsync(volume.VolumeId, status, cancellationToken));
+                }
+
+                if (owned is { } isOwned)
+                {
+                    ReplaceSeries(await client.SetOwnedAsync(
+                        volume.VolumeId, isOwned, format: null, cancellationToken));
+                }
+            }
+        });
+    }
+
+    /// <summary>
     /// Sets this series' volume view, or clears the override with null so it follows the
     /// global preference again.
     /// </summary>
@@ -143,7 +188,8 @@ public sealed class SeriesState(SeriesDetailClient client)
     /// The note on the series. An empty string clears it; that is the endpoint's own
     /// rule, because null there means "leave the note alone".
     /// </summary>
-    public Task SetNotesAsync(string notes, CancellationToken cancellationToken = default) =>
+    /// <returns>Whether the note was saved — a failed save keeps the editor open.</returns>
+    public Task<bool> SetNotesAsync(string notes, CancellationToken cancellationToken = default) =>
         SetStateAsync(trackingStatus: null, notes ?? string.Empty, cancellationToken);
 
     /// <summary>
@@ -186,6 +232,18 @@ public sealed class SeriesState(SeriesDetailClient client)
         });
     }
 
+    /// <summary>
+    /// Prints a problem the page caught before any call was made, on the same line a
+    /// refused write prints on.
+    /// </summary>
+    public void ReportProblem(string message)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
+        Message = message;
+        Changed?.Invoke();
+    }
+
     public Task RemoveCoverAsync(VolumeResponse volume, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(volume);
@@ -196,14 +254,14 @@ public sealed class SeriesState(SeriesDetailClient client)
                 ReplaceSeries(await client.RemoveCoverAsync(volume.VolumeId, cancellationToken)));
     }
 
-    private Task SetStateAsync(
+    private Task<bool> SetStateAsync(
         TrackingStatus? trackingStatus,
         string? notes,
         CancellationToken cancellationToken) =>
         Series is { } series
             ? RunAsync(async () => ReplaceSeries(await client.SetStateAsync(
                 series.SeriesId, trackingStatus, notes, cancellationToken)))
-            : Task.CompletedTask;
+            : Task.FromResult(false);
 
     /// <summary>Clears the new-volume badge, here and on the server.</summary>
     private Task MarkSeenAsync(CancellationToken cancellationToken) =>

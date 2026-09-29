@@ -50,7 +50,7 @@
   white-space: nowrap;
 }
 
-.row:hover:not(:disabled) .row__title { color: var(--muted); }
+.row:hover:not([aria-disabled="true"]) .row__title { color: var(--muted); }
 
 .list__head {
   padding: 0 8px 7px;
@@ -66,8 +66,8 @@
   background: transparent;
 }
 
-.row:hover:not(:disabled) { background: var(--surf); color: var(--text); }
-.row:disabled { cursor: default; opacity: 0.6; }
+.row:hover:not([aria-disabled="true"]) { background: var(--surf); color: var(--text); }
+.row[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 
 .cell--number { color: var(--text); }
 

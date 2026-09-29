@@ -79,6 +79,17 @@ public sealed class MinioCoverStore(
         }
     }
 
+    // S3 semantics already make this idempotent: removing a missing object succeeds, so
+    // there is no not-found case to translate.
+    public async Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        await EnsureBucketAsync(cancellationToken);
+
+        await minioClient.RemoveObjectAsync(
+            new RemoveObjectArgs().WithBucket(Bucket).WithObject(objectKey),
+            cancellationToken);
+    }
+
     public void Dispose() => _bucketGate.Dispose();
 
     private async Task EnsureBucketAsync(CancellationToken cancellationToken)

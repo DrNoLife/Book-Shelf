@@ -40,7 +40,12 @@ public static class MangaUpdatesSeriesMapper
             AssociatedTitles = ToAssociatedTitles(record.Associated),
             SourceType = record.Type,
             StartYear = ToYear(record.Year),
-            IsCompleted = record.Completed,
+            // From the status text, never the `completed` boolean. That flag is MangaUpdates'
+            // "Completely Scanlated?" — whether the fan translation finished — and says nothing
+            // about publication; reading it here recorded a Status discrepancy every night for
+            // a series whose text says "(Complete)". The add flow reads the same text through
+            // the same rule, so the two paths cannot disagree about one record.
+            IsCompleted = ToPublicationStatus(record.Status) is PublicationStatus.Completed,
             VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
             RawStatus = record.Status.NullIfBlank(),
         };

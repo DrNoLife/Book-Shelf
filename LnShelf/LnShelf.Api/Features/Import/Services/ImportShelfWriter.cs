@@ -75,6 +75,23 @@ public sealed class ImportShelfWriter(
             aniListId, metadata.CoverImageUrl, cancellationToken);
 
         var series = SeriesMetadataMapper.ToTrackedSeries(metadata, appliedAt, coverObjectKey);
+
+        // A series added from MangaUpdates while AniList was down is on the shelf with no
+        // AniList id; the lookup above cannot see it, and creating would split its state.
+        if (await UnlinkedSeriesMatch.FindAsync(dbContext, series, cancellationToken) is { } unlinked)
+        {
+            UnlinkedSeriesMatch.Adopt(unlinked, series);
+            counters.SeriesUpdated++;
+
+            logger.LogInformation(
+                "AniList {AniListId} matches {TitleEnglish} ({SeriesId}) by title; importing onto it",
+                aniListId,
+                unlinked.TitleEnglish,
+                unlinked.Id);
+
+            return unlinked;
+        }
+
         dbContext.Series.Add(series);
         counters.SeriesCreated++;
 
@@ -138,7 +155,13 @@ public sealed class ImportShelfWriter(
         // within one import the *latest* read of a volume is its read date
         // (DesiredVolumeStateMerger.Combine), and against what is already on the shelf
         // the *earliest* of the two survives. Neither level ever writes null over a date.
-        state.ReadAt = Earliest(state.ReadAt, desired.ReadAt);
+        //
+        // And only onto a volume that is read once the import is done: a read date on an
+        // unread or in-progress volume is the lie VolumeCommandService clears on sight.
+        if (state.ReadStatus is ReadStatus.Read)
+        {
+            state.ReadAt = Earliest(state.ReadAt, desired.ReadAt);
+        }
 
         if (desired.Owned && !state.Owned)
         {
@@ -172,7 +195,9 @@ public sealed class ImportShelfWriter(
             userState.TrackingStatus = ChooseTrackingStatus(series, states);
         }
 
-        var earliest = states.Select(state => state.ReadAt).Where(date => date is not null).Min();
+        // Started from any evidence of reading, last-read from finished volumes only —
+        // see DesiredVolumeState.ReadingEvidenceAt for why the two differ.
+        var earliest = states.Select(state => state.ReadingEvidenceAt).Where(date => date is not null).Min();
         var latest = states.Select(state => state.ReadAt).Where(date => date is not null).Max();
 
         // Same rule as the per-volume ReadAt, for the same reason plus one: importing an
@@ -200,6 +225,13 @@ public sealed class ImportShelfWriter(
         if (states.Any(state => state.ReadStatus is ReadStatus.Reading))
         {
             return TrackingStatus.Reading;
+        }
+
+        // An export of nothing but to-read (and abandoned) rows is a wish list, not
+        // evidence of reading — it stays where an untouched series starts.
+        if (!states.Any(state => state.ReadStatus is ReadStatus.Read))
+        {
+            return TrackingStatus.PlanToStart;
         }
 
         // Completed means the series is finished *and* every volume of it is read.

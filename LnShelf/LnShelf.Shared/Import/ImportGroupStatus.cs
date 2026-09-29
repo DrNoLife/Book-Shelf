@@ -6,7 +6,7 @@ namespace LnShelf.Shared.Import;
 // The unit is the group, not the row: a StoryGraph export lists volumes, and the
 // thing being matched against AniList is the series they belong to. This is why
 // feature-spec §5's per-row Resolution moved up a level.
-[JsonConverter(typeof(JsonStringEnumConverter<ImportGroupStatus>))]
+[JsonConverter(typeof(StrictStringEnumConverter<ImportGroupStatus>))]
 public enum ImportGroupStatus
 {
     /// <summary>One candidate won by a clear margin; no human needed.</summary>

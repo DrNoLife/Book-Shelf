@@ -12,6 +12,23 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.16.0", new DateOnly(2026, 9, 29), "What to buy, and what you've read",
+        [
+            "Upcoming is a real page now: everything that is out and not on your shelf, one line per series " +
+                "with a \"Vol 15 on Saxo\" link, then what is dated by month, then what is announced without a " +
+                "date. The format tabs work here too, and dropped series stay out of it.",
+            "Stats is a real page too: volumes read per month split by format, the shelf by format, what the " +
+                "priced volumes cost, how many started series you've finished, and the series you're furthest into.",
+            "\"Mark 2 read\" with volumes 10 and 12 selected used to mark 1–12. It now marks exactly the two.",
+            "A slow MangaUpdates or AniList answer no longer aborts the whole nightly sync, and a rate-limited " +
+                "request actually gets its one retry. Two sources that disagree on a date stop swapping it every night.",
+            "Adding a series from AniList that you had added from MangaUpdates during an outage links the two " +
+                "instead of making a second copy. Imports no longer put read dates on unread volumes or mark a " +
+                "to-read-only series as Reading.",
+            "Fixes on the way past: a replaced cover shows the new picture straight away, the keyboard keeps " +
+                "working in the volume grid after Space, menus opened with Enter stay open, a failed note save " +
+                "keeps what you typed, a too-big cover says so, and shelf rows take you to the library from any page.",
+        ]),
         new("0.15.0", new DateOnly(2026, 9, 6), "The dates were already there",
         [
             "The shelf has known since day one when you read each volume — it just never said. The volume " +

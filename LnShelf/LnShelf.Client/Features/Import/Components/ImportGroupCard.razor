@@ -48,11 +48,13 @@
         </button>
 
         @* StoryGraph records no ownership at all, so this rule is doing real work
-           and has to be visible and reversible where it applies. *@
+           and has to be visible and reversible where it applies. Disabled with a title,
+           not hidden (design.md), until there is a series to apply it to. *@
         <button type="button"
                 class="toggle @(Group.TreatReadAsOwned ? "toggle--on" : null)"
                 aria-pressed="@Group.TreatReadAsOwned.ToAriaState()"
-                disabled="@(IsCommitted || IsBusy)"
+                disabled="@(IsCommitted || IsBusy || !CanToggleOwnership)"
+                title="@OwnershipToggleTitle"
                 @onclick="OnOwnershipToggledAsync">
             @(Group.TreatReadAsOwned ? "Read means owned" : "Read only, not owned")
         </button>

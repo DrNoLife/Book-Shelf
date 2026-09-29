@@ -54,6 +54,20 @@ public sealed class VolumeSelectionState
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Back to nothing open, nothing selected, select mode off — for a page showing a
+    /// different series.
+    /// </summary>
+    // The container is scoped, so in a WASM app it outlives the navigation; without this
+    // the previous series' selection and open menu followed the reader to the next one.
+    public void Reset()
+    {
+        OpenMenuVolumeId = null;
+        IsSelectMode = false;
+        _selected.Clear();
+        Changed?.Invoke();
+    }
+
     public void ToggleSelection(VolumeResponse volume)
     {
         ArgumentNullException.ThrowIfNull(volume);

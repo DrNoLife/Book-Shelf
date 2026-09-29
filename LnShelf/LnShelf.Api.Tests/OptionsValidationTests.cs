@@ -78,6 +78,10 @@ public sealed class OptionsValidationTests
     [InlineData("OpenLibrary:RequestTimeout", "01:00:00", "RequestTimeout")]
     [InlineData("Covers:Bucket", "", "Bucket")]
     [InlineData("Covers:CoverQuality", "0", "CoverQuality")]
+
+    // One byte over the cover endpoint's own request limit: a value above it could never
+    // take effect, so it is refused rather than silently ignored.
+    [InlineData("Covers:MaximumUploadBytes", "8388609", "MaximumUploadBytes")]
     public void AnOutOfRangeSetting_FailsAtStartup_NamingTheField(
         string key, string value, string expectedFieldName)
     {

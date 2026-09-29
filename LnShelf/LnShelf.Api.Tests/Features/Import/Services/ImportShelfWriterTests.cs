@@ -158,6 +158,58 @@ public sealed class ImportShelfWriterTests
     }
 
     [Fact]
+    public async Task ApplyAsync_NothingButToReadRows_LeavesTheSeriesPlanToStart()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([1, 2, 3], ReadStatus.Unread, treatReadAsOwned: false)],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        // A wish list is not evidence of reading.
+        (await LoadSeriesAsync(dbContext)).UserState!.TrackingStatus.ShouldBe(TrackingStatus.PlanToStart);
+    }
+
+    /// <summary>
+    /// A series added from MangaUpdates while AniList was down has no AniList id, so the
+    /// import's own lookup cannot see it — and used to create a second copy beside it.
+    /// </summary>
+    [Fact]
+    public async Task ApplyAsync_ASeriesAddedFromMangaUpdatesUnderTheSameTitle_ImportsOntoIt()
+    {
+        await using var dbContext = CreateDbContext();
+        var existing = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            MangaUpdatesId = 17992364412,
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+        };
+        existing.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 1, IsReleased = true });
+        dbContext.Series.Add(existing);
+        await dbContext.SaveChangesAsync();
+
+        var counters = new ImportWriteCounters();
+        await CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18)).ApplyAsync(
+            AniListId, [CreateGroup([1])], counters, AppliedAt, CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        counters.SeriesCreated.ShouldBe(0);
+        counters.SeriesUpdated.ShouldBe(1);
+
+        var series = await LoadSeriesAsync(dbContext);
+        series.Id.ShouldBe(existing.Id);
+        series.AniListId.ShouldBe(AniListId);
+        series.Volumes.Single().UserState.ShouldNotBeNull().ReadStatus.ShouldBe(ReadStatus.Read);
+    }
+
+    [Fact]
     public async Task ApplyAsync_ASeriesTheUserHasDropped_KeepsThatStatus()
     {
         await using var dbContext = CreateDbContext();

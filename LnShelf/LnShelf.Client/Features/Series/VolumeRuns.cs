@@ -38,4 +38,34 @@ public static class VolumeRuns
 
         return run >= released.Count ? null : released[run].Number;
     }
+
+    /// <summary>
+    /// The N for which "volumes 1–N" is exactly the selection, so the bulk endpoint can
+    /// apply it in one call without touching a volume nobody picked.
+    /// </summary>
+    /// <returns>
+    /// Null when the selection is empty or has a gap — selecting 10 and 12 must mark two
+    /// volumes, not twelve.
+    /// </returns>
+    public static int? SelectionAsLeadingRun(
+        IEnumerable<VolumeResponse> volumes,
+        IReadOnlySet<Guid> selectedVolumeIds)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+        ArgumentNullException.ThrowIfNull(selectedVolumeIds);
+
+        var ordered = volumes.ToList();
+        var selected = ordered.Where(volume => selectedVolumeIds.Contains(volume.VolumeId)).ToList();
+        if (selected.Count == 0)
+        {
+            return null;
+        }
+
+        // The endpoint's own rule is "every volume numbered up to N", announced ones
+        // included, so the test is the same set comparison rather than a count of numbers.
+        var through = selected.Max(volume => volume.Number);
+        var covered = ordered.Count(volume => volume.Number <= through);
+
+        return covered == selected.Count ? through : null;
+    }
 }

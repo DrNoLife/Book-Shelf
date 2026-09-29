@@ -44,10 +44,21 @@ public sealed class CoverStoreOptions
     [Range(1, 100)]
     public int CoverQuality { get; set; } = 82;
 
-    /// <summary>Largest upload accepted for a cover override. 64 MiB ceiling.</summary>
-    // The typeof(long) form of [Range], because the int overload converts the value
-    // through Convert.ToInt32 and a configured value above int.MaxValue would surface as
-    // an OverflowException from inside validation instead of a named field.
-    [Range(typeof(long), "1", "67108864")]
-    public long MaximumUploadBytes { get; set; } = 8 * 1024 * 1024;
+    /// <summary>
+    /// The most any cover upload request may carry: the cover endpoint's
+    /// [RequestSizeLimit] and the ceiling of <see cref="MaximumUploadBytes"/>.
+    /// </summary>
+    // One constant for both, because they are the same limit seen from two places. The
+    // option used to allow 64 MiB while the endpoint's attribute refused anything over
+    // 8 MiB before the option was ever read, so configuring a higher value silently did
+    // nothing. The option can still lower the limit; raising it is a code change here.
+    public const long UploadCeilingBytes = 8 * 1024 * 1024;
+
+    /// <summary>Largest upload accepted for a cover override, up to <see cref="UploadCeilingBytes"/>.</summary>
+    // The double form of [Range], because a long constant can feed it (the typeof form
+    // takes strings, which would have to repeat the number) and, unlike the int form, it
+    // does not overflow on a configured value above int.MaxValue — that is reported as
+    // out of range like any other.
+    [Range(1d, UploadCeilingBytes)]
+    public long MaximumUploadBytes { get; set; } = UploadCeilingBytes;
 }

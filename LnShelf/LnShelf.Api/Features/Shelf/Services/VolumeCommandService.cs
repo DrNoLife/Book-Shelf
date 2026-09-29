@@ -35,7 +35,7 @@ public sealed class VolumeCommandService(
         if (becameRead)
         {
             // The series is already loaded with its user state here, so no second read.
-            StampLastRead(series.UserState ??= new SeriesUserState { SeriesId = series.Id }, timeProvider.Today());
+            StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -57,6 +57,12 @@ public sealed class VolumeCommandService(
         if (request.PurchasePrice is < 0)
         {
             throw new InvalidInputException("A purchase price cannot be negative.");
+        }
+
+        if (request.PurchasePrice is > VolumeUserState.MaximumPurchasePrice)
+        {
+            throw new InvalidInputException(
+                $"A purchase price can be at most {VolumeUserState.MaximumPurchasePrice}.");
         }
 
         var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
@@ -103,7 +109,13 @@ public sealed class VolumeCommandService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.ThroughNumber);
+
+        // A 400 rather than ArgumentOutOfRangeException: the number is the caller's input,
+        // and the central handler reads any other exception as a defect here.
+        if (request.ThroughNumber <= 0)
+        {
+            throw new InvalidInputException("A bulk change has to run through volume 1 or later.");
+        }
 
         if (request.Read is null && request.Owned is null)
         {
@@ -140,13 +152,20 @@ public sealed class VolumeCommandService(
             {
                 state.Owned = owned;
                 state.OwnedFormat = owned ? state.OwnedFormat ?? OwnedFormat.Physical : null;
+
+                // The same stamp the single-volume path makes, so a volume bought through
+                // the bulk bar is not the one kind of owned volume with no purchase date.
+                if (owned)
+                {
+                    state.PurchasedAt ??= timeProvider.Today();
+                }
             }
         }
 
         if (anyBecameRead)
         {
             // The series is already loaded with its user state here, so no second read.
-            StampLastRead(series.UserState ??= new SeriesUserState { SeriesId = series.Id }, timeProvider.Today());
+            StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -180,15 +199,21 @@ public sealed class VolumeCommandService(
         var normalized = await coverNormalizer.NormalizeAsync(content, cancellationToken)
             ?? throw new InvalidInputException("That file is not an image the shelf can read.");
 
-        var objectKey = CoverObjectKey.ForVolumeOverride(volume.Id, CoverNormalizer.Extension);
+        var objectKey = CoverObjectKey.ForVolumeOverride(
+            volume.Id, Guid.CreateVersion7(), CoverNormalizer.Extension);
         await coverStore.SaveAsync(objectKey, normalized, CoverNormalizer.ContentType, cancellationToken);
 
         // The key lands on user state, not on the volume: it is user data, and sync
         // writes the volume but never the state (CLAUDE.md).
         var state = EnsureState(volume);
+        var replacedObjectKey = state.CoverOverrideObjectKey;
         state.CoverOverrideObjectKey = objectKey;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Only once the new key is saved: until then the old object is still what the
+        // shelf points at.
+        await DeleteReplacedOverrideAsync(replacedObjectKey, cancellationToken);
 
         logger.LogInformation(
             "Volume {VolumeNumber} of {SeriesId} has a cover override at {ObjectKey}",
@@ -207,13 +232,15 @@ public sealed class VolumeCommandService(
             return null;
         }
 
-        // The stored object is left in place: dropping the reference is what "revert to
-        // synced art" means, and keeping the bytes makes an accidental removal
-        // recoverable rather than final.
-        if (volume.UserState is { } state)
+        // The stored object goes too. It used to be kept so an accidental removal was
+        // recoverable, but every upload now has its own key, so a kept object is one
+        // nothing can name again — not a backup, just a leak.
+        if (volume.UserState is { CoverOverrideObjectKey: { } removedObjectKey } state)
         {
             state.CoverOverrideObjectKey = null;
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            await DeleteReplacedOverrideAsync(removedObjectKey, cancellationToken);
         }
 
         logger.LogInformation(
@@ -221,6 +248,36 @@ public sealed class VolumeCommandService(
             volume.Number, volume.SeriesId);
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
+    }
+
+    /// <summary>
+    /// Removes an override object the shelf no longer points at.
+    /// </summary>
+    // Never fatal. The user's change is already saved by the time this runs, and failing
+    // the request over an orphaned 100 KB object would report a write that succeeded as
+    // one that did not. The orphan is harmless: nothing references it.
+    private async Task DeleteReplacedOverrideAsync(string? objectKey, CancellationToken cancellationToken)
+    {
+        if (objectKey is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await coverStore.DeleteAsync(objectKey, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not delete the replaced cover override {ObjectKey}; it is orphaned but unreferenced",
+                objectKey);
+        }
     }
 
     /// <summary>

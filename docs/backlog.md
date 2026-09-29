@@ -90,13 +90,12 @@ design work (how do the three-segment bar and Behind counts aggregate?);
 explicitly not a data-model merge. Wait until it annoys enough to earn an
 evening.
 
-## 4. Stats page
+## 4. Stats page — ~~built~~ DONE (2026-09-29, v0.16.0)
 
-The seam exists; the spend line already ships in the series hero. The page:
-volumes read per month split by format, backlog trend over time, spend over
-time, completion rate. Blocked on nothing except being dessert. One session,
-after the app has accumulated a few months of real usage worth charting —
-which also gives the trend queries actual trends.
+Read per month by format, the shelf by format, spend (all time and per month),
+completion, furthest read. **Still parked: the backlog-over-time chart** — an
+import carries no purchase dates, so a trend would be drawn from the handful of
+volumes that have one. It un-parks once a few months of `PurchasedAt` exist.
 
 ## 5. WebNovel manual volumes
 
@@ -150,5 +149,14 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   anything else Postgres does — those are covered by configuration review only.
 - Central Package Management (`Directory.Packages.props`) not adopted; four
   projects still carry their own `PackageReference` versions.
+- **MinIO's image is no longer publicly pullable [flagged, 2026-09-29].** Both
+  `minio/minio` (Docker Hub) and `quay.io/minio/minio` refuse the pinned
+  `RELEASE.2025-09-07T16-13-09Z` tag — MinIO stopped publishing community images.
+  Dev machines and the server run on cached copies; a fresh machine or a pruned
+  cache cannot start the stack. Options: `docker save` the cached image next to the
+  deploy tarballs, build MinIO from source, or move `ICoverStore` to another
+  S3-compatible store (the seam makes that one new implementation). Owner's call.
+- The e2e check against the four canary series (Slime, 86, Torture Princess,
+  Overlord) runs against a throwaway database; nothing scripts it yet.
 - feature-spec §7's internal proxy header (`X-LnShelf-Internal`) is designed and
   documented but implemented nowhere — neither nginx nor the API knows the name.

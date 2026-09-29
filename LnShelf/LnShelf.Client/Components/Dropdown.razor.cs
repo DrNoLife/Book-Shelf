@@ -45,13 +45,16 @@ public partial class Dropdown
         await ValueChanged.InvokeAsync(value);
     }
 
+    // Enter and space are not handled here: the control is a real <button>, so both
+    // already fire its click, which toggles. Opening on keydown as well meant the click
+    // that followed closed the menu again, and the key appeared to do nothing.
     private void OnButtonKeyDown(KeyboardEventArgs args)
     {
         if (args.Key is "Escape")
         {
             IsOpen = false;
         }
-        else if (args.Key is "ArrowDown" or "Enter" or " ")
+        else if (args.Key is "ArrowDown")
         {
             IsOpen = true;
         }

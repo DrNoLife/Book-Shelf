@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
@@ -131,6 +132,61 @@ public sealed class PoliteRateLimitHandlerTests
         upstream.Calls.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task SendAsync_ABackOffLongerThanTheRequestTimeout_StillRetries()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.TooManyRequests, HttpStatusCode.OK);
+        using var client = CreateClient(
+            upstream,
+            maximumRetryDelay: TimeSpan.FromMilliseconds(600),
+            requestTimeout: TimeSpan.FromMilliseconds(200));
+
+        using var response = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+
+        // The shape AniList and MangaUpdates used to have in reverse: a 60-second back-off
+        // inside a 20-second client timeout, so the retry was never sent. The timeout bounds
+        // each attempt, and the wait between them is charged to neither.
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        upstream.Calls.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SendAsync_AnAttemptThatOutlivesTheRequestTimeout_ThrowsTimeoutException()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.OK) { Delay = TimeSpan.FromSeconds(30) };
+        using var client = CreateClient(upstream, requestTimeout: TimeSpan.FromMilliseconds(100));
+
+        // A timeout rather than a cancellation, so the per-series isolation and the search
+        // fallback can tell "the source did not answer" from "the run was cancelled".
+        await Should.ThrowAsync<TimeoutException>(
+            () => client.GetAsync(new Uri("http://source/series"), CancellationToken.None));
+    }
+
+    [Fact]
+    public void AniList_ThePolicy_BoundsEachRequestItself()
+    {
+        var options = new AniListOptions { RequestTimeout = TimeSpan.FromSeconds(17) };
+
+        using var provider = new ServiceCollection()
+            .AddSingleton(Options.Create(options))
+            .BuildServiceProvider();
+
+        // The client's own timeout is infinite, so this is the only thing bounding a request.
+        MetadataRateLimiting.AniList(provider).RequestTimeout.ShouldBe(TimeSpan.FromSeconds(17));
+    }
+
+    [Fact]
+    public void MangaUpdates_ThePolicy_BoundsEachRequestItself()
+    {
+        var options = new MangaUpdatesOptions { RequestTimeout = TimeSpan.FromSeconds(13) };
+
+        using var provider = new ServiceCollection()
+            .AddSingleton(Options.Create(options))
+            .BuildServiceProvider();
+
+        MetadataRateLimiting.MangaUpdates(provider).RequestTimeout.ShouldBe(TimeSpan.FromSeconds(13));
+    }
+
     [Theory]
     [InlineData(5, 60, 5)]
     [InlineData(59, 60, 59)]
@@ -160,7 +216,10 @@ public sealed class PoliteRateLimitHandlerTests
                 new RetryConditionHeaderValue(TimeSpan.Zero), TimeSpan.FromSeconds(20))
             .ShouldBe(TimeSpan.FromSeconds(20));
 
-    private static HttpClient CreateClient(HttpMessageHandler upstream, TimeSpan? maximumRetryDelay = null)
+    private static HttpClient CreateClient(
+        HttpMessageHandler upstream,
+        TimeSpan? maximumRetryDelay = null,
+        TimeSpan? requestTimeout = null)
     {
         var policy = new SourceRateLimitPolicy
         {
@@ -168,6 +227,7 @@ public sealed class PoliteRateLimitHandlerTests
             RequestsPerMinute = 600,
             QueuedRequestLimit = 16,
             MaximumRetryDelay = maximumRetryDelay ?? TimeSpan.FromMilliseconds(20),
+            RequestTimeout = requestTimeout,
         };
 
         var handler = new PoliteRateLimitHandler(
@@ -190,7 +250,10 @@ public sealed class PoliteRateLimitHandlerTests
         /// <summary>The <c>Retry-After</c> seconds a 429 advertises, or null for none.</summary>
         public string? RetryAfter { get; init; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        /// <summary>How long each answer takes to arrive — a source that is slow to reply.</summary>
+        public TimeSpan Delay { get; init; } = TimeSpan.Zero;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
@@ -199,6 +262,11 @@ public sealed class PoliteRateLimitHandlerTests
             var status = statusCodes[Math.Min(Calls, statusCodes.Length - 1)];
             Calls++;
 
+            if (Delay > TimeSpan.Zero)
+            {
+                await Task.Delay(Delay, cancellationToken);
+            }
+
             var response = new HttpResponseMessage(status);
 
             if (status is HttpStatusCode.TooManyRequests && RetryAfter is not null)
@@ -206,7 +274,7 @@ public sealed class PoliteRateLimitHandlerTests
                 response.Headers.TryAddWithoutValidation("Retry-After", RetryAfter);
             }
 
-            return Task.FromResult(response);
+            return response;
         }
     }
 }

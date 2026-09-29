@@ -4,7 +4,7 @@ namespace LnShelf.Shared.Import;
 /// Why a group is in the review queue. The queue prints this, because "review
 /// this" without saying what is uncertain is not a question the user can answer.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<ImportReviewReason>))]
+[JsonConverter(typeof(StrictStringEnumConverter<ImportReviewReason>))]
 public enum ImportReviewReason
 {
     None,

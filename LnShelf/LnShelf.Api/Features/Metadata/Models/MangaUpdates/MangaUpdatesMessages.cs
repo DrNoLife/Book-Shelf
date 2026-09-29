@@ -54,7 +54,12 @@ public sealed class MangaUpdatesSeriesRecord
     // knows neither the volume count nor whether publication has finished.
     public string? Status { get; set; }
 
+    /// <summary>
+    /// "Completely Scanlated?" on the site — the fan translation, not publication. Kept for
+    /// the wire shape only; publication status is read from <see cref="Status"/>.
+    /// </summary>
     public bool Completed { get; set; }
+
     public bool Licensed { get; set; }
 
     public List<MangaUpdatesAssociatedTitle>? Associated { get; set; }

@@ -304,6 +304,48 @@ public sealed class VolumeEnrichmentCatalogueTests
     }
 
     [Fact]
+    public async Task EnrichAsync_TheStoreAndTheEditionDisagreeOnTheDate_TheEditionWinsAndStaysPut()
+    {
+        var series = Series(Volume(8, isReleased: true, isbn: "9781975320775"));
+        var volume = series.Volumes.Single();
+
+        var catalogueSource = Catalogue(Record(
+            "86--EIGHTY-SIX, Vol. 8 (light novel)", releaseDate: new DateOnly(2021, 8, 24)));
+
+        var enrichmentSource = EnrichmentSource(new VolumeEnrichment
+        {
+            SourceRecordKey = "/books/OL1M",
+            Title = "86—EIGHTY-SIX, Vol. 8: Gun Smoke On The Water",
+            ReleaseDate = new DateOnly(2021, 8, 17),
+            Language = EditionLanguage.English,
+        });
+
+        // A cover that never caches keeps the volume incomplete, so both passes are asked
+        // again on the second night — the arrangement under which the two used to take turns.
+        var coverCache = Substitute.For<IVolumeCoverCache>();
+        coverCache.EnsureCachedAsync(
+                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Uri>(), Arg.Any<CancellationToken>())
+            .Returns((string?)null);
+
+        await CreateService(catalogueSource, enrichmentSource, coverCache)
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        // The edition's own date, by ISBN, wins for display (CLAUDE.md) even though the store
+        // spoke first.
+        volume.ReleaseDate.ShouldBe(new DateOnly(2021, 8, 17));
+
+        var second = Run();
+        await CreateService(catalogueSource, enrichmentSource, coverCache)
+            .EnrichAsync(series, second, Today, Budget(10), CancellationToken.None);
+
+        // Both sources answered again and nothing moved: no flip, and no "dates written" for
+        // a night that changed none.
+        await enrichmentSource.Received(2).GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        volume.ReleaseDate.ShouldBe(new DateOnly(2021, 8, 17));
+        second.DatesMoved.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task EnrichAsync_AWholeSeries_CostsOneCatalogueRequest()
     {
         var series = Series(
@@ -381,12 +423,13 @@ public sealed class VolumeEnrichmentCatalogueTests
     {
         var series = Series(Volume(8, isReleased: true));
         var volume = series.Volumes.Single();
+        var overrideObjectKey = CoverObjectKey.ForVolumeOverride(volume.Id, Guid.CreateVersion7(), ".webp");
         volume.UserState = new VolumeUserState
         {
             VolumeId = volume.Id,
             ReadStatus = ReadStatus.Read,
             Owned = true,
-            CoverOverrideObjectKey = CoverObjectKey.ForVolumeOverride(volume.Id, ".webp"),
+            CoverOverrideObjectKey = overrideObjectKey,
         };
 
         await CreateService(Catalogue(Record(
@@ -399,8 +442,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         // prefix so the override survives and still wins on read.
         volume.UserState.ReadStatus.ShouldBe(ReadStatus.Read);
         volume.UserState.Owned.ShouldBeTrue();
-        volume.UserState.CoverOverrideObjectKey.ShouldBe(
-            CoverObjectKey.ForVolumeOverride(volume.Id, ".webp"));
+        volume.UserState.CoverOverrideObjectKey.ShouldBe(overrideObjectKey);
         volume.CoverObjectKey.ShouldNotBeNull().ShouldStartWith("volume/applebooks/");
     }
 

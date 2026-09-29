@@ -1,0 +1,70 @@
+@* Twelve columns, one per month, oldest on the left. Plain markup rather than a chart
+   library: the whole chart is a flex row of stacked divs, and a library would bring a
+   second visual language into an app whose design is settled.
+
+   Every column prints its own figure above it, so nothing is hover-only (design.md);
+   the title is the hover extra, and the aria-label is the same sentence for a screen
+   reader. *@
+
+<div class="chart" role="list" aria-label="@AriaLabel">
+    @foreach (var bar in Bars)
+    {
+        <div class="column" role="listitem" aria-label="@Describe(bar)" title="@Describe(bar)" @key="bar.Month">
+            <span class="column__value tabular" aria-hidden="true">@(bar.Total > 0 ? bar.ValueLabel : "")</span>
+
+            <span class="column__plot" aria-hidden="true">
+                <span class="column__stack" style="height: @HeightPercent(bar)">
+                    @foreach (var segment in bar.Segments.Where(segment => segment.Value > 0))
+                    {
+                        <span class="segment @SegmentClass(segment.Kind)" style="flex-grow: @Weight(segment)"></span>
+                    }
+                </span>
+            </span>
+
+            <span class="column__month" aria-hidden="true">@MonthLabel(bar)</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<MonthBar> Bars { get; set; }
+
+    [Parameter]
+    public required string AriaLabel { get; set; }
+
+    private decimal Maximum => Bars.Count == 0 ? 0 : Bars.Max(bar => bar.Total);
+
+    // Scaled to the busiest month rather than to a fixed axis: the chart answers "which
+    // months", and the printed figures carry "how many".
+    private string HeightPercent(MonthBar bar) => Maximum <= 0
+        ? "0%"
+        : (bar.Total / Maximum * 100m).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+
+    private static string Weight(BarSegment segment) =>
+        segment.Value.ToString(CultureInfo.InvariantCulture);
+
+    // January carries the year, so a twelve-month window that crosses one reads without a
+    // separate axis title; the first column carries it too, so the window's start is named.
+    private string MonthLabel(MonthBar bar) =>
+        bar.Month.Month == 1 || bar == Bars[0]
+            ? bar.Month.ToString("MMM yy", CultureInfo.InvariantCulture)
+            : bar.Month.ToString("MMM", CultureInfo.InvariantCulture);
+
+    private static string Describe(MonthBar bar)
+    {
+        var month = bar.Month.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+        var parts = bar.Segments.Where(segment => segment.Value > 0).Select(segment => segment.Words).ToList();
+
+        return parts.Count == 0 ? $"{month}: none" : $"{month}: {string.Join(", ", parts)}";
+    }
+
+    private static string SegmentClass(BarSegmentKind kind) => kind switch
+    {
+        BarSegmentKind.LightNovel => "segment--ln",
+        BarSegmentKind.Manga => "segment--manga",
+        BarSegmentKind.WebNovel => "segment--wn",
+        BarSegmentKind.Plain => "segment--plain",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown segment kind."),
+    };
+}

@@ -20,15 +20,18 @@
 
         <li @key="volume.VolumeId">
             @* A button, not a row with a click handler: the menu it opens is the same
-               menu the tile opens, so it has to be reachable the same way. *@
+               menu the tile opens, so it has to be reachable the same way. aria-disabled
+               and the keyup guard for the tile's reasons (VolumeTile.razor): focus has
+               to survive a save, and space must not also fire the native click. *@
             <button type="button"
                     class="row @StateClass(state)"
                     data-volume="@volume.Number"
                     aria-haspopup="menu"
                     aria-label="@AccessibleLabel(volume, state)"
-                    disabled="@(!IsInteractive)"
+                    aria-disabled="@((!IsInteractive).ToAriaState())"
                     @onclick="args => OnClickAsync(args, volume)"
-                    @onkeydown="args => OnKeyDownAsync(args, volume)">
+                    @onkeydown="args => OnKeyDownAsync(args, volume)"
+                    @onkeyup:preventDefault>
 
                 @* The title follows the number in the same cell, so a row with one and a
                    row without keep every other column aligned. Nothing is printed when

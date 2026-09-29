@@ -19,7 +19,11 @@ public sealed class MangaUpdatesAddSeriesFlow(
         var mangaUpdatesId = request.MangaUpdatesId
             ?? throw new ArgumentException("The request carries no MangaUpdates id.", nameof(request));
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mangaUpdatesId);
+        // A 400 for the same reason as the AniList flow's: the id is the caller's input.
+        if (mangaUpdatesId <= 0)
+        {
+            throw new InvalidInputException($"{mangaUpdatesId} is not a MangaUpdates id.");
+        }
 
         return mangaUpdatesId;
     }

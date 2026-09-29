@@ -132,7 +132,8 @@ public sealed class CatalogueTitleArbiter(
         {
             return await catalogueSource.GetVolumesAsync(attemptTitle, series.Format, cancellationToken);
         }
-        catch (OperationCanceledException)
+        // The caller's cancellation only — a timed-out attempt is that attempt's failure.
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }

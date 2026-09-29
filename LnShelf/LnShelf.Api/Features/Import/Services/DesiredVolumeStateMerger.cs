@@ -31,7 +31,12 @@ public static class DesiredVolumeStateMerger
                     ReadStatus = row.ReadStatus,
                     Owned = ImportOwnershipRule.IsOwned(row.OwnedInExport, row.ReadStatus, group.TreatReadAsOwned),
                     OwnedFormat = row.OwnedFormat,
-                    ReadAt = row.ReadAt,
+
+                    // Only a Read row's date is a read date. Did-not-finish and
+                    // currently-reading rows carry dates too, and taking them here put a
+                    // read date on volumes that were never finished.
+                    ReadAt = row.ReadStatus is ReadStatus.Read ? row.ReadAt : null,
+                    ReadingEvidenceAt = row.ReadStatus is ReadStatus.Read or ReadStatus.Reading ? row.ReadAt : null,
                     Subtitle = row.Subtitle.NullIfBlank(),
                     Isbn = Isbn.Normalize(row.Isbn),
                 };
@@ -76,6 +81,9 @@ public static class DesiredVolumeStateMerger
             OwnedFormat = ChooseOwnedFormat(left, right),
 
             ReadAt = Latest(left.ReadAt, right.ReadAt),
+
+            // Earliest, unlike ReadAt: it only ever feeds a start date.
+            ReadingEvidenceAt = Earliest(left.ReadingEvidenceAt, right.ReadingEvidenceAt),
 
             // Whichever row had one. Japanese subtitles are already gone by here
             // (StoryGraphBookMapper), so any two that survive to meet are two English
@@ -139,6 +147,14 @@ public static class DesiredVolumeStateMerger
 
         return leftFormat ?? rightFormat;
     }
+
+    private static DateOnly? Earliest(DateOnly? left, DateOnly? right) =>
+        (left, right) switch
+        {
+            (null, var other) => other,
+            (var other, null) => other,
+            _ => left < right ? left : right,
+        };
 
     private static DateOnly? Latest(DateOnly? left, DateOnly? right) =>
         (left, right) switch

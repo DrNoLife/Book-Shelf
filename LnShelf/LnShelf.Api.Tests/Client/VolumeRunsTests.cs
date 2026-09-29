@@ -63,6 +63,29 @@ public sealed class VolumeRunsTests
         VolumeRuns.NextRunEnd(volumes, IsRead).ShouldBe(3);
     }
 
+    /// <summary>
+    /// Whether a select-mode selection can go through the "1–N" bulk endpoint. Selecting 10
+    /// and 12 under a "Mark 2 read" label used to send "through 12" and mark twelve.
+    /// </summary>
+    [Theory]
+    [InlineData(new[] { 1, 2, 3 }, 3)]
+    [InlineData(new[] { 1 }, 1)]
+    [InlineData(new[] { 3, 1, 2 }, 3)]
+    [InlineData(new[] { 10, 12 }, null)]
+    [InlineData(new[] { 1, 3 }, null)]
+    [InlineData(new[] { 2, 3 }, null)]
+    [InlineData(new int[0], null)]
+    public void SelectionAsLeadingRun_TheSelection_IsARunFromOneOrNothing(int[] selectedNumbers, int? expected)
+    {
+        var volumes = Shelf(released: 10, read: 0, notOut: 2);
+        var selected = volumes
+            .Where(volume => selectedNumbers.Contains(volume.Number))
+            .Select(volume => volume.VolumeId)
+            .ToHashSet();
+
+        VolumeRuns.SelectionAsLeadingRun(volumes, selected).ShouldBe(expected);
+    }
+
     private static bool IsRead(VolumeResponse volume) => volume.ReadStatus is ReadStatus.Read;
 
     private static IReadOnlyList<VolumeResponse> Shelf(int released, int read, int notOut = 0) =>

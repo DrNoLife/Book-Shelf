@@ -66,7 +66,14 @@
         }
         else if (SearchState.HasSearched)
         {
-            <p class="notice">@SearchState.Source knows nothing by that name.</p>
+            @* Only an answer is an empty answer. A failed search also leaves no results,
+               and printing this under "Search failed" claimed a reply the source never
+               gave. With no results on screen, a message can only be that failure, which
+               is already printed above. *@
+            @if (SearchState.Message is null)
+            {
+                <p class="notice">@SearchState.Source knows nothing by that name.</p>
+            }
         }
         else
         {

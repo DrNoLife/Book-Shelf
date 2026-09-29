@@ -137,8 +137,19 @@ public partial class VolumeGrid
     {
         Selection.CloseMenu();
 
-        // The stream is capped at the endpoint's own limit; a larger file is refused
-        // there rather than being read into the browser's memory first.
+        // Checked before opening, the way ImportState checks its CSV: OpenReadStream
+        // throws an IOException for a file over its cap, and that surfaced as the Blazor
+        // error bar rather than a sentence.
+        if (selection.File.Size > CoverUploadLimitBytes)
+        {
+            SeriesState.ReportProblem(
+                $"{selection.File.Name} is {selection.File.Size / 1024} KB; "
+                + $"the limit for a cover is {CoverUploadLimitBytes / 1024} KB.");
+            return;
+        }
+
+        // The stream is capped at the endpoint's own limit as well; a larger file is
+        // refused there rather than being read into the browser's memory first.
         await using var content = selection.File.OpenReadStream(CoverUploadLimitBytes);
         await SeriesState.SetCoverAsync(selection.Volume, content, selection.File.Name);
     }

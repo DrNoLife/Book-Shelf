@@ -40,7 +40,9 @@ public sealed record ReleaseSeriesInfo
     public string? SourceType { get; init; }
     public int? StartYear { get; init; }
 
-    /// <summary>Whether publication has finished, as the source sees it.</summary>
+    /// <summary>
+    /// Whether publication has finished, as the source sees it — read from its status text.
+    /// </summary>
     public bool IsCompleted { get; init; }
 
     /// <summary>

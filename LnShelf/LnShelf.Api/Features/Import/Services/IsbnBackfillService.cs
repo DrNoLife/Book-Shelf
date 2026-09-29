@@ -45,9 +45,13 @@ public sealed class IsbnBackfillService(LnShelfDbContext dbContext, ILogger<Isbn
         // AniList id, which keeps the add path from reading the whole staging table.
         var aniListIds = shelf.Keys.ToList();
 
+        // Committed only. A group still waiting for review carries the matcher's best
+        // guess as its AniList id, and a skipped one is books the user chose to leave
+        // off the shelf — neither is the user's word that these rows are this series.
         var groups = await dbContext.ImportGroups
             .Include(group => group.Rows)
-            .Where(group => group.MatchedAniListId != null
+            .Where(group => group.Status == ImportGroupStatus.Committed
+                            && group.MatchedAniListId != null
                             && aniListIds.Contains(group.MatchedAniListId.Value))
             .ToListAsync(cancellationToken);
 

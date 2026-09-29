@@ -4,7 +4,7 @@ namespace LnShelf.Shared.Shelf;
 /// The status filter behind the library's chips. Mixes user tracking status with
 /// derived state deliberately — that is what the shelves in the sidebar are.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<LibraryFilter>))]
+[JsonConverter(typeof(StrictStringEnumConverter<LibraryFilter>))]
 public enum LibraryFilter
 {
     All,

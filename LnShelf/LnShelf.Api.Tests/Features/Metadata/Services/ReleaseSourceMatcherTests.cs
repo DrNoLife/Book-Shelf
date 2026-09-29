@@ -136,12 +136,79 @@ public sealed class ReleaseSourceMatcherTests
         match.Outcome.ShouldBe(ReleaseMatchOutcome.Linked);
     }
 
+    [Fact]
+    public async Task MatchAsync_OneCandidateFailsToLoad_DeclinesRatherThanThrowingOrGuessing()
+    {
+        var matcher = CreateMatcher(
+            out var releaseSource,
+            (YoujoSenkiId, "Youjo Senki", ["The Saga of Tanya the Evil"], 14),
+            (BookwormId, "Youjo Senki Manga", [], 20));
+
+        releaseSource.GetSeriesAsync(BookwormId, Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSeriesInfo?>>(_ => throw new HttpRequestException("MangaUpdates answered 500"));
+
+        var match = await matcher.MatchAsync(
+            CreateSeries("The Saga of Tanya the Evil", "Youjo Senki"), NothingLinked, CancellationToken.None);
+
+        // Isolated: one record answering 500 no longer throws out of the whole link. And not
+        // linked either — the one that did not load could have been the close runner-up, and
+        // a link is never revisited. The next run asks again.
+        match.Outcome.ShouldBe(ReleaseMatchOutcome.Ambiguous);
+        match.MatchedExternalId.ShouldBeNull();
+        match.Explanation.ShouldContain("could not be fetched");
+    }
+
+    [Fact]
+    public async Task MatchAsync_EveryCandidateFailsToLoad_DeclinesWithNoCandidate()
+    {
+        var matcher = CreateMatcher(
+            out var releaseSource,
+            (YoujoSenkiId, "Youjo Senki", ["The Saga of Tanya the Evil"], 14));
+
+        // A timeout, in the shape HttpClient reports one: nobody cancelled anything.
+        releaseSource.GetSeriesAsync(YoujoSenkiId, Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSeriesInfo?>>(_ => throw new TaskCanceledException("The request timed out."));
+
+        var match = await matcher.MatchAsync(
+            CreateSeries("The Saga of Tanya the Evil", "Youjo Senki"), NothingLinked, CancellationToken.None);
+
+        match.Outcome.ShouldBe(ReleaseMatchOutcome.NoCandidate);
+    }
+
+    [Fact]
+    public async Task MatchAsync_TheCallerCancels_StopsRatherThanSkippingTheCandidate()
+    {
+        using var cancellation = new CancellationTokenSource();
+
+        var matcher = CreateMatcher(
+            out var releaseSource,
+            (YoujoSenkiId, "Youjo Senki", ["The Saga of Tanya the Evil"], 14));
+
+        releaseSource.GetSeriesAsync(YoujoSenkiId, Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSeriesInfo?>>(_ =>
+            {
+                cancellation.Cancel();
+                throw new OperationCanceledException(cancellation.Token);
+            });
+
+        await Should.ThrowAsync<OperationCanceledException>(() => matcher.MatchAsync(
+            CreateSeries("The Saga of Tanya the Evil", "Youjo Senki"), NothingLinked, cancellation.Token));
+    }
+
     private static readonly IReadOnlySet<long> NothingLinked = new HashSet<long>();
 
     private static ReleaseSourceMatcher CreateMatcher(
+        params (long ExternalId, string Title, string[] Associated, int? VolumeCount)[] candidates) =>
+        CreateMatcher(out _, candidates);
+
+    /// <param name="releaseSource">
+    /// The source double, handed back so a test can make one candidate's fetch fail.
+    /// </param>
+    private static ReleaseSourceMatcher CreateMatcher(
+        out IReleaseSource releaseSource,
         params (long ExternalId, string Title, string[] Associated, int? VolumeCount)[] candidates)
     {
-        var releaseSource = Substitute.For<IReleaseSource>();
+        releaseSource = Substitute.For<IReleaseSource>();
         releaseSource.SourceName.Returns("MangaUpdates");
 
         releaseSource.SearchAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())

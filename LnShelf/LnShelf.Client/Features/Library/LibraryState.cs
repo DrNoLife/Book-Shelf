@@ -129,8 +129,27 @@ public sealed class LibraryState(HttpClient httpClient)
         await ReloadAsync(cancellationToken);
     }
 
+    /// <summary>The token of the reload in flight, cancelled when a newer one starts.</summary>
+    // Clicking Manga then All in quick succession starts two fetches, and nothing made
+    // them land in order: the Manga response arriving second left Manga's cards under
+    // the All tab. Each reload now cancels the one before, so only the latest can land.
+    private CancellationTokenSource? _reloadCancellation;
+
     private async Task ReloadAsync(CancellationToken cancellationToken)
     {
+        if (_reloadCancellation is { } previous)
+        {
+            await previous.CancelAsync();
+            previous.Dispose();
+        }
+
+        var reload = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _reloadCancellation = reload;
+
+        // Captured now: the next reload disposes this source, and reading Token off a
+        // disposed source throws where the token itself still answers.
+        var token = reload.Token;
+
         LoadFailed = false;
         Changed?.Invoke();
 
@@ -140,8 +159,17 @@ public sealed class LibraryState(HttpClient httpClient)
                 ? $"api/library?filter={SelectedFilter}"
                 : $"api/library?filter={SelectedFilter}&format={SelectedFormat}";
 
-            Library = await httpClient.GetFromJsonAsync<LibraryResponse>(route, cancellationToken);
+            var library = await httpClient.GetFromJsonAsync<LibraryResponse>(route, token);
+
+            // A response that finished just as it was superseded is still stale.
+            token.ThrowIfCancellationRequested();
+            Library = library;
             _visibleCards = null;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Superseded, or the caller gave up. The newer reload owns the page now.
+            return;
         }
         catch (HttpRequestException)
         {
@@ -149,9 +177,7 @@ public sealed class LibraryState(HttpClient httpClient)
             // nothing else the client can do about a dead API.
             LoadFailed = true;
         }
-        finally
-        {
-            Changed?.Invoke();
-        }
+
+        Changed?.Invoke();
     }
 }

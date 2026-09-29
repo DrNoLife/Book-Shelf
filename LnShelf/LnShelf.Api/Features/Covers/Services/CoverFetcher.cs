@@ -51,7 +51,10 @@ public sealed class CoverFetcher(
 
             return objectKey;
         }
-        catch (OperationCanceledException)
+        // The caller's cancellation only. HttpClient.Timeout surfaces as a cancelled task
+        // nobody asked for, and a CDN slow to hand over one image is exactly the hiccup the
+        // catch below exists for.
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }

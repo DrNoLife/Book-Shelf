@@ -168,6 +168,12 @@ public partial class VolumeTile
 
     private Task OnClickAsync(MouseEventArgs args)
     {
+        // The guard the disabled attribute used to be; see the markup for why it is not.
+        if (!IsInteractive)
+        {
+            return Task.CompletedTask;
+        }
+
         if (IsSelectMode)
         {
             return SelectionToggled.InvokeAsync(Volume);
@@ -180,8 +186,15 @@ public partial class VolumeTile
             : MenuRequested.InvokeAsync(Volume);
     }
 
-    private Task OnContextMenuAsync() => OwnedToggled.InvokeAsync(Volume);
+    private Task OnContextMenuAsync() =>
+        IsInteractive ? OwnedToggled.InvokeAsync(Volume) : Task.CompletedTask;
 
+    /// <summary>
+    /// Arrows move between tiles even while a write is in flight; space waits for it.
+    /// </summary>
+    // No Enter case: Enter on a button already fires the native click, which opens the
+    // menu through OnClickAsync. Handling it here as well opened the menu and then the
+    // click toggled it shut again.
     private Task OnKeyDownAsync(KeyboardEventArgs args)
     {
         switch (args.Key)
@@ -190,7 +203,7 @@ public partial class VolumeTile
                 return Navigated.InvokeAsync((Volume, args.Key));
 
             // Space still cycles read; shift-space toggles owned, mirroring the pointer.
-            case " " or "Spacebar":
+            case " " or "Spacebar" when IsInteractive:
                 if (IsSelectMode)
                 {
                     return SelectionToggled.InvokeAsync(Volume);
@@ -199,12 +212,6 @@ public partial class VolumeTile
                 return args.ShiftKey
                     ? OwnedToggled.InvokeAsync(Volume)
                     : ReadCycled.InvokeAsync(Volume);
-
-            // Enter is the keyboard's "open the menu", matching the pointer's click.
-            case "Enter":
-                return IsSelectMode
-                    ? SelectionToggled.InvokeAsync(Volume)
-                    : MenuRequested.InvokeAsync(Volume);
 
             default:
                 return Task.CompletedTask;

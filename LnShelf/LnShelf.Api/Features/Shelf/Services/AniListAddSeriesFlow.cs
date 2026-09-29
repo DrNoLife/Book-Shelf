@@ -15,7 +15,12 @@ public sealed class AniListAddSeriesFlow(
         var aniListId = request.AniListId
             ?? throw new ArgumentException("The request carries no AniList id.", nameof(request));
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(aniListId);
+        // A 400, not ArgumentOutOfRangeException: the id is straight from the request
+        // body, and anything but InvalidInputException reaches the caller as a 500.
+        if (aniListId <= 0)
+        {
+            throw new InvalidInputException($"{aniListId} is not an AniList id.");
+        }
 
         return aniListId;
     }

@@ -3,7 +3,7 @@ namespace LnShelf.Shared.Metadata;
 /// <summary>
 /// What happened when the shelf tried to link a series to the release source.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<ReleaseMatchOutcome>))]
+[JsonConverter(typeof(StrictStringEnumConverter<ReleaseMatchOutcome>))]
 public enum ReleaseMatchOutcome
 {
     /// <summary>One candidate won clearly; the link was written.</summary>

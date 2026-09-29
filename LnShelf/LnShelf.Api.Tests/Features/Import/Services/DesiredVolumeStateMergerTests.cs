@@ -143,6 +143,24 @@ public sealed class DesiredVolumeStateMergerTests
     }
 
     [Fact]
+    public void Merge_AReadRowAndALaterReadingRow_KeepsTheReadRowsDate()
+    {
+        // A re-read in progress: the Reading row's date is newer, but it is not the date
+        // this volume was finished.
+        var read = CreateGroup("Overlord", [1]);
+        read.Rows.Single().ReadAt = new DateOnly(2021, 11, 23);
+        var reading = CreateGroup("Overlord", [1]);
+        reading.Rows.Single().ReadStatus = ReadStatus.Reading;
+        reading.Rows.Single().ReadAt = new DateOnly(2024, 2, 1);
+
+        var merged = DesiredVolumeStateMerger.Merge([read, reading])[1];
+
+        merged.ReadStatus.ShouldBe(ReadStatus.Read);
+        merged.ReadAt.ShouldBe(new DateOnly(2021, 11, 23));
+        merged.ReadingEvidenceAt.ShouldBe(new DateOnly(2021, 11, 23));
+    }
+
+    [Fact]
     public void Merge_ABookWithNoVolumeNumber_BecomesVolumeOne()
     {
         var group = CreateGroup("Vesten mod vesten", []);

@@ -66,7 +66,8 @@ public sealed class Series
 
     /// <summary>
     /// The synopsis, as plain text. Null for a series added before the shelf asked
-    /// for one, and for a manual entry no source knows about.
+    /// for one, and for a manual entry no source knows about. Empty when AniList was
+    /// asked and has none — an answer, so the sync stops asking (SeriesRefresher).
     /// </summary>
     public string? Description { get; set; }
 

@@ -25,18 +25,15 @@
             <span>Import</span>
         </NavLink>
 
-        @* Upcoming and Stats exist in the design but not yet in the app. Shown
-           dimmed rather than hidden so the nav does not change shape when they
-           land. No tooltip: hover-only information is exactly what design.md
-           forbids, and the dimming is the visible channel. *@
-        <span class="nav__row nav__row--pending" aria-disabled="true">
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="upcoming">
             <Icon Name="IconName.CalendarBlank" Size="15" />
             <span>Upcoming</span>
-        </span>
-        <span class="nav__row nav__row--pending" aria-disabled="true">
+        </NavLink>
+
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="stats">
             <Icon Name="IconName.ChartBar" Size="15" />
             <span>Stats</span>
-        </span>
+        </NavLink>
     </nav>
 
     <div class="shelves">
@@ -51,7 +48,7 @@
                         class="shelf @(LibraryState.SelectedFilter == shelf.Filter ? "shelf--active" : null) @(shelf.IsAttention ? "shelf--attention" : null)"
                         @key="shelf.Filter"
                         aria-pressed="@((LibraryState.SelectedFilter == shelf.Filter).ToAriaState())"
-                        @onclick="() => LibraryState.SelectFilterAsync(shelf.Filter)">
+                        @onclick="() => SelectShelfAsync(shelf.Filter)">
                     <span class="shelf__label">@shelf.Label</span>
                     <span class="shelf__count tabular">@shelf.Count@(shelf.CountSuffix)</span>
                 </button>

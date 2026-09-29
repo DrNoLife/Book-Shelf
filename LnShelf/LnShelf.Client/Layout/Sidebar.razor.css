@@ -74,8 +74,6 @@
   background: var(--acc-wash);
 }
 
-.nav__row--pending { color: var(--faint); cursor: default; }
-.nav__row--pending:hover { background: none; color: var(--faint); }
 
 /* --- shelves --- */
 
@@ -162,9 +160,8 @@
      toolbar (StatusChips carries every filter the shelf rows do, and two more);
    - the sync note, five lines of fine print that would push the shelf itself off the
      first screen. The series page prints its own sync panel either way.
-   The dimmed Upcoming and Stats rows go too. Dimming them costs nothing in a vertical
-   list, which is what that decision was made for; in a horizontal strip they would
-   cost the room the three routes that exist actually need. */
+   Five routes no longer clear 400px, so the strip scrolls sideways on the narrowest
+   phones rather than dropping any of them. */
 @media (max-width: 860px) {
   .sidebar {
     flex-direction: row;
@@ -195,12 +192,6 @@
     padding: 9px 8px;
     white-space: nowrap;
   }
-
-  /* Paired with the ::deep form for the same reason the rule above is: the top-level
-     ".nav ::deep .nav__row" compiles to two classes plus the scope attribute, which
-     outranks a lone ".nav__row--pending" no matter how much later it is declared. */
-  .nav__row--pending,
-  .nav ::deep .nav__row--pending { display: none; }
 
   .shelves,
   .sync { display: none; }

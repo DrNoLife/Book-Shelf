@@ -109,7 +109,11 @@ public sealed class SeriesSyncService(
             await refresher.RefreshAsync(series, run, linkedExternalIds, budget, cancellationToken);
             run.SeriesRefreshed++;
         }
-        catch (OperationCanceledException)
+        // Only the caller's own cancellation stops the run. An HttpClient timeout also
+        // surfaces as a cancelled task, with nobody having asked for it — and letting that
+        // through would abort the sweep over one slow request, leaving the run unfinished
+        // and every series after this one unrefreshed. That is one series' failure.
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }

@@ -55,10 +55,17 @@ public partial class VolumeList
     /// The tile's gesture, unchanged: a plain click opens the menu, shift-click is the
     /// one-gesture route to ownership.
     /// </summary>
-    private Task OnClickAsync(MouseEventArgs args, VolumeResponse volume) =>
-        args.ShiftKey
+    private Task OnClickAsync(MouseEventArgs args, VolumeResponse volume)
+    {
+        if (!IsInteractive)
+        {
+            return Task.CompletedTask;
+        }
+
+        return args.ShiftKey
             ? OwnedToggled.InvokeAsync(volume)
             : MenuRequested.InvokeAsync(volume);
+    }
 
     private Task OnKeyDownAsync(KeyboardEventArgs args, VolumeResponse volume)
     {
@@ -67,7 +74,7 @@ public partial class VolumeList
             case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown":
                 return Navigated.InvokeAsync((volume, args.Key));
 
-            case " " or "Spacebar":
+            case " " or "Spacebar" when IsInteractive:
                 return args.ShiftKey
                     ? OwnedToggled.InvokeAsync(volume)
                     : ReadCycled.InvokeAsync(volume);

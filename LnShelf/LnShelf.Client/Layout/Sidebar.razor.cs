@@ -11,6 +11,9 @@ public partial class Sidebar : IDisposable
     [Inject]
     public required SyncState SyncState { get; set; }
 
+    [Inject]
+    public required NavigationManager Navigation { get; set; }
+
     private SyncSummaryResponse? LatestSync => SyncState.Latest;
 
     /// <summary>
@@ -65,6 +68,20 @@ public partial class Sidebar : IDisposable
     {
         LibraryState.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;
+    }
+
+    /// <summary>
+    /// A shelf row is a library filter, so choosing one from any other page goes to the
+    /// library — otherwise the click changes a filter nobody is looking at.
+    /// </summary>
+    private async Task SelectShelfAsync(LibraryFilter filter)
+    {
+        await LibraryState.SelectFilterAsync(filter);
+
+        if (Navigation.ToBaseRelativePath(Navigation.Uri).Length > 0)
+        {
+            Navigation.NavigateTo("");
+        }
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

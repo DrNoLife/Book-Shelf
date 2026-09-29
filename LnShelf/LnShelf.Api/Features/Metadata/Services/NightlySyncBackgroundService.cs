@@ -62,12 +62,37 @@ public sealed class NightlySyncBackgroundService(
         }
     }
 
-    private TimeSpan TimeUntilNextRun()
-    {
-        var now = timeProvider.GetLocalNow();
-        var todaysRun = new DateTimeOffset(
-            now.Year, now.Month, now.Day, options.Value.Hour, 0, 0, now.Offset);
+    private TimeSpan TimeUntilNextRun() =>
+        TimeUntilNextRun(timeProvider.GetUtcNow(), timeProvider.LocalTimeZone, options.Value.Hour);
 
-        return todaysRun > now ? todaysRun - now : todaysRun.AddDays(1) - now;
+    /// <summary>
+    /// How long until the next <paramref name="hour"/>:00 on the local wall clock.
+    /// </summary>
+    // Each candidate run takes the offset in force *at that run*, not the offset now. Reusing
+    // now's offset is right on every night but two a year: the evening before a DST change,
+    // tomorrow's 04:00 was computed at tonight's offset and so landed at 03:00 or 05:00.
+    //
+    // Public and static, like PoliteRateLimitHandler.RetryDelayFor, so the rule is testable
+    // against a real DST zone without driving the background loop.
+    public static TimeSpan TimeUntilNextRun(DateTimeOffset utcNow, TimeZoneInfo localZone, int hour)
+    {
+        ArgumentNullException.ThrowIfNull(localZone);
+
+        var localToday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(utcNow, localZone).DateTime);
+
+        var todaysRun = RunOn(localToday);
+        if (todaysRun > utcNow)
+        {
+            return todaysRun - utcNow;
+        }
+
+        return RunOn(localToday.AddDays(1)) - utcNow;
+
+        DateTimeOffset RunOn(DateOnly day)
+        {
+            var wallClock = day.ToDateTime(new TimeOnly(hour, 0));
+
+            return new DateTimeOffset(wallClock, localZone.GetUtcOffset(wallClock));
+        }
     }
 }

@@ -19,14 +19,19 @@ public static class CoverObjectKey
         $"{Slug(source.ToString())}/{sourceId}{extension}";
 
     /// <summary>
-    /// A user-supplied cover for one volume. Keyed on the volume, so an override
-    /// replaces itself rather than accumulating files.
+    /// A user-supplied cover for one volume, from one upload.
     /// </summary>
+    /// <param name="uploadId">Fresh per upload; the caller deletes the key it replaces.</param>
     // A separate prefix from the synced art on purpose: "overrides always win and are
     // never replaced by sync" (CLAUDE.md) is easier to keep true when sync cannot even
     // name the key.
-    public static string ForVolumeOverride(Guid volumeId, string extension) =>
-        $"override/volume/{volumeId}{extension}";
+    //
+    // A new key per upload, not one per volume. The cover endpoint tells browsers to keep
+    // a cover for a week as immutable, on the promise that the key changes when the art
+    // does — a fixed key broke that promise for exactly one kind of cover, and a replaced
+    // override kept showing the old picture for up to a week.
+    public static string ForVolumeOverride(Guid volumeId, Guid uploadId, string extension) =>
+        $"override/volume/{volumeId}/{uploadId:N}{extension}";
 
     /// <summary>
     /// Synced art for one volume, from one source.

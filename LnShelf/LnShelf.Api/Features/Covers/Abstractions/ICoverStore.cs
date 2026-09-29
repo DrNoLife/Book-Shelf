@@ -21,4 +21,9 @@ public interface ICoverStore
 
     /// <returns>Null when the store holds nothing under that key.</returns>
     Task<CoverContent?> ReadAsync(string objectKey, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes the object under a key. Deleting a key that holds nothing is not an error.
+    /// </summary>
+    Task DeleteAsync(string objectKey, CancellationToken cancellationToken);
 }

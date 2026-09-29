@@ -1,0 +1,72 @@
+.chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 720px;
+}
+
+/* The whole column is the hover target, not just the mark — a one-volume month is a
+   sliver too thin to aim at. */
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.column__value {
+  height: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.column__plot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 120px;
+
+  /* The baseline: a hairline, recessive, the only axis the chart draws. */
+  border-bottom: 1px solid var(--line-2);
+}
+
+/* Thin marks, anchored to the baseline, rounded only at the data end. */
+.column__stack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: min(100%, 18px);
+  min-height: 0;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+
+.segment {
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-height: 3px;
+}
+
+/* The format badges' mapping (design.md, Format badges): LN is the loud one, manga is
+   quiet ink, WN is outlined — a shape as well as a shade, so it survives grayscale. */
+.segment--ln { background: var(--acc); }
+.segment--manga { background: var(--muted); }
+.segment--wn { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc-soft); }
+
+/* A single-series chart names no format. Neutral ink, the same as manga's, which is
+   safe only because the two never share a chart. */
+.segment--plain { background: var(--muted); }
+
+.column__month {
+  font-size: 10.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .chart { gap: 3px; }
+  .column__month { font-size: 9px; }
+  .column__value { font-size: 10px; }
+}

@@ -84,7 +84,7 @@ public sealed class CoverObjectKeyTests
             CoverObjectKey.ForSeriesSource(MetadataSourceName.MangaUpdates, 17992364412, ".jpg"))
             .ShouldBeTrue();
         CoverObjectKey.IsWellFormed(
-            CoverObjectKey.ForVolumeOverride(volumeId, ".jpg")).ShouldBeTrue();
+            CoverObjectKey.ForVolumeOverride(volumeId, Guid.CreateVersion7(), ".webp")).ShouldBeTrue();
         CoverObjectKey.IsWellFormed(
             CoverObjectKey.ForVolumeSync(volumeId, "Open Library", ".webp")).ShouldBeTrue();
     }

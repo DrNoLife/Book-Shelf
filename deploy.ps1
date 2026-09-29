@@ -92,7 +92,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'scp (compose) failed.' }
 
     Write-Host '==> Loading images + restarting the stack…' -ForegroundColor Cyan
-    Invoke-Remote "cd '$RemoteDir' && docker load -i lnshelf-img.tar && rm -f lnshelf-img.tar && docker compose up -d --no-build && docker image prune -f >/dev/null 2>&1 || true; echo DEPLOYED"
+    # Only the prune is allowed to fail — it is housekeeping. The `|| true` is braced to it
+    # alone: unbraced, it (and the `; echo`) covered the whole && chain, so a failed load or
+    # compose up still exited 0 and printed DEPLOYED.
+    Invoke-Remote "cd '$RemoteDir' && docker load -i lnshelf-img.tar && rm -f lnshelf-img.tar && docker compose up -d --no-build && { docker image prune -f >/dev/null 2>&1 || true; } && echo DEPLOYED"
 }
 finally {
     Remove-Item $tar -ErrorAction SilentlyContinue

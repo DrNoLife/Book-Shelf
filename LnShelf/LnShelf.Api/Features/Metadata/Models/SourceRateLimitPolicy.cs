@@ -29,7 +29,8 @@ public sealed record SourceRateLimitPolicy
     /// <summary>
     /// Bounds one request, separately from the wait for a permit.
     /// </summary>
-    // Null when the HttpClient's own timeout is doing the job. It is not, for the two slow
-    // sources — see PoliteRateLimitHandler for why those are not the same clock.
+    // Null when the HttpClient's own timeout is doing the job. Every registered source sets
+    // it and leaves its client's timeout infinite — see PoliteRateLimitHandler for why the
+    // two are not the same clock.
     public TimeSpan? RequestTimeout { get; init; }
 }

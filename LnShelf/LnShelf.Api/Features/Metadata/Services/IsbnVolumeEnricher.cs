@@ -44,7 +44,8 @@ public sealed class IsbnVolumeEnricher(
             {
                 await ApplyByIsbnAsync(series, volume, run, today, budget, cancellationToken);
             }
-            catch (OperationCanceledException)
+            // The caller's cancellation only — a timed-out lookup is that volume's failure.
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }

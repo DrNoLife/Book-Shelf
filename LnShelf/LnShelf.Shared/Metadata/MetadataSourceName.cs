@@ -9,7 +9,7 @@ namespace LnShelf.Shared.Metadata;
 // into SyncDiscrepancy as a pair of named columns — a third source could not have been
 // recorded at all. The discrepancy now carries a list of (source, value) pairs instead,
 // which is what made the fourth a member here and nothing else.
-[JsonConverter(typeof(JsonStringEnumConverter<MetadataSourceName>))]
+[JsonConverter(typeof(StrictStringEnumConverter<MetadataSourceName>))]
 public enum MetadataSourceName
 {
     AniList,

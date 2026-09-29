@@ -2,7 +2,9 @@ using LnShelf.Api.Commands;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
+using LnShelf.Api.Features.Releases;
 using LnShelf.Api.Features.Shelf;
+using LnShelf.Api.Features.Stats;
 
 // A leading bare word is a one-shot maintenance job rather than a request to serve
 // (Commands/IConsoleCommand.cs). It is taken out of the host's arguments so the
@@ -20,6 +22,8 @@ builder.Services.AddMetadata(builder.Configuration);
 builder.Services.AddCovers(builder.Configuration);
 builder.Services.AddImport(builder.Configuration);
 builder.Services.AddPreferences();
+builder.Services.AddReleases();
+builder.Services.AddStats();
 
 // Development only. In production nginx serves the client and proxies /api/*, so
 // browser and API share one origin and no CORS policy exists (feature-spec §2).

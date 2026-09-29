@@ -165,6 +165,59 @@ public sealed class SeriesSyncServiceTests
     }
 
     [Fact]
+    public async Task RunAsync_OneSeriesTimesOut_TheRunStillFinishes()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedSeriesAsync(dbContext, volumeCount: 3, titleEnglish: "Explodes", aniListId: 1);
+        await SeedSeriesAsync(dbContext, volumeCount: 3, titleEnglish: "Survives", aniListId: 2);
+
+        // What HttpClient.Timeout actually throws: a cancelled task, with nobody having
+        // cancelled the run's own token.
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(
+                Arg.Is<Series>(series => series.TitleEnglish == "Explodes"),
+                Arg.Any<IReadOnlySet<long>>(),
+                Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSourceMatch>>(_ => throw new TaskCanceledException("The request timed out."));
+        matcher.MatchAsync(
+                Arg.Is<Series>(series => series.TitleEnglish == "Survives"),
+                Arg.Any<IReadOnlySet<long>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Linked(volumeCount: 3));
+
+        var run = await CreateService(dbContext, matcher).RunAsync(CancellationToken.None);
+
+        // One slow request is one series' failure, not the end of the sweep: the run is
+        // finished and the series after it still refreshed.
+        run.Failures.ShouldBe(1);
+        run.SeriesRefreshed.ShouldBe(1);
+        run.FinishedAt.ShouldNotBeNull();
+        (await dbContext.Series.SingleAsync(series => series.TitleEnglish == "Survives"))
+            .MangaUpdatesId.ShouldBe(MangaUpdatesId);
+    }
+
+    [Fact]
+    public async Task RunAsync_TheCallerCancels_StopsTheRun()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedSeriesAsync(dbContext, volumeCount: 3);
+
+        using var cancellation = new CancellationTokenSource();
+
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSourceMatch>>(_ =>
+            {
+                cancellation.Cancel();
+                throw new OperationCanceledException(cancellation.Token);
+            });
+
+        // A real shutdown is still not swallowed as a series failure.
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => CreateService(dbContext, matcher).RunAsync(cancellation.Token));
+    }
+
+    [Fact]
     public async Task RunAsync_ASeriesWithNoExternalIdAtAll_IsSkipped()
     {
         await using var dbContext = CreateDbContext();

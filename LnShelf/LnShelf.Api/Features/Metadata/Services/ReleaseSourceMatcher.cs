@@ -28,7 +28,7 @@ public sealed class ReleaseSourceMatcher(
                 $"{releaseSource.SourceName} returned nothing for '{series.TitleEnglish}'.");
         }
 
-        var scored = await ScoreAsync(series, candidates, cancellationToken);
+        var (scored, unfetched) = await ScoreAsync(series, candidates, cancellationToken);
         if (scored.Count == 0)
         {
             return NotLinked(
@@ -39,6 +39,19 @@ public sealed class ReleaseSourceMatcher(
 
         var best = scored[0];
         var runnerUp = scored.Count > 1 ? scored[1] : null;
+
+        if (unfetched > 0 && best.Score >= options.Value.AutoLinkMinimumScore)
+        {
+            // Not linked on partial evidence. A link is written once and never revisited, and
+            // the candidate that failed to load may have been the real match or the close
+            // runner-up that makes this one ambiguous. Unlinked, the series is simply asked
+            // about again on the next run, when the source may answer in full.
+            return NotLinked(
+                ReleaseMatchOutcome.Ambiguous,
+                best.Score,
+                $"'{best.Info.Title}' scored {best.Score}, but {unfetched} of {candidates.Count} "
+                + $"{releaseSource.SourceName} candidates could not be fetched to compare against.");
+        }
 
         if (best.Score < options.Value.AutoLinkMinimumScore)
         {
@@ -126,21 +139,54 @@ public sealed class ReleaseSourceMatcher(
     /// Fetches detail for the top candidates and scores every title the shelf has
     /// against every title the source has.
     /// </summary>
+    /// <returns>
+    /// The scored candidates, best first, and how many could not be fetched — which the
+    /// caller needs, because a winner among an incomplete field is not a clear winner.
+    /// </returns>
     // The detail fetch is not optional. Search returns primary titles only, and the
     // primary title is routinely not the recognisable one: MangaUpdates files
     // "86―EIGHTY-SIX" under the primary title "86", which scores 50 against the
     // shelf's name and 100 against its own associated titles.
-    private async Task<List<ScoredReleaseCandidate>> ScoreAsync(
+    //
+    // Failure isolation per candidate, matching the rest of the sync path: one record that
+    // answers 500 must not cost the series the other four, nor the rest of its refresh.
+    private async Task<(List<ScoredReleaseCandidate> Scored, int Unfetched)> ScoreAsync(
         Series series,
         IReadOnlyList<ReleaseSeriesCandidate> candidates,
         CancellationToken cancellationToken)
     {
         var shelfTitles = SearchTitles(series).ToArray();
         var scored = new List<ScoredReleaseCandidate>(candidates.Count);
+        var unfetched = 0;
 
         foreach (var candidate in candidates)
         {
-            var info = await releaseSource.GetSeriesAsync(candidate.ExternalId, cancellationToken);
+            ReleaseSeriesInfo? info;
+
+            try
+            {
+                info = await releaseSource.GetSeriesAsync(candidate.ExternalId, cancellationToken);
+            }
+            // The caller's cancellation only — a timed-out fetch is that candidate's failure.
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                unfetched++;
+                logger.LogWarning(
+                    exception,
+                    "Could not fetch {SourceName} candidate {ExternalId} '{CandidateTitle}' while linking "
+                    + "{TitleEnglish}; skipping it",
+                    releaseSource.SourceName,
+                    candidate.ExternalId,
+                    candidate.Title,
+                    series.TitleEnglish);
+
+                continue;
+            }
+
             if (info is null)
             {
                 continue;
@@ -150,7 +196,7 @@ public sealed class ReleaseSourceMatcher(
         }
 
         // Stable: candidates that tie keep the source's own relevance order.
-        return [.. scored.OrderByDescending(candidate => candidate.Score)];
+        return ([.. scored.OrderByDescending(candidate => candidate.Score)], unfetched);
     }
 
     private static int BestScore(string[] shelfTitles, ReleaseSeriesInfo info)

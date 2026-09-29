@@ -6,6 +6,61 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## v0.16.0 — what to buy, and what you've read (2026-09-29)
+
+**Two pages that were dimmed in the nav are real.** `Features/Releases` (API) serves
+`GET /api/releases/upcoming?format=`: out now and unowned (one line per series, most
+behind first, "Vol N on Saxo"), then dated volumes as This month / Next 3 months /
+**Later** [flagged — not one of ui-spec's four groups; a volume five months out is
+neither], then Announced. Dropped series are left out [flagged]. `Features/Stats`
+serves `GET /api/stats`: read per month by format over twelve months, read volumes
+with no date counted but not charted, the shelf by format, spend (all time + per
+month from dated, priced purchases), completed of started, the five series read
+furthest into. Both group in memory through `SeriesDetailProjection.ToVolume`, so
+"out" has one definition across tile, card and both pages. The chart is plain
+markup in the format badges' own mapping; the dataviz validator fails it on
+lightness/chroma (design.md's fixed palette), passes CVD and normal-vision
+separation, and every column prints its figure. No backlog-trend chart: nothing
+dates most purchases. `FormatTabs` moved to shared `Components/`.
+
+**Three reviewers, 30 defects, all fixed.** The worst: a HttpClient timeout on one
+series aborted the whole nightly sync and failed the add that triggered it; the
+429 retry waited 60 s inside a 20 s timeout and could never be sent (AniList and
+MangaUpdates now time out per attempt in the handler, like the other two sources);
+"Mark 2 read" on volumes 10 and 12 marked 1–12; a series added from MangaUpdates
+was duplicated by a later AniList add or import (`UnlinkedSeriesMatch` adopts an
+exact normalized-title, same-format, id-less row); cover overrides reused one key
+under a week-long immutable cache. Also: MU's `completed` is "completely
+scanlated", not publication status; Apple Books and Open Library swapped a date
+nightly; DST shifted the 04:00 run; integer enums were accepted and later crashed
+import (`StrictStringEnumConverter` on every Shared enum); import dated unread
+volumes and marked to-read-only series Reading; 500s for bad input are 400s; bulk
+owned stamps `PurchasedAt`; the client drops stale responses, keeps focus after
+Space, keeps a note draft on failure; deploy.ps1 no longer reports DEPLOYED over a
+failed `docker load`; css/js get `no-cache` in nginx.
+
+**Veto material [flagged].** A failed candidate fetch makes linking Ambiguous
+rather than auto-linking the best of the rest. `Series.Description = ""` now means
+"AniList has none" — a later synopsis needs the column reset. Reverting a cover
+override deletes the image. A dated currently-reading import row feeds `StartedAt`
+but not `ReadAt`. Adoption links ids only, no metadata refresh.
+
+**Proven, not assumed.** 1149 → **1256 tests**, 0 warnings, format clean. End to end
+on a throwaway Postgres + MinIO (ports 5434/9200; the dev ports belong to other
+projects on this machine): Slime LN + manga, 86, Torture Princess, Overlord LN
+added from AniList (86 through the Search page) — 23/32/14/9/16 volumes, covers,
+blurbs and dates from Apple Books/Open Library; Overlord manga added from
+MangaUpdates then AniList → one row with both ids; `"format":1` → 400; notes of
+4001 chars → 400. Upcoming and Stats matched hand-computed figures (LN to buy
+8+2+6 = 16; spend 298 kr, avg 149); Manga tab narrowed to the one manga line;
+Space in the grid kept focus and arrows worked; a shelf row on a series page went
+to the filtered library; no console errors.
+
+**Not done.** `IReleaseNotifier` + ntfy (phase 5's other half). MinIO's image is no
+longer publicly pullable — backlog §7, owner's call.
+
+---
+
 ## Sweep — the repo read end to end (2026-09-06)
 
 Not a feature phase. Six reviewers read every line of the four projects in

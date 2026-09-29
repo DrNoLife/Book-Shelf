@@ -109,21 +109,27 @@ public partial class VolumeGridToolbar
             : Task.CompletedTask;
 
     /// <summary>
-    /// Bulk over an arbitrary selection is expressed as "through the highest selected
-    /// volume", which is what the endpoint takes.
+    /// Marks exactly the selected volumes, which is what the "Mark N read" label promises.
     /// </summary>
     private Task MarkSelectedReadAsync() => MarkSelectionAsync(ReadStatus.Read, owned: null);
 
     private Task MarkSelectedOwnedAsync() => MarkSelectionAsync(read: null, owned: true);
 
+    // A selection that is volumes 1–N goes through the bulk endpoint in one call; anything
+    // else is written volume by volume. The bulk endpoint only speaks "through N", and
+    // this used to send the highest selected number — so picking 10 and 12 under a
+    // "Mark 2 read" label marked twelve volumes.
     private Task MarkSelectionAsync(ReadStatus? read, bool? owned)
     {
-        var highest = Series.Volumes
-            .Where(volume => Selection.SelectedVolumeIds.Contains(volume.VolumeId))
-            .Select(volume => volume.Number)
-            .DefaultIfEmpty(0)
-            .Max();
+        if (VolumeRuns.SelectionAsLeadingRun(Series.Volumes, Selection.SelectedVolumeIds) is { } through)
+        {
+            return SeriesState.MarkThroughAsync(through, read, owned);
+        }
 
-        return highest == 0 ? Task.CompletedTask : SeriesState.MarkThroughAsync(highest, read, owned);
+        var selected = Series.Volumes
+            .Where(volume => Selection.SelectedVolumeIds.Contains(volume.VolumeId))
+            .ToList();
+
+        return selected.Count == 0 ? Task.CompletedTask : SeriesState.MarkVolumesAsync(selected, read, owned);
     }
 }

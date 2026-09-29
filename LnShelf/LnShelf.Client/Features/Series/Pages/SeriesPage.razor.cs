@@ -36,6 +36,12 @@ public partial class SeriesPage : IDisposable
 
     private SeriesDetailResponse? Series => SeriesState.Series;
 
+    /// <summary>The token of the load in flight, cancelled when a newer one starts.</summary>
+    private CancellationTokenSource? _loadCancellation;
+
+    /// <summary>The series the volume selection belongs to.</summary>
+    private Guid _selectionSeriesId;
+
     /// <summary>
     /// True until the series behind *this* route is the one in hand.
     /// </summary>
@@ -135,9 +141,13 @@ public partial class SeriesPage : IDisposable
     }
 
     /// <summary>
-    /// Re-fetches on parameter change, not just on first render, so navigating from one
-    /// series to another actually loads the second one.
+    /// Re-fetches on every parameter set, not just on first render or a changed id, so
+    /// the page never shows the scoped container's old copy as if it were current.
     /// </summary>
+    // Loading only when the id differed kept the container's copy across a delete and
+    // Back, an import or a nightly sync. Each load gets its own token and cancels the one
+    // before, so hopping LN → manga → LN cannot let the first response land last and
+    // paint the wrong series under the URL.
     protected override async Task OnParametersSetAsync()
     {
         if (!Preferences.HasLoaded)
@@ -145,14 +155,41 @@ public partial class SeriesPage : IDisposable
             await Preferences.LoadAsync();
         }
 
-        if (Series?.SeriesId != SeriesId)
+        // A selection is a set of this series' volume ids; carried into the next series it
+        // would be counted by "Mark N read" and match nothing there.
+        if (_selectionSeriesId != SeriesId)
         {
-            await SeriesState.LoadAsync(SeriesId);
+            _selectionSeriesId = SeriesId;
+            Selection.Reset();
         }
+
+        await LoadSeriesAsync();
 
         if (!SyncState.HasLoaded)
         {
             await SyncState.LoadAsync();
+        }
+    }
+
+    private async Task LoadSeriesAsync()
+    {
+        if (_loadCancellation is { } previous)
+        {
+            await previous.CancelAsync();
+            previous.Dispose();
+        }
+
+        var cancellation = new CancellationTokenSource();
+        _loadCancellation = cancellation;
+
+        try
+        {
+            await SeriesState.LoadAsync(SeriesId, cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // Superseded by a newer load, or the page went away; nothing is waiting for
+            // this one. SeriesState already dropped its response.
         }
     }
 
@@ -185,6 +222,10 @@ public partial class SeriesPage : IDisposable
 
     public void Dispose()
     {
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = null;
+
         SeriesState.Changed -= OnStateChanged;
         Selection.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;

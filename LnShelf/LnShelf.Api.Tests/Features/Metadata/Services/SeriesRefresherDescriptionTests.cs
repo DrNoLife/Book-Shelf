@@ -59,15 +59,46 @@ public sealed class SeriesRefresherDescriptionTests
     }
 
     [Fact]
-    public async Task RefreshAsync_AniListHasNoSynopsisForIt_LeavesTheDescriptionNull()
+    public async Task RefreshAsync_AniListHasNoSynopsisForIt_WritesTheEmptyAnswer()
     {
         var series = CreateSeries();
 
         await RefreshAsync(series, MetadataSource(description: null));
 
-        // Nothing is invented, and nothing is written — the guard stays true, so a later
-        // run asks again once AniList's entry has been filled in by somebody.
+        // Nothing is invented, but the answer is kept: empty means "asked, AniList has none",
+        // the same state Volume.Title uses, and it is what makes the heal self-extinguishing.
+        series.Description.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_AniListAlreadySaidItHasNoSynopsis_DoesNotAskAgain()
+    {
+        var series = CreateSeries();
+        var metadataSource = MetadataSource(description: null);
+
+        await RefreshAsync(series, metadataSource);
+        await RefreshAsync(series, metadataSource);
+
+        // Once, ever — not once a night for a synopsis AniList has already said it lacks.
+        await metadataSource.Received(1).GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RefreshAsync_AniListTimesOut_LeavesTheDescriptionNullAndCarriesOn()
+    {
+        var series = CreateSeries();
+
+        // HttpClient.Timeout's shape: a cancelled task that nobody cancelled.
+        var metadataSource = Substitute.For<ISeriesMetadataSource>();
+        metadataSource.GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns<Task<SeriesMetadata?>>(_ => throw new TaskCanceledException("The request timed out."));
+
+        var run = await RefreshAsync(series, metadataSource);
+
+        // Not an answer, so nothing is written and the next run asks again — and not a
+        // reason to throw away the volume counts this refresh already applied.
         series.Description.ShouldBeNull();
+        run.VolumesMarkedReleased.ShouldBe(3);
     }
 
     [Fact]

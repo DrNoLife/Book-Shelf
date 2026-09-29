@@ -396,7 +396,8 @@ POST   /api/series/{id}/volumes/bulk  { throughNumber, read?, owned? }
 POST   /api/series/{id}/volumes       { number, releaseDate? }   manual, IsLocalOnly
 
 GET    /api/search?q=&format=                      AniList passthrough (cached)
-GET    /api/releases/upcoming?format=
+GET    /api/releases/upcoming?format=             out now / this month / next 3 months / later / announced
+GET    /api/stats                                 read per month by format, spend, completion, furthest read
 GET    /api/covers/{objectKey}                     streams from ICoverStore
 PUT    /api/volumes/{id}/cover                     override upload
 DELETE /api/volumes/{id}/cover                     revert to synced

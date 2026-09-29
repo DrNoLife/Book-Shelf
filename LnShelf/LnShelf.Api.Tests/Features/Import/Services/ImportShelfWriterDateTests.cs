@@ -175,6 +175,66 @@ public sealed class ImportShelfWriterDateTests
         (await LoadSeriesAsync(dbContext)).UserState!.StartedAt.ShouldBe(ExportDate);
     }
 
+    [Theory]
+    [InlineData(ReadStatus.Reading)]
+    [InlineData(ReadStatus.Unread)]
+    public async Task ApplyAsync_ADatedRowThatIsNotRead_GivesTheVolumeNoReadDate(ReadStatus readStatus)
+    {
+        // Did-not-finish maps to Unread and currently-reading to Reading; both exports put
+        // a date on those rows too.
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([1], readStatus, readAt: ExportDate)],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        (await LoadVolumeAsync(dbContext, 1)).UserState!.ReadAt.ShouldBeNull();
+        (await LoadSeriesAsync(dbContext)).UserState!.LastReadAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ADatedCurrentlyReadingRow_StillDatesTheStartOfTheSeries()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        // The date on a currently-reading row is an earlier finished read: proof the
+        // reading had begun by then, though not that the volume is read now.
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([1], ReadStatus.Reading, readAt: ExportDate), CreateGroup([2], readAt: StampedToday)],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        var userState = (await LoadSeriesAsync(dbContext)).UserState!;
+        userState.StartedAt.ShouldBe(ExportDate);
+        userState.LastReadAt.ShouldBe(StampedToday);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ADatedDidNotFinishRow_DatesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
+
+        await writer.ApplyAsync(
+            AniListId,
+            [CreateGroup([1], ReadStatus.Unread, readAt: ExportDate)],
+            new ImportWriteCounters(),
+            AppliedAt,
+            CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        (await LoadSeriesAsync(dbContext)).UserState!.StartedAt.ShouldBeNull();
+    }
+
     [Fact]
     public async Task ApplyAsync_TwoRowsForOneVolume_KeepTheLaterReadDate()
     {

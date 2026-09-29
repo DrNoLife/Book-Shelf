@@ -7,7 +7,7 @@ namespace LnShelf.Shared.Preferences;
 // (SeriesUserState.VolumeViewOverride, null meaning "follow the global"), because
 // the right answer differs by series: a 42-volume manga is a list, a 14-volume
 // light novel with cover art is tiles.
-[JsonConverter(typeof(JsonStringEnumConverter<VolumeView>))]
+[JsonConverter(typeof(StrictStringEnumConverter<VolumeView>))]
 public enum VolumeView
 {
     Tiles,

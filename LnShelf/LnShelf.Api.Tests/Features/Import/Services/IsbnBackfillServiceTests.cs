@@ -104,6 +104,25 @@ public sealed class IsbnBackfillServiceTests
         (await dbContext.Volumes.CountAsync(volume => volume.Isbn != null)).ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData(ImportGroupStatus.AutoMatched)]
+    [InlineData(ImportGroupStatus.NeedsReview)]
+    [InlineData(ImportGroupStatus.Resolved)]
+    [InlineData(ImportGroupStatus.Skipped)]
+    public async Task RunAsync_AGroupThatWasNeverCommitted_IsIgnored(ImportGroupStatus status)
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedShelfAsync(dbContext, volumeCount: 2);
+        await SeedStagingAsync(dbContext, [(1, "9780316272247")], status: status);
+
+        var report = await CreateService(dbContext).RunAsync(CancellationToken.None);
+
+        // A match nobody has committed is a guess, and a skipped group is books the user
+        // left off the shelf on purpose.
+        report.Offered.ShouldBe(0);
+        (await dbContext.Volumes.CountAsync(volume => volume.Isbn != null)).ShouldBe(0);
+    }
+
     [Fact]
     public async Task RunAsync_OneVolumeStagedTwice_KeepsTheEnglishEdition()
     {
@@ -146,7 +165,8 @@ public sealed class IsbnBackfillServiceTests
         LnShelfDbContext dbContext,
         (int VolumeNumber, string? Isbn)[] rows,
         int? matchedAniListId = AniListId,
-        string seriesTitle = "Overlord")
+        string seriesTitle = "Overlord",
+        ImportGroupStatus status = ImportGroupStatus.Committed)
     {
         var batch = new ImportBatch
         {
@@ -161,7 +181,7 @@ public sealed class IsbnBackfillServiceTests
             ImportBatchId = batch.Id,
             SeriesTitle = seriesTitle,
             SeriesKey = TitleNormalizer.Normalize(seriesTitle),
-            Status = ImportGroupStatus.Committed,
+            Status = status,
             MatchedAniListId = matchedAniListId,
         };
 

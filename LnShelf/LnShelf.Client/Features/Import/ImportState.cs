@@ -50,31 +50,38 @@ public sealed class ImportState(HttpClient httpClient)
 
         IsMatching = true;
 
-        await RunAsync(async () =>
+        // In a finally: anything RunAsync does not handle would otherwise leave the page
+        // saying "matching" for good.
+        try
         {
-            using var form = new MultipartFormDataContent();
-            using var fileContent = new StreamContent(file.OpenReadStream(MaximumUploadBytes, cancellationToken));
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
-
-            // The field name the API binds its IFormFile parameter from.
-            form.Add(fileContent, "file", file.Name);
-
-            using var response = await httpClient.PostAsync("api/import", form, cancellationToken);
-
-            if (!await SucceededAsync(response, cancellationToken))
+            await RunAsync(async () =>
             {
-                return;
-            }
+                using var form = new MultipartFormDataContent();
+                using var fileContent = new StreamContent(file.OpenReadStream(MaximumUploadBytes, cancellationToken));
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
 
-            var batch = await response.Content.ReadFromJsonAsync<ImportBatchResponse>(cancellationToken);
-            if (batch is not null)
-            {
-                await OpenBatchInternalAsync(batch.BatchId, cancellationToken);
-            }
-        });
+                // The field name the API binds its IFormFile parameter from.
+                form.Add(fileContent, "file", file.Name);
 
-        IsMatching = false;
-        Changed?.Invoke();
+                using var response = await httpClient.PostAsync("api/import", form, cancellationToken);
+
+                if (!await SucceededAsync(response, cancellationToken))
+                {
+                    return;
+                }
+
+                var batch = await response.Content.ReadFromJsonAsync<ImportBatchResponse>(cancellationToken);
+                if (batch is not null)
+                {
+                    await OpenBatchInternalAsync(batch.BatchId, cancellationToken);
+                }
+            });
+        }
+        finally
+        {
+            IsMatching = false;
+            Changed?.Invoke();
+        }
     }
 
     public Task OpenBatchAsync(Guid batchId, CancellationToken cancellationToken = default) =>
@@ -179,6 +186,13 @@ public sealed class ImportState(HttpClient httpClient)
             // Rendering the failure is handling it; the browser cannot fix a dead
             // API or an AniList outage.
             Message = exception.Message;
+        }
+        catch (TaskCanceledException exception) when (exception.InnerException is TimeoutException)
+        {
+            // HttpClient reports its own timeout as a cancellation. The API may well still
+            // be matching, and a finished batch shows up under recent imports.
+            Message = "The API took too long to answer. An import may still finish on the "
+                + "server — reload in a minute and look for it under recent imports.";
         }
         finally
         {

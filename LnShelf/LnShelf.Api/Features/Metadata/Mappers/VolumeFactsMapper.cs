@@ -26,6 +26,10 @@ public static class VolumeFactsMapper
             Description = record.Description,
             ReleaseDate = record.ReleaseDate,
 
+            // Fill-only: a store listing's date is second in precedence to the edition's own,
+            // and letting it replace one would flip the date against Open Library every night.
+            MayReplaceReleaseDate = false,
+
             // Nothing to keep: a storefront date is either a full ISO timestamp or absent, so
             // there is no coarse-but-real string of the "2022" kind to report.
             RawReleaseDate = null,
@@ -49,6 +53,10 @@ public static class VolumeFactsMapper
             // account.
             Description = null,
             ReleaseDate = enrichment.ReleaseDate,
+
+            // The real per-volume date, looked up by ISBN, wins for display (CLAUDE.md).
+            MayReplaceReleaseDate = true,
+
             RawReleaseDate = enrichment.RawPublishDate,
             CoverImageUrl = enrichment.CoverImageUrl,
         };

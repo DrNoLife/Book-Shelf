@@ -45,6 +45,12 @@ public sealed class SeriesCommandService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.Notes is { Length: > SeriesUserState.NotesMaximumLength })
+        {
+            throw new InvalidInputException(
+                $"A note can be at most {SeriesUserState.NotesMaximumLength} characters; this one is {request.Notes.Length}.");
+        }
+
         var detail = await WriteUserStateAsync(
             seriesId,
             state =>
@@ -123,7 +129,7 @@ public sealed class SeriesCommandService(
 
         // A series with no user-state row has never been touched; any of these writes is a
         // touch, and it is the same row every other per-series preference lives on.
-        change(series.UserState ??= new SeriesUserState { SeriesId = series.Id });
+        change(series.UserState ??= SeriesUserState.Untouched(series.Id));
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -164,9 +170,9 @@ public sealed class SeriesCommandService(
         dbContext.Series.Remove(series);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Cover objects are deliberately left in MinIO, matching what removing a volume's
-        // cover override already does: dropping the reference is the operation, and the
-        // bytes are a cache. Re-adding the series finds its art already local.
+        // Cover objects are deliberately left in MinIO: dropping the reference is the
+        // operation, and the synced bytes are a cache. Re-adding the series finds its art
+        // already local.
         logger.LogInformation(
             "Deleted {TitleEnglish} ({SeriesId}) with {VolumeCount} volumes and all user state on them; "
             + "{LinkedBackCount} relation(s) cleared",

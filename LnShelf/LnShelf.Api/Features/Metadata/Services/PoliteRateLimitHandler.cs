@@ -74,13 +74,15 @@ public sealed class PoliteRateLimitHandler(
     // The lease is time-based, so releasing it here does not hand the permit back: the window
     // does that. It is disposed early on purpose, before the response body is read.
     //
-    // The per-request timeout belongs here rather than on the HttpClient for the slow sources.
-    // HttpClient.Timeout covers the whole handler chain including the permit wait, and at
-    // twelve requests a minute a queued lookup waits far longer than any sane per-request
-    // timeout — a 60-volume run failed every request after the first few for exactly that
-    // reason. AniList and MangaUpdates run at 90 and 60 a minute, so their waits are around a
-    // second and the distinction never bites; their clients keep their own timeout and their
-    // policies carry none.
+    // The per-request timeout belongs here rather than on the HttpClient, for every source.
+    // HttpClient.Timeout covers the whole handler chain: the permit wait, and the 429 back-off
+    // in SendAsync above. At twelve requests a minute a queued lookup waits far longer than
+    // any sane per-request timeout — a 60-volume run failed every request after the first few
+    // for exactly that reason. AniList and MangaUpdates used to keep their own client timeout,
+    // on the grounds that their permit waits are around a second; but their back-off after a
+    // bare 429 is MaximumRetryDelay, 60 seconds, which a 20-second client timeout always cut
+    // short — the one retry could never be sent. Bounded here, each attempt gets the full
+    // timeout and the wait between them is not charged to either.
     private async Task<HttpResponseMessage> SendWithPermitAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)

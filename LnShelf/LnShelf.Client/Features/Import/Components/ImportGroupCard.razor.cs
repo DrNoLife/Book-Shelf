@@ -66,6 +66,19 @@ public partial class ImportGroupCard
     private Task OnSkippedAsync() =>
         Decided.InvokeAsync(new ImportDecision(Group.GroupId, AniListId: null, Skip: true, Group.TreatReadAsOwned));
 
+    /// <summary>
+    /// The toggle re-sends the group's current decision with the flag flipped, and a
+    /// group waiting for review has no decision to re-send.
+    /// </summary>
+    // Neither a match nor a skip is a request the API refuses with a 400, so the toggle
+    // used to be clickable on exactly the cards where it could only fail.
+    private bool CanToggleOwnership =>
+        Group.Status is ImportGroupStatus.Skipped || Group.MatchedAniListId is not null;
+
+    private string? OwnershipToggleTitle => CanToggleOwnership
+        ? null
+        : "Choose a series first — this applies to the series it becomes";
+
     private Task OnOwnershipToggledAsync() =>
         Decided.InvokeAsync(new ImportDecision(
             Group.GroupId,

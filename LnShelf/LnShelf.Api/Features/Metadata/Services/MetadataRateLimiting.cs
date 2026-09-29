@@ -35,7 +35,10 @@ public static class MetadataRateLimiting
         }
     }
 
-    /// <summary>AniList: 90 a minute, and its client owns its own request timeout.</summary>
+    /// <summary>
+    /// AniList: 90 a minute, and — like every source now — the request timeout lives on the
+    /// handler.
+    /// </summary>
     public static SourceRateLimitPolicy AniList(IServiceProvider provider)
     {
         var options = provider.GetRequiredService<IOptions<AniListOptions>>().Value;
@@ -49,6 +52,7 @@ public static class MetadataRateLimiting
             QueuedRequestLimit = options.RequestsPerMinute,
 
             MaximumRetryDelay = options.MaximumRetryDelay,
+            RequestTimeout = options.RequestTimeout,
         };
     }
 
@@ -63,6 +67,7 @@ public static class MetadataRateLimiting
             RequestsPerMinute = options.RequestsPerMinute,
             QueuedRequestLimit = options.RequestsPerMinute,
             MaximumRetryDelay = options.MaximumRetryDelay,
+            RequestTimeout = options.RequestTimeout,
         };
     }
 

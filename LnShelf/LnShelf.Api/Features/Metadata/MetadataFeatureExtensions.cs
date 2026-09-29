@@ -50,7 +50,12 @@ public static class MetadataFeatureExtensions
                 {
                     var aniList = provider.GetRequiredService<IOptions<AniListOptions>>().Value;
                     httpClient.BaseAddress = aniList.Endpoint;
-                    httpClient.Timeout = aniList.RequestTimeout;
+
+                    // Infinite here, and enforced per attempt inside the handler instead.
+                    // HttpClient.Timeout covers the whole handler chain, 429 back-off
+                    // included, so a 20-second timeout around a 60-second back-off meant the
+                    // retry could never happen. See PoliteRateLimitHandler.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
                 })
@@ -89,7 +94,10 @@ public static class MetadataFeatureExtensions
                 {
                     var mangaUpdates = provider.GetRequiredService<IOptions<MangaUpdatesOptions>>().Value;
                     httpClient.BaseAddress = mangaUpdates.Endpoint;
-                    httpClient.Timeout = mangaUpdates.RequestTimeout;
+
+                    // Infinite for the same reason as AniList's: the timeout lives on the
+                    // handler, per attempt, so it cannot swallow the 429 back-off.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
                 })

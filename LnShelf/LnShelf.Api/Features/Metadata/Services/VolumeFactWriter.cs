@@ -40,7 +40,8 @@ public sealed class VolumeFactWriter(
     }
 
     /// <summary>
-    /// Writes the date, unless it contradicts what the release source already said.
+    /// Writes the date, unless it contradicts what the release source already said or a
+    /// source lower in precedence would be replacing one.
     /// </summary>
     // The rule the verdict settled (§1). A real date wins for display where one exists,
     // but IsReleased stays the release model: it is a sourced count covering the whole
@@ -114,6 +115,15 @@ public sealed class VolumeFactWriter(
                 facts.SourceName,
                 releaseDate);
 
+            return;
+        }
+
+        // Precedence between the two per-volume sources, checked after the conflict above so a
+        // contradiction is still recorded whichever source raised it. Without it the two passes
+        // wrote in turn — the store's date, then Open Library's — so disagreeing sources moved
+        // the date twice every night and the run reported two dates written for no change.
+        if (volume.ReleaseDate is not null && !facts.MayReplaceReleaseDate)
+        {
             return;
         }
 

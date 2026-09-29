@@ -7,7 +7,7 @@ namespace LnShelf.Shared.Metadata;
 // here: "these two sources do not agree on which series this even is" is a
 // disagreement of exactly the same kind, it needs the same human resolution, and
 // giving it the same home means the review list is one query rather than two.
-[JsonConverter(typeof(JsonStringEnumConverter<SyncDiscrepancyField>))]
+[JsonConverter(typeof(StrictStringEnumConverter<SyncDiscrepancyField>))]
 public enum SyncDiscrepancyField
 {
     VolumeCount,

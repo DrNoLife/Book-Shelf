@@ -767,6 +767,141 @@ public sealed class SeriesCommandServiceTests
     }
 
     /// <summary>
+    /// The duplicate the MangaUpdates fallback used to create: added while AniList was
+    /// down, then added again from AniList once it was back.
+    /// </summary>
+    [Fact]
+    public async Task AddAsync_AniList_ASeriesAddedFromMangaUpdatesUnderTheSameTitle_LinksItInsteadOfAddingACopy()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // MangaUpdates filed it under the romaji title, which is AniList's second one.
+        var existing = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            MangaUpdatesId = MangaUpdatesId,
+            TitleEnglish = "Mushoku Tensei: Isekai Ittara Honki Dasu",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Completed,
+        };
+        var volume = new Volume { Id = Guid.CreateVersion7(), Number = 1, IsReleased = true };
+        volume.UserState = new VolumeUserState { VolumeId = volume.Id, ReadStatus = ReadStatus.Read, Owned = true };
+        existing.Volumes.Add(volume);
+        dbContext.Series.Add(existing);
+        await dbContext.SaveChangesAsync();
+
+        var response = await CreateService(dbContext, CreateMetadataSource())
+            .AddAsync(CreateRequest(), CancellationToken.None);
+
+        response.ShouldNotBeNull().SeriesId.ShouldBe(existing.Id);
+        response.AlreadyTracked.ShouldBeTrue();
+
+        // One row, now linked to both catalogues, with the user's state where it was.
+        var series = await dbContext.Series.SingleAsync();
+        series.AniListId.ShouldBe(AniListId);
+        series.MangaUpdatesId.ShouldBe(MangaUpdatesId);
+        (await dbContext.VolumeUserStates.SingleAsync()).ReadStatus.ShouldBe(ReadStatus.Read);
+    }
+
+    [Fact]
+    public async Task AddAsync_AniList_TheSameTitleAsAMangaUpdatesMangaRow_StillAddsTheLightNovel()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Series.Add(new Series
+        {
+            Id = Guid.CreateVersion7(),
+            MangaUpdatesId = MangaUpdatesId,
+            TitleEnglish = "Mushoku Tensei: Jobless Reincarnation",
+            Format = Format.Manga,
+            PublicationStatus = PublicationStatus.Ongoing,
+        });
+        await dbContext.SaveChangesAsync();
+
+        var response = await CreateService(dbContext, CreateMetadataSource())
+            .AddAsync(CreateRequest(), CancellationToken.None);
+
+        // Same title, different format: the manga and the light novel are two series.
+        response.ShouldNotBeNull().AlreadyTracked.ShouldBeFalse();
+        (await dbContext.Series.CountAsync()).ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(0L, null)]
+    [InlineData(-5L, null)]
+    [InlineData(null, 0L)]
+    [InlineData(null, -5L)]
+    public async Task AddAsync_ANonPositiveId_IsA400RatherThanA500(long? aniListId, long? mangaUpdatesId)
+    {
+        await using var dbContext = CreateDbContext();
+        var request = new AddSeriesRequest
+        {
+            AniListId = aniListId is null ? null : (int)aniListId,
+            MangaUpdatesId = mangaUpdatesId,
+            Format = Format.LightNovel,
+        };
+
+        var act = async () => await CreateService(dbContext, CreateMetadataSource())
+            .AddAsync(request, CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+    }
+
+    [Fact]
+    public async Task SetStateAsync_ANoteLongerThanTheColumn_IsRefused()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        var act = async () => await service.SetStateAsync(
+            seriesId,
+            new UpdateSeriesStateRequest { Notes = new string('x', SeriesUserState.NotesMaximumLength + 1) },
+            CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+    }
+
+    [Fact]
+    public async Task SetStateAsync_ANoteExactlyAsLongAsTheColumn_IsStored()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext, CreateMetadataSource());
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None))
+            .ShouldNotBeNull().SeriesId;
+
+        var detail = await service.SetStateAsync(
+            seriesId,
+            new UpdateSeriesStateRequest { Notes = new string('x', SeriesUserState.NotesMaximumLength) },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().Notes.ShouldNotBeNull().Length.ShouldBe(SeriesUserState.NotesMaximumLength);
+    }
+
+    [Fact]
+    public async Task SetVolumeViewAsync_ASeriesWithNoUserStateRow_StaysPlanToStart()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 999,
+            TitleEnglish = "Overlord",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+        };
+        dbContext.Series.Add(series);
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext, CreateMetadataSource()).SetVolumeViewAsync(
+            series.Id, new SetSeriesVolumeViewRequest { View = VolumeView.List }, CancellationToken.None);
+
+        // A missing row reads as PlanToStart; creating it to hold a view preference must
+        // not quietly turn that into Reading, the enum's default.
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.PlanToStart);
+    }
+
+    /// <summary>
     /// The service wired with both real add flows — the composition the app runs.
     /// </summary>
     // The flows are the real implementations rather than substitutes, because they are

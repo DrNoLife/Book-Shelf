@@ -1,0 +1,148 @@
+@page "/stats"
+@using LnShelf.Client.Features.Stats.Components
+
+@* The StoryGraph wrap-up, but yours (ui-spec §5). Numbers first; the charts are what
+   the numbers look like over a year. No backlog-over-time chart on purpose — see
+   StatsResponse for why a trend line would be drawn from data the shelf does not have. *@
+
+<h1 class="stats__title">Stats</h1>
+
+<div class="stats">
+
+    <div class="stats__top">
+        <p class="eyebrow">Stats@(State.Response is { } loaded ? $" · {SeriesCount(loaded)} series" : "")</p>
+
+        @if (State.Response is { } response)
+        {
+            <div class="figures">
+                <p class="figure">
+                    <span class="figure__value figure__value--accent tabular">@response.Formats.Sum(format => format.Read)</span>
+                    <span class="figure__label">read</span>
+                </p>
+                <p class="figure">
+                    <span class="figure__value tabular">@response.Formats.Sum(format => format.Owned)</span>
+                    <span class="figure__label">owned</span>
+                </p>
+                <p class="figure">
+                    <span class="figure__value tabular">@response.CompletedSeries</span>
+                    <span class="figure__label">of @response.StartedSeries started series completed</span>
+                </p>
+            </div>
+
+            <p class="stats__prose">
+                @response.Formats.Sum(format => format.Backlog) bought and unread.
+                @response.Formats.Sum(format => format.ToBuy) out there you haven't bought.
+            </p>
+        }
+    </div>
+
+    <div class="stats__body">
+        @if (State.LoadFailed)
+        {
+            <p class="notice">Could not reach the API.</p>
+        }
+        else if (State.Response is not { } stats)
+        {
+            <p class="notice">Counting…</p>
+        }
+        else if (stats.Formats.Count == 0)
+        {
+            <p class="notice">Nothing on the shelf yet, so nothing to count.</p>
+        }
+        else
+        {
+            <section class="section" aria-labelledby="stats-read">
+                <h2 class="section__heading" id="stats-read">Read per month</h2>
+
+                <MonthBarChart Bars="ReadBars(stats)" AriaLabel="Volumes read per month, last twelve months" />
+
+                <Legend>
+                    <LegendItem Words="Light novel"><Mark><span class="mark mark--ln"></span></Mark></LegendItem>
+                    <LegendItem Words="Manga"><Mark><span class="mark mark--manga"></span></Mark></LegendItem>
+                    <LegendItem Words="Web novel"><Mark><span class="mark mark--wn"></span></Mark></LegendItem>
+                </Legend>
+
+                @if (stats.ReadWithoutDate > 0)
+                {
+                    <p class="notice notice--quiet">
+                        @stats.ReadWithoutDate read @(stats.ReadWithoutDate == 1 ? "volume carries" : "volumes carry") no read date and
+                        @(stats.ReadWithoutDate == 1 ? "is" : "are") counted above but charted nowhere.
+                    </p>
+                }
+            </section>
+
+            <section class="section" aria-labelledby="stats-formats">
+                <h2 class="section__heading" id="stats-formats">By format</h2>
+
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="eyebrow">Format</th>
+                            <th scope="col" class="eyebrow">Series</th>
+                            <th scope="col" class="eyebrow">Read</th>
+                            <th scope="col" class="eyebrow">Owned</th>
+                            <th scope="col" class="eyebrow">Backlog</th>
+                            <th scope="col" class="eyebrow">To buy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var format in stats.Formats)
+                        {
+                            <tr @key="format.Format">
+                                <th scope="row"><FormatBadge Value="format.Format" /></th>
+                                <td class="tabular">@format.SeriesCount</td>
+                                <td class="tabular">@format.Read</td>
+                                <td class="tabular">@format.Owned</td>
+                                <td class="tabular">@format.Backlog</td>
+                                <td class="tabular">@format.ToBuy</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="section" aria-labelledby="stats-spend">
+                <h2 class="section__heading" id="stats-spend">Spend</h2>
+
+                @if (stats.Spend is { } spend)
+                {
+                    <p class="section__line tabular">
+                        @spend.PricedCount priced @(spend.PricedCount == 1 ? "volume" : "volumes") · @Money(spend.Total) · avg @Money(spend.Average)
+                    </p>
+
+                    @if (stats.SpendPerMonth.Any(month => month.Total > 0))
+                    {
+                        <MonthBarChart Bars="SpendBars(stats)" AriaLabel="Money spent per month, last twelve months" />
+                    }
+                    else
+                    {
+                        <p class="notice notice--quiet">None of it carries a purchase date from the last twelve months.</p>
+                    }
+                }
+                else
+                {
+                    <p class="notice notice--quiet">No volume carries a price. Add one from a volume's menu and it lands here.</p>
+                }
+            </section>
+
+            @if (stats.LongestSeries.Count > 0)
+            {
+                <section class="section" aria-labelledby="stats-longest">
+                    <h2 class="section__heading" id="stats-longest">Furthest read</h2>
+
+                    <ol class="longest">
+                        @foreach (var series in stats.LongestSeries)
+                        {
+                            <li class="longest__row" @key="series.SeriesId">
+                                <span class="longest__badge"><FormatBadge Value="series.Format" /></span>
+                                <a class="longest__title" href="@($"/series/{series.SeriesId}")">@series.Title</a>
+                                <span class="longest__count tabular">@series.Read of @series.Tracked read</span>
+                            </li>
+                        }
+                    </ol>
+                </section>
+            }
+        }
+    </div>
+
+</div>

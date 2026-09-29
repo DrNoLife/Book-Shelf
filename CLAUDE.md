@@ -300,7 +300,8 @@ Features/
   Preferences/      (the single user-preferences row)
   Import/           (StoryGraph CSV pipeline, match queue)
   Changelog/        (app version + release notes, served to the client)
-  Releases/         (upcoming view queries, notifications — phase 5, not yet created)
+  Releases/         (upcoming view query; the IReleaseNotifier seam arrives with its notifier)
+  Stats/            (the Stats page's read-only figures)
 ```
 
 Two exceptions to feature-slice-first, both above `Features/` because every slice

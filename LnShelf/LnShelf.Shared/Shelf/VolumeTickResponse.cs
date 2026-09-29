@@ -35,7 +35,7 @@ public sealed record VolumeTickResponse
 }
 
 /// <summary>The four appearances a tick can carry.</summary>
-[JsonConverter(typeof(JsonStringEnumConverter<VolumeTickKind>))]
+[JsonConverter(typeof(StrictStringEnumConverter<VolumeTickKind>))]
 public enum VolumeTickKind
 {
     Read,

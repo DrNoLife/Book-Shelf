@@ -68,14 +68,25 @@ public partial class SeriesNotes
     // The empty string is not skipped as "nothing to save": it is how the endpoint is told
     // to clear a note (null there means "leave it alone"), so erasing the box and clicking
     // away is the erase.
-    private Task SaveAsync()
+    //
+    // Edit mode is left before the call rather than after it, so the blur of the box being
+    // removed cannot start a second save. A refused save reopens it with the draft still
+    // in it: closing the box on failure used to throw away whatever had been typed.
+    private async Task SaveAsync()
     {
         IsEditing = false;
 
         var notes = Draft.Trim();
 
-        return notes == (Series.Notes ?? string.Empty)
-            ? Task.CompletedTask
-            : SeriesState.SetNotesAsync(notes);
+        if (notes == (Series.Notes ?? string.Empty))
+        {
+            return;
+        }
+
+        if (!await SeriesState.SetNotesAsync(notes))
+        {
+            IsEditing = true;
+            _focusWanted = true;
+        }
     }
 }

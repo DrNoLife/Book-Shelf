@@ -264,6 +264,39 @@ public sealed class MangaUpdatesSeriesMapperTests
         }).PublicationStatus.ShouldBe(expected);
     }
 
+    /// <summary>
+    /// Whether publication has finished, for the nightly sync — the same text, the same rule.
+    /// </summary>
+    // The `completed` flag is set against the text in every row on purpose. It is MangaUpdates'
+    // "Completely Scanlated?", which is how "10 Volumes (Complete)" with completed:false used
+    // to record a Status discrepancy every night the series was swept.
+    [Theory]
+    [InlineData("10 Volumes (Complete)", false, true)]
+    [InlineData("9 Volumes + 1 Extra (Complete)", true, true)]
+    [InlineData("14 Volumes (Ongoing)", true, false)]
+    [InlineData("17 Volumes (Hiatus)", false, false)]
+    [InlineData(null, true, false)]
+    public void ToSeriesInfo_TheStatusTextNotTheScanlationFlag_DecidesCompletion(
+        string? status,
+        bool completelyScanlated,
+        bool expected)
+    {
+        var record = new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Status = status,
+            Completed = completelyScanlated,
+        };
+
+        MangaUpdatesSeriesMapper.ToSeriesInfo(record).IsCompleted.ShouldBe(expected);
+
+        // One rule for both paths: sync can never call finished what the add flow did not.
+        (MangaUpdatesSeriesMapper.ToSeriesMetadata(record).PublicationStatus is PublicationStatus.Completed)
+            .ShouldBe(expected);
+    }
+
     /// <summary>MangaUpdates' medium words in the shelf's own vocabulary.</summary>
     [Theory]
     [InlineData("Novel", Format.LightNovel)]

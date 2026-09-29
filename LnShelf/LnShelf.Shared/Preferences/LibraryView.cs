@@ -7,7 +7,7 @@ namespace LnShelf.Shared.Preferences;
 // type-to-filter applies identically in both. Covers is the default because the
 // design's thesis is "covers doing the talking"; rows exist for the days the
 // question is "what am I behind on", where a scannable table beats artwork.
-[JsonConverter(typeof(JsonStringEnumConverter<LibraryView>))]
+[JsonConverter(typeof(StrictStringEnumConverter<LibraryView>))]
 public enum LibraryView
 {
     Covers,

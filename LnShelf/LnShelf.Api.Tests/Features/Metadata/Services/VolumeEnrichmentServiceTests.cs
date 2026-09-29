@@ -143,11 +143,12 @@ public sealed class VolumeEnrichmentServiceTests
         var volume = series.Volumes.Single();
 
         // The user has already dropped their own cover on this volume.
+        var overrideObjectKey = CoverObjectKey.ForVolumeOverride(volume.Id, Guid.CreateVersion7(), ".webp");
         volume.UserState = new VolumeUserState
         {
             VolumeId = volume.Id,
             Owned = true,
-            CoverOverrideObjectKey = CoverObjectKey.ForVolumeOverride(volume.Id, ".webp"),
+            CoverOverrideObjectKey = overrideObjectKey,
         };
 
         var coverCache = Substitute.For<IVolumeCoverCache>();
@@ -162,8 +163,7 @@ public sealed class VolumeEnrichmentServiceTests
         // Synced art lands on its own prefix, so the override survives and still wins on
         // read. Sync cannot even name an override's key (CoverObjectKey).
         volume.CoverObjectKey.ShouldNotBeNull().ShouldStartWith("volume/openlibrary/");
-        volume.UserState.CoverOverrideObjectKey.ShouldBe(
-            CoverObjectKey.ForVolumeOverride(volume.Id, ".webp"));
+        volume.UserState.CoverOverrideObjectKey.ShouldBe(overrideObjectKey);
 
         // And it is there on purpose: removing an override falls back to synced art
         // (feature-spec §4.3), which needs the synced art to exist.

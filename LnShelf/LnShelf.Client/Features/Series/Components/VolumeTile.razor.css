@@ -20,10 +20,10 @@
   cursor: pointer;
 }
 
-.tile:disabled { cursor: default; }
+.tile[aria-disabled="true"] { cursor: default; }
 
 /* Hover raises the ring only. Never reflows (design.md). */
-.tile:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--line-3); }
+.tile:hover:not([aria-disabled="true"]) { box-shadow: 0 0 0 1px var(--line-3); }
 
 .tile__art,
 .tile__image {
@@ -67,7 +67,7 @@
   box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px var(--glow-reading);
 }
 
-.tile--reading:hover:not(:disabled) {
+.tile--reading:hover:not([aria-disabled="true"]) {
   box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px var(--glow-reading);
 }
 

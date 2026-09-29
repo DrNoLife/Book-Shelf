@@ -173,6 +173,65 @@ public sealed class VolumeCommandServiceTests
     }
 
     [Fact]
+    public async Task SetOwnedAsync_APriceTheColumnCannotHold_IsRefused()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        var act = async () => await CreateService(dbContext).SetOwnedAsync(
+            series.Volumes.Single().Id,
+            new SetVolumeOwnedRequest { Owned = true, PurchasePrice = VolumeUserState.MaximumPurchasePrice + 0.01m },
+            CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+    }
+
+    [Fact]
+    public async Task SetOwnedAsync_TheLargestPriceTheColumnHolds_IsStored()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        await CreateService(dbContext).SetOwnedAsync(
+            series.Volumes.Single().Id,
+            new SetVolumeOwnedRequest { Owned = true, PurchasePrice = VolumeUserState.MaximumPurchasePrice },
+            CancellationToken.None);
+
+        (await dbContext.VolumeUserStates.SingleAsync()).PurchasePrice.ShouldBe(VolumeUserState.MaximumPurchasePrice);
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_MarkingVolumesOwned_StampsThePurchaseDateLikeTheSinglePath()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 3);
+
+        await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 3, Owned = true },
+            CancellationToken.None);
+
+        (await dbContext.VolumeUserStates.ToListAsync())
+            .ShouldAllBe(state => state.PurchasedAt == DateOnly.FromDateTime(DateTime.Now.Date));
+    }
+
+    [Fact]
+    public async Task SetReadAsync_ASeriesWithNoUserStateRow_StaysPlanToStart()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 2, withSeriesState: false);
+
+        await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 1).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        // The row is created to hold the last-read date; the status has to be the one a
+        // missing row already read as, not the enum's default of Reading.
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.PlanToStart);
+    }
+
+    [Fact]
     public async Task SetBulkAsync_MarkThroughEight_TouchesTheFirstEightOnly()
     {
         await using var dbContext = CreateDbContext();
@@ -247,7 +306,7 @@ public sealed class VolumeCommandServiceTests
     [Theory]
     [InlineData(0)]
     [InlineData(-3)]
-    public async Task SetBulkAsync_ANonPositiveRange_Throws(int throughNumber)
+    public async Task SetBulkAsync_ANonPositiveRange_IsRefused(int throughNumber)
     {
         await using var dbContext = CreateDbContext();
         var series = await SeedAsync(dbContext, volumeCount: 3);
@@ -257,7 +316,8 @@ public sealed class VolumeCommandServiceTests
             new BulkVolumeStateRequest { ThroughNumber = throughNumber, Read = ReadStatus.Read },
             CancellationToken.None);
 
-        await act.ShouldThrowAsync<ArgumentOutOfRangeException>();
+        // The caller's input, so a 400 — not the 500 an ArgumentOutOfRangeException was.
+        await act.ShouldThrowAsync<InvalidInputException>();
     }
 
     [Fact]
@@ -335,13 +395,80 @@ public sealed class VolumeCommandServiceTests
 
         var response = Written(detail, volume.Id);
         response.HasCoverOverride.ShouldBeTrue();
-        response.CoverObjectKey.ShouldBe($"override/volume/{volume.Id}.webp");
+        var objectKey = response.CoverObjectKey.ShouldNotBeNull();
+        objectKey.ShouldStartWith($"override/volume/{volume.Id}/");
+        objectKey.ShouldEndWith(".webp");
+        CoverObjectKey.IsWellFormed(objectKey).ShouldBeTrue();
 
         await coverStore.Received(1).SaveAsync(
-            $"override/volume/{volume.Id}.webp",
+            objectKey,
             Arg.Any<ReadOnlyMemory<byte>>(),
             "image/webp",
             Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Covers are served as immutable for a week, so a replaced override has to arrive
+    /// under a new key or the browser keeps showing the old one.
+    /// </summary>
+    [Fact]
+    public async Task SetCoverAsync_ReplacingAnOverride_UsesANewKeyAndDeletesTheOldObject()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+        var volumeId = series.Volumes.Single().Id;
+
+        var coverStore = Substitute.For<ICoverStore>();
+        var service = CreateService(dbContext, coverStore);
+
+        var first = Written(
+            await service.SetCoverAsync(volumeId, CreatePng(400, 600), CancellationToken.None), volumeId)
+            .CoverObjectKey.ShouldNotBeNull();
+        var second = Written(
+            await service.SetCoverAsync(volumeId, CreatePng(400, 600), CancellationToken.None), volumeId)
+            .CoverObjectKey.ShouldNotBeNull();
+
+        second.ShouldNotBe(first);
+        await coverStore.Received(1).DeleteAsync(first, Arg.Any<CancellationToken>());
+        await coverStore.DidNotReceive().DeleteAsync(second, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RemoveCoverAsync_AnOverriddenVolume_DeletesTheObjectItNoLongerNames()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+        var volumeId = series.Volumes.Single().Id;
+
+        var coverStore = Substitute.For<ICoverStore>();
+        var service = CreateService(dbContext, coverStore);
+        var objectKey = Written(
+            await service.SetCoverAsync(volumeId, CreatePng(400, 600), CancellationToken.None), volumeId)
+            .CoverObjectKey.ShouldNotBeNull();
+
+        await service.RemoveCoverAsync(volumeId, CancellationToken.None);
+
+        await coverStore.Received(1).DeleteAsync(objectKey, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SetCoverAsync_TheOldObjectCannotBeDeleted_StillSavesTheNewCover()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+        var volumeId = series.Volumes.Single().Id;
+
+        var coverStore = Substitute.For<ICoverStore>();
+        coverStore.DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new HttpRequestException("MinIO is down")));
+        var service = CreateService(dbContext, coverStore);
+
+        await service.SetCoverAsync(volumeId, CreatePng(400, 600), CancellationToken.None);
+        var detail = await service.SetCoverAsync(volumeId, CreatePng(400, 600), CancellationToken.None);
+
+        // An orphaned object is harmless; reporting a saved cover as a failure is not.
+        (await dbContext.VolumeUserStates.SingleAsync()).CoverOverrideObjectKey
+            .ShouldBe(Written(detail, volumeId).CoverObjectKey);
     }
 
     [Fact]
@@ -504,7 +631,10 @@ public sealed class VolumeCommandServiceTests
         return stream.ToArray();
     }
 
-    private static async Task<Series> SeedAsync(LnShelfDbContext dbContext, int volumeCount)
+    private static async Task<Series> SeedAsync(
+        LnShelfDbContext dbContext,
+        int volumeCount,
+        bool withSeriesState = true)
     {
         var series = new Series
         {
@@ -513,7 +643,7 @@ public sealed class VolumeCommandServiceTests
             TitleEnglish = "The Saga of Tanya the Evil",
             Format = Format.LightNovel,
             PublicationStatus = PublicationStatus.Ongoing,
-            UserState = new SeriesUserState { TrackingStatus = TrackingStatus.Reading },
+            UserState = withSeriesState ? new SeriesUserState { TrackingStatus = TrackingStatus.Reading } : null,
         };
 
         foreach (var number in Enumerable.Range(1, volumeCount))

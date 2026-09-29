@@ -48,6 +48,11 @@ public sealed class AddSeriesPipeline(
 
         WarnOnFormatDisagreement(request.Format, series.Format, flow.Source, sourceId);
 
+        if (await UnlinkedSeriesMatch.FindAsync(dbContext, series, cancellationToken) is { } unlinked)
+        {
+            return await AdoptAsync(unlinked, series, flow.Source, sourceId, cancellationToken);
+        }
+
         dbContext.Series.Add(series);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -99,6 +104,40 @@ public sealed class AddSeriesPipeline(
             stored);
     }
 
+    /// <summary>
+    /// The series is already on the shelf under the other catalogue's id; link it rather
+    /// than add a second copy of it.
+    /// </summary>
+    // Answered as already tracked, because it was: nothing new is on the shelf, and the
+    // user's state on the existing row is the whole reason not to create another. No
+    // refresh either, matching the already-tracked path above.
+    private async Task<AddSeriesResponse> AdoptAsync(
+        Series existing,
+        Series built,
+        MetadataSourceName source,
+        long sourceId,
+        CancellationToken cancellationToken)
+    {
+        UnlinkedSeriesMatch.Adopt(existing, built);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "{Source} series {SourceId} matches {TitleEnglish} ({SeriesId}) by title; linked it instead of adding a copy",
+            source,
+            sourceId,
+            existing.TitleEnglish,
+            existing.Id);
+
+        return new AddSeriesResponse
+        {
+            SeriesId = existing.Id,
+            TitleEnglish = existing.TitleEnglish,
+            Format = existing.Format,
+            VolumeCount = existing.Volumes.Count,
+            AlreadyTracked = true,
+        };
+    }
+
     /// <param name="refreshSummary">What the refresh that ran alongside the add managed.</param>
     // The counts are re-read from the entity rather than from the metadata: the refresh can
     // discover volumes the source did not know about, and reporting the number from before
@@ -147,7 +186,9 @@ public sealed class AddSeriesPipeline(
 
             return run?.Summary;
         }
-        catch (OperationCanceledException)
+        // The caller's cancellation only. A source timing out surfaces as a cancelled task
+        // too, and failing the add over it is the trade this method refuses to make.
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }

@@ -25,7 +25,7 @@ public sealed class VolumesController(
     /// the UI is a drop target, and this is where the drop lands.
     /// </summary>
     [HttpPut("{volumeId:guid}/cover")]
-    [RequestSizeLimit(8 * 1024 * 1024)]
+    [RequestSizeLimit(CoverStoreOptions.UploadCeilingBytes)]
     public async Task<ActionResult<SeriesDetailResponse>> SetCoverAsync(
         Guid volumeId,
         IFormFile file,

@@ -30,6 +30,15 @@ public sealed record VolumeFacts
     public DateOnly? ReleaseDate { get; init; }
 
     /// <summary>
+    /// Whether this source's date may replace one already on the volume, rather than only
+    /// fill an empty one.
+    /// </summary>
+    // The release-date precedence (CLAUDE.md) as data rather than as a branch on the source's
+    // name, so a third per-volume source is a mapping and not an edit to the writer: a real
+    // per-edition date, by ISBN, outranks a storefront listing's.
+    public bool MayReplaceReleaseDate { get; init; }
+
+    /// <summary>
     /// The date exactly as published, kept for the log when it was too coarse to be a date.
     /// </summary>
     public string? RawReleaseDate { get; init; }
