@@ -99,22 +99,28 @@ public static class VolumeEditionMatcher
     //
     // What separates them is *where* the number falls. A real record puts it immediately
     // after the title, optionally behind a "vol" marker — "…, Vol. 4 Under Pressure",
-    // "…Slime 16". A different series puts its own remaining words there first. Three tokens
-    // of grace is enough for every real form on this shelf and not enough for a prefix
-    // collision.
-    private const int LeadingTokenAllowance = 3;
+    // "…Slime 16". A different series puts its own words there first, and one word is
+    // enough: "Sword Art Online Progressive 3" and "Overlord Gaiden 2" are spin-offs, not
+    // volume 3 and volume 2. So nothing but a volume marker may stand before the number. A
+    // three-token allowance used to let a one-word qualifier through (audit 2026-10-09).
+    private static readonly HashSet<string> VolumeMarkers = new(StringComparer.Ordinal) { "vol", "volume" };
 
     private static bool TryReadLeadingVolumeNumber(string remainder, out int volumeNumber)
     {
         volumeNumber = 0;
 
-        foreach (var token in TitleNormalizer.Tokenize(remainder).Take(LeadingTokenAllowance))
+        foreach (var token in TitleNormalizer.Tokenize(remainder))
         {
             // Whole tokens only. A "16" inside "2016" is a year, not a volume.
             if (int.TryParse(token, CultureInfo.InvariantCulture, out var number))
             {
                 volumeNumber = number;
                 return true;
+            }
+
+            if (!VolumeMarkers.Contains(token))
+            {
+                return false;
             }
         }
 

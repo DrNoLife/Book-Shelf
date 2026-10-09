@@ -41,6 +41,10 @@ public sealed class VolumeEditionMatcherTests
     [InlineData("That Time I Got Reincarnated as a Slime", 3,
         "That Time I Got Reincarnated as a Slime: The Slime Diaries 3")]
 
+    // A spin-off whose own name is a single word before the number (audit 2026-10-09).
+    [InlineData("Sword Art Online", 3, "Sword Art Online Progressive 3 (light novel)")]
+    [InlineData("Overlord", 2, "Overlord Gaiden 2")]
+
     // No volume number at all: not evidence that it is volume 2.
     [InlineData("Torture Princess: Fremd Torturchen", 2, "Torture Princess")]
     public void Matches_ARecordThatIsNotThisVolume_IsRefused(
@@ -192,22 +196,15 @@ public sealed class VolumeEditionMatcherTests
             .ShouldBeFalse();
 
     [Fact]
-    public void TryMatchVolumeNumber_ASpinOffNumberedFromOne_IsIndistinguishableAndSaysSo()
+    public void TryMatchVolumeNumber_ASpinOffNumberedFromOne_IsRefused()
     {
-        // Flagged rather than hidden. "Alter.1" is a real Apple listing for a 86 side
-        // story, and it does put a 1 immediately after the series title — which is exactly
-        // what a genuine volume 1 looks like, so the matcher accepts it.
-        //
-        // What saves volume 1 is that the catalogue pass takes the first confirmed record
-        // per number and Apple ranks the numbered volumes above the side stories. That is a
-        // dependency on the store's ordering, and it is written down here so the next
-        // change to that pass knows it exists.
+        // "Alter.1" is a real Apple listing for an 86 side story. It used to pass as volume
+        // 1, and only Apple ranking the numbered volumes first kept it off the shelf. Now the
+        // word before the number refuses it, so that ordering is no longer load-bearing.
         VolumeEditionMatcher
             .TryMatchVolumeNumber(
-                "86―EIGHTY-SIX", Format.LightNovel, "86--EIGHTY-SIX Alter.1 (light novel)", out var number)
-            .ShouldBeTrue();
-
-        number.ShouldBe(1);
+                "86―EIGHTY-SIX", Format.LightNovel, "86--EIGHTY-SIX Alter.1 (light novel)", out _)
+            .ShouldBeFalse();
     }
 
     [Theory]
