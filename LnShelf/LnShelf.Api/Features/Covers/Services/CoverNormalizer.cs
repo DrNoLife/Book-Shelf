@@ -24,7 +24,7 @@ public sealed class CoverNormalizer(IOptions<CoverStoreOptions> options, ILogger
 
             // Loading through ImageSharp is also the validation: an upload that is not
             // an image fails here rather than being stored and served as one.
-            using var image = await Image.LoadAsync(stream, cancellationToken);
+            using var image = await Image.LoadAsync(CoverImageDecoding.Options, stream, cancellationToken);
 
             var maximum = options.Value.MaximumCoverEdge;
             if (image.Width > maximum || image.Height > maximum)

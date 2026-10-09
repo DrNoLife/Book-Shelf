@@ -36,7 +36,7 @@ public sealed class VerificationImageProbe(HttpClient httpClient, ILogger<Verifi
             var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
             using var stream = new MemoryStream(content, writable: false);
-            using var image = await Image.LoadAsync(stream, cancellationToken);
+            using var image = await Image.LoadAsync(CoverImageDecoding.Options, stream, cancellationToken);
 
             logger.LogInformation(
                 "Verified the image at {SourceUri}: {ByteCount} bytes, {Width}x{Height}",

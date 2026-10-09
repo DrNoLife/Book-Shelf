@@ -170,6 +170,20 @@ public sealed class CoverNormalizerTests
         normalized.ShouldBeNull();
     }
 
+    // Only the formats a cover arrives in are decoded (CoverImageDecoding). TIFF is the one
+    // that matters: the ImageSharp line in use has advisories against its TIFF decoder.
+    [Fact]
+    public async Task NormalizeAsync_ATiff_IsRefused()
+    {
+        using var image = new Image<Rgba32>(20, 30);
+        using var tiff = new MemoryStream();
+        await image.SaveAsync(tiff, new SixLabors.ImageSharp.Formats.Tiff.TiffEncoder());
+
+        var normalized = await Normalizer().NormalizeAsync(tiff.ToArray(), CancellationToken.None);
+
+        normalized.ShouldBeNull();
+    }
+
     [Fact]
     public async Task NormalizeAsync_AnImageThatIsTruncated_ReturnsNull()
     {
