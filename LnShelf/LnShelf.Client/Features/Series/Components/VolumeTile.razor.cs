@@ -157,15 +157,6 @@ public partial class VolumeTile
         }
     }
 
-    /// <summary>Opens the tile's own file input — the menu asks the tile to do this.</summary>
-    public async Task OpenCoverPickerAsync()
-    {
-        if (_inputFile?.Element is { } input)
-        {
-            await JavaScript.InvokeVoidAsync("lnshelf.clickElement", input);
-        }
-    }
-
     private Task OnClickAsync(MouseEventArgs args)
     {
         // The guard the disabled attribute used to be; see the markup for why it is not.

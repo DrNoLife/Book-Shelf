@@ -61,7 +61,7 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
 
         await SetCoverAsync(volumeNumber: 11);
 
-        Fixture.CoverStore.ObjectKeys.ShouldNotBeEmpty();
+        (await CoverCountAfterSaveAsync()).ShouldBeGreaterThan(0);
     }
 
     private async Task OpenSeriesAsync()
@@ -84,6 +84,19 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
 
         await chooser.SetFilesAsync(StubImageHandler.ImagePath);
         await WaitForSaveAsync();
+    }
+
+    // The upload is read from the browser in chunks before it is sent, so the network can
+    // look idle before the cover reaches the store. Polled, with the same 5 s Playwright
+    // gives its own assertions.
+    private async Task<int> CoverCountAfterSaveAsync()
+    {
+        for (var attempt = 0; attempt < 50 && Fixture.CoverStore.ObjectKeys.Count == 0; attempt++)
+        {
+            await Task.Delay(100);
+        }
+
+        return Fixture.CoverStore.ObjectKeys.Count;
     }
 
     // A write is done when nothing on the page is marked busy any more.

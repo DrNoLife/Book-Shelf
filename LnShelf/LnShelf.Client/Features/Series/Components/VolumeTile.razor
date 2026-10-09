@@ -66,8 +66,8 @@
         <span class="tile__strip"></span>
     </button>
 
-    @* Hidden, but the one path a cover arrives by: the picker opens it, and a dropped
-       file is handed to it by script so both routes upload identically. *@
+    @* Hidden, and the path a dropped cover arrives by: script hands the dropped file to
+       it. The menu's picker uses VolumeGrid's own input, which the list view has too. *@
     <InputFile class="tile__file" @ref="_inputFile" OnChange="OnFileSelectedAsync" accept="image/*" tabindex="-1" aria-hidden="true" />
 
     @* The caption, under the artwork rather than on it: the number, then whatever else

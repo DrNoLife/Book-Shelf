@@ -102,8 +102,13 @@ window.lnshelf = {
         });
     },
 
-    clickElement: function (element) {
-        if (element) element.click();
+    // Cleared first: an input still holding the last file fires no change event when the
+    // same file is picked again, so a retry after a failed upload, or after "Remove cover",
+    // silently did nothing.
+    openFilePicker: function (input) {
+        if (!input) return;
+        input.value = '';
+        input.click();
     },
 
     // The browser's own confirm, for the one action that cannot be undone. A modal built

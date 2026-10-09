@@ -33,6 +33,11 @@ public partial class VolumeGrid
     // @ref never removes an entry, so without this the dictionary grew by a whole series
     // on every navigation and held its components alive with it.
     private readonly Dictionary<Guid, VolumeTile> _tiles = [];
+    private InputFile? _coverInput;
+
+    // Which volume the open file picker is for: the input is shared, so the volume has to
+    // be remembered between asking for the picker and the file arriving.
+    private VolumeResponse? _pendingCoverVolume;
 
     private Guid _tilesSeriesId;
 
@@ -127,10 +132,24 @@ public partial class VolumeGrid
 
     private async Task OnCoverPickRequestedAsync(VolumeResponse volume)
     {
-        if (_tiles.TryGetValue(volume.VolumeId, out var tile))
+        if (_coverInput?.Element is not { } input)
         {
-            await tile.OpenCoverPickerAsync();
+            return;
         }
+
+        _pendingCoverVolume = volume;
+        await JavaScript.InvokeVoidAsync("lnshelf.openFilePicker", input);
+    }
+
+    private Task OnCoverPickedAsync(InputFileChangeEventArgs args)
+    {
+        if (_pendingCoverVolume is not { } volume)
+        {
+            return Task.CompletedTask;
+        }
+
+        _pendingCoverVolume = null;
+        return OnCoverSelectedAsync((volume, args.File));
     }
 
     private async Task OnCoverSelectedAsync((VolumeResponse Volume, IBrowserFile File) selection)

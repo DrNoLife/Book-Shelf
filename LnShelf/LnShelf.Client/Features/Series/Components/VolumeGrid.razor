@@ -53,6 +53,16 @@
         }
     </div>
 
+    @* The menu's "Set cover…" opens this input, not a tile's: the list view offers the same
+       menu and has no tiles to borrow one from, so picking used to do nothing there. A
+       dropped file still goes through the tile it was dropped on. *@
+    <InputFile class="volumes__cover-input"
+               @ref="_coverInput"
+               OnChange="OnCoverPickedAsync"
+               accept="image/*"
+               tabindex="-1"
+               aria-hidden="true" />
+
     @if (OpenVolume is { } openVolume && _placement is { } placement)
     {
         <VolumePopover Volume="openVolume"

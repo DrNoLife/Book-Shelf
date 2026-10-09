@@ -46,3 +46,14 @@
      still lands three across on a phone and seven on a tablet. */
   .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }
+
+/* The cover picker's input exists in the DOM but is never seen, for the same reason as
+   the tile's own (VolumeTile.razor.css): InputFile renders the browser's "Choose file"
+   button otherwise. */
+.volumes ::deep .volumes__cover-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
