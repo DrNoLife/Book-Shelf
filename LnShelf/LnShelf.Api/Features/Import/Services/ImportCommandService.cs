@@ -100,6 +100,21 @@ public sealed class ImportCommandService(
                             && group.MatchedAniListId is not null)
             .ToList();
 
+        // Checked for every series before anything is written, for the same reason the
+        // waiting groups are: a refusal halfway through would leave half a batch applied.
+        var unplaceable = toApply
+            .GroupBy(group => group.MatchedAniListId!.Value)
+            .SelectMany(UnplaceableBookFinder.Find)
+            .ToList();
+
+        if (unplaceable.Count > 0)
+        {
+            throw new ConflictException(
+                $"{unplaceable.Count} book(s) have no volume number, but the series they were matched to " +
+                $"has numbered volumes, so there is no volume to put them on: {string.Join("; ", unplaceable)}. " +
+                "Skip their group or match it to another series, then commit again.");
+        }
+
         var counters = new ImportWriteCounters();
         var appliedAt = timeProvider.GetUtcNow();
 

@@ -145,6 +145,49 @@ public sealed class ImportCommandServiceTests
         (await dbContext.ImportBatches.SingleAsync()).CommittedAt.ShouldNotBeNull();
     }
 
+    // An unparsed title resolved to a series whose other books are numbered used to be
+    // written as volume 1, over volume 1's own state (audit 2026-10-09).
+    [Fact]
+    public async Task CommitAsync_UnnumberedBookBesideNumberedVolumes_IsRefusedAndWritesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+        var batch = await SeedBatchAsync(dbContext);
+        var unparsed = new ImportGroup
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesKey = "overlord official fanbook",
+            SeriesTitle = "Overlord Official Fanbook",
+            Status = ImportGroupStatus.NeedsReview,
+            Reason = ImportReviewReason.NoCandidate,
+            TreatReadAsOwned = true,
+        };
+        unparsed.Rows.Add(new ImportRow
+        {
+            Id = Guid.CreateVersion7(),
+            LineNumber = 5,
+            RawTitle = "Overlord Official Fanbook",
+            VolumeNumber = null,
+            ReadStatus = ReadStatus.Read,
+            OwnedInExport = false,
+        });
+        batch.Groups.Add(unparsed);
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        foreach (var group in batch.Groups)
+        {
+            await service.ResolveGroupAsync(
+                group.Id, new ResolveImportGroupRequest { AniListId = NovelAniListId }, CancellationToken.None);
+        }
+
+        var act = async () => await service.CommitAsync(batch.Id, CancellationToken.None);
+
+        var exception = await act.ShouldThrowAsync<ConflictException>();
+        exception.Message.ShouldContain("Overlord Official Fanbook");
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+        (await dbContext.ImportBatches.SingleAsync()).CommittedAt.ShouldBeNull();
+    }
+
     [Fact]
     public async Task CommitAsync_ASkippedGroup_WritesNothingForIt()
     {

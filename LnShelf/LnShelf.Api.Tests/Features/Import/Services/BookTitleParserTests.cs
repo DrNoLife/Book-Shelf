@@ -64,6 +64,54 @@ public sealed class BookTitleParserTests
         parsed.VolumeNumber.ShouldBe(expectedVolumeNumber);
     }
 
+    /// <summary>
+    /// Publisher spellings with a format tag (audit 2026-10-09). Before the fix every one
+    /// of these fell through as a one-book series named after the whole title.
+    /// </summary>
+    public static TheoryData<string, string, int?, string?> FormatTaggedTitles => new()
+    {
+        // The tag after the number, with and without a subtitle after it.
+        { "Overlord, Vol. 1 (light novel)", "Overlord", 1, null },
+        { "Overlord, Vol. 14 (light novel): The Witch of the Falling Kingdom", "Overlord", 14, "The Witch of the Falling Kingdom" },
+
+        // The tag before the marker, leaving no comma in front of "Vol.".
+        { "Mushoku Tensei (Light Novel) Vol. 3", "Mushoku Tensei", 3, null },
+        { "Mushoku Tensei: Jobless Reincarnation (Light Novel) Vol. 10", "Mushoku Tensei: Jobless Reincarnation", 10, null },
+
+        // A bare number, trusted only because the tag says this is a volume.
+        { "Sword Art Online 1 (light novel): Aincrad", "Sword Art Online", 1, "Aincrad" },
+
+        // The other tags the pattern accepts.
+        { "Frieren: Beyond Journey's End, Vol. 2 (manga)", "Frieren: Beyond Journey's End", 2, null },
+        { "Spice and Wolf, Vol. 4 (novel)", "Spice and Wolf", 4, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(FormatTaggedTitles))]
+    public void Parse_FormatTaggedTitle_DropsTheTagAndFindsTheVolume(
+        string rawTitle, string expectedSeriesTitle, int? expectedVolumeNumber, string? expectedSubtitle)
+    {
+        var parsed = BookTitleParser.Parse(rawTitle);
+
+        parsed.SeriesTitle.ShouldBe(expectedSeriesTitle);
+        parsed.VolumeNumber.ShouldBe(expectedVolumeNumber);
+        parsed.Subtitle.ShouldBe(expectedSubtitle);
+    }
+
+    [Theory]
+    // Only a whole "Vol" counts, so a word that starts with it is never a volume marker,
+    // and a title's own parentheses are not a format tag.
+    [InlineData("Revolution 3", "Revolution 3")]
+    [InlineData("The Volcano Diaries", "The Volcano Diaries")]
+    [InlineData("Catch 22 (Anniversary Edition)", "Catch 22 (Anniversary Edition)")]
+    public void Parse_TitleWithoutAVolumeMarker_IsNotSplit(string rawTitle, string expectedSeriesTitle)
+    {
+        var parsed = BookTitleParser.Parse(rawTitle);
+
+        parsed.SeriesTitle.ShouldBe(expectedSeriesTitle);
+        parsed.VolumeNumber.ShouldBeNull();
+    }
+
     [Fact]
     public void Parse_PartNumberedTitle_KeepsThePartNumberSeparatelyToo()
     {
