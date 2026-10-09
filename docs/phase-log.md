@@ -6,6 +6,58 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Audit, browser journeys and eight fixes (2026-10-09, unreleased)
+
+**A read-only audit first.** Eight areas (import, search, sync, shelf, client, data,
+infra, build and tests), every finding then argued against by a reviewer told to refute
+it. 33 confirmed, none critical or high; the full list with evidence is in
+`.research/audit-2026-10-09.md`. Build and all 1256 tests were green going in.
+
+**`LnShelf.EndToEnd.Tests`, browser journeys.** The real composition root on Kestrel
+through `WebApplicationFactory<Program>` (hence `public partial class Program`), a
+Testcontainers Postgres reset by Respawn and reseeded with the fixture library, and the
+*published* client bundle served same-origin by a startup filter that copies nginx's
+`try_files`. Every external source is faked at its seam; AniList answers from the
+captured fixtures through the production mapper, covers live in memory (no MinIO), and
+`CoverFetcher` gets a stub handler. Eight journeys, written red first for the bugs they
+pin. Out of the default `dotnet test` run (`IsTestProject` unless `RunEndToEnd=true`), in
+its own CI job. A test for re-picking the same cover file was written and then removed:
+Playwright's `SetInputFiles` fires `change` regardless, so it passed without the fix and
+could not fail.
+
+**Fixed, each with a test that failed first:**
+- Import: `(light novel)`, `(novel)` and `(manga)` tags, and "Vol." after a space, broke
+  title parsing, so such books became one-book series. A book with no volume number
+  beside numbered volumes is now refused at commit instead of overwriting volume 1
+  **[flagged — refuse, not guess]**.
+- "Set cover…" did nothing in the list view; the grid now owns the picker input. The
+  input is cleared before opening, so the same file can be picked again.
+- MangaUpdates publication status is read from the line its count came from.
+- The sidebar shows the last finished whole-shelf sweep (`SyncRun.CoversWholeShelf`,
+  migration backfills by summary lead).
+- Sync creates every missing volume number up to the source count, not only those above
+  the highest tracked.
+- The edition matcher accepts a number only behind "vol"/"volume", so "Progressive 3",
+  "Gaiden 2" and "Alter.1" are refused.
+- A store may correct an announced date it wrote itself (`Volume.ReleaseDateSource`);
+  unreleased volumes keep the catalogue pass asking **[flagged — one catalogue request
+  a night per series with announced volumes]**.
+- ImageSharp 3.1.12's advisories broke a fresh restore; covers now decode JPEG, PNG,
+  WebP and GIF only and the advisories are suppressed by id (backlog §7).
+
+**Made ready to be public.** MIT license and a README. No host address, account, default
+production password or personal address remains in the tree: `deploy.ps1` takes the
+server from parameters or `LNSHELF_DEPLOY_*`, the production compose requires
+`POSTGRES_PASSWORD` and `MINIO_ROOT_PASSWORD` from the server's `.env`, and the Open
+Library contact is `OPENLIBRARY_CONTACT_EMAIL`. **The server needs that `.env` before
+the next deploy.** No credential was ever committed. Git history still carries a
+personal address and is to be rewritten once, just before the repository goes public.
+
+**Next:** login as OpenID Connect inside the API, which supersedes §7's proxy-level
+design (being designed), then the open low-severity findings.
+
+---
+
 ## v0.16.0 — what to buy, and what you've read (2026-09-29)
 
 **Two pages that were dimmed in the nav are real.** `Features/Releases` (API) serves

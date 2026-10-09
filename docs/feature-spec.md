@@ -161,8 +161,12 @@ The series/volume tracking domain.
   - idempotent upserts keyed on external ids; **never writes user-state
     columns**
   - produces a run summary (series refreshed, dates moved, new volumes,
-    failures) persisted as the latest-sync record → surfaces in the sidebar
-    ("Synced 04:12 · 6 release dates moved") and the series-detail sync note
+    failures) persisted as a sync run → surfaces in the sidebar
+    ("Synced 04:12 · 6 release dates moved") and the series-detail sync note.
+    **[amended 2026-10-09]** The sidebar shows the last *finished whole-shelf*
+    sweep (`SyncRun.CoversWholeShelf`), not the newest run: the one-series
+    refresh that runs when a series is added, or a sweep still in flight, used to
+    replace the nightly summary and hide its items to review.
   - sets the per-series *new volume* flag when a previously-unseen released
     volume appears; flag clears when the user visits the series or marks it
     owned.
@@ -195,6 +199,10 @@ The series/volume tracking domain.
   not duplicated (keyed on AniList id after match).
 - Every mismatch found during the real import becomes a regression test case
   (testing.md).
+- **[added 2026-10-09]** A book with no volume number lands on volume 1 only when
+  its series has no numbered books. Matched to a series that does, it is refused at
+  commit with its title named, because there is no volume to put it on and folding
+  it into volume 1 overwrote that volume's state.
 
 **Two sources behind one seam** (**[added 2026-09-06]**). The upload carries no
 source parameter: `ImportSourceResolver` reads the file's header line and hands it
@@ -202,7 +210,9 @@ to the one `IShelfImporter` that recognises it (none, or more than one, is a 400
 guessing would stage the user's history through the wrong reader). Goodreads
 exports are read alongside StoryGraph's, using nine of that file's 24 columns:
 Title (with Goodreads' `(light novel)`-style edition marker stripped before the
-shared title parser sees it), Author, Additional Authors (first entry taken as the
+shared title parser sees it; **[amended 2026-10-09]** the shared parser now drops a
+`(light novel)`, `(novel)` or `(manga)` tag itself, wherever it sits, so StoryGraph
+rows written the same way parse too), Author, Additional Authors (first entry taken as the
 illustrator), ISBN13 then ISBN as fallback (both unwrapped from the `="…"` Excel
 armour Goodreads writes), Binding → owned format, Date Read, Exclusive Shelf →
 read status, and Owned Copies (any positive count is owned). Date Added, Read
@@ -285,9 +295,17 @@ Series
   LastSyncedAt
 
 Volume
-  Id, SeriesId (FK), Number, ReleaseDate (nullable), IsReleased,
-  Isbn (nullable), Title (nullable),
+  Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),
+  IsReleased, Isbn (nullable), Title (nullable),
   CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly
+
+  -- ReleaseDateSource [added 2026-10-09] is provenance for the one field two
+  -- per-volume sources compete over. Open Library (by ISBN) may replace any date;
+  -- a source may also correct a date it wrote itself, which is how a publisher
+  -- moving an announced volume reaches the shelf; a date of unknown origin (seed,
+  -- import, or written before provenance) on a volume not yet out counts as an
+  -- announcement. A store never replaces Open Library's date, so the two cannot
+  -- take turns overnight.
 
   -- Isbn is source metadata, and the written justification a stored field needs:
   -- it is the only key per-volume enrichment works by (§4.2), it cannot be derived
@@ -331,7 +349,7 @@ VolumeUserState
   CoverOverrideObjectKey (nullable)
 
 SyncRun
-  Id, StartedAt, FinishedAt, SeriesRefreshed, SeriesLinked, DatesMoved,
+  Id, StartedAt, FinishedAt, CoversWholeShelf, SeriesRefreshed, SeriesLinked, DatesMoved,
   VolumesMarkedReleased, VolumesEnriched, VolumeCoversCached, EnrichmentGaps,
   EnrichmentFailures, NewVolumes, Failures, Summary (text)
   -- EnrichmentGaps is reported rather than hidden: enriching 52 of 60 volumes

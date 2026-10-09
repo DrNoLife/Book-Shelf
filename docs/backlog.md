@@ -114,6 +114,14 @@ notification — which un-parks only if spike #1 delivers dates.
 
 ## 7. Sundry, when passing by
 
+- **ImageSharp 3.1.12 advisories [flagged, 2026-10-09].** Five published advisories,
+  suppressed by id in `LnShelf/Directory.Build.props` with the reason each does not
+  apply (covers decode JPEG, PNG, WebP and GIF only). The fix is 4.1.2+, which needs a
+  Six Labors license key at build time; a free community licence can be applied for.
+  Upgrade and delete the suppressions once a key is in hand (CI needs it as a secret).
+- **Low-severity findings from the 2026-10-09 audit** are listed in
+  `.research/audit-2026-10-09.md`. The medium ones are fixed; the rest are open.
+
 - Library "type to filter" could grow fuzzy matching if the shelf ever gets
   big enough to need it.
 - Cover ingest currently one size class; thumbnail generation only on a
@@ -157,6 +165,8 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   deploy tarballs, build MinIO from source, or move `ICoverStore` to another
   S3-compatible store (the seam makes that one new implementation). Owner's call.
 - The e2e check against the four canary series (Slime, 86, Torture Princess,
-  Overlord) runs against a throwaway database; nothing scripts it yet.
+  Overlord) runs against a throwaway database; nothing scripts it yet. (Unrelated to
+  `LnShelf.EndToEnd.Tests`, which drives the UI against faked sources and never
+  reaches the live APIs.)
 - feature-spec §7's internal proxy header (`X-LnShelf-Internal`) is designed and
   documented but implemented nowhere — neither nginx nor the API knows the name.
