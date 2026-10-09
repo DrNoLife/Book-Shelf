@@ -29,3 +29,35 @@ jobs:
 
       - name: Format check
         run: dotnet format LnShelf/LnShelf.slnx --verify-no-changes --no-restore
+
+  # The browser journeys (LnShelf.EndToEnd.Tests). After build-test, so a broken build
+  # fails once and cheaply instead of also spending a browser install. Needs Docker for
+  # the Testcontainers Postgres, which ubuntu runners have.
+  end-to-end:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build LnShelf/LnShelf.slnx -c Release
+
+      - name: Publish the client bundle
+        run: dotnet publish LnShelf/LnShelf.Client -c Release
+
+      - name: Install Chromium
+        run: pwsh LnShelf/LnShelf.EndToEnd.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Journeys
+        run: dotnet test LnShelf/LnShelf.EndToEnd.Tests -c Release --no-build -p:RunEndToEnd=true
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: LnShelf/LnShelf.EndToEnd.Tests/bin/Release/net10.0/playwright-traces/

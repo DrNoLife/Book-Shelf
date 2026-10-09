@@ -1,0 +1,14 @@
+global using LnShelf.Api.Features.Covers.Abstractions;
+global using LnShelf.Api.Features.Covers.Models;
+global using LnShelf.Api.Features.Covers.Services;
+global using LnShelf.Api.Features.Metadata.Abstractions;
+global using LnShelf.Api.Features.Metadata.Mappers;
+global using LnShelf.Api.Features.Metadata.Models;
+global using LnShelf.Api.Features.Metadata.Models.AniList;
+global using LnShelf.Api.Features.Metadata.Services;
+global using LnShelf.EndToEnd.Tests.Fakes;
+global using LnShelf.EndToEnd.Tests.Harness;
+global using LnShelf.Shared.Shelf;
+global using Microsoft.Playwright;
+global using Shouldly;
+global using Xunit;

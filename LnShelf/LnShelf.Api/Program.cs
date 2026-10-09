@@ -59,3 +59,7 @@ if (commandLine.Name is not null)
 
 await app.RunAsync();
 return 0;
+
+// Visible so the end-to-end tests can host this exact composition root through
+// WebApplicationFactory<Program>; top-level statements make the class internal.
+public partial class Program;

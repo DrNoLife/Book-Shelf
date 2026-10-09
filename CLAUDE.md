@@ -266,6 +266,9 @@ Repo root holds `CLAUDE.md`, `.claude/`, `docs/`, `docker-compose.yml`,
   production; nginx proxies `/api/*` to `LnShelf.Api`)
 - `LnShelf.Shared` — request/response contracts shared between server and client
 - `LnShelf.Api.Tests` — test project (mirrors the source layout)
+- `LnShelf.EndToEnd.Tests` — browser journeys (Playwright) against the real API on
+  Kestrel, a Testcontainers Postgres and fakes at the metadata seams. Journeys only,
+  per testing.md: no per-component tests.
 
 **Deliberate simplification vs. the enterprise template:** no separate
 Core/Application/Infrastructure projects. One user, one deployable, no
@@ -373,6 +376,13 @@ dotnet format LnShelf/LnShelf.slnx                    # style/analyzer fixes
 dotnet test  LnShelf/LnShelf.slnx                     # all tests
 dotnet test  LnShelf/LnShelf.Api.Tests                # one project
 dotnet test  LnShelf/LnShelf.slnx --filter "FullyQualifiedName~LnShelf.Api.Tests.Shelf"   # subset
+
+# Browser journeys (LnShelf.EndToEnd.Tests): skipped by the runs above on purpose.
+# Needs Docker running (Testcontainers Postgres) and, once, a Chromium install.
+dotnet publish LnShelf/LnShelf.Client -c Release
+pwsh LnShelf/LnShelf.EndToEnd.Tests/bin/Release/net10.0/playwright.ps1 install chromium   # once
+dotnet test  LnShelf/LnShelf.EndToEnd.Tests -c Release -p:RunEndToEnd=true
+# LNSHELF_HEADED=true shows the browser; traces land in bin/.../playwright-traces/.
 
 dotnet run --project LnShelf/LnShelf.Api              # run the API
 dotnet run --project LnShelf/LnShelf.Client           # run the WASM client (dev)
