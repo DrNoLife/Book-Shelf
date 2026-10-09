@@ -14,6 +14,19 @@ public partial class Sidebar : IDisposable
     [Inject]
     public required NavigationManager Navigation { get; set; }
 
+    [Inject]
+    public required HttpClient Http { get; set; }
+
+    /// <summary>
+    /// Ends the session, then leaves the app for a static page. Landing back in the app would
+    /// ask the API for the library, get a 401 and sign straight back in through the provider.
+    /// </summary>
+    private async Task OnSignOutAsync()
+    {
+        await Http.PostAsync("api/auth/logout", content: null);
+        Navigation.NavigateTo("signed-out.html", forceLoad: true);
+    }
+
     private SyncSummaryResponse? LatestSync => SyncState.Latest;
 
     /// <summary>

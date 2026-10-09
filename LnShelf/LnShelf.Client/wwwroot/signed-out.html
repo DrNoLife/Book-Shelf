@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- A static page, outside the Blazor app on purpose: the app asks the API for the
+     library on load, and with no session that would send the browser straight back
+     through the provider's login, which with a live provider session signs you in again. -->
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signed out · LN Shelf</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+    <main class="boot">
+        <p>You are signed out of LN Shelf.</p>
+        <p><a href="api/auth/login?returnUrl=%2F">Sign in again</a></p>
+    </main>
+</body>
+
+</html>

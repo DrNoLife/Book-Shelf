@@ -42,8 +42,10 @@ param(
         if (Test-Path $projectKey) { $projectKey } else { "$env:USERPROFILE\.ssh\id_hearth" }
     ),
 
-    # The client's published port on the server (docker-compose.production.yml).
-    [string]$Url       = '',
+    # Where the app is reached. With login on, that is the HTTPS hostname registered with
+    # the provider; the default is the client's published port, which proves the stack is
+    # up but cannot complete a login.
+    [string]$Url       = $env:LNSHELF_DEPLOY_URL,
     [string]$ApiTag    = 'lnshelf-api:latest',
     [string]$ClientTag = 'lnshelf-client:latest'
 )
@@ -118,19 +120,20 @@ finally {
 }
 
 Write-Host '==> Verifying…' -ForegroundColor Cyan
-# The shell first — nginx serving index.html. Then the library through the proxy, which is the only
-# check that proves all three of nginx, the API and Postgres are actually talking.
+# The shell first — nginx serving index.html. Then the health endpoint through the proxy, the one
+# API route open without signing in; it answers 200 only when the API can reach Postgres, so it
+# proves nginx, the API and the database are all talking.
 $shellOk = Wait-ForHttpOk -Uri $Url
-$apiOk   = $shellOk -and (Wait-ForHttpOk -Uri "$Url/api/library" -Attempts 10)
+$apiOk   = $shellOk -and (Wait-ForHttpOk -Uri "$Url/api/health" -Attempts 10)
 
 $stopwatch.Stop()
 $seconds = $stopwatch.Elapsed.TotalSeconds
 
 if ($shellOk -and $apiOk) {
-    Write-Host ("==> Deployed in {0:n0}s. {1} is up and the library reads through the proxy. Hard-refresh the browser (cached index.html)." -f $seconds, $Url) -ForegroundColor Green
+    Write-Host ("==> Deployed in {0:n0}s. {1} is up and the API and database answer through the proxy. Hard-refresh the browser (cached index.html)." -f $seconds, $Url) -ForegroundColor Green
 }
 elseif ($shellOk) {
-    Write-Warning ("The shell at {0} is up, but {0}/api/library did not return 200. Check the api container: ssh {1} 'cd {2} && docker compose logs api --tail 50'." -f $Url, $target, $RemoteDir)
+    Write-Warning ("The shell at {0} is up, but {0}/api/health did not return 200. Check the api container: ssh {1} 'cd {2} && docker compose logs api --tail 50'." -f $Url, $target, $RemoteDir)
     # Non-zero, so a scripted deploy does not report success for an API that is down.
     exit 1
 }

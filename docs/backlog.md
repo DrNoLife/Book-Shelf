@@ -168,5 +168,3 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   Overlord) runs against a throwaway database; nothing scripts it yet. (Unrelated to
   `LnShelf.EndToEnd.Tests`, which drives the UI against faked sources and never
   reaches the live APIs.)
-- feature-spec §7's internal proxy header (`X-LnShelf-Internal`) is designed and
-  documented but implemented nowhere — neither nginx nor the API knows the name.

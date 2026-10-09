@@ -24,6 +24,7 @@ builder.Services.AddImport(builder.Configuration);
 builder.Services.AddPreferences();
 builder.Services.AddReleases();
 builder.Services.AddStats();
+builder.Services.AddAuth(builder.Configuration, builder.Environment);
 
 // Development only. In production nginx serves the client and proxies /api/*, so
 // browser and API share one origin and no CORS policy exists (feature-spec §2).
@@ -35,6 +36,10 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// First, so everything after it sees the scheme and address the browser used rather than
+// nginx's (Features/Auth: secure cookies and the provider's redirect URI depend on it).
+app.UseForwardedHeaders();
+
 // Services throw and nothing catches on the way up; this turns what arrives here
 // into a ProblemDetails response (CLAUDE.md — Error handling).
 app.UseExceptionHandler();
@@ -44,6 +49,10 @@ if (app.Environment.IsDevelopment())
     var clientOrigin = builder.Configuration["Development:ClientOrigin"] ?? "http://localhost:5081";
     app.UseCors(policy => policy.WithOrigins(clientOrigin).AllowAnyHeader().AllowAnyMethod());
 }
+
+// After CORS, so a preflight from the development client is answered before it is
+// asked to sign in.
+app.UseAuth();
 
 // No HTTPS redirection: TLS terminates at the reverse proxy (feature-spec §2).
 app.MapControllers();

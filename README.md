@@ -9,7 +9,8 @@ Metadata comes from public sources (AniList, MangaUpdates, Open Library and the 
 Books catalogue) and is refreshed every night. Your own reading and ownership state lives
 in a local Postgres database, and sync never touches it.
 
-It is a single-user hobby project, run on a home server.
+It is a single-user hobby project, run on a home server. One person signs in, with
+Google or any other OpenID Connect provider.
 
 ## Features
 
@@ -58,7 +59,9 @@ dotnet run --project LnShelf/LnShelf.Api               # API, applies migrations
 dotnet run --project LnShelf/LnShelf.Client            # WASM dev server on :5081
 ```
 
-To get something to look at straight away, start the API with
+In development you are signed in automatically (`Auth:DevelopmentBypass` in
+`appsettings.Development.json`, refused outside Development). To get something to look at
+straight away, start the API with
 `Shelf__SeedDevelopmentFixture=true`: it then seeds a 24-series fixture library into an
 empty database. The nightly sync is off unless `Sync__Enabled=true`.
 
@@ -92,12 +95,36 @@ written to `bin/Release/net10.0/playwright-traces/`.
 `deploy.ps1` builds both images locally, copies them to the server over SSH and restarts
 the stack there with [`docker-compose.production.yml`](docker-compose.production.yml).
 
+### Login
+
+The API runs the OpenID Connect login itself and keeps the session in a cookie; only the
+address in `AUTH_ALLOWED_EMAIL` gets in. Google only allows sign-in redirects to `https://`
+addresses (or `http://localhost`), so the app needs a hostname with TLS in front of it,
+for example a reverse proxy such as Caddy or Traefik forwarding to port 8091.
+
+To set up Google:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create a project and
+   configure the OAuth consent screen (External, in testing, with yourself as a test user).
+2. Under *Credentials*, create an *OAuth client ID* of type *Web application*.
+3. Add the authorised redirect URI `https://<your host>/api/auth/callback`.
+4. Put the client id and secret in the server's `.env` (below).
+
+Any other OpenID Connect provider works the same way; set `AUTH_AUTHORITY` to its issuer.
+
+### Server configuration
+
 On the server, put a `.env` next to the compose file. The stack refuses to start without
-the two passwords:
+everything that is not marked optional:
 
 ```dotenv
 POSTGRES_PASSWORD=change-me
 MINIO_ROOT_PASSWORD=change-me-too
+AUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+AUTH_CLIENT_SECRET=your-client-secret
+AUTH_ALLOWED_EMAIL=you@example.com
+# Optional: another OpenID Connect issuer than Google.
+# AUTH_AUTHORITY=https://accounts.google.com
 # Optional: Open Library asks API users for a contact address in the User-Agent.
 OPENLIBRARY_CONTACT_EMAIL=
 ```
@@ -105,15 +132,13 @@ OPENLIBRARY_CONTACT_EMAIL=
 Then, from your machine:
 
 ```powershell
-./deploy.ps1 -Server <server address> -User <ssh user>
-# or set LNSHELF_DEPLOY_SERVER and LNSHELF_DEPLOY_USER once
+./deploy.ps1 -Server <server address> -User <ssh user> -Url https://<your host>
+# or set LNSHELF_DEPLOY_SERVER, LNSHELF_DEPLOY_USER and LNSHELF_DEPLOY_URL once
 ```
 
-The client is published on port 8091. Migrations run when the API starts.
-
-> **Authentication is not built yet.** Everything, including `/api`, is open to whoever
-> can reach port 8091. Run it on a network you trust until login lands (OpenID Connect,
-> in progress).
+The client is published on port 8091 for the TLS proxy to forward to. Migrations run
+when the API starts, and the deploy checks `/api/health`, the one endpoint open without
+signing in.
 
 ## Configuration
 
@@ -124,6 +149,8 @@ are most likely to change:
 | Setting | Default | Purpose |
 |---|---|---|
 | `ConnectionStrings__Db` | (none) | Postgres connection string |
+| `Auth__ClientId`, `Auth__ClientSecret`, `Auth__AllowedEmail` | (none) | Login: the OpenID Connect client and the one address allowed in |
+| `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
 | `Covers__Endpoint`, `Covers__AccessKey`, `Covers__SecretKey`, `Covers__Bucket` | `localhost:9000`, empty, empty, `lnshelf-covers` | Cover storage (S3/MinIO) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |
 | `OpenLibrary__ContactEmail` | empty | Contact address sent to Open Library |

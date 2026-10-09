@@ -8,8 +8,7 @@ namespace LnShelf.EndToEnd.Tests.Harness;
 /// <summary>
 /// Plays nginx for the test host: serves the published client bundle and falls back to
 /// index.html for client routes, so the browser and <c>/api</c> share one origin exactly
-/// as in production (nginx.conf). This is also where a proxy-injected auth header goes
-/// once feature-spec §7's internal header exists.
+/// as in production (nginx.conf).
 /// </summary>
 public sealed class ClientBundleStartupFilter(string bundlePath) : IStartupFilter
 {

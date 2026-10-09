@@ -52,10 +52,10 @@ public sealed class EndToEndFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// The only place a browser context is created, so a login or stored auth state
-    /// lands here once the app has one.
+    /// A browser context signed in as the owner, unless <paramref name="signedIn"/> is false.
+    /// The only place a context is created, so the login lives in one place.
     /// </summary>
-    public async Task<IBrowserContext> NewContextAsync()
+    public async Task<IBrowserContext> NewContextAsync(bool signedIn = true)
     {
         var browser = _browser ?? throw new InvalidOperationException("The fixture has not been initialised.");
 
@@ -63,6 +63,14 @@ public sealed class EndToEndFixture : IAsyncLifetime
         {
             BaseURL = Factory.BaseAddress.ToString(),
         });
+
+        // The context's request API shares its cookie jar, so the session cookie set here is
+        // the one every page in the context sends.
+        if (signedIn)
+        {
+            var response = await context.APIRequest.GetAsync(TestSignInStartupFilter.SignInPath);
+            response.Ok.ShouldBeTrue($"The test sign-in answered {response.Status}.");
+        }
 
         await context.Tracing.StartAsync(new TracingStartOptions { Screenshots = true, Snapshots = true });
 

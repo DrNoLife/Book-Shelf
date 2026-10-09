@@ -18,6 +18,8 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
     // instead of reaching AniList, MangaUpdates, Open Library or Apple Books.
     private const string UnreachableEndpoint = "http://127.0.0.1:9/";
 
+    public const string OwnerEmail = "owner@example.com";
+
     private readonly string _connectionString;
     private readonly string _bundlePath;
 
@@ -56,6 +58,14 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
         builder.UseSetting("OpenLibrary:CoverEndpoint", UnreachableEndpoint);
         builder.UseSetting("AppleBooks:Endpoint", UnreachableEndpoint);
 
+        // The real cookie and OpenID Connect schemes, configured but never contacted: the
+        // journeys sign in through TestSignInStartupFilter instead. HTTPS because the handler
+        // refuses plain-HTTP metadata, and unreachable for the same reason as the sources.
+        builder.UseSetting("Auth:Authority", "https://127.0.0.1:9/");
+        builder.UseSetting("Auth:ClientId", "end-to-end");
+        builder.UseSetting("Auth:ClientSecret", "end-to-end");
+        builder.UseSetting("Auth:AllowedEmail", OwnerEmail);
+
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<ISeriesMetadataSource>();
@@ -75,6 +85,9 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
             services.AddSingleton<ICoverStore>(CoverStore);
             services.AddHttpClient<CoverFetcher>().ConfigurePrimaryHttpMessageHandler(() => new StubImageHandler());
 
+            // Sign-in first: the bundle filter sends every extensionless non-API path to
+            // index.html, and the test sign-in path is one.
+            services.AddSingleton<IStartupFilter, TestSignInStartupFilter>();
             services.AddSingleton<IStartupFilter>(new ClientBundleStartupFilter(_bundlePath));
         });
     }

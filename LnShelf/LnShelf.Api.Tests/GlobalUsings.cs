@@ -1,5 +1,7 @@
 global using System.Globalization;
 global using System.Text;
+global using LnShelf.Api.Features.Auth.Models;
+global using LnShelf.Api.Features.Auth.Services;
 global using LnShelf.Api.Features.Changelog.Services;
 global using LnShelf.Api.Features.Covers.Abstractions;
 global using LnShelf.Api.Features.Covers.Models;

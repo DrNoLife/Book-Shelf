@@ -83,6 +83,13 @@ services:
       # Optional. Open Library asks API users for a contact address in the User-Agent;
       # empty sends the anonymous one (LnShelfUserAgent).
       OpenLibrary__ContactEmail: "${OPENLIBRARY_CONTACT_EMAIL:-}"
+      # Login (feature-spec §7): the OpenID Connect client registered with the provider,
+      # and the one address allowed in. All three are required; the API refuses to start
+      # without them. AUTH_AUTHORITY defaults to Google.
+      Auth__Authority: "${AUTH_AUTHORITY:-https://accounts.google.com}"
+      Auth__ClientId: "${AUTH_CLIENT_ID:?Set AUTH_CLIENT_ID in the .env next to docker-compose.yml}"
+      Auth__ClientSecret: "${AUTH_CLIENT_SECRET:?Set AUTH_CLIENT_SECRET in the .env next to docker-compose.yml}"
+      Auth__AllowedEmail: "${AUTH_ALLOWED_EMAIL:?Set AUTH_ALLOWED_EMAIL in the .env next to docker-compose.yml}"
     # No healthcheck: the aspnet runtime image ships no curl or wget, and adding
     # one to the image to satisfy compose is not worth it. deploy.ps1 polls
     # /api/library through the client instead, which proves more anyway.
@@ -100,7 +107,6 @@ services:
     ports:
       - "8091:80"
 
-# Auth (§7) is not built yet — this stack is LAN-only until it is.
 volumes:
   lnshelf-pgdata:
   lnshelf-minio:

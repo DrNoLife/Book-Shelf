@@ -67,7 +67,7 @@ Four containers, one compose file:
 | Storage abstraction | **[decision]** `ICoverStore` seam; MinIO is the first implementation | keeps local-disk or another S3 target as pure config/impl swap. (FluentStorage is an acceptable implementation detail behind the seam if it earns its keep; the seam is the requirement, the library isn't.) |
 | Caching | `HybridCache` | see §8 — L1 (in-process `MemoryCache`) only; no distributed L2, single instance means it would be ceremony |
 | Background work | one `BackgroundService` (nightly sync) | no Hangfire (CLAUDE.md) |
-| Auth | proxy-level auth over the shared origin (session cookie) + internal proxy-injected header on the API | see §7 — never a key in the client bundle; single user, no identity provider |
+| Auth | **[decision, 2026-10-09]** OpenID Connect in the API (Google by default) behind a cookie session; one allowed address | see §7 — never a token in the client bundle; single user, no user table |
 | Observability | structured logs + the sync summary; nothing more in v1 | |
 
 **A note on MinIO [decision, flagged]:** for one user and a few thousand
@@ -445,25 +445,54 @@ rendered, not an edit the reader made.
 
 ## 7. Auth
 
-**A static bearer key cannot work here** — the client is a public static
-bundle, so anything it ships is readable by whoever loads the page. The
-model instead:
+**[rewritten 2026-10-09]** The first design put auth in the proxy (basic auth or
+forward-auth) with an internal header on the API, and kept the app free of login
+code. The owner reversed that: login lives in the API, so it is versioned, tested
+and deployed with the app. The internal header was never implemented and is gone.
 
-- **The proxy is the front door for everything** — the WASM bundle *and*
-  `/api/*` both sit behind proxy-level auth (nginx basic auth is enough for
-  v1; forward-auth via Authelia/Tinyauth if the home setup grows one). The
-  browser holds a session cookie issued by the proxy; because the client and
-  API share one origin (§2), that cookie flows to `/api/*` automatically.
-- **The API trusts only the internal network.** It's unreachable from the
-  host except through the proxy; defense-in-depth, the proxy injects an
-  internal header (`X-LnShelf-Internal: <secret>`) that the API requires and
-  that never exists browser-side.
-- **The client carries zero auth code.** Phase 1's `HttpClient` is a plain
-  relative-path client — no token plumbing, no auth handlers. This is the
-  concrete phase-1 consequence of the decision.
-- Dev mode: the Mosaik-style dev-header bypass, no proxy required.
+**A static bearer key still cannot work** — the client is a public static
+bundle, so anything it ships is readable by whoever loads the page. So the
+bundle holds no token at all:
 
-No user table, no login page in the app itself.
+- **The API is a backend-for-frontend.** It runs the OpenID Connect
+  authorization-code flow (with PKCE) against the provider — Google by default,
+  any OpenID Connect issuer by config (`Auth:Authority`) — and keeps the
+  session in an HttpOnly, SameSite=Lax cookie (`lnshelf.session`, sliding,
+  30 days by default). Because client and API share one origin (§2), the
+  cookie flows to `/api/*` automatically. The provider's tokens are not kept.
+- **One person gets in.** `Auth:AllowedEmail` names the owner; the identity's
+  `email` must match it and `email_verified` must be true before a cookie is
+  issued at all (`OwnerAllowlist`). No user table; preferences stay one row.
+- **Closed by default.** A fallback authorization policy requires a signed-in
+  owner on every endpoint. The only anonymous ones are `GET /api/auth/login`
+  and `GET /api/health` (version and database reachability, which deploy.ps1
+  polls). An API call without a session gets a 401 ProblemDetails, never a
+  redirect.
+- **The client's only auth code** is `SignInRedirectHandler`: on a 401 it
+  sends the browser to `/api/auth/login?returnUrl=…`. "Sign out" posts
+  `/api/auth/logout` (ends the cookie, not the provider session) and leaves
+  for a static `signed-out.html`, so the app does not sign straight back in.
+- **Routes:** login `GET /api/auth/login`, provider callback
+  `/api/auth/callback` (under `/api/` because nginx only proxies that prefix),
+  logout `POST /api/auth/logout`.
+- **CSRF:** SameSite=Lax on the session, plus a middleware that refuses
+  unsafe `/api` methods whose `Sec-Fetch-Site` is `cross-site`.
+- **Behind proxies:** forwarded headers are honoured (the API publishes no
+  port), and nginx passes `Host` with its port and the outer proxy's
+  `X-Forwarded-Proto`, so the redirect URI and secure cookies are right
+  behind TLS.
+- **Cookie signing keys** are ASP.NET Core data-protection keys stored in
+  Postgres (`data_protection_key`), so a restart or redeploy keeps the session
+  and the database backup covers them.
+- **Requires HTTPS and a hostname.** Google accepts redirect URIs on `https://`
+  hosts and on `http://localhost` only, so the deployed stack needs TLS in
+  front of it (the house-wide reverse proxy in §9).
+- **Dev mode:** `Auth:DevelopmentBypass=true` (in appsettings.Development.json)
+  makes every request the owner and registers no provider; startup refuses it
+  outside Development. To try the real flow locally, turn it off and put the
+  client id, secret and address in user-secrets.
+- **End-to-end tests** use the real cookie scheme and sign in through a
+  test-only endpoint that exists in the test host alone.
 
 ## 8. Caching — where HybridCache actually earns its place
 
@@ -490,11 +519,11 @@ measurably slow (testing.md: measure, don't vibe).
 ```yaml
 services:
   client:   # nginx: serves WASM publish output, proxies /api → api
-    ports: ["8091:80"]        # or behind the house-wide reverse proxy
+    ports: ["8091:80"]        # behind the house-wide TLS reverse proxy (§7 needs HTTPS)
     depends_on: [api]
   api:
     environment: [ConnectionStrings__Db, Covers__*, Sync__Hour,
-                  LnShelf__InternalHeaderSecret]   # §7's X-LnShelf-Internal (designed, not yet implemented)
+                  Auth__ClientId, Auth__ClientSecret, Auth__AllowedEmail]   # §7; secrets from the server's .env
     depends_on: [postgres, minio]
   postgres:
     volumes: [pgdata:/var/lib/postgresql/data]

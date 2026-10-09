@@ -291,6 +291,7 @@ structure answers "where does X live?" without a search.
 
 ```
 Features/
+  Auth/             (OpenID Connect login, session cookie, the owner allowlist)
   Shelf/            (series & volume tracking — the core)
     Models/
     Services/
@@ -354,12 +355,12 @@ subfolder; if earlier work put them elsewhere, move them.
 - **The sync job is a `BackgroundService`**, not Hangfire — one nightly loop
   does not justify a job framework. If job count ever grows real, that's a
   phase decision, not a drive-by.
-- **Single user, but not zero auth.** Auth lives at the proxy (session
-  cookie covering both the WASM bundle and `/api/*` on the shared origin) —
-  never a key shipped in the client bundle, which is public by nature. The
-  API additionally requires an internal proxy-injected header. No identity
-  provider, no user tables beyond one row of preferences. Details:
-  `docs/feature-spec.md` §7.
+- **Single user, one identity.** Login is OpenID Connect run by the API
+  (`Features/Auth`, Google by default) with the session in a cookie on the
+  shared origin — never a token in the client bundle, which is public by
+  nature. One allowed address in config, no user table beyond one row of
+  preferences. Every endpoint requires the owner unless it says
+  `[AllowAnonymous]`. Details: `docs/feature-spec.md` §7.
 
 ---
 

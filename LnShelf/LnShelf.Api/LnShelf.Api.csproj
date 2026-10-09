@@ -35,6 +35,12 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+
+    <!-- Login (feature-spec §7): the API runs the OpenID Connect flow and keeps the session
+         in a cookie, so the WASM bundle never holds a token. The data-protection keys that
+         sign that cookie live in Postgres, so a container restart does not log anyone out. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
