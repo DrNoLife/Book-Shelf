@@ -9,11 +9,16 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public static class VolumeGaps
 {
     /// <summary>Whether any source is still worth a request for this volume at all.</summary>
+    // A volume not yet out is always worth asking about: its announced date can still move,
+    // and a volume with a date, a cover and a title used to be left alone for good, slipped
+    // date included. It costs nothing per volume, because the catalogue pass asks once per
+    // series.
     public static bool NeedsAnything(Volume volume)
     {
         ArgumentNullException.ThrowIfNull(volume);
 
-        return volume.ReleaseDate is null
+        return !volume.IsReleased
+            || volume.ReleaseDate is null
             || volume.CoverObjectKey is null
             || TitleUnresolved(volume)
             || volume.Description is null;

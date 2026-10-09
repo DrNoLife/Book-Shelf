@@ -518,6 +518,10 @@ namespace LnShelf.Api.Migrations
                     b.Property<DateOnly?>("ReleaseDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("ReleaseDateSource")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<Guid>("SeriesId")
                         .HasColumnType("uuid");
 

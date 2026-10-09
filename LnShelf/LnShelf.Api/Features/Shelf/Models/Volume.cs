@@ -15,6 +15,16 @@ public sealed class Volume
     public DateOnly? ReleaseDate { get; set; }
 
     /// <summary>
+    /// Which per-volume source wrote <see cref="ReleaseDate"/>. Null for a date written
+    /// before this was recorded, or by the seed or an import.
+    /// </summary>
+    // Provenance for the one field two sources compete over. Without it a store could only
+    // fill an empty date, so when a publisher moved an announced volume the store's new
+    // date was refused and the first one stuck (audit 2026-10-09). Knowing the writer lets
+    // a source correct its own date without letting it replace a higher-precedence one.
+    public MetadataSourceName? ReleaseDateSource { get; set; }
+
+    /// <summary>
     /// The release source says this volume is published, without saying when.
     /// </summary>
     // Source metadata, not a derived state, so it does not fall under CLAUDE.md's

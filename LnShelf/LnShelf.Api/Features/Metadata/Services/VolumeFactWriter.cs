@@ -122,14 +122,29 @@ public sealed class VolumeFactWriter(
         // contradiction is still recorded whichever source raised it. Without it the two passes
         // wrote in turn — the store's date, then Open Library's — so disagreeing sources moved
         // the date twice every night and the run reported two dates written for no change.
-        if (volume.ReleaseDate is not null && !facts.MayReplaceReleaseDate)
+        if (volume.ReleaseDate is not null && !MayReplaceReleaseDate(volume, facts))
         {
             return;
         }
 
         volume.ReleaseDate = releaseDate;
+        volume.ReleaseDateSource = facts.Source;
         run.DatesMoved++;
     }
+
+    /// <summary>
+    /// Whether this source's date may replace the one the volume already has.
+    /// </summary>
+    // A source higher in precedence always may. Any source may also correct a date it wrote
+    // itself, because that is a publisher moving an announced volume, which is the one kind
+    // of date expected to change. A date of unknown origin on a volume not yet out is
+    // treated the same way: it predates provenance, and an announcement is still all it can
+    // be. Neither case lets a store replace Open Library's date, so the two cannot take
+    // turns overnight.
+    private static bool MayReplaceReleaseDate(Volume volume, VolumeFacts facts) =>
+        facts.MayReplaceReleaseDate
+        || volume.ReleaseDateSource == facts.Source
+        || (volume.ReleaseDateSource is null && !volume.IsReleased);
 
     /// <summary>
     /// Fills the title in — as this volume's own subtitle, not the record's whole name —

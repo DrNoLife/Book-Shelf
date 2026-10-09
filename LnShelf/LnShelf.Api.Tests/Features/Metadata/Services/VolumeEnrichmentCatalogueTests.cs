@@ -124,6 +124,63 @@ public sealed class VolumeEnrichmentCatalogueTests
         run.Discrepancies.ShouldBeEmpty();
     }
 
+    // A publisher slipping a volume: the store wrote the announced date, then lists a new
+    // one. Fill-only kept the first date for good (audit 2026-10-09).
+    [Fact]
+    public async Task EnrichAsync_TheStoreMovesItsOwnAnnouncedDate_TheNewDateIsWritten()
+    {
+        var series = Series(Volume(14, isReleased: false));
+
+        await CreateService(Catalogue(Record(
+                "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2026, 12, 8))))
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        var second = Run();
+        await CreateService(Catalogue(Record(
+                "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2027, 2, 2))))
+            .EnrichAsync(series, second, Today, Budget(10), CancellationToken.None);
+
+        var volume = series.Volumes.Single();
+        volume.ReleaseDate.ShouldBe(new DateOnly(2027, 2, 2));
+        volume.ReleaseDateSource.ShouldBe(MetadataSourceName.AppleBooks);
+        second.DatesMoved.ShouldBe(1);
+    }
+
+    // Written before provenance existed, so nothing says who wrote it. On a volume not yet
+    // out it can only be an announcement, which is the kind of date expected to move.
+    [Fact]
+    public async Task EnrichAsync_AnAnnouncedDateOfUnknownOrigin_IsReplacedByTheStore()
+    {
+        var series = Series(Volume(14, isReleased: false));
+        var volume = series.Volumes.Single();
+        volume.ReleaseDate = new DateOnly(2026, 12, 8);
+        volume.Title = string.Empty;
+        volume.Description = "Already described.";
+        volume.CoverObjectKey = "volume/applebooks/14.webp";
+
+        await CreateService(Catalogue(Record(
+                "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2027, 2, 2))))
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        volume.ReleaseDate.ShouldBe(new DateOnly(2027, 2, 2));
+    }
+
+    // The other half of the rule: a store still never replaces a date of unknown origin on a
+    // volume that is out, which is what fill-only always protected.
+    [Fact]
+    public async Task EnrichAsync_ADateOfUnknownOriginOnAPublishedVolume_IsKept()
+    {
+        var series = Series(Volume(8, isReleased: true));
+        var volume = series.Volumes.Single();
+        volume.ReleaseDate = new DateOnly(2021, 8, 17);
+
+        await CreateService(Catalogue(Record(
+                "86--EIGHTY-SIX, Vol. 8 (light novel)", releaseDate: new DateOnly(2021, 8, 24))))
+            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+
+        volume.ReleaseDate.ShouldBe(new DateOnly(2021, 8, 17));
+    }
+
     [Fact]
     public async Task EnrichAsync_AVolumeAlreadyNamedWithNoSubtitle_IsNotAskedAboutAgain()
     {
