@@ -99,8 +99,20 @@ the stack there with [`docker-compose.production.yml`](docker-compose.production
 
 The API runs the OpenID Connect login itself and keeps the session in a cookie; only the
 address in `AUTH_ALLOWED_EMAIL` gets in. Google only allows sign-in redirects to `https://`
-addresses (or `http://localhost`), so the app needs a hostname with TLS in front of it,
-for example a reverse proxy such as Caddy or Traefik forwarding to port 8091.
+addresses (or `http://localhost`), so the app needs a hostname with TLS in front of it.
+
+The production compose file includes an optional Cloudflare Tunnel for that:
+
+1. Add your domain to Cloudflare.
+2. In the Cloudflare dashboard, under *Zero Trust → Networks → Tunnels*, create a tunnel
+   (type *Cloudflared*) and copy its token.
+3. Give the tunnel a *public hostname*, for example `shelf.example.com`, with the service
+   `http://client:80`.
+4. Put the token in the server's `.env` as `CLOUDFLARE_TUNNEL_TOKEN` and set
+   `COMPOSE_PROFILES=tunnel`.
+
+The tunnel only makes outbound connections, so no port is opened on your router. Any other
+TLS reverse proxy forwarding to port 8091 works too.
 
 To set up Google:
 
@@ -123,6 +135,9 @@ MINIO_ROOT_PASSWORD=change-me-too
 AUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
 AUTH_CLIENT_SECRET=your-client-secret
 AUTH_ALLOWED_EMAIL=you@example.com
+# Optional: HTTPS through a Cloudflare Tunnel (see Login above).
+# CLOUDFLARE_TUNNEL_TOKEN=
+# COMPOSE_PROFILES=tunnel
 # Optional: another OpenID Connect issuer than Google.
 # AUTH_AUTHORITY=https://accounts.google.com
 # Optional: Open Library asks API users for a contact address in the User-Agent.

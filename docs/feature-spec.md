@@ -486,7 +486,8 @@ bundle holds no token at all:
   and the database backup covers them.
 - **Requires HTTPS and a hostname.** Google accepts redirect URIs on `https://`
   hosts and on `http://localhost` only, so the deployed stack needs TLS in
-  front of it (the house-wide reverse proxy in §9).
+  front of it: the optional Cloudflare Tunnel service in §9, or any TLS reverse
+  proxy forwarding to the client's port.
 - **Dev mode:** `Auth:DevelopmentBypass=true` (in appsettings.Development.json)
   makes every request the owner and registers no provider; startup refuses it
   outside Development. To try the real flow locally, turn it off and put the
@@ -519,7 +520,8 @@ measurably slow (testing.md: measure, don't vibe).
 ```yaml
 services:
   client:   # nginx: serves WASM publish output, proxies /api → api
-    ports: ["8091:80"]        # behind the house-wide TLS reverse proxy (§7 needs HTTPS)
+    ports: ["8091:80"]        # plain HTTP on the LAN; HTTPS comes from the tunnel (§7 needs it)
+  tunnel:   # optional (profile "tunnel"): Cloudflare Tunnel, public hostname → http://client:80
     depends_on: [api]
   api:
     environment: [ConnectionStrings__Db, Covers__*, Sync__Hour,
