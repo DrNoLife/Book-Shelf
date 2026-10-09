@@ -203,10 +203,10 @@ public sealed class SeriesRefresher(
             run.Discrepancies.Add(SyncDiscrepancies.VolumeCount(series, info, sourceCount, trackedCount));
         }
 
-        if (sourceCount > trackedCount)
-        {
-            CreateMissingVolumes(series, run, sourceCount, trackedCount);
-        }
+        // Every missing number up to the count, not only the ones above the highest tracked:
+        // an import adds just the volumes in the export, and a shelf holding 2, 3 and 5 of a
+        // ten-volume series used to get 6 to 10 and never 1 or 4 (audit 2026-10-09).
+        CreateMissingVolumes(series, run, sourceCount, trackedCount);
 
         // Once, and after any new volumes exist, so the ones just created are covered by
         // the same pass rather than by a second identical loop.
@@ -220,11 +220,16 @@ public sealed class SeriesRefresher(
 
     private void CreateMissingVolumes(Series series, SyncRun run, int sourceCount, int trackedCount)
     {
-        var highestTracked = series.Volumes.Count == 0
-            ? 0
-            : series.Volumes.Max(volume => volume.Number);
+        var missingNumbers = Enumerable.Range(1, sourceCount)
+            .Except(series.Volumes.Select(volume => volume.Number))
+            .ToList();
 
-        for (var number = highestTracked + 1; number <= sourceCount; number++)
+        if (missingNumbers.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var number in missingNumbers)
         {
             series.Volumes.Add(new Volume
             {

@@ -95,6 +95,24 @@ public sealed class SeriesRefresherTests
         run.NewVolumes.ShouldBe(3);
     }
 
+    // An import creates only the volumes in the export, so a shelf can hold 2, 3 and 5 of a
+    // ten-volume series. Sync used to count up from the highest tracked number and never
+    // fill 1 or 4 (audit 2026-10-09).
+    [Fact]
+    public async Task RefreshAsync_TheShelfHasGapsBelowItsHighestVolume_CreatesTheMissingNumbers()
+    {
+        var series = CreateSeries(volumeCount: 0, PublicationStatus.Ongoing);
+        foreach (var number in new[] { 2, 3, 5 })
+        {
+            series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = number });
+        }
+
+        var run = await RefreshAsync(series, Info(volumeCount: 10, isCompleted: false));
+
+        series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 10));
+        run.NewVolumes.ShouldBe(7);
+    }
+
     [Fact]
     public async Task RefreshAsync_TheSourceCountsFewerVolumes_ResolvesTheRowInTheShelfsFavour()
     {
