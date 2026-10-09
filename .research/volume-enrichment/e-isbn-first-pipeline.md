@@ -24,7 +24,7 @@ alone except the CC0 licence quote, which is reused verbatim from Brief A
   incl. `language=eng` param test and inline `q=... language:eng` test),
   `GET /works/{id}/editions.json` (1 call). All via
   `curl -sL --max-time 20 -H "User-Agent: LnShelf-research/0.1 (contact:
-  owner@example.com)" ...` — identified honestly, per constraints.
+  <contact email>)" ...` — identified honestly, per constraints.
   Raw JSON and a parsed TSV saved under the session scratchpad
   (`scratchpad/ol/raw/*.json`, `scratchpad/ol/results_parsed.tsv`).
 

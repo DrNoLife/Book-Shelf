@@ -17,11 +17,10 @@ services:
     environment:
       POSTGRES_DB: lnshelf
       POSTGRES_USER: lnshelf
-      # LAN-only stack with no published port, so the compose default is a
-      # placeholder rather than a secret. The server's docker-compose.override.yml
-      # is the place to replace this (and the MinIO pair below) — deploy.ps1 never
-      # overwrites that file.
-      POSTGRES_PASSWORD: lnshelf
+      # Credentials come from a .env beside this file on the server (README.md,
+      # Deploy), never from the repository. The :? form refuses to start without
+      # them rather than falling back to a password everyone can read here.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the .env next to docker-compose.yml}
     volumes:
       - lnshelf-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -40,7 +39,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: lnshelf
-      MINIO_ROOT_PASSWORD: REMOVED-OLD-SECRET
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in the .env next to docker-compose.yml}
     volumes:
       - lnshelf-minio:/data
     healthcheck:
@@ -67,13 +66,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
-      ConnectionStrings__Db: "Host=postgres;Port=5432;Database=lnshelf;Username=lnshelf;Password=lnshelf"
+      ConnectionStrings__Db: "Host=postgres;Port=5432;Database=lnshelf;Username=lnshelf;Password=${POSTGRES_PASSWORD}"
       # Covers:* binds to CoverStoreOptions. Endpoint is S3 style — host and port,
       # no scheme; UseSsl carries the scheme instead.
       Covers__Endpoint: "minio:9000"
       Covers__UseSsl: "false"
       Covers__AccessKey: "lnshelf"
-      Covers__SecretKey: "REMOVED-OLD-SECRET"
+      Covers__SecretKey: "${MINIO_ROOT_PASSWORD}"
       Covers__Bucket: "lnshelf-covers"
       # The nightly sweep is the reason this is deployed at all, so unlike
       # development it is on. Hour is local time, hence TZ — the container would
@@ -81,6 +80,9 @@ services:
       Sync__Enabled: "true"
       Sync__Hour: "4"
       TZ: "Europe/Copenhagen"
+      # Optional. Open Library asks API users for a contact address in the User-Agent;
+      # empty sends the anonymous one (LnShelfUserAgent).
+      OpenLibrary__ContactEmail: "${OPENLIBRARY_CONTACT_EMAIL:-}"
     # No healthcheck: the aspnet runtime image ships no curl or wget, and adding
     # one to the image to satisfy compose is not worth it. deploy.ps1 polls
     # /api/library through the client instead, which proves more anyway.

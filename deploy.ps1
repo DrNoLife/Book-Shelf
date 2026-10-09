@@ -15,15 +15,25 @@
   Prerequisites (one-time):
     - Docker Desktop running locally.
     - SSH key auth to the server (key at $Key).
+    - The server address and account, as parameters or in LNSHELF_DEPLOY_SERVER and
+      LNSHELF_DEPLOY_USER. They are not written here, so the script holds nothing about
+      one particular network.
+    - A .env next to the compose file on the server with the credentials
+      docker-compose.production.yml asks for (see README.md, Deploy).
 
 .EXAMPLE
-  ./deploy.ps1
+  $env:LNSHELF_DEPLOY_SERVER = '192.0.2.10'; $env:LNSHELF_DEPLOY_USER = 'deploy'; ./deploy.ps1
+
+.EXAMPLE
+  ./deploy.ps1 -Server 192.0.2.10 -User deploy
 #>
 [CmdletBinding()]
 param(
-    [string]$Server    = '192.0.2.10',
-    [string]$User      = 'neko',
-    [string]$RemoteDir = '/home/neko/docker/lnshelf',
+    [string]$Server    = $env:LNSHELF_DEPLOY_SERVER,
+    [string]$User      = $env:LNSHELF_DEPLOY_USER,
+
+    # Under the account's home unless given, so it follows whatever $User is.
+    [string]$RemoteDir = $(if ($env:LNSHELF_DEPLOY_DIR) { $env:LNSHELF_DEPLOY_DIR } else { 'docker/lnshelf' }),
 
     # A project-specific key if one has been made, otherwise the server's existing Hearth key —
     # same host, same account, so it already grants what this needs.
@@ -32,12 +42,18 @@ param(
         if (Test-Path $projectKey) { $projectKey } else { "$env:USERPROFILE\.ssh\id_hearth" }
     ),
 
-    [string]$Url       = 'http://192.0.2.10:8091',
+    # The client's published port on the server (docker-compose.production.yml).
+    [string]$Url       = '',
     [string]$ApiTag    = 'lnshelf-api:latest',
     [string]$ClientTag = 'lnshelf-client:latest'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $Server -or -not $User) {
+    throw 'Say where to deploy: -Server and -User, or LNSHELF_DEPLOY_SERVER and LNSHELF_DEPLOY_USER.'
+}
+if (-not $Url) { $Url = "http://${Server}:8091" }
 Set-Location -Path $PSScriptRoot   # repo root (both Dockerfiles + the compose file live here)
 
 $target  = "$User@$Server"
@@ -115,7 +131,10 @@ if ($shellOk -and $apiOk) {
 }
 elseif ($shellOk) {
     Write-Warning ("The shell at {0} is up, but {0}/api/library did not return 200. Check the api container: ssh {1} 'cd {2} && docker compose logs api --tail 50'." -f $Url, $target, $RemoteDir)
+    # Non-zero, so a scripted deploy does not report success for an API that is down.
+    exit 1
 }
 else {
     Write-Warning ("Images shipped and the stack restarted, but {0} did not return 200 yet. Give it a few seconds (migrations run on startup), then hard-refresh. If it stays down: ssh {1} 'cd {2} && docker compose ps'." -f $Url, $target, $RemoteDir)
+    exit 1
 }

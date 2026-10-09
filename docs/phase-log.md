@@ -184,9 +184,9 @@ page copy is source-neutral now.
 ## Phase 6.2 — deployed, and proven where it runs (2026-08-15)
 
 `.\deploy.ps1` against the real server: both images built, one tarball shipped,
-stack up on `neko@192.0.2.10:/home/neko/docker/lnshelf` — **69 seconds**
+stack up on `<user>@<server>:~/docker/lnshelf` — **69 seconds**
 from invocation to the health check passing through nginx on
-`http://192.0.2.10:8091`.
+`http://<server>:8091`.
 
 The production instance was then proven the same way the dev one was, not
 assumed from it:
@@ -468,7 +468,7 @@ deploy, adapted to this app's nginx-in-front architecture.
   local time and a container defaults to UTC.
 - **`deploy.ps1`**, Hearth's shape exactly: build both images → `docker save`
   one tarball → `scp` it and the compose file to
-  `neko@192.0.2.10:/home/neko/docker/lnshelf` → `docker load`,
+  `<user>@<server>:~/docker/lnshelf` → `docker load`,
   `compose up -d --no-build`, prune → poll `/` and `/api/library` for 200.
 - **Verified locally, not assumed**: both images built Release with warnings as
   errors; a full stack under `-p lnshelf-prod-test` served the WASM shell,
