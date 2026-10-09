@@ -27,6 +27,31 @@ public static partial class MangaUpdatesVolumeCountParser
                ?? FirstMatch(WebNovelVolumesPattern(), status);
     }
 
+    /// <summary>
+    /// The line of the status the count is read from, so the publication status can be
+    /// read from the same line.
+    /// </summary>
+    /// <returns>Null when no line carries a count.</returns>
+    // "14 WN Volumes (Complete)\n23 LN Volumes (Ongoing)" is an ongoing light novel. Read
+    // from the whole text, "complete" in the web-novel line flipped it to Completed,
+    // while the count came from the LN line (audit 2026-10-09).
+    public static string? CountedLine(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return null;
+        }
+
+        var lines = status.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return FirstLineMatching(LightNovelVolumesPattern(), lines)
+               ?? FirstLineMatching(PlainVolumesPattern(), lines)
+               ?? FirstLineMatching(WebNovelVolumesPattern(), lines);
+    }
+
+    private static string? FirstLineMatching(Regex pattern, string[] lines) =>
+        lines.FirstOrDefault(line => FirstMatch(pattern, line) is not null);
+
     private static int? FirstMatch(Regex pattern, string status)
     {
         var match = pattern.Match(status);

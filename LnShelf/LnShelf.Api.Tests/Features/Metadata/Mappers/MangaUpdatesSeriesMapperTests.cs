@@ -249,6 +249,11 @@ public sealed class MangaUpdatesSeriesMapperTests
     [InlineData("23 LN Volumes + 2 SS Volumes (Complete)", PublicationStatus.Completed)]
     [InlineData("17 Volumes (Hiatus)", PublicationStatus.Hiatus)]
     [InlineData("4 Volumes (Cancelled)", PublicationStatus.Cancelled)]
+
+    // Several lines: the status is the one on the line the count is read from.
+    [InlineData("14 WN Volumes (Complete)\n23 LN Volumes (Ongoing)", PublicationStatus.Ongoing)]
+    [InlineData("14 WN Volumes + 2 SS Volumes (Complete) \n 23 LN Volumes + 2 SS Volumes (Complete)", PublicationStatus.Completed)]
+    [InlineData("Hiatus", PublicationStatus.Hiatus)]
     [InlineData("", PublicationStatus.Ongoing)]
     [InlineData(null, PublicationStatus.Ongoing)]
     public void ToSeriesMetadata_TheStatusText_DecidesPublicationStatus(

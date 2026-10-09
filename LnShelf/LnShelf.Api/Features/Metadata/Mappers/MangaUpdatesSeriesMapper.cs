@@ -177,8 +177,12 @@ public static class MangaUpdatesSeriesMapper
     // "14 Volumes (Ongoing)", "Hiatus", and occasionally nothing at all. Ordered so a
     // status that mentions two states resolves to the more final one, and defaulting to
     // Ongoing rather than throwing, because an unreadable status is not a reason to
-    // refuse to add a series.
-    private static PublicationStatus ToPublicationStatus(string? status) => status switch
+    // refuse to add a series. Read from the line the volume count came from when there is
+    // one, so the web-novel line of a multi-line status cannot decide a light novel's.
+    private static PublicationStatus ToPublicationStatus(string? status) =>
+        ToPublicationStatusOf(MangaUpdatesVolumeCountParser.CountedLine(status) ?? status);
+
+    private static PublicationStatus ToPublicationStatusOf(string? status) => status switch
     {
         null or "" => PublicationStatus.Ongoing,
         _ when Mentions(status, "cancel") => PublicationStatus.Cancelled,
