@@ -17,7 +17,7 @@ public sealed class SeriesSyncService(
 {
     public async Task<SyncRun> RunAsync(CancellationToken cancellationToken)
     {
-        var run = await StartRunAsync(cancellationToken);
+        var run = await StartRunAsync(coversWholeShelf: true, cancellationToken);
 
         // Sync skips any series without an external id (feature-spec §4.2) — a
         // manual WebNovel entry has nothing to refresh against.
@@ -67,7 +67,7 @@ public sealed class SeriesSyncService(
             return null;
         }
 
-        var run = await StartRunAsync(cancellationToken);
+        var run = await StartRunAsync(coversWholeShelf: false, cancellationToken);
 
         // Every *other* series' link, so this one cannot be given a record already spoken
         // for. Its own is excluded, or an already-linked series would look like a clash
@@ -132,12 +132,13 @@ public sealed class SeriesSyncService(
     /// Saved before any refreshing, so the discrepancies a refresh records have a run to
     /// belong to.
     /// </summary>
-    private async Task<SyncRun> StartRunAsync(CancellationToken cancellationToken)
+    private async Task<SyncRun> StartRunAsync(bool coversWholeShelf, CancellationToken cancellationToken)
     {
         var run = new SyncRun
         {
             Id = Guid.CreateVersion7(),
             StartedAt = timeProvider.GetUtcNow(),
+            CoversWholeShelf = coversWholeShelf,
         };
 
         dbContext.SyncRuns.Add(run);

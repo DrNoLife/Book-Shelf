@@ -12,6 +12,14 @@ public sealed class SyncRun
     /// <summary>Null while a run is in flight.</summary>
     public DateTimeOffset? FinishedAt { get; set; }
 
+    /// <summary>
+    /// The nightly or "Sync now" sweep, as opposed to the refresh of one series.
+    /// </summary>
+    // Stored because the sidebar has to tell them apart: it prints the last sweep and its
+    // items to review, and a one-series refresh after adding a series used to replace both
+    // (audit 2026-10-09).
+    public bool CoversWholeShelf { get; set; }
+
     public int SeriesRefreshed { get; set; }
 
     /// <summary>Series newly linked to the release source by this run.</summary>

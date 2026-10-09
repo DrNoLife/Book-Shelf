@@ -271,6 +271,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("CoversWholeShelf")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("DatesMoved")
                         .HasColumnType("integer");
 
