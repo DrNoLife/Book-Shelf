@@ -149,7 +149,7 @@ public sealed class StoryGraphCsvReaderTests
         var slimeVolume5 = books.Single(book =>
             book.RawTitle == "That Time I Got Reincarnated as a Slime, Vol. 5");
 
-        slimeVolume5.ReadAt.ShouldBe(new DateOnly(2021, 11, 23));
+        slimeVolume5.ReadAt.ShouldBe(new DateOnly(2019, 2, 27));
 
         // Some rows carry no date at all; that is not an error.
         books.Count(book => book.ReadAt is null).ShouldBeGreaterThan(0);
@@ -160,14 +160,14 @@ public sealed class StoryGraphCsvReaderTests
     {
         var books = await StoryGraphExportFixture.ReadAsync();
 
-        // The one row in the real file with a range: Dates Read is
-        // "2026/07/21-2026/07/26". It survived only because Last Date Read happens to
+        // The one row in the export with a range: Dates Read is
+        // "2023/10/25-2023/10/30" (the fixture's dates are shifted, see StoryGraphExportFixture). It survived only because Last Date Read happens to
         // be filled too, and the moment a row has the range and no Last Date Read the
         // date was lost silently.
         var tanyaVolume13 = books.Single(book =>
             book.RawTitle.StartsWith("The Saga of Tanya the Evil, Vol. 13", StringComparison.Ordinal));
 
-        tanyaVolume13.ReadAt.ShouldBe(new DateOnly(2026, 7, 26));
+        tanyaVolume13.ReadAt.ShouldBe(new DateOnly(2023, 10, 30));
     }
 
     [Fact]

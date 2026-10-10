@@ -1,11 +1,14 @@
 namespace LnShelf.Api.Tests.Features.Import.Fixtures;
 
 /// <summary>
-/// The real StoryGraph export, read through the production reader.
+/// The owner's real StoryGraph export, anonymised, read through the production reader.
 /// </summary>
 // testing.md #2: every mismatch found during the real import becomes a regression
-// case. This is that file — 76 books, linked from docs/ rather than copied — and
-// the numbers asserted against it are the ones the real run produced.
+// case. This is that file, 76 books, with what made it personal taken out before the
+// repository went public: reviews and star ratings are blank, and every date is moved
+// back by the same 1000 days, so their order, ranges and placeholders are unchanged but
+// the real days are not in it. Titles, credits and ISBNs stay; they are what the parsing
+// tests are about. The counts asserted against it are the ones the real run produced.
 internal static class StoryGraphExportFixture
 {
     public const string FileName = "story-graph-export.csv";
