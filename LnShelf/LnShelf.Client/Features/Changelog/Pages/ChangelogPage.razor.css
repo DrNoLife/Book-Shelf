@@ -48,18 +48,6 @@
 
 .release__version { color: var(--muted); font-weight: 600; }
 
-.release__changes {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.release__changes li::marker { color: var(--faint); }
-
 /* The latest release is the only panel; its heading and list get a little more air. */
 .changelog__releases ::deep .release--latest {
   --panel-padding: var(--space-6);

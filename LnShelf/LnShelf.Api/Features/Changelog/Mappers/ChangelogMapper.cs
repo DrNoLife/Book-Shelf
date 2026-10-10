@@ -29,7 +29,9 @@ public static class ChangelogMapper
             Version = entry.Version,
             Date = entry.Date,
             Title = entry.Title,
-            Changes = entry.Changes,
+            Features = entry.Features,
+            Improvements = entry.Improvements,
+            Fixes = entry.Fixes,
         };
     }
 }

@@ -1,4 +1,5 @@
 @page "/changelog"
+@using LnShelf.Client.Features.Changelog.Components
 @using LnShelf.Shared.Changelog
 
 @* Release notes, per design.md: the page frame of Library and Profile, serif release titles,
@@ -44,12 +45,7 @@
                             <span class="release__date tabular">@latest.Date.Full</span>
                         </p>
                         <h2 id="@HeadingId(latest)" class="title-section release__title">@latest.Title</h2>
-                        <ul class="release__changes">
-                            @foreach (var change in latest.Changes)
-                            {
-                                <li>@change</li>
-                            }
-                        </ul>
+                        <ReleaseChanges Entry="latest" />
                     </Panel>
 
                     @if (loaded.Entries.Count > 1)
@@ -64,12 +60,7 @@
                                     </p>
                                     <div class="release__body">
                                         <h2 id="@HeadingId(entry)" class="title-card release__title">@entry.Title</h2>
-                                        <ul class="release__changes">
-                                            @foreach (var change in entry.Changes)
-                                            {
-                                                <li>@change</li>
-                                            }
-                                        </ul>
+                                        <ReleaseChanges Entry="entry" />
                                     </div>
                                 </section>
                             }

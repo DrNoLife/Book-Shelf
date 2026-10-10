@@ -18,5 +18,13 @@ public sealed record ChangelogEntryResponse
     public required string Version { get; init; }
     public required DateOnly Date { get; init; }
     public required string Title { get; init; }
-    public required IReadOnlyList<string> Changes { get; init; }
+
+    /// <summary>Something you could not do before.</summary>
+    public required IReadOnlyList<string> Features { get; init; }
+
+    /// <summary>An existing thing that now works better, reads better, is faster or safer.</summary>
+    public required IReadOnlyList<string> Improvements { get; init; }
+
+    /// <summary>Something that was wrong and now behaves as intended.</summary>
+    public required IReadOnlyList<string> Fixes { get; init; }
 }

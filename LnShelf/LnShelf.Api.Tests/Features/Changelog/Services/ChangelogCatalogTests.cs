@@ -41,4 +41,27 @@ public sealed class ChangelogCatalogTests
 
         duplicates.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void Entries_EachHaveAtLeastOneLineInSomeCategory()
+    {
+        var empty = ChangelogCatalog.Entries
+            .Where(entry => entry.Features.Count + entry.Improvements.Count + entry.Fixes.Count == 0)
+            .Select(entry => entry.Version)
+            .ToList();
+
+        empty.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Entries_NoLineStartsWithBehindTheScenes()
+    {
+        // Behind-the-scenes work is an Improvement worded for the user; the prefix is retired.
+        var offending = ChangelogCatalog.Entries
+            .SelectMany(entry => entry.Features.Concat(entry.Improvements).Concat(entry.Fixes))
+            .Where(line => line.StartsWith("Behind the scenes", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        offending.ShouldBeEmpty();
+    }
 }

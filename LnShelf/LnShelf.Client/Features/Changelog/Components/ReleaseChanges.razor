@@ -1,0 +1,35 @@
+@using LnShelf.Shared.Changelog
+
+@* One release's changes, grouped Features, Improvements, Bug fixes in that order. A category
+   with no lines is not rendered, so a fix-only release shows one heading, not three. The
+   h3 sits under the release's h2; it is styled as an eyebrow, a quiet label rather than a title. *@
+
+@foreach (var (heading, lines) in Categories)
+{
+    if (lines.Count == 0)
+    {
+        continue;
+    }
+
+    <div class="changes">
+        <h3 class="eyebrow changes__heading">@heading</h3>
+        <ul class="changes__list">
+            @foreach (var line in lines)
+            {
+                <li>@line</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required ChangelogEntryResponse Entry { get; set; }
+
+    private IEnumerable<(string Heading, IReadOnlyList<string> Lines)> Categories =>
+    [
+        ("Features", Entry.Features),
+        ("Improvements", Entry.Improvements),
+        ("Bug fixes", Entry.Fixes),
+    ];
+}
