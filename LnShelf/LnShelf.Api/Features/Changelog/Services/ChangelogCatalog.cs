@@ -20,6 +20,14 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.22.0", new DateOnly(2026, 10, 10), "Released by GitHub",
+            Features: [],
+            Improvements: [
+                "This is the first version built, scanned and published by GitHub and installed on the server " +
+                    "by the server itself, after the owner approves it. The source is public now too.",
+            ],
+            Fixes: []
+        ),
         new("0.21.1", new DateOnly(2026, 10, 10), "Two loose ends",
             Features: [],
             Improvements: [
