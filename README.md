@@ -9,8 +9,8 @@ Metadata comes from public sources (AniList, MangaUpdates, Open Library and the 
 Books catalogue) and is refreshed every night. Your own reading and ownership state lives
 in a local Postgres database, and sync never touches it.
 
-It is a single-user hobby project, run on a home server. One person signs in, with
-Google or any other OpenID Connect provider.
+It is a hobby project, run on a home server. Anyone can sign in with Google (or another
+OpenID Connect provider) and gets a shelf of their own; nobody can see anyone else's.
 
 ## Features
 
@@ -97,8 +97,9 @@ the stack there with [`docker-compose.production.yml`](docker-compose.production
 
 ### Login
 
-The API runs the OpenID Connect login itself and keeps the session in a cookie; only the
-address in `AUTH_ALLOWED_EMAIL` gets in. Google only allows sign-in redirects to `https://`
+The API runs the OpenID Connect login itself and keeps the session in a cookie. Every
+verified Google account that signs in becomes a user with its own shelf, within per-user
+limits (see Configuration). Google only allows sign-in redirects to `https://`
 addresses (or `http://localhost`), so the app needs a hostname with TLS in front of it.
 
 The production compose file includes an optional Cloudflare Tunnel for that:
@@ -134,7 +135,8 @@ POSTGRES_PASSWORD=change-me
 MINIO_ROOT_PASSWORD=change-me-too
 AUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
 AUTH_CLIENT_SECRET=your-client-secret
-AUTH_ALLOWED_EMAIL=you@example.com
+# Optional: the address that takes over a library created before there were users.
+AUTH_INITIAL_OWNER_EMAIL=you@example.com
 # Optional: HTTPS through a Cloudflare Tunnel (see Login above).
 # CLOUDFLARE_TUNNEL_TOKEN=
 # COMPOSE_PROFILES=tunnel
@@ -151,6 +153,10 @@ Then, from your machine:
 # or set LNSHELF_DEPLOY_SERVER, LNSHELF_DEPLOY_USER and LNSHELF_DEPLOY_URL once
 ```
 
+Each user can read what is stored about them, and delete their account and all of it, on
+the app's Privacy page (`/privacy.html`). Use that address as the privacy policy link on
+the Google consent screen.
+
 The client is published on port 8091 for the TLS proxy to forward to. Migrations run
 when the API starts, and the deploy checks `/api/health`, the one endpoint open without
 signing in.
@@ -164,7 +170,11 @@ are most likely to change:
 | Setting | Default | Purpose |
 |---|---|---|
 | `ConnectionStrings__Db` | (none) | Postgres connection string |
-| `Auth__ClientId`, `Auth__ClientSecret`, `Auth__AllowedEmail` | (none) | Login: the OpenID Connect client and the one address allowed in |
+| `Auth__ClientId`, `Auth__ClientSecret` | (none) | Login: the OpenID Connect client |
+| `Auth__AllowedEmails__0`, `__1`, … | empty (anyone) | Restrict sign-up to these addresses |
+| `Auth__InitialOwnerEmail` | empty | Who adopts the library from before users existed |
+| `Limits__MaximumSeriesPerUser`, `Limits__MaximumCoverOverridesPerUser` | `500`, `300` | Per-user storage limits |
+| `Limits__ExternalRequestsPerMinute`, `Limits__SyncRunsPerHour` | `20`, `2` | Per-user rate limits on calls that reach the metadata sources |
 | `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
 | `Covers__Endpoint`, `Covers__AccessKey`, `Covers__SecretKey`, `Covers__Bucket` | `localhost:9000`, empty, empty, `lnshelf-covers` | Cover storage (S3/MinIO) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |

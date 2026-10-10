@@ -4,9 +4,12 @@ namespace LnShelf.Api.Features.Import.Models;
 /// One uploaded StoryGraph export. Kept after committing: it is the record of
 /// what was imported and how each series was matched.
 /// </summary>
-public sealed class ImportBatch
+public sealed class ImportBatch : IOwned
 {
     public Guid Id { get; set; }
+
+    /// <summary>The user this belongs to (IOwned). Stamped on save.</summary>
+    public Guid OwnerId { get; set; }
 
     public string FileName { get; set; } = string.Empty;
     public DateTimeOffset UploadedAt { get; set; }

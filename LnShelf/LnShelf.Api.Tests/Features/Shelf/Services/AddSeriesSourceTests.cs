@@ -1,5 +1,3 @@
-using LnShelf.Api.Errors;
-
 namespace LnShelf.Api.Tests.Features.Shelf.Services;
 
 /// <summary>

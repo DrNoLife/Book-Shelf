@@ -25,16 +25,14 @@ public sealed class AuthOptionsValidatorTests
         Validator("Development").Validate(null, new AuthOptions { DevelopmentBypass = true }).Succeeded.ShouldBeTrue();
 
     [Theory]
-    [InlineData("", "secret", "owner@example.com", "Auth:ClientId")]
-    [InlineData("client", "", "owner@example.com", "Auth:ClientSecret")]
-    [InlineData("client", "secret", " ", "Auth:AllowedEmail")]
-    public void Validate_AMissingSetting_FailsNamingIt(string clientId, string clientSecret, string allowedEmail, string expected)
+    [InlineData("", "secret", "Auth:ClientId")]
+    [InlineData("client", "", "Auth:ClientSecret")]
+    public void Validate_AMissingSetting_FailsNamingIt(string clientId, string clientSecret, string expected)
     {
         var result = Validator("Production").Validate(null, new AuthOptions
         {
             ClientId = clientId,
             ClientSecret = clientSecret,
-            AllowedEmail = allowedEmail,
         });
 
         result.Failed.ShouldBeTrue();
@@ -47,7 +45,6 @@ public sealed class AuthOptionsValidatorTests
         {
             ClientId = "client",
             ClientSecret = "secret",
-            AllowedEmail = "owner@example.com",
         }).Succeeded.ShouldBeTrue();
 
     private static AuthOptionsValidator Validator(string environmentName)

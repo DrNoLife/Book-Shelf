@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
@@ -276,5 +275,5 @@ public sealed class IsbnDiscoveryServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"isbn-discovery-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

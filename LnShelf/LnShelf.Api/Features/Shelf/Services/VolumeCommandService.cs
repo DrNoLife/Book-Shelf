@@ -6,6 +6,7 @@ public sealed class VolumeCommandService(
     ICoverStore coverStore,
     CoverNormalizer coverNormalizer,
     TimeProvider timeProvider,
+    UserLimits userLimits,
     ILogger<VolumeCommandService> logger) : IVolumeCommandService
 {
     public async Task<SeriesDetailResponse?> SetReadAsync(
@@ -192,6 +193,12 @@ public sealed class VolumeCommandService(
         if (series is null || Find(series, volumeId) is not { } volume)
         {
             return null;
+        }
+
+        // Replacing a cover takes no extra room; a first one for this volume does.
+        if (volume.UserState?.CoverOverrideObjectKey is null)
+        {
+            await userLimits.EnsureRoomForCoverOverrideAsync(cancellationToken);
         }
 
         // Normalized before anything is stored, so an upload that is not a decodable

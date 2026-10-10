@@ -15,6 +15,7 @@ public sealed class ImportController(
     // Slow by nature — one metadata search plus a few cover fetches per series —
     // and deliberately synchronous: a background job would need a progress channel
     // and a way to resume, which one user importing one file does not justify.
+    [EnableRateLimiting(UserRateLimits.ExternalSources)]
     [HttpPost]
     [RequestSizeLimit(8 * 1024 * 1024)]
     public async Task<ActionResult<ImportBatchResponse>> UploadAsync(
@@ -71,6 +72,7 @@ public sealed class ImportController(
     /// The review queue's manual fallback, for when none of the offered
     /// candidates is right.
     /// </summary>
+    [EnableRateLimiting(UserRateLimits.ExternalSources)]
     [HttpGet("candidates")]
     public async Task<ActionResult<IReadOnlyList<ImportCandidateResponse>>> SearchCandidatesAsync(
         [FromQuery(Name = "q")] string query,

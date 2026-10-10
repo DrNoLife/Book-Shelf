@@ -3,9 +3,12 @@ namespace LnShelf.Api.Features.Metadata.Models;
 /// <summary>
 /// One sync run, per feature-spec §5. The latest one is what the sidebar prints.
 /// </summary>
-public sealed class SyncRun
+public sealed class SyncRun : IOwned
 {
     public Guid Id { get; set; }
+
+    /// <summary>The user this belongs to (IOwned). Stamped on save.</summary>
+    public Guid OwnerId { get; set; }
 
     public DateTimeOffset StartedAt { get; set; }
 

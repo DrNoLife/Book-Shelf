@@ -8,7 +8,7 @@ namespace LnShelf.Api.Features.Auth.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(IOptions<AuthOptions> options) : ControllerBase
+public sealed class AuthController(IOptions<AuthOptions> options, AccountDeletionService accountDeletion) : ControllerBase
 {
     /// <summary>
     /// Starts a login, then returns to <paramref name="returnUrl"/>. Already signed in (and
@@ -35,6 +35,22 @@ public sealed class AuthController(IOptions<AuthOptions> options) : ControllerBa
     [HttpPost("logout")]
     public async Task<IActionResult> LogoutAsync()
     {
+        if (!options.Value.DevelopmentBypass)
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Deletes the signed-in account and all its data, then ends the session.
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteAccountAsync(CancellationToken cancellationToken)
+    {
+        await accountDeletion.DeleteCurrentAccountAsync(cancellationToken);
+
         if (!options.Value.DevelopmentBypass)
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,5 +1,5 @@
 using LnShelf.Api.Commands;
-using LnShelf.Api.Data;
+using LnShelf.Api.Features.Auth;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
@@ -9,6 +9,7 @@ using LnShelf.Api.Features.Shelf;
 using LnShelf.Api.Features.Stats;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace LnShelf.Api.Tests;
 
@@ -100,6 +101,8 @@ public sealed class CompositionRootTests
                 ["Covers:AccessKey"] = "none",
                 ["Covers:SecretKey"] = "none",
                 ["Covers:Bucket"] = "lnshelf-covers",
+                ["Auth:ClientId"] = "none",
+                ["Auth:ClientSecret"] = "none",
             })
             .Build();
 
@@ -118,6 +121,15 @@ public sealed class CompositionRootTests
         services.AddPreferences();
         services.AddReleases();
         services.AddStats();
+
+        // The real cookie and OpenID Connect registration, as production has it: the
+        // environment only decides whether the development bypass is allowed.
+        var environment = Substitute.For<IHostEnvironment>();
+        environment.EnvironmentName.Returns("Production");
+        services.AddSingleton(environment);
+        services.AddRouting();
+        services.AddAuth(configuration, environment);
+        services.AddUserLimits(configuration);
 
         return services;
     }

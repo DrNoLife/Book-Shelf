@@ -12,8 +12,10 @@ public sealed class ImportBatchConfiguration : IEntityTypeConfiguration<ImportBa
 
         builder.Property(batch => batch.FileName).HasMaxLength(400).IsRequired();
 
+        builder.HasOne<User>().WithMany().HasForeignKey(batch => batch.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
         builder.HasMany(batch => batch.Groups)
-            .WithOne()
+            .WithOne(group => group.Batch)
             .HasForeignKey(group => group.ImportBatchId)
             .OnDelete(DeleteBehavior.Cascade);
     }

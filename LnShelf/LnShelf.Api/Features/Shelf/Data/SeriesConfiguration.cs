@@ -40,17 +40,21 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         // over varchar(n) and cannot truncate a description mid-sentence.
         builder.Property(series => series.Description);
 
-        // Matching and sync key on the external ids constantly (data-access.md).
-        builder.HasIndex(series => series.AniListId).IsUnique();
-        builder.HasIndex(series => series.MangaUpdatesId).IsUnique();
+        // Matching and sync key on the external ids constantly (data-access.md). Unique per
+        // owner, not globally: every user has their own copy of a series (feature-spec §7).
+        builder.HasIndex(series => new { series.OwnerId, series.AniListId }).IsUnique();
+        builder.HasIndex(series => new { series.OwnerId, series.MangaUpdatesId }).IsUnique();
+
+        // Deleting an account deletes every series it tracks, and everything under them.
+        builder.HasOne<User>().WithMany().HasForeignKey(series => series.OwnerId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(series => series.Volumes)
-            .WithOne()
+            .WithOne(volume => volume.Series)
             .HasForeignKey(volume => volume.SeriesId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(series => series.UserState)
-            .WithOne()
+            .WithOne(state => state.Series)
             .HasForeignKey<SeriesUserState>(state => state.SeriesId)
             .OnDelete(DeleteBehavior.Cascade);
     }

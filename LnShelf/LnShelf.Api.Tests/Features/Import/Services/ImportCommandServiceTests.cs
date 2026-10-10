@@ -1,5 +1,3 @@
-using LnShelf.Api.Data;
-using LnShelf.Api.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Import.Services;
@@ -332,7 +330,7 @@ public sealed class ImportCommandServiceTests
 
         return new ImportCommandService(
             dbContext,
-            new ImportShelfWriter(dbContext, metadataSource, coverCache, NullLogger<ImportShelfWriter>.Instance),
+            new ImportShelfWriter(dbContext, metadataSource, coverCache, TestUsers.Limits(dbContext), NullLogger<ImportShelfWriter>.Instance),
             metadataSource,
             coverCache,
             TimeProvider.System,
@@ -342,5 +340,5 @@ public sealed class ImportCommandServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"import-command-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

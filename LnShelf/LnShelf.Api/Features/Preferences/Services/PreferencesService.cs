@@ -11,9 +11,10 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
     {
         var preferences = await dbContext.UserPreferences
             .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.Id == UserPreferences.SingletonId, cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken);
 
-        // Absent means "never changed anything", which is the defaults — not an error
+        // The owner filter leaves this user's row or none. Absent means "never changed
+        // anything", which is the defaults — not an error
         // and not a reason to write a row before the user has an opinion.
         return PreferencesMapper.ToResponse(preferences ?? new UserPreferences());
     }
@@ -25,7 +26,7 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
         ArgumentNullException.ThrowIfNull(request);
 
         var preferences = await dbContext.UserPreferences
-            .FirstOrDefaultAsync(row => row.Id == UserPreferences.SingletonId, cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (preferences is null)
         {

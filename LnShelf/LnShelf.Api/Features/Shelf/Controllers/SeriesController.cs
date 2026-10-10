@@ -92,6 +92,7 @@ public sealed class SeriesController(
     // naming a source no IAddSeriesFlow is registered for. Which flow runs is the command
     // service's lookup, not a switch here — nothing about dispatching to a metadata source
     // is a controller's business.
+    [EnableRateLimiting(UserRateLimits.ExternalSources)]
     [HttpPost]
     public async Task<ActionResult<AddSeriesResponse>> AddAsync(
         [FromBody] AddSeriesRequest request,

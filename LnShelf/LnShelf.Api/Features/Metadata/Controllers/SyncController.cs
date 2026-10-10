@@ -10,6 +10,7 @@ public sealed class SyncController(
     /// Runs a sync now. The same code path the nightly job uses (feature-spec §4.2
     /// — "manual sync now … same code path").
     /// </summary>
+    [EnableRateLimiting(UserRateLimits.WholeShelfSync)]
     [HttpPost]
     public async Task<ActionResult<SyncSummaryResponse>> RunAsync(CancellationToken cancellationToken)
     {

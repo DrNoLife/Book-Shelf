@@ -1,5 +1,3 @@
-using LnShelf.Api.Data;
-using LnShelf.Api.Errors;
 using LnShelf.Shared.Preferences;
 using Microsoft.EntityFrameworkCore;
 
@@ -581,7 +579,7 @@ public sealed class SeriesCommandServiceTests
             [],
             NoStagedIsbns(),
             NoRefresh(),
-            NullLogger<AddSeriesPipeline>.Instance);
+            TestUsers.Limits(dbContext), NullLogger<AddSeriesPipeline>.Instance);
 
         var act = async () => await pipeline.RunAsync(CreateRequest(), CancellationToken.None);
 
@@ -927,7 +925,7 @@ public sealed class SeriesCommandServiceTests
                 ],
                 isbnBackfill ?? NoStagedIsbns(),
                 seriesSync ?? NoRefresh(),
-                NullLogger<AddSeriesPipeline>.Instance),
+                TestUsers.Limits(dbContext), NullLogger<AddSeriesPipeline>.Instance),
             TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
 
@@ -1051,5 +1049,5 @@ public sealed class SeriesCommandServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"shelf-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

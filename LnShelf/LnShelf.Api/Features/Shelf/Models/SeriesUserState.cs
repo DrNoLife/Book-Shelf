@@ -8,6 +8,9 @@ public sealed class SeriesUserState
     /// <summary>Primary key and foreign key — one row per series.</summary>
     public Guid SeriesId { get; set; }
 
+    /// <summary>The owning series. The owner filter reads it.</summary>
+    public Series? Series { get; set; }
+
     /// <summary>The notes column's width, shared by its configuration and the write guard.</summary>
     // One constant for both, so a note the service accepts is always a note the column
     // can hold — a longer one used to reach Postgres and come back as a 500.

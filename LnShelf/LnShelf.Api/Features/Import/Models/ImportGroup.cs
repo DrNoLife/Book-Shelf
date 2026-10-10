@@ -14,6 +14,9 @@ public sealed class ImportGroup
     public Guid Id { get; set; }
     public Guid ImportBatchId { get; set; }
 
+    /// <summary>The owning batch. The owner filter reads it.</summary>
+    public ImportBatch? Batch { get; set; }
+
     /// <summary>The normalised title the rows were grouped on.</summary>
     public string SeriesKey { get; set; } = string.Empty;
 

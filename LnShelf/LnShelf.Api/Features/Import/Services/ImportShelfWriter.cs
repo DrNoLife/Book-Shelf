@@ -9,6 +9,7 @@ public sealed class ImportShelfWriter(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
     ICoverCache coverCache,
+    UserLimits userLimits,
     ILogger<ImportShelfWriter> logger)
 {
     /// <param name="groups">
@@ -91,6 +92,10 @@ public sealed class ImportShelfWriter(
 
             return unlinked;
         }
+
+        // Counted against what is saved plus what this commit has already added, so a big
+        // export stops at the limit rather than after it.
+        await userLimits.EnsureRoomForSeriesAsync(adding: counters.SeriesCreated + 1, cancellationToken);
 
         dbContext.Series.Add(series);
         counters.SeriesCreated++;

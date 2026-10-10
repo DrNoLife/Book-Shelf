@@ -1,5 +1,3 @@
-using LnShelf.Api.Data;
-using LnShelf.Api.Features.Preferences.Models;
 using LnShelf.Api.Features.Preferences.Services;
 using LnShelf.Shared.Preferences;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +42,7 @@ public sealed class PreferencesServiceTests
         response.GridDensity.ShouldBe(GridDensity.Compact);
 
         var row = await dbContext.UserPreferences.SingleAsync();
-        row.Id.ShouldBe(UserPreferences.SingletonId);
+        row.OwnerId.ShouldBe(TestUsers.Owner);
         row.GridDensity.ShouldBe(GridDensity.Compact);
     }
 
@@ -151,5 +149,5 @@ public sealed class PreferencesServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"preferences-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

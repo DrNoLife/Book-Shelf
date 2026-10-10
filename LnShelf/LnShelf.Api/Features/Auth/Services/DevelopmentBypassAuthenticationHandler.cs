@@ -1,10 +1,9 @@
-using System.Security.Claims;
 using System.Text.Encodings.Web;
 
 namespace LnShelf.Api.Features.Auth.Services;
 
 /// <summary>
-/// Development only: every request is the owner. Registered instead of cookie and OpenID
+/// Development only: every request is the fixed development user (User.DevelopmentUserId). Registered instead of cookie and OpenID
 /// Connect when Auth:DevelopmentBypass is on, which AuthOptionsValidator allows in
 /// Development alone.
 /// </summary>
@@ -19,10 +18,7 @@ public sealed class DevelopmentBypassAuthenticationHandler(
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, "Development owner")],
-            SchemeName);
-
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
+        var principal = UserSignIn.Principal(User.DevelopmentUserId, "developer@localhost");
+        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
     }
 }

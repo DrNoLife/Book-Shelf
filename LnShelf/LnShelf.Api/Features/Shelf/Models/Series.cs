@@ -7,9 +7,12 @@ namespace LnShelf.Api.Features.Shelf.Models;
 // Persistence models are mutable classes rather than the records CLAUDE.md
 // prefers: EF materialisation and change tracking need settable members. They
 // never leave this project — queries project to LnShelf.Shared records.
-public sealed class Series
+public sealed class Series : IOwned
 {
     public Guid Id { get; set; }
+
+    /// <summary>The user this belongs to (IOwned). Stamped on save.</summary>
+    public Guid OwnerId { get; set; }
 
     // Both external ids are nullable: a manual-only series (WebNovel — §4.2) has
     // neither, and Postgres unique indexes permit multiple nulls.

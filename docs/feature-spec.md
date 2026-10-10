@@ -7,13 +7,14 @@ material.
 
 ## 1. System overview
 
-Self-hosted, single-user tracker for light novel and manga collections.
+Self-hosted tracker for light novel and manga collections. **[amended 2026-10-10]**
+Anyone may sign up; every user has a separate shelf (§7).
 Series-centric with per-volume state on two independent axes (read /
 owned). Metadata flows in from AniList and MangaUpdates; user state lives in
 local Postgres and is never touched by sync. Deployed as Docker containers on
 the home network behind a reverse proxy.
 
-**Non-goals (v1):** multi-user, social features, reviews/ratings sync,
+**Non-goals (v1):** shared shelves between users, social features, reviews/ratings sync,
 in-volume page progress, anime tracking, mobile app (the web UI is
 responsive; that's the mobile story). **Offline mode is explicitly killed**,
 superseding the UI spec's "works offline-read; writes queue" line: a service
@@ -67,7 +68,7 @@ Four containers, one compose file:
 | Storage abstraction | **[decision]** `ICoverStore` seam; MinIO is the first implementation | keeps local-disk or another S3 target as pure config/impl swap. (FluentStorage is an acceptable implementation detail behind the seam if it earns its keep; the seam is the requirement, the library isn't.) |
 | Caching | `HybridCache` | see §8 — L1 (in-process `MemoryCache`) only; no distributed L2, single instance means it would be ceremony |
 | Background work | one `BackgroundService` (nightly sync) | no Hangfire (CLAUDE.md) |
-| Auth | **[decision, 2026-10-09]** OpenID Connect in the API (Google by default) behind a cookie session; one allowed address | see §7 — never a token in the client bundle; single user, no user table |
+| Auth | **[decision, 2026-10-09/10]** OpenID Connect in the API (Google by default) behind a cookie session; open sign-up, one shelf per user | see §7 — never a token in the client bundle |
 | Observability | structured logs + the sync summary; nothing more in v1 | |
 
 **A note on MinIO [decision, flagged]:** for one user and a few thousand
@@ -348,8 +349,14 @@ VolumeUserState
   PurchasedAt (nullable), PurchasePrice (nullable),
   CoverOverrideObjectKey (nullable)
 
+User   [added 2026-10-10]
+  Id, Issuer, Subject (unique together), Email, CreatedAt, LastSeenAt
+  -- Series, ImportBatch, SyncRun and UserPreferences carry OwnerId (FK, cascade);
+  -- the unique external-id indexes on Series are per owner; UserPreferences is
+  -- keyed by OwnerId.
+
 SyncRun
-  Id, StartedAt, FinishedAt, CoversWholeShelf, SeriesRefreshed, SeriesLinked, DatesMoved,
+  Id, OwnerId, StartedAt, FinishedAt, CoversWholeShelf, SeriesRefreshed, SeriesLinked, DatesMoved,
   VolumesMarkedReleased, VolumesEnriched, VolumeCoversCached, EnrichmentGaps,
   EnrichmentFailures, NewVolumes, Failures, Summary (text)
   -- EnrichmentGaps is reported rather than hidden: enriching 52 of 60 volumes
@@ -460,9 +467,29 @@ bundle holds no token at all:
   session in an HttpOnly, SameSite=Lax cookie (`lnshelf.session`, sliding,
   30 days by default). Because client and API share one origin (§2), the
   cookie flows to `/api/*` automatically. The provider's tokens are not kept.
-- **One person gets in.** `Auth:AllowedEmail` names the owner; the identity's
-  `email` must match it and `email_verified` must be true before a cookie is
-  issued at all (`OwnerAllowlist`). No user table; preferences stay one row.
+- **Everyone gets their own shelf** **[amended 2026-10-10]**. A verified
+  identity becomes a `User` (keyed by issuer and subject, never by email) on
+  first sign-in (`UserSignIn`), and the session carries the user id. Sign-up
+  is open unless `Auth:AllowedEmails` lists addresses. Each user has separate
+  copies of everything, including metadata: the roots `Series`,
+  `ImportBatch`, `SyncRun` and `UserPreferences` carry `OwnerId`, and EF
+  global query filters on `LnShelfDbContext` restrict every query to the
+  current user (children are filtered through their root). With no current
+  user a query sees nothing and a new root cannot be saved, so a forgotten
+  scope fails closed. Another user's id is a 404, never a 403.
+- **Background work acts as each user.** The nightly sync runs once per user,
+  each in its own scope after `ICurrentUser.ActAs`, sharing one lookup
+  allowance for the night (`OpenLibrary:MaximumLookupsPerNight`); console
+  commands act as `--user <email>` or the only user.
+- **The library from before users** belongs to a placeholder user the
+  migration created; `Auth:InitialOwnerEmail` adopts it in place on first
+  sign-in.
+- **Limits per user** (`Limits:*`): series, uploaded covers, and rate limits
+  on endpoints that reach the metadata sources and on whole-shelf sync.
+- **Privacy:** a static `privacy.html` says what is stored, and
+  `DELETE /api/auth/account` deletes the user and everything they own
+  (cascade from the user row, then their volume covers in the store).
+  Covers are served `private` and per-volume covers only to their owner.
 - **Closed by default.** A fallback authorization policy requires a signed-in
   owner on every endpoint. The only anonymous ones are `GET /api/auth/login`
   and `GET /api/health` (version and database reachability, which deploy.ps1
@@ -525,7 +552,7 @@ services:
     depends_on: [api]
   api:
     environment: [ConnectionStrings__Db, Covers__*, Sync__Hour,
-                  Auth__ClientId, Auth__ClientSecret, Auth__AllowedEmail]   # §7; secrets from the server's .env
+                  Auth__ClientId, Auth__ClientSecret, Auth__InitialOwnerEmail]   # §7; secrets from the server's .env
     depends_on: [postgres, minio]
   postgres:
     volumes: [pgdata:/var/lib/postgresql/data]

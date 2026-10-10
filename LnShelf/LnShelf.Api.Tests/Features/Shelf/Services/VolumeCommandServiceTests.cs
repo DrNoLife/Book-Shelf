@@ -1,5 +1,3 @@
-using LnShelf.Api.Data;
-using LnShelf.Api.Errors;
 using LnShelf.Api.Features.Covers.Services;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
@@ -376,6 +374,7 @@ public sealed class VolumeCommandServiceTests
                 Options.Create(new CoverStoreOptions()),
                 NullLogger<CoverNormalizer>.Instance),
             TimeProvider.System,
+            TestUsers.Limits(dbContext),
             NullLogger<VolumeCommandService>.Instance);
 
     [Fact]
@@ -667,5 +666,5 @@ public sealed class VolumeCommandServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"volumes-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

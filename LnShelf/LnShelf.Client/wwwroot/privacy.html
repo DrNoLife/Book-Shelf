@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- A static page outside the Blazor app, like signed-out.html: it has to be readable
+     without signing in, because the Google consent screen links to it. -->
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy · LN Shelf</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+    <main class="boot privacy">
+        <h1>Privacy</h1>
+
+        <p>LN Shelf is a hobby project that keeps track of your light novel and manga collection.</p>
+
+        <h2>What is stored</h2>
+        <ul>
+            <li>Your Google account's email address and its account id, so you can sign in again.</li>
+            <li>The series and volumes you add or import, and what you record about them: read and
+                owned status, dates, prices, notes and covers you upload.</li>
+            <li>When you last signed in.</li>
+        </ul>
+
+        <h2>What is not</h2>
+        <ul>
+            <li>No password: signing in goes through Google, and no Google token is kept.</li>
+            <li>No tracking, no analytics and no ads. Nothing is shared with or sold to anyone.</li>
+            <li>Other users cannot see anything of yours.</li>
+        </ul>
+
+        <p>Series details and covers come from public catalogues (AniList, MangaUpdates, Open
+            Library and Apple Books). Only titles and ISBNs are sent to them, never anything about
+            you.</p>
+
+        <h2>Deleting your data</h2>
+        <p>This deletes your account and everything on your shelf, straight away and for good.</p>
+        <p><button type="button" id="delete-account">Delete my account and all my data</button></p>
+        <p id="delete-status" role="status"></p>
+
+        <p><a href="./">Back to the shelf</a></p>
+    </main>
+
+    <script>
+        document.getElementById('delete-account').addEventListener('click', async () => {
+            if (!window.confirm('Delete your account and everything on your shelf? This cannot be undone.')) {
+                return;
+            }
+
+            const status = document.getElementById('delete-status');
+            const response = await fetch('api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
+
+            if (response.status === 204) {
+                window.location.href = 'signed-out.html';
+            } else if (response.status === 401) {
+                status.textContent = 'Sign in first, then come back here to delete your account.';
+            } else {
+                status.textContent = 'Deleting failed (' + response.status + '). Nothing was deleted; try again later.';
+            }
+        });
+    </script>
+</body>
+
+</html>

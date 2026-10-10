@@ -25,6 +25,7 @@ builder.Services.AddPreferences();
 builder.Services.AddReleases();
 builder.Services.AddStats();
 builder.Services.AddAuth(builder.Configuration, builder.Environment);
+builder.Services.AddUserLimits(builder.Configuration);
 
 // Development only. In production nginx serves the client and proxies /api/*, so
 // browser and API share one origin and no CORS policy exists (feature-spec §2).
@@ -53,6 +54,9 @@ if (app.Environment.IsDevelopment())
 // After CORS, so a preflight from the development client is answered before it is
 // asked to sign in.
 app.UseAuth();
+
+// After authentication, because the limits are per signed-in user.
+app.UseRateLimiter();
 
 // No HTTPS redirection: TLS terminates at the reverse proxy (feature-spec §2).
 app.MapControllers();

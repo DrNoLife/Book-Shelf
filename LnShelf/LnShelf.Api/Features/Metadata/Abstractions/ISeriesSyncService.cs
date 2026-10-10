@@ -6,7 +6,14 @@ namespace LnShelf.Api.Features.Metadata.Abstractions;
 /// </summary>
 public interface ISeriesSyncService
 {
+    /// <summary>Every series of the current user, with a run's own lookup allowance.</summary>
     Task<SyncRun> RunAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every series of the current user, spending from <paramref name="budget"/>: the night
+    /// shares one allowance across all users' runs.
+    /// </summary>
+    Task<SyncRun> RunAsync(LookupBudget budget, CancellationToken cancellationToken);
 
     /// <summary>
     /// The same refresh, for one series, on demand — feature-spec §4.2's "manual sync

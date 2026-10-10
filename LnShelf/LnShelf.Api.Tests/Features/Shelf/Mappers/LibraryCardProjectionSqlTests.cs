@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Shelf.Mappers;
@@ -40,5 +39,5 @@ public sealed class LibraryCardProjectionSqlTests
     private static LnShelfDbContext CreatePostgresDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseNpgsql("Host=localhost;Database=lnshelf;Username=lnshelf;Password=none")
-            .Options);
+            .Options, TestUsers.Current);
 }

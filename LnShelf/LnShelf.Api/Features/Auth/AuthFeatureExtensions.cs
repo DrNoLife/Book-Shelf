@@ -6,8 +6,8 @@ namespace LnShelf.Api.Features.Auth;
 
 /// <summary>
 /// Login (feature-spec §7): the API runs OpenID Connect against the provider and keeps the
-/// session in a cookie, so the WASM bundle never holds a token. One allowed address, no
-/// user table.
+/// session in a cookie, so the WASM bundle never holds a token. Every signed-in identity is a
+/// user with their own shelf.
 /// </summary>
 public static class AuthFeatureExtensions
 {
@@ -23,6 +23,8 @@ public static class AuthFeatureExtensions
                 .Bind(configuration.GetSection(AuthOptions.SectionName))
                 .ValidateOnStart();
             services.AddSingleton<IValidateOptions<AuthOptions>, AuthOptionsValidator>();
+            services.AddScoped<UserSignIn>();
+            services.AddScoped<AccountDeletionService>();
 
             var auth = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
 
@@ -75,6 +77,22 @@ public static class AuthFeatureExtensions
                         context.HttpContext, StatusCodes.Status401Unauthorized, "Sign in first");
                     cookie.Events.OnRedirectToAccessDenied = context => WriteProblemAsync(
                         context.HttpContext, StatusCodes.Status403Forbidden, "Not allowed");
+
+                    // A session whose user is gone (account deleted) or that predates users
+                    // (no user claim) is dropped, and the next API call answers 401.
+                    cookie.Events.OnValidatePrincipal = async context =>
+                    {
+                        var claim = context.Principal?.FindFirst(LnShelfClaims.UserId)?.Value;
+                        var exists = Guid.TryParse(claim, out var userId)
+                            && await context.HttpContext.RequestServices.GetRequiredService<LnShelfDbContext>()
+                                .Users.AnyAsync(user => user.Id == userId, context.HttpContext.RequestAborted);
+
+                        if (!exists)
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                    };
                 })
                 .AddOpenIdConnect(openIdConnect =>
                 {
@@ -95,14 +113,25 @@ public static class AuthFeatureExtensions
                     // provider's APIs afterwards, so none are kept in the cookie.
                     openIdConnect.SaveTokens = false;
 
-                    openIdConnect.Events.OnTokenValidated = context =>
+                    // The token's own claim names ("sub", "email", "iss"), which UserSignIn reads,
+                    // rather than the long WS-Federation URIs they are mapped to by default.
+                    openIdConnect.MapInboundClaims = false;
+
+                    // The session carries this app's user, not the provider's raw identity.
+                    openIdConnect.Events.OnTokenValidated = async context =>
                     {
-                        if (context.Principal is null || !OwnerAllowlist.Admits(context.Principal, auth.AllowedEmail))
+                        var principal = context.Principal is null
+                            ? null
+                            : await context.HttpContext.RequestServices.GetRequiredService<UserSignIn>()
+                                .SignInAsync(context.Principal, context.HttpContext.RequestAborted);
+
+                        if (principal is null)
                         {
                             context.Fail("This account is not allowed in.");
+                            return;
                         }
 
-                        return Task.CompletedTask;
+                        context.Principal = principal;
                     };
 
                     openIdConnect.Events.OnRemoteFailure = async context =>

@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
@@ -173,7 +172,7 @@ public sealed class IsbnReviewRoundTripTests : IDisposable
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"isbn-apply-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 
     public void Dispose()
     {

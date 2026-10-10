@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using static LnShelf.Api.Tests.Features.Metadata.Services.VolumeEnrichmentTestContext;
 
@@ -491,5 +490,5 @@ public sealed class SeriesSyncServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"sync-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

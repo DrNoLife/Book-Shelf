@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Shelf.Services;
@@ -155,5 +154,5 @@ public sealed class SeriesDetailQueryServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"series-detail-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

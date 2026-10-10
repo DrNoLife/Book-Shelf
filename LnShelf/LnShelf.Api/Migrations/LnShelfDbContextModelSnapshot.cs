@@ -22,6 +22,40 @@ namespace LnShelf.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("LnShelf.Api.Features.Auth.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Issuer", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("app_user", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -35,6 +69,9 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("RowCount")
                         .HasColumnType("integer");
 
@@ -42,6 +79,8 @@ namespace LnShelf.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("import_batch", (string)null);
                 });
@@ -295,6 +334,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<int>("NewVolumes")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("SeriesLinked")
                         .HasColumnType("integer");
 
@@ -323,14 +365,14 @@ namespace LnShelf.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StartedAt");
+                    b.HasIndex("OwnerId", "StartedAt");
 
                     b.ToTable("sync_run", (string)null);
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("DefaultLibraryFilter")
@@ -361,7 +403,7 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.HasKey("Id");
+                    b.HasKey("OwnerId");
 
                     b.ToTable("user_preferences", (string)null);
                 });
@@ -412,6 +454,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<long?>("MangaUpdatesId")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("PublicationStatus")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -442,10 +487,10 @@ namespace LnShelf.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AniListId")
+                    b.HasIndex("OwnerId", "AniListId")
                         .IsUnique();
 
-                    b.HasIndex("MangaUpdatesId")
+                    b.HasIndex("OwnerId", "MangaUpdatesId")
                         .IsUnique();
 
                     b.ToTable("series", (string)null);
@@ -592,6 +637,15 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("data_protection_key", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportCandidate", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Import.Models.ImportGroup", null)
@@ -603,11 +657,13 @@ namespace LnShelf.Api.Migrations
 
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportGroup", b =>
                 {
-                    b.HasOne("LnShelf.Api.Features.Import.Models.ImportBatch", null)
+                    b.HasOne("LnShelf.Api.Features.Import.Models.ImportBatch", "Batch")
                         .WithMany("Groups")
                         .HasForeignKey("ImportBatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Batch");
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportRow", b =>
@@ -637,22 +693,53 @@ namespace LnShelf.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.SeriesUserState", b =>
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncRun", b =>
                 {
-                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", null)
-                        .WithOne("UserState")
-                        .HasForeignKey("LnShelf.Api.Features.Shelf.Models.SeriesUserState", "SeriesId")
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.SeriesUserState", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", "Series")
+                        .WithOne("UserState")
+                        .HasForeignKey("LnShelf.Api.Features.Shelf.Models.SeriesUserState", "SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Series");
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Volume", b =>
                 {
-                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", null)
+                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", "Series")
                         .WithMany("Volumes")
                         .HasForeignKey("SeriesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Series");
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.VolumeUserState", b =>

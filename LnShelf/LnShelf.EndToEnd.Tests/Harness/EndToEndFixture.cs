@@ -1,3 +1,6 @@
+using LnShelf.Api.Features.Auth.Abstractions;
+using LnShelf.Api.Features.Auth.Models;
+using LnShelf.Api.Features.Auth.Services;
 using LnShelf.Api.Features.Shelf.Data;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -45,17 +48,25 @@ public sealed class EndToEndFixture : IAsyncLifetime
     {
         await _database.EmptyAsync();
 
+        // Both users exist from the start; the seeded shelf is A's, and B's is empty.
         await using var scope = Factory.Services.CreateAsyncScope();
+        var signIn = scope.ServiceProvider.GetRequiredService<UserSignIn>();
+        var userA = await signIn.SignInAsync(TestUser.A.ProviderIdentity(), CancellationToken.None);
+        await signIn.SignInAsync(TestUser.B.ProviderIdentity(), CancellationToken.None);
+
+        var userAId = Guid.Parse(userA!.FindFirst(LnShelfClaims.UserId)!.Value);
+        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userAId);
         await scope.ServiceProvider.GetRequiredService<ShelfSeeder>().SeedAsync(CancellationToken.None);
 
         CoverStore.Clear();
     }
 
     /// <summary>
-    /// A browser context signed in as the owner, unless <paramref name="signedIn"/> is false.
-    /// The only place a context is created, so the login lives in one place.
+    /// A browser context signed in as <paramref name="user"/> (A by default), unless
+    /// <paramref name="signedIn"/> is false. The only place a context is created, so the
+    /// login lives in one place.
     /// </summary>
-    public async Task<IBrowserContext> NewContextAsync(bool signedIn = true)
+    public async Task<IBrowserContext> NewContextAsync(bool signedIn = true, TestUser? user = null)
     {
         var browser = _browser ?? throw new InvalidOperationException("The fixture has not been initialised.");
 
@@ -68,7 +79,8 @@ public sealed class EndToEndFixture : IAsyncLifetime
         // the one every page in the context sends.
         if (signedIn)
         {
-            var response = await context.APIRequest.GetAsync(TestSignInStartupFilter.SignInPath);
+            var response = await context.APIRequest.GetAsync(
+                $"{TestSignInStartupFilter.SignInPath}?user={(user ?? TestUser.A).Key}");
             response.Ok.ShouldBeTrue($"The test sign-in answered {response.Status}.");
         }
 

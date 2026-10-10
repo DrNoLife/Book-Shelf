@@ -15,8 +15,13 @@ public sealed class SeriesSyncService(
     TimeProvider timeProvider,
     ILogger<SeriesSyncService> logger) : ISeriesSyncService
 {
-    public async Task<SyncRun> RunAsync(CancellationToken cancellationToken)
+    public Task<SyncRun> RunAsync(CancellationToken cancellationToken) =>
+        RunAsync(new LookupBudget(enrichmentOptions.Value.MaximumLookupsPerRun), cancellationToken);
+
+    public async Task<SyncRun> RunAsync(LookupBudget budget, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(budget);
+
         var run = await StartRunAsync(coversWholeShelf: true, cancellationToken);
 
         // Sync skips any series without an external id (feature-spec §4.2) — a
@@ -44,9 +49,8 @@ public sealed class SeriesSyncService(
 
         // One budget for the whole sweep, spent down series by series. Enrichment re-asks
         // about the volumes it failed on, because the catalogue grows — which makes an
-        // uncapped run able to spend an hour against somebody else's donated API.
-        var budget = new LookupBudget(enrichmentOptions.Value.MaximumLookupsPerRun);
-
+        // uncapped run able to spend an hour against somebody else's donated API. The
+        // caller sizes it: a run's own, or the night's, shared across users.
         foreach (var candidate in series)
         {
             await RefreshOneAsync(candidate, run, linkedExternalIds, budget, cancellationToken);

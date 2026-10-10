@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Import.Fixtures;
@@ -16,7 +15,7 @@ internal static class ImportPipelineHarness
     public static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"import-staging-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 
     /// <summary>
     /// A matcher that finds nothing, so every group goes to review — which keeps

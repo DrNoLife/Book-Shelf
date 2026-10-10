@@ -44,6 +44,27 @@ public static class CoverObjectKey
         $"volume/{Slug(sourceName)}/{volumeId}{extension}";
 
     /// <summary>
+    /// The volume a per-volume key belongs to (an override or a volume's synced art), or
+    /// null for a key shared by every copy of a series (a source's series art).
+    /// </summary>
+    // The covers endpoint and account deletion both need to know whose a key is, and the
+    // volume id is the only owner the key carries.
+    public static Guid? VolumeIdOf(string objectKey)
+    {
+        ArgumentNullException.ThrowIfNull(objectKey);
+
+        var parts = objectKey.Split('/');
+        var candidate = parts switch
+        {
+            ["override", "volume", var volumeId, _] => volumeId,
+            ["volume", _, var file] => Path.GetFileNameWithoutExtension(file),
+            _ => null,
+        };
+
+        return Guid.TryParse(candidate, out var parsed) ? parsed : null;
+    }
+
+    /// <summary>
     /// A source name reduced to what <see cref="IsWellFormed"/> allows.
     /// </summary>
     // The source name reaches this from a SourceName property, so it is not attacker

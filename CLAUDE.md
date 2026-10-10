@@ -355,12 +355,18 @@ subfolder; if earlier work put them elsewhere, move them.
 - **The sync job is a `BackgroundService`**, not Hangfire — one nightly loop
   does not justify a job framework. If job count ever grows real, that's a
   phase decision, not a drive-by.
-- **Single user, one identity.** Login is OpenID Connect run by the API
+- **Many users, separate shelves.** Login is OpenID Connect run by the API
   (`Features/Auth`, Google by default) with the session in a cookie on the
   shared origin — never a token in the client bundle, which is public by
-  nature. One allowed address in config, no user table beyond one row of
-  preferences. Every endpoint requires the owner unless it says
-  `[AllowAnonymous]`. Details: `docs/feature-spec.md` §7.
+  nature. Each user owns their own copies of everything: the four roots
+  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`) implement `IOwned`,
+  `LnShelfDbContext` stamps `OwnerId` on save and filters every query by the
+  current user (`ICurrentUser`). **Never filter by owner by hand and never
+  call `IgnoreQueryFilters` in request code**; background work and console
+  commands call `ICurrentUser.ActAs(userId)` in their own scope instead. A new
+  root entity implements `IOwned` and gets a filter in `ApplyOwnerFilters`.
+  Every endpoint requires a user unless it says `[AllowAnonymous]`.
+  Details: `docs/feature-spec.md` §7.
 
 ---
 

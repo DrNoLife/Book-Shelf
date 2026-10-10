@@ -18,7 +18,6 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
     // instead of reaching AniList, MangaUpdates, Open Library or Apple Books.
     private const string UnreachableEndpoint = "http://127.0.0.1:9/";
 
-    public const string OwnerEmail = "owner@example.com";
 
     private readonly string _connectionString;
     private readonly string _bundlePath;
@@ -64,7 +63,10 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
         builder.UseSetting("Auth:Authority", "https://127.0.0.1:9/");
         builder.UseSetting("Auth:ClientId", "end-to-end");
         builder.UseSetting("Auth:ClientSecret", "end-to-end");
-        builder.UseSetting("Auth:AllowedEmail", OwnerEmail);
+
+        // Generous, so a journey never meets a limit it is not about.
+        builder.UseSetting("Limits:ExternalRequestsPerMinute", "10000");
+        builder.UseSetting("Limits:SyncRunsPerHour", "1000");
 
         builder.ConfigureTestServices(services =>
         {

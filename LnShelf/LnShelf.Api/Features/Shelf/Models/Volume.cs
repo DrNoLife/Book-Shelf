@@ -9,6 +9,9 @@ public sealed class Volume
     public Guid Id { get; set; }
     public Guid SeriesId { get; set; }
 
+    /// <summary>The owning series. Loaded only where a query needs it; the owner filter reads it.</summary>
+    public Series? Series { get; set; }
+
     public int Number { get; set; }
 
     /// <summary>Null means the date is unknown — announced, or simply unrecorded.</summary>

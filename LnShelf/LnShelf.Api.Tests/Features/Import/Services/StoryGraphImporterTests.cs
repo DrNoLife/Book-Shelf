@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using LnShelf.Api.Tests.Features.Import.Fixtures;
 using Microsoft.EntityFrameworkCore;
 
@@ -185,5 +184,5 @@ public sealed class StoryGraphImporterTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"import-staging-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

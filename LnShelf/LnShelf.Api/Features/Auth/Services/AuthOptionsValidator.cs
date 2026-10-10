@@ -24,7 +24,6 @@ public sealed class AuthOptionsValidator(IHostEnvironment environment) : IValida
         var missing = new List<string>();
         if (string.IsNullOrWhiteSpace(options.ClientId)) missing.Add("Auth:ClientId");
         if (string.IsNullOrWhiteSpace(options.ClientSecret)) missing.Add("Auth:ClientSecret");
-        if (string.IsNullOrWhiteSpace(options.AllowedEmail)) missing.Add("Auth:AllowedEmail");
 
         if (missing.Count > 0)
         {

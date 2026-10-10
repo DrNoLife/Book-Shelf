@@ -5,10 +5,11 @@ public sealed class UserPreferencesConfiguration : IEntityTypeConfiguration<User
     public void Configure(EntityTypeBuilder<UserPreferences> builder)
     {
         builder.ToTable("user_preferences");
-        builder.HasKey(preferences => preferences.Id);
+        builder.HasKey(preferences => preferences.OwnerId);
+        builder.Property(preferences => preferences.OwnerId).ValueGeneratedNever();
 
-        // Assigned by the application — and always the same value.
-        builder.Property(preferences => preferences.Id).ValueGeneratedNever();
+        // Deleting an account deletes its preferences.
+        builder.HasOne<User>().WithMany().HasForeignKey(preferences => preferences.OwnerId).OnDelete(DeleteBehavior.Cascade);
 
         // Enums as text, like every other enum here: readable in psql and immune to
         // reordering the members.

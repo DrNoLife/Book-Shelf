@@ -1,17 +1,14 @@
 namespace LnShelf.Api.Features.Preferences.Models;
 
 /// <summary>
-/// The single preferences row (feature-spec §4.6).
+/// One user's preferences row (feature-spec §4.6).
 /// </summary>
-// One user, one row, and a fixed key rather than a generated one: "the settings"
-// is a singleton, and a table that could hold two of them would invite code that
-// has to choose between them.
-public sealed class UserPreferences
+// Keyed by its owner rather than by an id of its own: one user, one row, and a table that
+// could hold two rows for one user would invite code that has to choose between them.
+public sealed class UserPreferences : IOwned
 {
-    /// <summary>The only id this table ever has.</summary>
-    public static readonly Guid SingletonId = new("00000000-0000-0000-0000-000000000001");
-
-    public Guid Id { get; set; } = SingletonId;
+    /// <summary>The user these belong to, and the primary key (IOwned).</summary>
+    public Guid OwnerId { get; set; }
 
     public GridDensity GridDensity { get; set; } = GridDensity.Comfortable;
 

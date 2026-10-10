@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using LnShelf.Api.Features.Releases.Services;
 using Microsoft.EntityFrameworkCore;
 using static LnShelf.Api.Tests.Features.Releases.Fixtures.UpcomingShelf;
@@ -54,5 +53,5 @@ public sealed class UpcomingQueryServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"upcoming-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

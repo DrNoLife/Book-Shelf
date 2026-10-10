@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Import.Services;
@@ -208,5 +207,5 @@ public sealed class IsbnBackfillServiceTests
     private static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"isbn-backfill-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 }

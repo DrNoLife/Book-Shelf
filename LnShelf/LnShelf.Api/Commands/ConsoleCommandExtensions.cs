@@ -37,6 +37,20 @@ public static class ConsoleCommandExtensions
             var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
                 .CreateLogger(typeof(ConsoleCommandExtensions));
 
+            // Every command works on one user's shelf, the owner filters see to that, so the
+            // command acts as the user named by --user, or as the only user when there is one.
+            var userId = await ResolveUserAsync(scope.ServiceProvider, commandLine, cancellationToken);
+            if (userId is { } chosen)
+            {
+                scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(chosen);
+            }
+            else if (await scope.ServiceProvider.GetRequiredService<LnShelfDbContext>().Users.CountAsync(cancellationToken) > 1)
+            {
+                await Console.Error.WriteLineAsync(
+                    "There is more than one user: pass --user <email> to say whose shelf this command works on.");
+                return 2;
+            }
+
             try
             {
                 var exitCode = await command.RunAsync(commandLine, cancellationToken);
@@ -57,5 +71,28 @@ public static class ConsoleCommandExtensions
                 return 1;
             }
         }
+    }
+
+    /// <returns>The user --user names, or the only user; null when neither applies.</returns>
+    private static async Task<Guid?> ResolveUserAsync(
+        IServiceProvider services,
+        ConsoleCommandLine commandLine,
+        CancellationToken cancellationToken)
+    {
+        var users = services.GetRequiredService<LnShelfDbContext>().Users;
+        var email = commandLine.Option("user");
+
+        if (email is not null)
+        {
+            var named = await users
+                .Where(user => user.Email.ToLower() == email.Trim().ToLower())
+                .Select(user => (Guid?)user.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return named ?? throw new InvalidOperationException($"No user has the address '{email}'.");
+        }
+
+        var all = await users.Select(user => user.Id).Take(2).ToListAsync(cancellationToken);
+        return all.Count == 1 ? all[0] : null;
     }
 }

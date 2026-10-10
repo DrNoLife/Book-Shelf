@@ -65,6 +65,15 @@ public sealed class OpenLibraryOptions
     public int MaximumLookupsPerRun { get; set; } = 60;
 
     /// <summary>
+    /// The allowance for the whole nightly sweep, shared by every user's run that night.
+    /// </summary>
+    // Separate from the per-run number because the night now runs once per user (feature-spec
+    // §7): per-run allowances would multiply with the number of users, and the source's
+    // patience does not.
+    [Range(1, 10000)]
+    public int MaximumLookupsPerNight { get; set; } = 300;
+
+    /// <summary>
     /// Volumes one on-demand refresh will look up — adding a series, or a manual sync.
     /// </summary>
     // Much smaller than the nightly allowance, because somebody is waiting for this one.

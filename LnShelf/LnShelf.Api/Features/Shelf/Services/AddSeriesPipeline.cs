@@ -16,6 +16,7 @@ public sealed class AddSeriesPipeline(
     IEnumerable<IAddSeriesFlow> addSeriesFlows,
     IIsbnBackfill isbnBackfill,
     ISeriesSyncService seriesSync,
+    UserLimits userLimits,
     ILogger<AddSeriesPipeline> logger)
 {
     /// <returns>Null when the source has no series with that id.</returns>
@@ -52,6 +53,8 @@ public sealed class AddSeriesPipeline(
         {
             return await AdoptAsync(unlinked, series, flow.Source, sourceId, cancellationToken);
         }
+
+        await userLimits.EnsureRoomForSeriesAsync(adding: 1, cancellationToken);
 
         dbContext.Series.Add(series);
         await dbContext.SaveChangesAsync(cancellationToken);

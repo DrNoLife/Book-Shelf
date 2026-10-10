@@ -1,14 +1,15 @@
-using System.Security.Claims;
+using LnShelf.Api.Features.Auth.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LnShelf.EndToEnd.Tests.Harness;
 
 /// <summary>
-/// Signs the browser in as the owner without the provider: issues the real session cookie
+/// Signs the browser in as test user A or B (`?user=b`) without the provider: issues the real session cookie
 /// through the real cookie scheme, so everything after the login is exercised as in
 /// production.
 /// </summary>
@@ -30,14 +31,14 @@ public sealed class TestSignInStartupFilter : IStartupFilter
                 return;
             }
 
-            var owner = new ClaimsPrincipal(new ClaimsIdentity(
-                [
-                    new Claim("email", EndToEndWebApplicationFactory.OwnerEmail),
-                    new Claim("email_verified", "true"),
-                ],
-                CookieAuthenticationDefaults.AuthenticationScheme));
+            // Through the real UserSignIn, so the user row and the session's claims are the ones
+            // a provider callback would have produced.
+            var user = TestUser.FromKey(context.Request.Query["user"]) ?? TestUser.A;
+            var principal = await context.RequestServices.GetRequiredService<UserSignIn>()
+                .SignInAsync(user.ProviderIdentity(), context.RequestAborted)
+                ?? throw new InvalidOperationException($"UserSignIn refused {user.Email}.");
 
-            await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, owner);
+            await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
             context.Response.StatusCode = StatusCodes.Status204NoContent;
         });
 

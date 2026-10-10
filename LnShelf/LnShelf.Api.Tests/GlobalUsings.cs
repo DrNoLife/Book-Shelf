@@ -1,5 +1,8 @@
 global using System.Globalization;
 global using System.Text;
+global using LnShelf.Api.Data;
+global using LnShelf.Api.Errors;
+global using LnShelf.Api.Features.Auth.Abstractions;
 global using LnShelf.Api.Features.Auth.Models;
 global using LnShelf.Api.Features.Auth.Services;
 global using LnShelf.Api.Features.Changelog.Services;
@@ -20,6 +23,7 @@ global using LnShelf.Api.Features.Shelf.Mappers;
 global using LnShelf.Api.Features.Shelf.Models;
 global using LnShelf.Api.Features.Shelf.Services;
 global using LnShelf.Api.Matching;
+global using LnShelf.Api.Tests.Features.Auth.Fixtures;
 global using LnShelf.Shared.Import;
 global using LnShelf.Shared.Metadata;
 global using LnShelf.Shared.Shelf;

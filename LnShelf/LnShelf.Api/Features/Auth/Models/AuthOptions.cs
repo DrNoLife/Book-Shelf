@@ -1,8 +1,7 @@
 namespace LnShelf.Api.Features.Auth.Models;
 
 /// <summary>
-/// Login through an OpenID Connect provider, for the one person allowed in
-/// (feature-spec §7).
+/// Login through an OpenID Connect provider (feature-spec §7).
 /// </summary>
 // ClientSecret is a credential: it arrives as Auth__ClientSecret in the container and from
 // user-secrets locally, never from appsettings (CLAUDE.md, Configuration & secrets). The
@@ -19,14 +18,22 @@ public sealed class AuthOptions
 
     public string ClientSecret { get; set; } = string.Empty;
 
-    /// <summary>The single address let in. Anyone else the provider signs in is refused.</summary>
-    public string AllowedEmail { get; set; } = string.Empty;
+    /// <summary>
+    /// Who may sign in. Empty means anyone the provider vouches for, with a verified address.
+    /// </summary>
+    public string[] AllowedEmails { get; set; } = [];
+
+    /// <summary>
+    /// The address that takes over the library that existed before users did, on its first
+    /// sign-in. Empty when there is none to adopt.
+    /// </summary>
+    public string InitialOwnerEmail { get; set; } = string.Empty;
 
     /// <summary>How long a session lasts without being used. Each use extends it.</summary>
     public TimeSpan SessionLifetime { get; set; } = TimeSpan.FromDays(30);
 
     /// <summary>
-    /// Development only: every request is the owner, and no provider is configured. Startup
+    /// Development only: every request is the development user, and no provider is configured. Startup
     /// refuses it in any other environment.
     /// </summary>
     public bool DevelopmentBypass { get; set; }

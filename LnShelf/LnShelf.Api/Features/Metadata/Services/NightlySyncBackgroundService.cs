@@ -7,6 +7,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class NightlySyncBackgroundService(
     IServiceScopeFactory scopeFactory,
     IOptions<SyncOptions> options,
+    IOptions<OpenLibraryOptions> lookupOptions,
     TimeProvider timeProvider,
     ILogger<NightlySyncBackgroundService> logger) : BackgroundService
 {
@@ -39,15 +40,42 @@ public sealed class NightlySyncBackgroundService(
         }
     }
 
+    // One run per user, each in its own scope acting as that user, so every user gets their
+    // own run, discrepancies and sidebar summary, and the owner filters keep each run to that
+    // user's series (feature-spec §7). The lookup allowance is the night's, shared by all.
     private async Task RunOnceAsync(CancellationToken stoppingToken)
+    {
+        var budget = new LookupBudget(lookupOptions.Value.MaximumLookupsPerNight);
+
+        foreach (var userId in await UserIdsAsync(stoppingToken))
+        {
+            await RunForUserAsync(userId, budget, stoppingToken);
+        }
+    }
+
+    // Most recently seen first, so when the night's allowance runs out it is the people who
+    // use the shelf who got the lookups.
+    private async Task<IReadOnlyList<Guid>> UserIdsAsync(CancellationToken stoppingToken)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LnShelfDbContext>();
+
+        return await dbContext.Users
+            .OrderByDescending(user => user.LastSeenAt)
+            .Select(user => user.Id)
+            .ToListAsync(stoppingToken);
+    }
+
+    private async Task RunForUserAsync(Guid userId, LookupBudget budget, CancellationToken stoppingToken)
     {
         // A scope per run: the sync service is scoped because the DbContext is.
         await using var scope = scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId);
         var sync = scope.ServiceProvider.GetRequiredService<ISeriesSyncService>();
 
         try
         {
-            await sync.RunAsync(stoppingToken);
+            await sync.RunAsync(budget, stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -56,9 +84,9 @@ public sealed class NightlySyncBackgroundService(
         catch (Exception exception)
         {
             // The run already isolates per-series failures; this catches a failure of
-            // the run itself. Swallowed on purpose — the loop has to survive to
-            // try again tomorrow.
-            logger.LogError(exception, "The nightly sync run failed outright");
+            // the run itself. Swallowed on purpose — one user's failure must not stop the
+            // others' runs, and the loop has to survive to try again tomorrow.
+            logger.LogError(exception, "The nightly sync run for user {UserId} failed outright", userId);
         }
     }
 

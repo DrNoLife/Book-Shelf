@@ -12,8 +12,10 @@ public sealed class SyncRunConfiguration : IEntityTypeConfiguration<SyncRun>
 
         builder.Property(run => run.Summary).HasMaxLength(2000).IsRequired();
 
-        // The sidebar asks for the latest run on every navigation.
-        builder.HasIndex(run => run.StartedAt);
+        // The sidebar asks for the owner's latest run on every navigation.
+        builder.HasIndex(run => new { run.OwnerId, run.StartedAt });
+
+        builder.HasOne<User>().WithMany().HasForeignKey(run => run.OwnerId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(run => run.Discrepancies)
             .WithOne()

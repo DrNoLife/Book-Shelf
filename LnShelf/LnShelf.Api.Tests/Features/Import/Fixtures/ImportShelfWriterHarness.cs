@@ -1,4 +1,3 @@
-using LnShelf.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Import.Fixtures;
@@ -22,13 +21,13 @@ internal static class ImportShelfWriterHarness
     public static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"import-{Guid.CreateVersion7()}")
-            .Options);
+            .Options, TestUsers.Current);
 
     public static ImportShelfWriter CreateWriter(
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource) =>
         new(dbContext, metadataSource, Substitute.For<ICoverCache>(),
-            NullLogger<ImportShelfWriter>.Instance);
+            TestUsers.Limits(dbContext), NullLogger<ImportShelfWriter>.Instance);
 
     public static ISeriesMetadataSource CreateMetadataSource(int? volumeCount)
     {
