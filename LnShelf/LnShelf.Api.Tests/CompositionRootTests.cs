@@ -50,6 +50,8 @@ public sealed class CompositionRootTests
     [InlineData("isbn-apply")]
     [InlineData("enrichment-verify")]
     [InlineData("subtitle-backfill")]
+    [InlineData("cover-orphan-sweep")]
+    [InlineData("cover-migrate")]
     public void EveryConsoleCommand_IsResolvableByItsName(string commandName)
     {
         using var provider = BuildServices().BuildServiceProvider();
@@ -98,10 +100,12 @@ public sealed class CompositionRootTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Db"] = "Host=localhost;Database=none;Username=none;Password=none",
-                ["Covers:Endpoint"] = "localhost:9000",
-                ["Covers:AccessKey"] = "none",
-                ["Covers:SecretKey"] = "none",
-                ["Covers:Bucket"] = "lnshelf-covers",
+                ["Covers:FileSystem:RootPath"] = Path.Combine(Path.GetTempPath(), "lnshelf-composition-root-covers"),
+                // MinIO configured, so the keyed migration source and cover-migrate are part
+                // of the graph checked here, as they are in the one release that carries them.
+                ["Covers:Minio:Endpoint"] = "localhost:9000",
+                ["Covers:Minio:AccessKey"] = "none",
+                ["Covers:Minio:SecretKey"] = "none",
                 ["Auth:ClientId"] = "none",
                 ["Auth:ClientSecret"] = "none",
             })

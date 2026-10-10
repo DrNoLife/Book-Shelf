@@ -11,14 +11,14 @@ namespace LnShelf.Api.Features.Covers.Services;
 /// </summary>
 // One size class in v1 (§4.3): the grid renders covers at two scales from the same
 // file, and thumbnails are a measured-need optimisation rather than a default.
-public sealed class CoverNormalizer(IOptions<CoverStoreOptions> options, ILogger<CoverNormalizer> logger)
+public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger<CoverNormalizer> logger)
 {
     public const string ContentType = "image/webp";
     public const string Extension = ".webp";
 
     /// <returns>
     /// The normalized bytes, or null when the input is not a decodable image or would decode
-    /// into more pixels than <see cref="CoverStoreOptions.MaximumDecodedPixels"/> allows.
+    /// into more pixels than <see cref="CoverImageOptions.MaximumDecodedPixels"/> allows.
     /// </returns>
     public async Task<byte[]?> NormalizeAsync(ReadOnlyMemory<byte> source, CancellationToken cancellationToken)
     {

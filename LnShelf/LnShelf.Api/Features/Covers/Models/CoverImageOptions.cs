@@ -3,33 +3,14 @@ using System.ComponentModel.DataAnnotations;
 namespace LnShelf.Api.Features.Covers.Models;
 
 /// <summary>
-/// MinIO connection settings, bound once through <c>IOptions&lt;T&gt;</c>.
+/// How covers are fetched, checked and encoded, bound once through <c>IOptions&lt;T&gt;</c>.
+/// Where they are kept is the store's own options (<see cref="FileSystemCoverStoreOptions"/>).
 /// </summary>
-// The keys are credentials, so in the container they arrive as environment
-// variables (feature-spec §9). The values checked into
-// appsettings.Development.json are the local compose credentials and nothing
-// else — the same standing exception docker-compose.yml already documents.
-public sealed class CoverStoreOptions
+// Split from the store's settings so each class has one reason to change: these move when the
+// image rules do, the store's when the storage does.
+public sealed class CoverImageOptions
 {
     public const string SectionName = "Covers";
-
-    /// <summary>Host and port, S3 style — no scheme.</summary>
-    // [Required] rather than [Url]: the value is deliberately schemeless, so a URL check
-    // would reject the very shape MinIO asks for.
-    [Required]
-    public string Endpoint { get; set; } = "localhost:9000";
-
-    // The two keys are deliberately not [Required], unlike everything else here that has to
-    // be present: empty is their shipped default, so requiring them would turn a build with
-    // no MinIO configured — which is a normal state to be in — into one that will not start.
-    // Making them required is a defensible call; it is a decision about the development
-    // experience rather than a validation gap, so it is left to be made on purpose.
-    public string AccessKey { get; set; } = string.Empty;
-    public string SecretKey { get; set; } = string.Empty;
-    public bool UseSsl { get; set; }
-
-    [Required]
-    public string Bucket { get; set; } = "lnshelf-covers";
 
     [Range(typeof(TimeSpan), "00:00:01", "00:10:00")]
     public TimeSpan FetchTimeout { get; set; } = TimeSpan.FromSeconds(20);

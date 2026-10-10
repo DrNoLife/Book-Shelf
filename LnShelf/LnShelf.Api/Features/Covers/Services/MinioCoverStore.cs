@@ -5,10 +5,14 @@ using Minio.Exceptions;
 
 namespace LnShelf.Api.Features.Covers.Services;
 
-/// <inheritdoc />
+/// <summary>
+/// The retired MinIO cover store, kept for one release as the source <c>cover-migrate</c>
+/// copies out of. Registered keyed (<see cref="CoversFeatureExtensions.MinioServiceKey"/>), so
+/// nothing that asks for the cover store can be handed this one.
+/// </summary>
 public sealed class MinioCoverStore(
     IMinioClient minioClient,
-    IOptions<CoverStoreOptions> options,
+    IOptions<MinioCoverStoreOptions> options,
     ILogger<MinioCoverStore> logger) : ICoverStore, IDisposable
 {
     // The bucket is created on first use rather than at startup: MinIO being down

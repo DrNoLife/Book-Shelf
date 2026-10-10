@@ -191,7 +191,7 @@ public partial class VolumeGrid
         await SeriesState.SetCoverAsync(selection.Volume, content, selection.File.Name);
     }
 
-    /// <summary>Matches the API's cap (CoverStoreOptions.MaximumUploadBytes).</summary>
+    /// <summary>Matches the API's cap (CoverImageOptions.MaximumUploadBytes).</summary>
     private const long CoverUploadLimitBytes = 8 * 1024 * 1024;
 
     private Task OnReadCycledAsync(VolumeResponse volume) => SeriesState.CycleReadAsync(volume);

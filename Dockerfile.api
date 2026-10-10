@@ -28,6 +28,10 @@ RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey     dotnet 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app ./
+# The cover folder (FileSystemCoverStoreOptions' default). Created and handed to the app user
+# here because Docker copies an image directory's ownership into an empty named volume mounted
+# over it: without this the volume is root's and the API cannot save a single cover.
+RUN mkdir -p /data/covers && chown "$APP_UID" /data/covers
 # Non-root: the base image defines APP_UID (the unprivileged "app" user) for
 # exactly this. Safe because the listening port (8080) is unprivileged too.
 USER $APP_UID

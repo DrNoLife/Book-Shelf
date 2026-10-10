@@ -14,28 +14,24 @@ public static class CoversFeatureExtensions
         public IServiceCollection AddCovers(IConfiguration configuration)
         {
             // Validated at startup rather than bound and hoped for: a bad cover size or a
-            // missing bucket name otherwise surfaces the first time somebody adds a series,
+            // missing folder otherwise surfaces the first time somebody adds a series,
             // which can be hours after the deployment that caused it.
-            services.AddOptions<CoverStoreOptions>()
-                .Bind(configuration.GetSection(CoverStoreOptions.SectionName))
+            services.AddOptions<CoverImageOptions>()
+                .Bind(configuration.GetSection(CoverImageOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            services.AddSingleton<IMinioClient>(provider =>
-            {
-                var covers = provider.GetRequiredService<IOptions<CoverStoreOptions>>().Value;
+            services.AddOptions<FileSystemCoverStoreOptions>()
+                .Bind(configuration.GetSection(FileSystemCoverStoreOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
-                return new MinioClient()
-                    .WithEndpoint(covers.Endpoint)
-                    .WithCredentials(covers.AccessKey, covers.SecretKey)
-                    .WithSSL(covers.UseSsl)
-                    .Build();
-            });
+            // Singleton: the store holds nothing but the resolved folder.
+            services.AddSingleton<CoverStoreRoot>();
+            services.AddSingleton<ICoverStore, FileSystemCoverStore>();
+            services.AddHostedService<CoverStoreStartupProbe>();
 
-            // Singleton: the store is stateless apart from remembering that the
-            // bucket exists, which is exactly what should not be re-checked per
-            // request.
-            services.AddSingleton<ICoverStore, MinioCoverStore>();
+            services.AddMinioMigrationSource(configuration);
 
             // Stateless; the options it reads are the only thing it holds.
             services.AddSingleton<CoverNormalizer>();
@@ -45,7 +41,7 @@ public static class CoversFeatureExtensions
             // rate-limit handlers protect.
             services.AddHttpClient<CoverFetcher>((provider, httpClient) =>
             {
-                var covers = provider.GetRequiredService<IOptions<CoverStoreOptions>>().Value;
+                var covers = provider.GetRequiredService<IOptions<CoverImageOptions>>().Value;
                 httpClient.Timeout = covers.FetchTimeout;
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
             });
@@ -64,5 +60,43 @@ public static class CoversFeatureExtensions
 
             return services;
         }
+
+        /// <summary>
+        /// The retired MinIO store as cover-migrate's source, only where one is configured.
+        /// </summary>
+        // Keyed, so an ICoverStore asked for anywhere else is always the folder. Registered
+        // only when Covers:Minio:Endpoint is set, which keeps a machine without MinIO (dev,
+        // tests, and production once migrated) from needing its settings to start, and keeps
+        // the console runner, which resolves every command, from resolving a store that is not
+        // there.
+        private void AddMinioMigrationSource(IConfiguration configuration)
+        {
+            if (string.IsNullOrWhiteSpace(configuration[$"{MinioCoverStoreOptions.SectionName}:Endpoint"]))
+            {
+                return;
+            }
+
+            services.AddOptions<MinioCoverStoreOptions>()
+                .Bind(configuration.GetSection(MinioCoverStoreOptions.SectionName))
+                .ValidateDataAnnotations();
+
+            services.AddSingleton<IMinioClient>(provider =>
+            {
+                var minio = provider.GetRequiredService<IOptions<MinioCoverStoreOptions>>().Value;
+
+                return new MinioClient()
+                    .WithEndpoint(minio.Endpoint)
+                    .WithCredentials(minio.AccessKey, minio.SecretKey)
+                    .WithSSL(minio.UseSsl)
+                    .Build();
+            });
+
+            services.AddKeyedSingleton<ICoverStore, MinioCoverStore>(MinioServiceKey);
+            services.AddSingleton<CoverMigrator>();
+            services.AddScoped<IConsoleCommand, CoverMigrateCommand>();
+        }
     }
+
+    /// <summary>The service key the retired MinIO store is registered under.</summary>
+    public const string MinioServiceKey = "minio";
 }

@@ -371,7 +371,7 @@ public sealed class VolumeCommandServiceTests
         new(dbContext,
             coverStore ?? Substitute.For<ICoverStore>(),
             new CoverNormalizer(
-                Options.Create(new CoverStoreOptions()),
+                Options.Create(new CoverImageOptions()),
                 NullLogger<CoverNormalizer>.Instance),
             TimeProvider.System,
             TestUsers.Limits(dbContext),

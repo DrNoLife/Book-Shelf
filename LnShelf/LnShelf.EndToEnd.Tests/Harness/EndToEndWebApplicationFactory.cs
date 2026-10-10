@@ -68,6 +68,10 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
         builder.UseSetting("Limits:ExternalRequestsPerMinute", "10000");
         builder.UseSetting("Limits:SyncRunsPerHour", "1000");
 
+        // The journeys use the in-memory store below, but the folder store's startup probe still
+        // runs; give it a folder it can write to instead of the container path.
+        builder.UseSetting("Covers:FileSystem:RootPath", Path.Combine(Path.GetTempPath(), "lnshelf-end-to-end-covers"));
+
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<ISeriesMetadataSource>();

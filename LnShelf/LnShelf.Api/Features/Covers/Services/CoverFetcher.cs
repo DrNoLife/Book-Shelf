@@ -12,7 +12,7 @@ public sealed class CoverFetcher(
     ICoverStore coverStore,
     CoverNormalizer normalizer,
     HttpClient httpClient,
-    IOptions<CoverStoreOptions> options,
+    IOptions<CoverImageOptions> options,
     ILogger<CoverFetcher> logger)
 {
     /// <param name="what">What is being cached, for the log line only.</param>

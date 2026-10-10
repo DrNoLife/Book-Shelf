@@ -20,6 +20,19 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.20.0", new DateOnly(2026, 10, 10), "Covers on the server's own disk",
+            Features: [],
+            Improvements: [
+                "Covers are now kept as plain files on the server instead of in a separate storage service " +
+                    "whose maker stopped publishing it. One less thing to run, and the server can be set up " +
+                    "again from scratch.",
+                "The database and the covers are backed up every night, and the newest backup is test-restored " +
+                    "to prove it works. Fourteen nights are kept, as the privacy page says.",
+                "The app checks at startup that it can save covers, so a broken setup is caught by the deploy " +
+                    "instead of by your first upload.",
+            ],
+            Fixes: []
+        ),
         new("0.19.0", new DateOnly(2026, 10, 10), "A second bookshop",
             Features: [
                 "Faraos Cigarer sits next to Saxo: on the series page, in the phone's More sheet, and on every " +

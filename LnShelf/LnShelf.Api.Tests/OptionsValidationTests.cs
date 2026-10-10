@@ -77,7 +77,7 @@ public sealed class OptionsValidationTests
     [InlineData("AppleBooks:SearchLimit", "0", "SearchLimit")]
     [InlineData("OpenLibrary:MaximumLookupsPerRun", "0", "MaximumLookupsPerRun")]
     [InlineData("OpenLibrary:RequestTimeout", "01:00:00", "RequestTimeout")]
-    [InlineData("Covers:Bucket", "", "Bucket")]
+    [InlineData("Covers:FileSystem:RootPath", "", "RootPath")]
     [InlineData("Covers:CoverQuality", "0", "CoverQuality")]
 
     // One byte over the cover endpoint's own request limit: a value above it could never

@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 namespace LnShelf.EndToEnd.Tests.Fakes;
 
 /// <summary>
-/// <c>ICoverStore</c> without MinIO, whose community image can no longer be pulled
-/// (docs/backlog.md). One instance lives for the whole run and is cleared between tests.
+/// <c>ICoverStore</c> in memory, so a journey can see exactly which covers were written and the
+/// run leaves nothing on disk. One instance lives for the whole run and is cleared between tests.
 /// </summary>
 public sealed class InMemoryCoverStore : ICoverStore
 {

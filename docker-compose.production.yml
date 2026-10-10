@@ -81,6 +81,8 @@ services:
     # starving Postgres and the other stacks on the shared host; the .NET GC reads it
     # from the cgroup and sizes its heap to fit.
     mem_limit: 1g
+    volumes:
+      - lnshelf-covers:/data/covers
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,13 +92,15 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
       ConnectionStrings__Db: "Host=postgres;Port=5432;Database=lnshelf;Username=lnshelf;Password=${POSTGRES_PASSWORD}"
-      # Covers:* binds to CoverStoreOptions. Endpoint is S3 style — host and port,
-      # no scheme; UseSsl carries the scheme instead.
-      Covers__Endpoint: "minio:9000"
-      Covers__UseSsl: "false"
-      Covers__AccessKey: "lnshelf"
-      Covers__SecretKey: "${MINIO_ROOT_PASSWORD}"
-      Covers__Bucket: "lnshelf-covers"
+      # Covers live in the lnshelf-covers volume at /data/covers, the store's default
+      # (FileSystemCoverStoreOptions). Covers__Minio__* is the retired MinIO store,
+      # present for this one release so cover-migrate can copy out of it; it goes in
+      # the next.
+      Covers__Minio__Endpoint: "minio:9000"
+      Covers__Minio__UseSsl: "false"
+      Covers__Minio__AccessKey: "lnshelf"
+      Covers__Minio__SecretKey: "${MINIO_ROOT_PASSWORD}"
+      Covers__Minio__Bucket: "lnshelf-covers"
       # The nightly sweep is the reason this is deployed at all, so unlike
       # development it is on. Hour is local time, hence TZ — the container would
       # otherwise be UTC and sync at 06:00 local in summer.
@@ -159,3 +163,4 @@ secrets:
 volumes:
   lnshelf-pgdata:
   lnshelf-minio:
+  lnshelf-covers:

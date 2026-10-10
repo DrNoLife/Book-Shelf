@@ -4,7 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 [Route("api/volumes")]
 public sealed class VolumesController(
     IVolumeCommandService volumeCommandService,
-    IOptions<CoverStoreOptions> coverOptions) : ControllerBase
+    IOptions<CoverImageOptions> coverOptions) : ControllerBase
 {
     /// <summary>
     /// Sets a volume's read status (feature-spec §6). The tile decides what the next
@@ -25,7 +25,7 @@ public sealed class VolumesController(
     /// the UI is a drop target, and this is where the drop lands.
     /// </summary>
     [HttpPut("{volumeId:guid}/cover")]
-    [RequestSizeLimit(CoverStoreOptions.UploadCeilingBytes)]
+    [RequestSizeLimit(CoverImageOptions.UploadCeilingBytes)]
     public async Task<ActionResult<SeriesDetailResponse>> SetCoverAsync(
         Guid volumeId,
         IFormFile file,

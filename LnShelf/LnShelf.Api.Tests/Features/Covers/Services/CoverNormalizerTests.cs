@@ -225,7 +225,7 @@ public sealed class CoverNormalizerTests
         int coverQuality = 82,
         long maximumDecodedPixels = 40_000_000) =>
         new(
-            Options.Create(new CoverStoreOptions
+            Options.Create(new CoverImageOptions
             {
                 MaximumCoverEdge = maximumCoverEdge,
                 CoverQuality = coverQuality,

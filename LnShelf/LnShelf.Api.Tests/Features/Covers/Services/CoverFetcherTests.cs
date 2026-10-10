@@ -72,7 +72,7 @@ public sealed class CoverFetcherTests
 
     private static CoverFetcher CreateFetcher(ICoverStore store, HttpContent content)
     {
-        var options = Options.Create(new CoverStoreOptions { MaximumUploadBytes = MaximumBytes });
+        var options = Options.Create(new CoverImageOptions { MaximumUploadBytes = MaximumBytes });
 
         return new CoverFetcher(
             store,
