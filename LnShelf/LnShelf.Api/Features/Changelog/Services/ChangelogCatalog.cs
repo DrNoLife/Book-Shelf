@@ -20,6 +20,15 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.19.0", new DateOnly(2026, 10, 10), "A second bookshop",
+            Features: [
+                "Faraos Cigarer sits next to Saxo: on the series page, in the phone's More sheet, and on every " +
+                    "line in Upcoming that is out now. It opens Faraos' search for the series (light novels as " +
+                    "\"Ln\"), because their search finds nothing once a volume number is in it.",
+            ],
+            Improvements: [],
+            Fixes: []
+        ),
         new("0.18.0", new DateOnly(2026, 10, 10), "On your phone",
             Features: [
                 "LN Shelf has a proper phone layout: a tab bar along the bottom for Library, Upcoming, Stats and " +

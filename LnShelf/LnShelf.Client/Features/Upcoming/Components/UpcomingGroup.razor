@@ -2,7 +2,7 @@
 
 @* One group of the Upcoming view. Every line is the same shape — cover, badge, title,
    the volumes it is about — and only the last column changes with the group's meaning:
-   a Saxo link where something can be bought now, the date where one is known, and the
+   Saxo and Faraos links where something can be bought now, the date where one is known, and the
    plain words "No date" where it is not. *@
 
 @if (Entries.Count > 0)
@@ -41,12 +41,21 @@
                             case UpcomingGroupKind.OutNow:
                                 @* The control says exactly what it does, and names the
                                    first volume it points at (design.md voice). *@
-                                <a class="secondary line__buy"
-                                   href="@SaxoSearch.UrlFor(entry.SeriesTitle, entry.VolumeNumbers[0])"
-                                   target="_blank"
-                                   rel="noopener noreferrer">
-                                    Vol @entry.VolumeNumbers[0] on Saxo <Icon Name="IconName.ArrowUpRight" Size="10" />
-                                </a>
+                                <span class="line__shops">
+                                    <a class="secondary line__buy"
+                                       href="@SaxoSearch.UrlFor(entry.SeriesTitle, entry.VolumeNumbers[0])"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        Vol @entry.VolumeNumbers[0] on Saxo <Icon Name="IconName.ArrowUpRight" Size="10" />
+                                    </a>
+                                    <a class="ghost line__buy"
+                                       href="@FaraosSearch.UrlFor(entry.SeriesTitle, entry.Format)"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       aria-label="@($"{entry.SeriesTitle} at Faraos Cigarer")">
+                                        Faraos <Icon Name="IconName.ArrowUpRight" Size="10" />
+                                    </a>
+                                </span>
                                 break;
                             case UpcomingGroupKind.Dated when entry.ReleaseDate is { } releaseDate:
                                 <span class="line__date tabular">@releaseDate.Full</span>

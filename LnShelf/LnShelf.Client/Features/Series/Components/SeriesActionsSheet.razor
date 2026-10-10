@@ -29,6 +29,15 @@
         </button>
     </div>
 
+    @* Faraos searches by series, not volume (FaraosSearch), so it sits here rather than in
+       the action bar, whose Buy names one volume. *@
+    @if (Series.Counts.NextToBuyNumber is not null)
+    {
+        <a class="secondary button--large" href="@FaraosSearch.UrlFor(Series.TitleEnglish, Series.Format)" target="_blank" rel="noopener noreferrer">
+            Find it at Faraos Cigarer <Icon Name="IconName.ArrowUpRight" Size="12" />
+        </a>
+    }
+
     @if (Series.AniListId is not null || Series.MangaUpdatesId is not null)
     {
         <div class="actions__group">

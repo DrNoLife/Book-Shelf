@@ -204,11 +204,11 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
 
 ## 8. More shops, and price watching (owner + a friend's request, 2026-10-10) — future
 
-- **Faraos Cigarer next to Saxo.** Today "Vol 12 on Saxo" is a hand-built search URL
-  (`SaxoSearch.UrlFor`), with no API and no scraping. A second shop is the same kind of
-  link. Do it as a small seam (a list of shop link builders) rather than a second
-  hard-coded `SaxoSearch`, so a third shop is one new class. Possibly a per-user
-  preference for which shops to show.
+- **Faraos Cigarer next to Saxo [done, 0.19.0].** `FaraosSearch` builds a title-only search
+  link (Faraos' search returns nothing with a volume number in the query). Faraos also has
+  an undocumented JSON search endpoint (`POST https://shopws.faraos.dk/api/1/items/filtered`)
+  that returns price, sale price, stock and ISBN per item; the likely price source below,
+  if its use is cleared with Faraos first.
 - **Watch a volume's price and say when it goes on sale.** Mark a volume (or "everything
   I plan to buy", i.e. *To buy*) as watched. A background job checks the price at the
   shops, and a drop shows up as a highlight in the app, plus an email/notification.
