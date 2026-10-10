@@ -6,7 +6,7 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
-## Search & add redesigned (0.24.0, 2026-10-10)
+## Search & add redesigned (0.24.1, 2026-10-10; the 0.24.0 tag failed CI on formatting and never shipped)
 
 Built from the owner's canvas (Search.dc / MSearch.dc) by a one-implementer workflow with an
 independent review (approved; only low findings, three fixed by the lead).

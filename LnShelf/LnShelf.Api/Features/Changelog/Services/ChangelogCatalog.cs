@@ -20,7 +20,7 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
-        new("0.24.0", new DateOnly(2026, 10, 10), "A better way to add",
+        new("0.24.1", new DateOnly(2026, 10, 10), "A better way to add",
             Features: [
                 "Search & add is redesigned: results are grouped by work, so a series' parts and side stories sit " +
                     "together under one heading, with each format's count on the filter and \"Add all\" for the parts " +

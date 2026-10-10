@@ -1,5 +1,3 @@
-using LnShelf.Client.Features.Search;
-
 namespace LnShelf.Client.Features.Search.Components;
 
 public partial class SearchEntryRow

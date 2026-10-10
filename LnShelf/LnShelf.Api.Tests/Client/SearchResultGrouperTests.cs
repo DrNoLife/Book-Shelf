@@ -276,15 +276,15 @@ public sealed class SearchResultGrouperTests
         string? native = null,
         int? year = 2015,
         int? volumes = null) => new()
-    {
-        Source = MetadataSourceName.AniList,
-        AniListId = _nextId++,
-        TitleEnglish = english,
-        TitleRomaji = romaji,
-        TitleNative = native,
-        Format = format,
-        PublicationStatus = PublicationStatus.Completed,
-        VolumeCount = volumes,
-        StartYear = year,
-    };
+        {
+            Source = MetadataSourceName.AniList,
+            AniListId = _nextId++,
+            TitleEnglish = english,
+            TitleRomaji = romaji,
+            TitleNative = native,
+            Format = format,
+            PublicationStatus = PublicationStatus.Completed,
+            VolumeCount = volumes,
+            StartYear = year,
+        };
 }
