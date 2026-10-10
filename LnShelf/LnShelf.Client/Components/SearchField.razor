@@ -5,11 +5,21 @@
 
 <div @attributes="AdditionalAttributes" class="@CssClass">
     <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="15" /></span>
-    <input class="field__input"
+    <input class="field__input @(IsClearShown ? "field__input--clearable" : null)"
            type="search"
            id="@InputId"
            placeholder="@Placeholder"
            aria-label="@AriaLabel"
            value="@Value"
-           @oninput="OnInputAsync" />
+           @ref="_input"
+           @oninput="OnInputAsync"
+           @onkeydown="OnKeyDownAsync" />
+
+    @* Our own clear mark: app.css removes the browser's, which can be neither styled nor named. *@
+    @if (IsClearShown)
+    {
+        <button type="button" class="field__clear" aria-label="@ClearLabel" title="@ClearLabel" @onclick="ClearAsync">
+            <Icon Name="IconName.Close" Size="13" />
+        </button>
+    }
 </div>

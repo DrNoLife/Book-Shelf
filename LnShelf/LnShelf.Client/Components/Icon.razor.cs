@@ -23,6 +23,7 @@ public enum IconName
     User,
     CaretRight,
     DotsThree,
+    SlidersHorizontal,
 }
 
 public partial class Icon
@@ -54,6 +55,7 @@ public partial class Icon
         IconName.User => UserPath,
         IconName.CaretRight => CaretRightPath,
         IconName.DotsThree => DotsThreePath,
+        IconName.SlidersHorizontal => SlidersHorizontalPath,
         _ => throw new ArgumentOutOfRangeException(nameof(Name), Name, "Unknown icon."),
     };
 
@@ -137,4 +139,13 @@ public partial class Icon
     private const string DotsThreePath =
         "M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0," +
         "12,12A12,12,0,0,0,60,116Z";
+
+    // Three rails with a hollow knob on each, on the same 256 grid and 16-unit stroke as the
+    // Phosphor set, drawn here rather than vendored like GridNine. Each rail stops short of
+    // its knob so the ring stays hollow; the inner circle winds the other way, which is what
+    // cuts the hole under the default fill rule.
+    private const string SlidersHorizontalPath =
+        "M40,64H136V80H40ZM184,64H216V80H184ZM136,72a24,24,0,1,0,48,0a24,24,0,1,0-48,0ZM152,72a8,8,0,1,1,16,0a8,8,0,1,1-16,0Z" +
+        "M40,120H72V136H40ZM120,120H216V136H120ZM72,128a24,24,0,1,0,48,0a24,24,0,1,0-48,0ZM88,128a8,8,0,1,1,16,0a8,8,0,1,1-16,0Z" +
+        "M40,176H152V192H40ZM200,176H216V192H200ZM152,184a24,24,0,1,0,48,0a24,24,0,1,0-48,0ZM168,184a8,8,0,1,1,16,0a8,8,0,1,1-16,0Z";
 }
