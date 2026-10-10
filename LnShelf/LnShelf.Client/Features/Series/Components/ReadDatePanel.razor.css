@@ -19,9 +19,19 @@
 
 /* 16px so a phone does not zoom the page when the input takes focus. */
 .read-date-panel__input {
-  min-height: 36px;
+  /* app.css strips the native appearance from every input, and iOS Safari then gives an
+     empty date input no intrinsic width: a sliver with nothing to tap. The width and the
+     44px height keep it a usable target while it is empty. */
+  min-inline-size: 10em;
+  min-block-size: 44px;
   padding: 0 var(--space-2);
   font-size: 16px;
+  text-align: start;
+}
+
+/* iOS centres the value inside the stripped input; the label beside it reads from the start. */
+.read-date-panel__input::deep::-webkit-date-and-time-value {
+  text-align: start;
 }
 
 .read-date-panel__scope {

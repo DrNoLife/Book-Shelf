@@ -33,9 +33,25 @@
 }
 
 .read-date__input {
-  min-height: 36px;
+  /* app.css strips the native appearance from every input, and iOS Safari then gives an
+     empty date input no intrinsic width: a sliver with nothing to tap. The width and the
+     44px height keep it a usable target while it is empty. */
+  min-inline-size: 10em;
+  min-block-size: 44px;
   padding: 0 var(--space-2);
   font-size: 16px;
+  text-align: start;
+}
+
+/* iOS centres the value inside the stripped input; the label beside it reads from the start. */
+.read-date__input::deep::-webkit-date-and-time-value {
+  text-align: start;
+}
+
+/* A refused date: its own line, under the input it is about. */
+.read-date__error {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .cover-actions {

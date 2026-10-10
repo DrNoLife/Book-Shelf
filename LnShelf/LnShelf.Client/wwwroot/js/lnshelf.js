@@ -66,6 +66,13 @@ window.lnshelf = {
         return window.matchMedia('(max-width: 720px)').matches;
     },
 
+    // Puts a value back into an input Blazor will not rewrite: a refused date leaves the
+    // rendered value attribute unchanged, so the DOM keeps what the reader picked. Setting it
+    // here, rather than rebuilding the element, keeps focus where it is.
+    setInputValue: function (input, value) {
+        if (input) input.value = value;
+    },
+
     // Arrow keys inside a menu wrap, which is what a menu is expected to do and what
     // keeps the last row reachable without counting rows in C#.
     moveMenuFocus: function (container, step) {

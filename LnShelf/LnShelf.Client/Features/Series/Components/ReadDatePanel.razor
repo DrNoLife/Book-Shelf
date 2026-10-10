@@ -10,8 +10,8 @@
                aria-label="Read date for the selected volumes"
                min="@ReadDateInput.EarliestText"
                max="@ReadDateInput.Format(ReadDateInput.Today)"
-               @bind="_text"
-               @bind:event="onchange" />
+               value="@_text"
+               @onchange="OnTextChanged" />
     </label>
 
     <p class="read-date-panel__scope fine">@ScopeLine</p>

@@ -26,7 +26,15 @@ public sealed class PhoneReadDateTests(EndToEndFixture fixture) : JourneyTest(fi
         var fontSize = await input.EvaluateAsync<double>("element => parseFloat(getComputedStyle(element).fontSize)");
         fontSize.ShouldBeGreaterThanOrEqualTo(16);
 
+        // Empty date inputs collapse on iOS without a minimum size; 44px is the touch target.
+        var box = await input.BoundingBoxAsync();
+        box.ShouldNotBeNull();
+        box.Height.ShouldBeGreaterThanOrEqualTo(44);
+        box.Width.ShouldBeGreaterThanOrEqualTo(120);
+
+        // The picker closing blurs the input on a phone, and that is what saves the date.
         await input.FillAsync("2024-03-14");
+        await input.BlurAsync();
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.ReloadAsync();

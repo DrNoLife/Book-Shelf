@@ -18,8 +18,10 @@
 
         @* When it was read — the tile's caption has no room for it and design.md fixes what
            may go there, so this is its home. A read volume's date is editable, because
-           volumes marked read in a batch all carry the day they were ticked off. The input
-           saves on change; there is no Save button to forget. *@
+           volumes marked read in a batch all carry the day they were ticked off. The date is
+           saved when the input loses focus or Enter is pressed, never per keystroke: a
+           desktop date input raises a change for every segment edited, and a half-typed
+           date (an emptied segment, the year 0002 on the way to 2025) must not be saved. *@
         @if (Volume.ReadStatus is ReadStatus.Read)
         {
             <div class="read-date">
@@ -28,11 +30,14 @@
                     <input class="read-date__input tabular"
                            type="date"
                            aria-label="Read date"
+                           aria-invalid="@(_error is not null ? "true" : null)"
+                           @ref="_readDateInput"
                            value="@ReadDateInput.Format(Volume.ReadAt)"
                            min="@ReadDateInput.EarliestText"
                            max="@ReadDateInput.Format(ReadDateInput.Today)"
-                           disabled="@IsBusy"
-                           @onchange="OnReadDateChangedAsync" />
+                           @oninput="OnReadDateInput"
+                           @onblur="CommitReadDateAsync"
+                           @onkeydown="OnReadDateKeyDownAsync" />
                 </label>
 
                 @if (Volume.ReadAt is not null)
@@ -40,6 +45,11 @@
                     <button type="button" class="ghost" disabled="@IsBusy" @onclick="OnReadDateClearedAsync">
                         Clear date
                     </button>
+                }
+
+                @if (_error is not null)
+                {
+                    <p class="read-date__error fine" role="alert">@_error</p>
                 }
             </div>
         }

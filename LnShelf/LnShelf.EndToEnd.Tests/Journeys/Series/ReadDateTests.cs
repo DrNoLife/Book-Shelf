@@ -13,7 +13,7 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await ReadDateInput().FillAsync("2024-03-14");
+        await EnterReadDateAsync("2024-03-14");
         await WaitForSaveAsync();
         await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
 
@@ -30,7 +30,7 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await ReadDateInput().FillAsync("2024-03-14");
+        await EnterReadDateAsync("2024-03-14");
         await WaitForSaveAsync();
         await Page.GetByRole(AriaRole.Button, new() { Name = "Clear date" }).ClickAsync();
         await WaitForSaveAsync();
@@ -53,6 +53,74 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         // The input itself carries the bound, so the picker cannot offer a later day.
         var max = await ReadDateInput().GetAttributeAsync("max");
         max.ShouldBe(DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd"));
+    }
+
+    // A desktop date input raises a change for every segment edited. Emptying one must not
+    // erase the stored date, and half-typed values must not be saved on the way.
+    [Fact]
+    public async Task ReadVolume_EmptyASegmentAndLeave_KeepsTheStoredDate()
+    {
+        await OpenSeriesAsync();
+
+        await Volume(1).ClickAsync();
+        await EnterReadDateAsync("2024-03-14");
+        await WaitForSaveAsync();
+
+        await ReadDateInput().FocusAsync();
+        await Page.Keyboard.PressAsync("Backspace");
+        await ReadDateInput().BlurAsync();
+        await WaitForSaveAsync();
+
+        await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
+
+        await Page.ReloadAsync();
+        await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
+        await Volume(1).ClickAsync();
+
+        await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
+    }
+
+    [Fact]
+    public async Task ReadVolume_TypeTheDateSegmentBySegment_SavesOnceItIsComplete()
+    {
+        await OpenSeriesAsync();
+
+        await Volume(1).ClickAsync();
+        await ReadDateInput().FocusAsync();
+
+        // Day and month are both 05, so the order the browser's locale shows them in does not matter. Every keystroke raises an event;
+        // none of them may take focus away or print a range problem on the way to 2024.
+        await Page.Keyboard.TypeAsync("05052024");
+        await Assertions.Expect(ReadDateInput()).ToBeFocusedAsync();
+        await Assertions.Expect(Page.GetByRole(AriaRole.Alert)).ToHaveCountAsync(0);
+
+        await Page.Keyboard.PressAsync("Enter");
+        await WaitForSaveAsync();
+
+        await Page.ReloadAsync();
+        await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
+        await Volume(1).ClickAsync();
+
+        await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-05-05");
+    }
+
+    // A refusal is printed beside the input, and the input goes back to what is stored,
+    // rather than keeping a date that was never saved.
+    [Fact]
+    public async Task ReadVolume_ADateInTheFutureIsEntered_IsRefusedBesideTheInput()
+    {
+        await OpenSeriesAsync();
+
+        await Volume(1).ClickAsync();
+        await EnterReadDateAsync("2024-03-14");
+        await WaitForSaveAsync();
+
+        var future = DateOnly.FromDateTime(DateTime.Now).AddYears(1).ToString("yyyy-MM-dd");
+        await EnterReadDateAsync(future);
+
+        var details = Page.GetByRole(AriaRole.Dialog, new() { Name = "Volume 1" });
+        await Assertions.Expect(details.GetByRole(AriaRole.Alert)).ToContainTextAsync("future");
+        await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
     }
 
     [Fact]
@@ -98,6 +166,14 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         var seriesId = await ShelfLookup.SeriesIdAsync(Page, SeriesTitle);
         await Page.GotoAsync($"/series/{seriesId}");
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
+    }
+
+    // The date is saved when the input is committed, as a reader does it with Enter. Filling
+    // sets the whole value at once, so this is the end of an edit, not the middle of one.
+    private async Task EnterReadDateAsync(string date)
+    {
+        await ReadDateInput().FillAsync(date);
+        await ReadDateInput().PressAsync("Enter");
     }
 
     // The open volume's date input; the select-mode panel has its own, with a longer name.

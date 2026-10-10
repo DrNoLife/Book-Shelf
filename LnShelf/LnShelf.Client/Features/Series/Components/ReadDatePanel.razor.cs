@@ -36,6 +36,10 @@ public partial class ReadDatePanel
         }
     }
 
+    // Not @bind: for a date input Razor generates a DateTime-typed binding, and the date
+    // is kept as the input's own ISO text and parsed in one place, ReadDateInput.
+    private void OnTextChanged(ChangeEventArgs args) => _text = args.Value?.ToString() ?? string.Empty;
+
     private async Task ApplyAsync()
     {
         if (ReadDateInput.Parse(_text) is not { } date)
