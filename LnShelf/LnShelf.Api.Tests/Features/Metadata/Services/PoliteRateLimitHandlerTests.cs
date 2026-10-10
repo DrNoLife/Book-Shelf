@@ -151,6 +151,18 @@ public sealed class PoliteRateLimitHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_HeadersArriveButTheBodyStalls_ThrowsTimeoutException()
+    {
+        using var upstream = new StallingBodyHandler();
+        using var client = CreateClient(upstream, requestTimeout: TimeSpan.FromMilliseconds(100));
+
+        // The deadline covers the body too: a source that answers 200 and then stops sending
+        // must fail this one item, not hang the sweep.
+        await Should.ThrowAsync<TimeoutException>(
+            () => client.GetAsync(new Uri("http://source/series"), CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SendAsync_AnAttemptThatOutlivesTheRequestTimeout_ThrowsTimeoutException()
     {
         using var upstream = new StubHandler(HttpStatusCode.OK) { Delay = TimeSpan.FromSeconds(30) };
@@ -238,6 +250,34 @@ public sealed class PoliteRateLimitHandlerTests
         };
 
         return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+    }
+
+    /// <summary>Answers 200 at once with a body that never finishes arriving.</summary>
+    private sealed class StallingBodyHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StallingContent() });
+
+        private sealed class StallingContent : HttpContent
+        {
+            protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context) =>
+                SerializeToStreamAsync(stream, context, CancellationToken.None);
+
+            protected override async Task SerializeToStreamAsync(
+                Stream stream, System.Net.TransportContext? context, CancellationToken cancellationToken)
+            {
+                await stream.WriteAsync("{\"partial\":"u8.ToArray(), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = 0;
+                return false;
+            }
+        }
     }
 
     /// <summary>

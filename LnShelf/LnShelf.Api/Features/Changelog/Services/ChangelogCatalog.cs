@@ -20,6 +20,18 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.21.1", new DateOnly(2026, 10, 10), "Two loose ends",
+            Features: [],
+            Improvements: [
+                "Each release is built on GitHub with a security scan and a signed record of how it was built, " +
+                    "the web server no longer runs with full rights, and every part it is built from is pinned " +
+                    "to an exact version.",
+            ],
+            Fixes: [
+                "A cover upload that is too large now says so, instead of failing with a server error.",
+                "A metadata source that starts answering and then stops can no longer stall the nightly sync.",
+            ]
+        ),
         new("0.21.0", new DateOnly(2026, 10, 10), "Someone is watching",
             Features: [],
             Improvements: [

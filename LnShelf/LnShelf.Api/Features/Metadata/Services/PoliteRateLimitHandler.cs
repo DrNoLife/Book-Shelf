@@ -107,7 +107,23 @@ public sealed class PoliteRateLimitHandler(
 
         try
         {
-            return await base.SendAsync(request, linked.Token);
+            var response = await base.SendAsync(request, linked.Token);
+
+            // The body is read here, under the same deadline, not later by the caller under no
+            // deadline at all: a source that sends its headers and then stalls the body would
+            // otherwise hang the whole nightly sweep (audit 2026-10-09, #21). Metadata answers
+            // are a few kilobytes of JSON, so buffering costs nothing.
+            try
+            {
+                await response.Content.LoadIntoBufferAsync(linked.Token);
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
+
+            return response;
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested
                                                 && !cancellationToken.IsCancellationRequested)

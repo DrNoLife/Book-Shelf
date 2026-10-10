@@ -42,6 +42,16 @@ public sealed class ProblemDetailsExceptionHandler(
                 $"{unavailable.SourceName} is unavailable",
                 unavailable.UpstreamMessage),
 
+            // Kestrel refusing the request itself, most often a body over a [RequestSizeLimit]
+            // (a cover upload past 8 MB). It carries its own status (413 there), which is the
+            // honest answer; it is not a server fault (audit 2026-10-09, #22).
+            BadHttpRequestException badRequest => (
+                badRequest.StatusCode,
+                badRequest.StatusCode is StatusCodes.Status413PayloadTooLarge ? "Too large" : "Bad request",
+                badRequest.StatusCode is StatusCodes.Status413PayloadTooLarge
+                    ? "The upload is larger than the server accepts."
+                    : "The request could not be read."),
+
             // The message could be anything, so it stays in the log.
             _ => (StatusCodes.Status500InternalServerError, "Unexpected failure", null),
         };

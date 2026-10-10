@@ -98,4 +98,18 @@ public sealed class ProblemDetailsExceptionHandlerTests
         // A 500 could be anything, so the message stays in the log rather than on the wire.
         detail.ShouldBeNull();
     }
+
+    [Theory]
+    [InlineData(413, "Too large")]
+    [InlineData(400, "Bad request")]
+    public void Describe_KestrelRefusingTheRequest_KeepsItsStatus(int status, string expectedTitle)
+    {
+        var (statusCode, title, detail) = ProblemDetailsExceptionHandler.Describe(
+            new Microsoft.AspNetCore.Http.BadHttpRequestException("Request body too large.", status));
+
+        // Not a 500: an upload over the limit is the client's mistake, and the status says so.
+        statusCode.ShouldBe(status);
+        title.ShouldBe(expectedTitle);
+        detail.ShouldNotBeNull();
+    }
 }
