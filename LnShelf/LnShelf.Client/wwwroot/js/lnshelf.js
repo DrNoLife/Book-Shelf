@@ -20,6 +20,7 @@ window.lnshelf = {
         const closeFraction = 0.3;     // of the sheet's height
         const flickVelocity = 0.5;     // px per ms
         const flickMinimumDistance = 30;
+        const flickWindow = 100;       // ms; older movement does not make a flick
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
         let pointerId = null;
@@ -106,6 +107,10 @@ window.lnshelf = {
         const onPointerUp = event => {
             if (event.pointerId !== pointerId) return;
 
+            // A finger that paused sends no pointermove, so the last speed may be stale: only a
+            // movement within the final 100 ms counts as a flick.
+            if (event.timeStamp - lastTime > flickWindow) velocity = 0;
+
             const wasDragging = dragging;
             reset();
             if (!wasDragging) return;
@@ -130,13 +135,23 @@ window.lnshelf = {
             reset();
         };
 
-        // Once a drag is under way the browser must not also scroll or pull-to-refresh.
-        // Pointer events alone cannot prevent that for touch; cancelling touchmove can.
+        // The browser decides at the first touchmove whether the gesture is a native pan, and
+        // later moves cannot be cancelled. So a downward move from a sheet resting at its top
+        // is cancelled from the very first one, before the drag has formally started: a
+        // downward move cannot scroll content that is already at the top, and upward moves
+        // are left alone so the content still scrolls.
+        let touchStartY = 0;
+        const onTouchStart = event => {
+            if (event.touches.length === 1) touchStartY = event.touches[0].clientY;
+        };
         const onTouchMove = event => {
-            if (dragging && event.cancelable) event.preventDefault();
+            if (!event.cancelable || event.touches.length !== 1) return;
+            const movedDown = event.touches[0].clientY > touchStartY;
+            if (dragging || (pointerId !== null && sheet.scrollTop <= 0 && movedDown)) event.preventDefault();
         };
 
         sheet.addEventListener('pointerdown', onPointerDown);
+        sheet.addEventListener('touchstart', onTouchStart, { passive: true });
         sheet.addEventListener('touchmove', onTouchMove, { passive: false });
         window.addEventListener('pointermove', onPointerMove);
         window.addEventListener('pointerup', onPointerUp);
@@ -144,6 +159,7 @@ window.lnshelf = {
 
         window.lnshelf.sheetDragDisposers.set(sheet, () => {
             sheet.removeEventListener('pointerdown', onPointerDown);
+            sheet.removeEventListener('touchstart', onTouchStart);
             sheet.removeEventListener('touchmove', onTouchMove);
             window.removeEventListener('pointermove', onPointerMove);
             window.removeEventListener('pointerup', onPointerUp);

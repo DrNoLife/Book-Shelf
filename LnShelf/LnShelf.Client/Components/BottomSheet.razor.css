@@ -33,11 +33,10 @@
   overscroll-behavior: contain;
 }
 
-/* While a finger or the mouse holds the sheet it follows it exactly: no easing, no text
-   selection, and the browser's own scroll stays out of the way. */
+/* While a finger or the mouse holds the sheet it follows it exactly: no easing, and no text
+   selection. (touch-action cannot be switched on mid-gesture; the script cancels touchmove.) */
 .sheet--dragging {
   user-select: none;
-  touch-action: none;
 }
 
 /* The grab handle: a cue that this is a sheet, not a page. Decorative; Done closes it. */
