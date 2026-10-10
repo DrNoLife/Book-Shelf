@@ -54,7 +54,13 @@
 /* A finger gets the 44px the buttons and segmented controls already grow to, so the field
    lines up with a button beside it on a touch screen. */
 @media (pointer: coarse) {
-  .field__input { min-height: var(--control-large); }
+  /* 16px, off the type scale on purpose: iOS Safari zooms the page into any focused input
+     set smaller and leaves it zoomed after blur. maximum-scale=1 would stop that too, but it
+     also takes pinch zoom away from everyone. */
+  .field__input {
+    min-height: var(--control-large);
+    font-size: 16px;
+  }
 
   .field__clear { width: 40px; height: 40px; }
 }

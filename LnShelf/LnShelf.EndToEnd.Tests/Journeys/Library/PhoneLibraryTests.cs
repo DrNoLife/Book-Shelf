@@ -47,10 +47,7 @@ public sealed class PhoneLibraryTests(EndToEndFixture fixture) : JourneyTest(fix
         await Assertions.Expect(tabs.GetByRole(AriaRole.Link, new() { Name = "Search and add" })).ToBeVisibleAsync();
         await Assertions.Expect(Page.Locator("aside.sidebar")).ToBeHiddenAsync();
 
-        // Nothing on the page may push it sideways at phone width.
-        var overflow = await Page.EvaluateAsync<bool>(
-            "() => document.querySelector('main').scrollWidth > document.querySelector('main').clientWidth");
-        overflow.ShouldBeFalse();
+        await MainShouldNotScrollSidewaysAsync();
     }
 
     [Fact]
@@ -87,6 +84,25 @@ public sealed class PhoneLibraryTests(EndToEndFixture fixture) : JourneyTest(fix
         var shelfOverflows = await Page.EvaluateAsync<bool>(
             "() => { const shelf = document.querySelector('section.shelf'); return shelf.scrollWidth > shelf.clientWidth; }");
         shelfOverflows.ShouldBeFalse();
+        await MainShouldNotScrollSidewaysAsync();
+    }
+
+    /// <summary>
+    /// Nothing on the page may push it sideways, at this viewport or at the narrowest phone
+    /// we design for. Measured once the "Up next" carousel has rendered: a sideways-scrolled
+    /// carousel is what once widened the page, and before it exists there is nothing to catch.
+    /// </summary>
+    private async Task MainShouldNotScrollSidewaysAsync()
+    {
+        await Assertions.Expect(Page.Locator("article.next").First).ToBeVisibleAsync();
+
+        foreach (var width in (int[])[390, 360])
+        {
+            await Page.SetViewportSizeAsync(width, 844);
+            var overflow = await Page.EvaluateAsync<int>(
+                "() => { const main = document.querySelector('main'); return main.scrollWidth - main.clientWidth; }");
+            overflow.ShouldBe(0, $"main scrolls {overflow}px sideways at {width}px wide");
+        }
     }
 
     private ILocator FinishButtonFor(string title, string volumeNumber) =>
