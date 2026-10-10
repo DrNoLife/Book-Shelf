@@ -157,6 +157,12 @@
 
 html { -webkit-text-size-adjust: 100%; }
 
+/* Safety net, not the fix: nothing may ever give the document a horizontal scrollbar. Each
+   overflow is still fixed at its own root; this only stops one that slips through from
+   shifting the whole page sideways on a phone. clip, not hidden, so sticky bars keep working. */
+html,
+body { overflow-x: clip; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -244,6 +250,16 @@ input:-webkit-autofill,
 input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text);
   box-shadow: inset 0 0 0 100px var(--surf);
+}
+
+/* iOS Safari zooms the page when a field under 16px takes focus, and does not zoom back.
+   Phones and any touch device get 16px; !important because a component's own scoped
+   font-size (the note field's 13px) outranks this element selector. Zoom itself stays
+   available to the user: no maximum-scale, no user-scalable=no. */
+@media (max-width: 720px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select { font-size: 16px !important; }
 }
 
 /* The scrollbar is the last piece of OS chrome on the page. */
@@ -382,14 +398,15 @@ h1[tabindex="-1"]:focus { outline: none; }
   margin: 0 auto;
 }
 
-/* Phones: a tighter top, and the bottom reserves the tab bar (and the home-indicator inset
-   under it) so the last thing on a page can always be scrolled clear of the bar. The series
-   page's sticky action bar is the same height, so the one reserve serves both. */
+/* A section may be narrower than its content wants to be (a textarea, a long title, a
+   legend); without this a flex child refuses to shrink and widens the whole page. */
+.page__stack > * { min-width: 0; }
+
+/* Phones: a tighter top. The bottom space for the tab bar is reserved once, on the scrolling
+   column itself (.main in MainLayout.razor.css), so every page has it — including the ones
+   that do not use this frame (stats, upcoming, import, search). */
 @media (max-width: 720px) {
-  .page {
-    padding-top: var(--space-6);
-    padding-bottom: calc(var(--space-8) + var(--tab-bar-height) + env(safe-area-inset-bottom));
-  }
+  .page { padding-top: var(--space-6); }
 }
 
 /* --- buttons ---

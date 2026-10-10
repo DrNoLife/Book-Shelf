@@ -26,7 +26,18 @@
   min-width: 0;
   overflow-y: auto;
   background: var(--bg);
+  /* A long unbroken title wraps instead of pushing the column wide. break-word rather than
+     anywhere: it does not shrink the min-content width of flex and grid items. */
+  overflow-wrap: break-word;
 }
+
+/* Defence in depth: the page never scrolls sideways (each overflow is fixed where it starts;
+   this keeps one that slips through from shifting the page). On this wrapper and not on .main:
+   .main has overflow-y: auto, which turns a clip on the other axis into hidden, and a hidden
+   scroll container can still be scrolled by focus or scrollIntoView. clip on a box that is not
+   itself a scroller really cannot move, and creates no scroll container, so sticky bars and
+   the carousels' own scrolling are untouched. */
+.main__content { overflow-x: clip; }
 
 /* Focus arrives here only from the skip link, programmatically; a ring around the whole
    content column would be noise. */
@@ -65,4 +76,10 @@
    (the .page rule in app.css). */
 @media (max-width: 720px) {
   .app { grid-template-rows: minmax(0, 1fr); }
+
+  /* The bar is fixed over the content, so the column reserves its height plus the
+     home-indicator inset under it. Here, once, rather than in each page's own frame: a page
+     that forgets (the stats page did) would hide its last rows behind the bar. The series
+     page's sticky action bar is the same height, so the one reserve serves both. */
+  .main { padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom)); }
 }

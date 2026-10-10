@@ -93,6 +93,17 @@
   white-space: nowrap;
 }
 
+/* The two shop links are wider than the fourth column leaves on a phone, so a line that has
+   them wraps the links onto a second row under the title; a plain date stays in the column. */
+@media (max-width: 720px) {
+  .line__when:has(.line__shops) {
+    grid-column: 3 / -1;
+    justify-self: start;
+  }
+
+  .line__shops { flex-wrap: wrap; }
+}
+
 .line__date { color: var(--text); }
 
 .line__nodate { color: var(--faint); }

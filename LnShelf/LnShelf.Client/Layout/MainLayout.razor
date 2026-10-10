@@ -8,7 +8,9 @@
 <div class="app">
     <Sidebar />
     <main class="main" id="main" tabindex="-1" @ref="_mainElement">
-        @Body
+        <div class="main__content">
+            @Body
+        </div>
     </main>
     @* Phones only; the sidebar is the navigation everywhere else. *@
     <MobileTabBar />
