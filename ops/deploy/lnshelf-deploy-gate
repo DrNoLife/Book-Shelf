@@ -1,0 +1,221 @@
+#!/bin/bash
+# The only program the deploy SSH key can run. The deploy sshd (ops/sshd/sshd_lnshelf_deploy.conf)
+# starts it through ForceCommand for every connection, whatever the client asked for; what the
+# client asked for arrives in SSH_ORIGINAL_COMMAND and is treated as hostile text.
+#
+# Exactly two commands are accepted, matched whole and read only through BASH_REMATCH:
+#
+#   deploy <version> <commit sha> sha256:<api digest> sha256:<client digest>
+#   status <version>
+#
+# Before a deploy starts, this server checks with GitHub's public API, independently of the
+# workflow that asked, that:
+#   - the commit is on main,
+#   - the tag v<version> points at that commit,
+#   - the two digests are the ones the release workflow published in that tag's digests.txt.
+# So even someone holding both the Cloudflare service token and the deploy key can only deploy
+# a released version of main: the worst they can do is a downgrade or a restart.
+#
+# The compose file is fetched for that commit, which cannot change, and the deploy itself runs
+# detached (setsid) in lnshelf-deploy, so a dropped connection cannot stop it half way. The
+# workflow polls `status <version>` for the result.
+#
+# Installed by hand, owned by root, at /usr/local/sbin/lnshelf-deploy-gate (ops/sshd/README.md).
+# It never updates itself: a change is reviewed in the repository and installed again by hand.
+set -euo pipefail
+export LC_ALL=C
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+umask 077
+
+readonly REPO="DrNoLife/Book-Shelf"
+readonly LNSHELF_DIR="/home/neko/docker/lnshelf"
+# Outside every deploy directory, so nothing a deploy writes or removes can touch the lock or
+# the results the workflow polls.
+readonly STATE_DIR="/home/neko/.local/state/lnshelf-deploy"
+readonly DEPLOY_LOCK="$STATE_DIR/deploy.lock"
+readonly DEPLOY_SCRIPT="/usr/local/sbin/lnshelf-deploy"
+readonly COMPOSE_FILE_NAME="docker-compose.production.yml"
+# A cheap first cut before any matching. A real deploy command is about 200 characters
+# (198 for 0.21.0), so the bound leaves room for longer version numbers; the patterns below
+# are what actually limit each field.
+readonly MAX_COMMAND_LENGTH=256
+readonly STATUS_LOG_LINES=20
+
+readonly VERSION_PATTERN='[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}'
+readonly DIGEST_PATTERN='sha256:[0-9a-f]{64}'
+readonly DEPLOY_COMMAND="^deploy ($VERSION_PATTERN) ([0-9a-f]{40}) ($DIGEST_PATTERN) ($DIGEST_PATTERN)\$"
+readonly STATUS_COMMAND="^status ($VERSION_PATTERN)\$"
+
+# Refusals never echo the input back: it is hostile, and it would end up in a public log.
+refuse() {
+    printf 'refused: %s\n' "$1" >&2
+    exit 2
+}
+
+# Every outbound request: HTTPS only, also after redirects, bounded in time and size.
+fetch() {
+    curl --fail --silent --show-error --location \
+        --proto '=https' --proto-redir '=https' --tlsv1.2 \
+        --max-time 30 --max-filesize 1048576 --retry 2 \
+        --user-agent lnshelf-deploy-gate \
+        "$@"
+}
+
+# Unauthenticated on purpose: the repository is public, and a token here would be one more
+# secret on the server that could be stolen.
+github_api() {
+    fetch --header 'Accept: application/vnd.github+json' \
+        --header 'X-GitHub-Api-Version: 2022-11-28' \
+        "https://api.github.com/repos/$REPO/$1"
+}
+
+require_tools() {
+    local tool
+    for tool in curl jq flock setsid docker; do
+        command -v "$tool" > /dev/null || refuse "the server is missing $tool"
+    done
+}
+
+verify_commit_on_main() {
+    local sha=$1 comparison
+    comparison="$(github_api "compare/$sha...main?per_page=1" | jq -r '.status // empty')" \
+        || refuse "could not compare the commit with main on GitHub"
+    # "ahead" means main has the commit and more on top; "identical" means it is main's head.
+    # "behind" and "diverged" mean the commit is not in main's history.
+    case "$comparison" in
+        ahead | identical) ;;
+        *) refuse "the commit is not on main" ;;
+    esac
+}
+
+verify_tag_points_at_commit() {
+    local version=$1 sha=$2 reference object_type object_sha
+    reference="$(github_api "git/ref/tags/v$version")" || refuse "tag v$version does not exist on GitHub"
+    object_type="$(jq -r '.object.type // empty' <<< "$reference")"
+    object_sha="$(jq -r '.object.sha // empty' <<< "$reference")"
+    # An annotated tag points at a tag object, which in turn points at the commit.
+    if [[ "$object_type" == tag ]]; then
+        [[ "$object_sha" =~ ^[0-9a-f]{40}$ ]] || refuse "tag v$version could not be resolved"
+        reference="$(github_api "git/tags/$object_sha")" || refuse "tag v$version could not be resolved"
+        object_type="$(jq -r '.object.type // empty' <<< "$reference")"
+        object_sha="$(jq -r '.object.sha // empty' <<< "$reference")"
+    fi
+    [[ "$object_type" == commit && "$object_sha" == "$sha" ]] \
+        || refuse "tag v$version does not point at that commit"
+}
+
+verify_published_digests() {
+    local version=$1 api_digest=$2 client_digest=$3 published line
+    local published_api="" published_client=""
+    published="$(fetch "https://github.com/$REPO/releases/download/v$version/digests.txt")" \
+        || refuse "release v$version has no digests.txt"
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^api=($DIGEST_PATTERN)$ ]]; then
+            published_api="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^client=($DIGEST_PATTERN)$ ]]; then
+            published_client="${BASH_REMATCH[1]}"
+        fi
+    done <<< "$published"
+    [[ -n "$published_api" && "$published_api" == "$api_digest" ]] \
+        || refuse "the API digest is not the one release v$version published"
+    [[ -n "$published_client" && "$published_client" == "$client_digest" ]] \
+        || refuse "the client digest is not the one release v$version published"
+}
+
+# The compose file of exactly that commit. raw.githubusercontent.com serves it by SHA, so what
+# is deployed is what was reviewed on main, not whatever a branch points at now.
+fetch_compose_file() {
+    local version=$1 sha=$2 release_dir download
+    release_dir="$LNSHELF_DIR/releases/$version"
+    download="$release_dir/$COMPOSE_FILE_NAME.download"
+    mkdir -p "$release_dir"
+    fetch --output "$download" "https://raw.githubusercontent.com/$REPO/$sha/$COMPOSE_FILE_NAME" \
+        || { rm -f "$download"; refuse "could not fetch $COMPOSE_FILE_NAME for that commit"; }
+    # A commit from before images were pulled by digest would start whatever lnshelf-api:latest
+    # happens to be on this host. Only a compose file that takes the digests may be deployed.
+    if ! grep -q 'LNSHELF_API_DIGEST' "$download" || ! grep -q 'LNSHELF_CLIENT_DIGEST' "$download"; then
+        rm -f "$download"
+        refuse "the compose file at that commit does not deploy images by digest"
+    fi
+    mv -f "$download" "$release_dir/$COMPOSE_FILE_NAME"
+}
+
+write_status() {
+    local version=$1 state=$2
+    printf '%s\n' "$state" > "$STATE_DIR/$version.status.tmp"
+    mv -f "$STATE_DIR/$version.status.tmp" "$STATE_DIR/$version.status"
+}
+
+deploy() {
+    local version=$1 sha=$2 api_digest=$3 client_digest=$4 log_file
+    require_tools
+    mkdir -p "$STATE_DIR"
+
+    # Taken before any check and handed down to lnshelf-deploy through file descriptor 9, so
+    # the lock is held from the first request to GitHub until the deploy has a result.
+    exec 9>> "$DEPLOY_LOCK"
+    if ! flock -n 9; then
+        printf 'busy: another deploy is running\n' >&2
+        exit 75
+    fi
+
+    verify_commit_on_main "$sha"
+    verify_tag_points_at_commit "$version" "$sha"
+    verify_published_digests "$version" "$api_digest" "$client_digest"
+    fetch_compose_file "$version" "$sha"
+
+    log_file="$STATE_DIR/$version.log"
+    : > "$log_file"
+    write_status "$version" running
+    # A session of its own, stdin closed and output to the log: sshd can close the connection
+    # (or lose it) without the deploy noticing.
+    setsid --fork "$DEPLOY_SCRIPT" "$version" "$sha" "$api_digest" "$client_digest" \
+        >> "$log_file" 2>&1 < /dev/null
+    printf 'accepted: deploying %s; poll with "status %s"\n' "$version" "$version"
+}
+
+# One line of state (running, succeeded, failed or unknown), then the tail of the deploy log.
+# The log is written by lnshelf-deploy, which never prints secrets; it is still cut down to
+# printable ASCII, since it ends up in a public Actions log.
+status() {
+    local version=$1 state=unknown interrupted=false
+    local status_file="$STATE_DIR/$version.status" log_file="$STATE_DIR/$version.log"
+    if [[ -f "$status_file" ]]; then
+        read -r state < "$status_file" || state=unknown
+    fi
+    case "$state" in
+        running | succeeded | failed) ;;
+        *) state=unknown ;;
+    esac
+    # lnshelf-deploy holds the lock until it has written its result. A free lock next to
+    # "running" means it died without one (killed, or the host rebooted).
+    if [[ "$state" == running && -d "$STATE_DIR" ]] && flock -n "$DEPLOY_LOCK" true; then
+        state=failed
+        interrupted=true
+    fi
+    printf '%s\n' "$state"
+    if [[ "$interrupted" == true ]]; then
+        printf 'The deploy process ended without recording a result (killed or interrupted).\n'
+    fi
+    if [[ -f "$log_file" ]]; then
+        tail -n "$STATUS_LOG_LINES" "$log_file" | tr -cd '\11\12\40-\176'
+    fi
+}
+
+main() {
+    local command="${SSH_ORIGINAL_COMMAND:-}"
+    [[ -n "$command" ]] || refuse "this key only deploys; no shell"
+    (( ${#command} <= MAX_COMMAND_LENGTH )) || refuse "command too long"
+    # Printable ASCII only: no newline, tab or other control character can reach the matching.
+    [[ "$command" != *[![:print:]]* ]] || refuse "unprintable characters"
+
+    if [[ "$command" =~ $DEPLOY_COMMAND ]]; then
+        deploy "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}" "${BASH_REMATCH[4]}"
+    elif [[ "$command" =~ $STATUS_COMMAND ]]; then
+        status "${BASH_REMATCH[1]}"
+    else
+        refuse "unrecognised command"
+    fi
+}
+
+main

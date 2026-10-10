@@ -1,0 +1,352 @@
+#!/bin/bash
+# Deploys one released version of LnShelf on this server, and rolls back when it does not come up
+# healthy and rolling back is safe. lnshelf-deploy-gate starts it after verifying the release with
+# GitHub. It is also the emergency path, run by hand over the LAN (README.md, Deploy):
+#
+#   lnshelf-deploy <version> <commit sha> sha256:<api digest> sha256:<client digest>
+#
+# By hand it trusts its arguments (checking them against GitHub is the gate's job) and needs
+# releases/<version>/docker-compose.production.yml. The gate fetches that file, and every earlier
+# release keeps its own, so rolling back by hand to a version deployed before works offline.
+#
+# Its output is the log the status command shows in the public Actions log, so it never prints
+# the environment, .env or `docker compose config`.
+#
+# Installed by hand, owned by root, at /usr/local/sbin/lnshelf-deploy (ops/sshd/README.md).
+set -euo pipefail
+export LC_ALL=C
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+umask 077
+
+readonly LNSHELF_DIR="/home/neko/docker/lnshelf"
+readonly STATE_DIR="/home/neko/.local/state/lnshelf-deploy"
+readonly DEPLOY_LOCK="$STATE_DIR/deploy.lock"
+# Shared with ops/backup/lnshelf-backup.sh. Held for the whole deploy, so a nightly dump never
+# runs against a stack that is being replaced or rolled back.
+readonly OPERATIONS_LOCK="$LNSHELF_DIR/.ops.lock"
+readonly DEPLOYED_FILE="$LNSHELF_DIR/.deployed"
+readonly ENV_FILE="$LNSHELF_DIR/.env"
+readonly OVERRIDE_FILE="$LNSHELF_DIR/docker-compose.override.yml"
+readonly BACKUP_DIR="$LNSHELF_DIR/backups"
+readonly COMPOSE_FILE_NAME="docker-compose.production.yml"
+readonly HEALTH_URL="http://localhost:8091/api/health"
+readonly HEALTH_TIMEOUT_SECONDS=90
+readonly KEEP_DUMPS=5
+# Only these repositories are ever pruned. Hearth runs on the same host, so a global prune
+# could delete its images.
+readonly IMAGE_REPOSITORIES=("ghcr.io/drnolife/lnshelf-api" "ghcr.io/drnolife/lnshelf-client")
+
+readonly VERSION_REGEX='^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$'
+readonly SHA_REGEX='^[0-9a-f]{40}$'
+readonly DIGEST_REGEX='^sha256:[0-9a-f]{64}$'
+
+version=""
+sha=""
+api_digest=""
+client_digest=""
+previous_version=""
+previous_api_digest=""
+previous_client_digest=""
+dump_path=""
+migrations_before="unknown"
+
+log() {
+    printf '%s %s\n' "$(date -Is)" "$*"
+}
+
+die() {
+    log "$*"
+    exit 1
+}
+
+usage() {
+    printf 'usage: lnshelf-deploy <version> <commit sha> sha256:<api digest> sha256:<client digest>\n' >&2
+    exit 64
+}
+
+compose_file_for() {
+    printf '%s/releases/%s/%s' "$LNSHELF_DIR" "$1" "$COMPOSE_FILE_NAME"
+}
+
+# compose_release <version> <api digest> <client digest> <compose arguments...>
+# Always the same project, directory and env file, so .env and the host's override load no
+# matter which release's compose file is used.
+compose_release() {
+    local release_version=$1 release_api_digest=$2 release_client_digest=$3
+    shift 3
+    local files=(-f "$(compose_file_for "$release_version")")
+    if [[ -f "$OVERRIDE_FILE" ]]; then
+        files+=(-f "$OVERRIDE_FILE")
+    fi
+    LNSHELF_API_DIGEST="$release_api_digest" LNSHELF_CLIENT_DIGEST="$release_client_digest" \
+        docker compose -p lnshelf --project-directory "$LNSHELF_DIR" --env-file "$ENV_FILE" \
+        "${files[@]}" "$@"
+}
+
+compose_target() {
+    compose_release "$version" "$api_digest" "$client_digest" "$@"
+}
+
+write_status() {
+    printf '%s\n' "$1" > "$STATE_DIR/$version.status.tmp"
+    mv -f "$STATE_DIR/$version.status.tmp" "$STATE_DIR/$version.status"
+}
+
+record_result() {
+    local exit_code=$?
+    if (( exit_code == 0 )); then
+        write_status succeeded
+    else
+        write_status failed
+    fi
+}
+
+# The gate hands its lock over on file descriptor 9; by hand there is none, so open it here.
+# flock on the inherited descriptor succeeds because it is the same lock, not a second one.
+take_deploy_lock() {
+    mkdir -p "$STATE_DIR"
+    if [[ ! /proc/$$/fd/9 -ef "$DEPLOY_LOCK" ]]; then
+        exec 9>> "$DEPLOY_LOCK"
+    fi
+    if ! flock -n 9; then
+        log "Another deploy is running."
+        exit 75
+    fi
+}
+
+take_operations_lock() {
+    exec 8>> "$OPERATIONS_LOCK"
+    # A nightly backup takes a few minutes; wait for it rather than fail the deploy.
+    if ! flock -w 900 8; then
+        die "A backup has held $OPERATIONS_LOCK for 15 minutes; not deploying."
+    fi
+}
+
+# .deployed is parsed line by line rather than sourced: it is data, and sourcing would run it.
+read_previous_deploy() {
+    local line key value
+    [[ -f "$DEPLOYED_FILE" ]] || return 0
+    while IFS= read -r line; do
+        key="${line%%=*}"
+        value="${line#*=}"
+        case "$key" in
+            LNSHELF_VERSION)
+                if [[ "$value" =~ $VERSION_REGEX ]]; then previous_version="$value"; fi
+                ;;
+            LNSHELF_API_DIGEST)
+                if [[ "$value" =~ $DIGEST_REGEX ]]; then previous_api_digest="$value"; fi
+                ;;
+            LNSHELF_CLIENT_DIGEST)
+                if [[ "$value" =~ $DIGEST_REGEX ]]; then previous_client_digest="$value"; fi
+                ;;
+        esac
+    done < "$DEPLOYED_FILE"
+    if [[ -z "$previous_version" || -z "$previous_api_digest" || -z "$previous_client_digest" ]]; then
+        log "Ignoring $DEPLOYED_FILE: it does not name a complete deploy."
+        previous_version=""
+        previous_api_digest=""
+        previous_client_digest=""
+    fi
+}
+
+# Written last, after the health check, and replaced in one rename. The backup script reads it
+# to find the compose file and digests that are live.
+write_deployed() {
+    {
+        printf 'LNSHELF_VERSION=%s\n' "$version"
+        printf 'LNSHELF_SHA=%s\n' "$sha"
+        printf 'LNSHELF_API_DIGEST=%s\n' "$api_digest"
+        printf 'LNSHELF_CLIENT_DIGEST=%s\n' "$client_digest"
+        printf 'LNSHELF_COMPOSE_FILE=%s\n' "$(compose_file_for "$version")"
+        printf 'DEPLOYED_AT=%s\n' "$(date -Is)"
+    } > "$DEPLOYED_FILE.tmp"
+    mv -f "$DEPLOYED_FILE.tmp" "$DEPLOYED_FILE"
+}
+
+postgres_running() {
+    [[ -n "$(compose_target ps --status running -q postgres 2> /dev/null)" ]]
+}
+
+psql_value() {
+    compose_target exec -T postgres psql -U lnshelf -d lnshelf -XtAq -v ON_ERROR_STOP=1 -c "$1"
+}
+
+# How many EF Core migrations the database has applied. Migrations run when the API starts, so
+# comparing this before and after tells whether the schema moved under the new release.
+migration_count() {
+    local exists count
+    exists="$(psql_value "SELECT to_regclass('public.\"__EFMigrationsHistory\"') IS NOT NULL")" || return 1
+    if [[ "$exists" == f ]]; then
+        printf '0\n'
+        return 0
+    fi
+    count="$(psql_value 'SELECT count(*) FROM "__EFMigrationsHistory"')" || return 1
+    [[ "$count" =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "$count"
+}
+
+# Migrations cannot be undone by starting an older image, so the database is dumped first, while
+# the running release still owns the schema. Checked with pg_restore --list before it counts.
+dump_database() {
+    local stamp temporary
+    mkdir -p "$BACKUP_DIR"
+    chmod 700 "$BACKUP_DIR"
+    find "$BACKUP_DIR" -maxdepth 1 -name 'pre-deploy-*.dump.tmp' -delete
+
+    if ! postgres_running; then
+        if [[ -n "$previous_version" ]]; then
+            die "Postgres is not running, so there is nothing safe to dump before migrating. Start it (or find out why it stopped) and deploy again."
+        fi
+        log "Postgres is not running and nothing was deployed before; no pre-deploy dump."
+        return 0
+    fi
+
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    dump_path="$BACKUP_DIR/pre-deploy-$version-$stamp.dump"
+    temporary="$dump_path.tmp"
+    log "Dumping the database to $dump_path."
+    if ! compose_target exec -T postgres pg_dump -U lnshelf -d lnshelf -Fc > "$temporary"; then
+        rm -f "$temporary"
+        die "The pre-deploy dump failed; nothing was changed."
+    fi
+    if ! compose_target exec -T postgres pg_restore --list < "$temporary" > /dev/null; then
+        rm -f "$temporary"
+        die "The pre-deploy dump does not read back; nothing was changed."
+    fi
+    mv "$temporary" "$dump_path"
+
+    find "$BACKUP_DIR" -maxdepth 1 -name 'pre-deploy-*.dump' -printf '%T@ %p\n' \
+        | sort -rn | tail -n "+$((KEEP_DUMPS + 1))" | cut -d' ' -f2- \
+        | xargs -r rm -f --
+}
+
+# Healthy means: HTTP 200, the database reachable, and the version asked for. The version check
+# matters, since a container that failed to be replaced still answers healthy for the old one.
+wait_for_health() {
+    local expected=$1 response status_code body=""
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS))
+    log "Waiting up to ${HEALTH_TIMEOUT_SECONDS}s for $expected to report healthy."
+    while (( SECONDS < deadline )); do
+        response="$(curl --silent --max-time 5 --output - --write-out '\n%{http_code}' "$HEALTH_URL" 2> /dev/null)" || response=""
+        status_code="${response##*$'\n'}"
+        body="${response%$'\n'*}"
+        if [[ "$status_code" == 200 && "$body" == *'"database":"ok"'* && "$body" == *"\"version\":\"$expected\""* ]]; then
+            log "Healthy: $body"
+            return 0
+        fi
+        sleep 3
+    done
+    log "Not healthy after ${HEALTH_TIMEOUT_SECONDS}s. Last answer: ${body:-none}"
+    return 1
+}
+
+prune_images() {
+    local repository digest
+    local keep=("$api_digest" "$client_digest" "$previous_api_digest" "$previous_client_digest")
+    for repository in "${IMAGE_REPOSITORIES[@]}"; do
+        while IFS= read -r digest; do
+            [[ "$digest" =~ $DIGEST_REGEX ]] || continue
+            if [[ " ${keep[*]} " == *" $digest "* ]]; then
+                continue
+            fi
+            # Housekeeping only: an image still in use simply stays.
+            if docker image rm "$repository@$digest" > /dev/null 2>&1; then
+                log "Removed $repository@$digest."
+            fi
+        done < <(docker image ls --digests --format '{{.Digest}}' "$repository")
+    done
+}
+
+# The new release did not come up. Roll back only when that cannot hurt: an earlier deploy is
+# recorded, and the new release applied no migration, so the old image still fits the schema.
+recover() {
+    local reason=$1 migrations_after
+    log "The deploy of $version failed: $reason"
+
+    if [[ -z "$previous_version" ]]; then
+        log "No earlier deploy is recorded in $DEPLOYED_FILE, so there is nothing to roll back to. The stack is left as it is."
+        exit 1
+    fi
+
+    # Stopped before counting, so a migration still running cannot commit after the check.
+    log "Stopping the new API to check its migrations."
+    compose_target stop api || true
+    migrations_after="$(migration_count)" || migrations_after="unknown"
+
+    if [[ "$migrations_before" == unknown || "$migrations_after" != "$migrations_before" ]]; then
+        compose_target start api || true
+        log "NO AUTOMATIC ROLLBACK: the migration count went from $migrations_before to $migrations_after, so $previous_version may not fit the schema any more."
+        log "The pre-deploy dump is ${dump_path:-missing}. Restore it by hand as described in README.md (Deploy, Rolling back), then deploy $previous_version."
+        exit 1
+    fi
+
+    log "No migration was applied ($migrations_after before and after). Rolling back to $previous_version."
+    if [[ ! -f "$(compose_file_for "$previous_version")" ]]; then
+        die "ROLLBACK FAILED: $(compose_file_for "$previous_version") is missing."
+    fi
+    if compose_release "$previous_version" "$previous_api_digest" "$previous_client_digest" \
+            up -d --no-build --remove-orphans postgres api client \
+        && wait_for_health "$previous_version"; then
+        log "Rolled back: $previous_version is serving again. $version was not deployed."
+    else
+        log "ROLLBACK FAILED: $previous_version did not come back healthy either. The site is down; look at it by hand."
+    fi
+    exit 1
+}
+
+main() {
+    # Run as root (sudo, by hand) it would leave root-owned state and dumps that the next
+    # deploy, as the deploy account, could not replace.
+    if (( EUID == 0 )); then
+        printf 'Run lnshelf-deploy as the deploy account (neko), not as root.\n' >&2
+        exit 64
+    fi
+    (( $# == 4 )) || usage
+    version=$1
+    sha=$2
+    api_digest=$3
+    client_digest=$4
+    [[ "$version" =~ $VERSION_REGEX ]] || usage
+    [[ "$sha" =~ $SHA_REGEX ]] || usage
+    [[ "$api_digest" =~ $DIGEST_REGEX ]] || usage
+    [[ "$client_digest" =~ $DIGEST_REGEX ]] || usage
+
+    take_deploy_lock
+    # From here on, every exit records succeeded or failed for the status command.
+    trap record_result EXIT
+    write_status running
+
+    [[ -f "$(compose_file_for "$version")" ]] \
+        || die "$(compose_file_for "$version") is missing. The gate fetches it; by hand, download $COMPOSE_FILE_NAME for commit $sha into that directory first."
+    [[ -f "$ENV_FILE" ]] || die "$ENV_FILE is missing."
+    # Validates only; --quiet prints nothing on success, and an error names a missing variable,
+    # never a value.
+    compose_target config --quiet || die "The compose file does not resolve with this host's .env and override; nothing was changed."
+
+    take_operations_lock
+    read_previous_deploy
+    log "Deploying $version ($sha). Currently deployed: ${previous_version:-nothing recorded}."
+
+    dump_database
+    migrations_before="$(migration_count)" || migrations_before="unknown"
+    log "Applied migrations before the deploy: $migrations_before."
+
+    log "Pulling images."
+    if ! compose_target pull --quiet postgres api client; then
+        die "Pulling the images failed; the running stack was not touched."
+    fi
+
+    log "Starting $version."
+    if ! compose_target up -d --no-build --remove-orphans postgres api client; then
+        recover "docker compose up failed"
+    fi
+    if ! wait_for_health "$version"; then
+        recover "it did not report healthy"
+    fi
+
+    write_deployed
+    prune_images
+    log "Deployed $version."
+}
+
+main "$@"

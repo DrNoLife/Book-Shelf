@@ -1,0 +1,57 @@
+# Weekly dependency updates. Minor and patch bumps arrive as one grouped pull request per
+# ecosystem; a major bump gets its own, since that is where breaking changes live.
+#
+# The cooldown holds back a release until it is a week old. Hijacked releases (a compromised
+# maintainer account, a moved action tag) are usually caught and pulled within days, so waiting
+# keeps them out of this repository at little cost.
+#
+# Dependabot's pull requests run CI like any other; it needs SIXLABORS_LICENSE_KEY as a
+# Dependabot secret as well, because Actions secrets are not passed to its runs.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /LnShelf
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      nuget-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Updates the SHA pins together with their version comments.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Dockerfile.api and Dockerfile.client at the repository root.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      docker-minor-and-patch:
+        update-types: [minor, patch]
+
+  # The image pins in the compose files: the production stack, and the tunnel and Uptime Kuma
+  # projects that run beside it on the server.
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /ops/cloudflared
+      - /ops/uptime-kuma
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      compose-minor-and-patch:
+        update-types: [minor, patch]

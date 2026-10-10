@@ -89,8 +89,89 @@ written to `bin/Release/net10.0/playwright-traces/`.
 
 ## Deploying
 
-`deploy.ps1` builds both images locally, copies them to the server over SSH and restarts
-the stack there with [`docker-compose.production.yml`](docker-compose.production.yml).
+A release is a version tag. Bump `<Version>` in `LnShelf/Directory.Build.props`, add the
+changelog entry (`ChangelogCatalog.cs`; a test keeps the two equal), commit, then:
+
+```bash
+git tag v0.22.0 && git push --follow-tags
+```
+
+[`release.yml`](.github/workflows/release.yml) then:
+
+1. **verify**: checks that the tag matches `<Version>` and that the commit is on `main`;
+2. **ci**: runs the full CI, browser journeys included;
+3. **scan**: builds both images and fails on a fixable critical vulnerability (Trivy);
+4. **publish**: pushes `ghcr.io/drnolife/lnshelf-api` and `lnshelf-client`, attests their
+   provenance, and attaches their digests to a GitHub Release as `digests.txt`;
+5. **deploy**: waits for the owner's approval (the `production` environment), then asks
+   the server, through the Cloudflare Tunnel, to deploy exactly that version, commit and
+   digests.
+
+On the server, the deploy gate ([`ops/deploy/lnshelf-deploy-gate`](ops/deploy/lnshelf-deploy-gate))
+accepts only that one command and checks it against GitHub on its own: the commit is on
+`main`, the tag points at it, the digests are the published ones. It then fetches the compose
+file of that commit and runs [`lnshelf-deploy`](ops/deploy/lnshelf-deploy) detached:
+
+1. take a pre-deploy `pg_dump`, keeping five;
+2. pull by digest and start the new release;
+3. wait for `/api/health` to report the new version with the database up.
+
+If the health check fails and the release ran no migration, it goes back to the previous
+release on its own. If a migration ran, it stops and names the dump instead (see
+[Rolling back](#rolling-back)).
+
+### What the deploy path trusts
+
+The path is built so that no single stolen secret can run a command on the server:
+
+| Stolen | What it allows |
+|---|---|
+| The Cloudflare service token | Reaching the deploy sshd, which still wants the key. |
+| The deploy SSH key | Nothing from outside the Docker network the tunnel lives on. |
+| Both | Deploying a version that was released from `main`, with its published digests: at worst a downgrade or a restart. |
+| `SIXLABORS_LICENSE_KEY` | Building ImageSharp somewhere else. |
+| The owner's GitHub account | Everything, which is why it has 2FA and every deploy needs its approval. |
+
+Migrations stay backward compatible for one release (add first, remove a release later), so
+going back one image is always safe.
+
+### Setting it up (owner, once)
+
+1. **GitHub.** The repository is public, which gives Actions, secret scanning, Dependabot
+   and CodeQL for free. Rulesets protect `main` (CI required, no force push) and `v*` tags
+   (only the owner creates them). The `production` environment allows `v*` tags only, needs
+   the owner's approval, and holds the deploy secrets: `DEPLOY_SSH_KEY`,
+   `DEPLOY_KNOWN_HOSTS`, `DEPLOY_SSH_HOST`, `CF_ACCESS_CLIENT_ID` and
+   `CF_ACCESS_CLIENT_SECRET`. `SIXLABORS_LICENSE_KEY` is a repository secret and a Dependabot
+   secret. The GHCR packages are public, so the server pulls without a token.
+2. **The tunnel in its own project:** [`ops/cloudflared/README.md`](ops/cloudflared/README.md).
+3. **The deploy sshd, key and gate:** [`ops/sshd/README.md`](ops/sshd/README.md).
+4. **Monitoring:** [`ops/uptime-kuma/README.md`](ops/uptime-kuma/README.md).
+
+Until that is in place, `deploy.ps1` still works the old way: it builds both images locally,
+ships them over SSH, and runs them through a `docker-compose.local.yml` that swaps the GHCR
+digests for the local tags. It goes once the first tag deploy is green.
+
+### Rolling back
+
+To go back to an earlier release, run its tag's workflow again. Nothing is rebuilt: the deploy
+job reads the digests that release published.
+
+```bash
+gh workflow run release.yml --ref v0.21.0
+```
+
+If a release ran a migration and then failed, nothing rolls back on its own, because the old
+image may not understand the new schema. Restore the dump the deploy named, on the server, then
+roll back as above:
+
+```bash
+cd ~/docker/lnshelf
+docker exec -i lnshelf-postgres-1 pg_restore -U lnshelf -d lnshelf --clean --if-exists < backups/pre-deploy-<version>-<stamp>.dump
+```
+
+If GitHub is unreachable, the owner can run `lnshelf-deploy <version> <sha> <api digest>
+<client digest>` on the server with their normal key.
 
 ### Six Labors license key
 
@@ -151,13 +232,9 @@ AUTH_INITIAL_OWNER_EMAIL=you@example.com
 # AUTH_AUTHORITY=https://accounts.google.com
 # Optional: Open Library asks API users for a contact address in the User-Agent.
 OPENLIBRARY_CONTACT_EMAIL=
-```
-
-Then, from your machine:
-
-```powershell
-./deploy.ps1 -Server <server address> -User <ssh user> -Url https://<your host>
-# or set LNSHELF_DEPLOY_SERVER, LNSHELF_DEPLOY_USER and LNSHELF_DEPLOY_URL once
+# Optional: Uptime Kuma push URLs (README, Monitoring).
+# HEARTBEAT_NIGHTLY_SYNC_URL=http://<server>:3001/api/push/<token>
+# BACKUP_HEARTBEAT_URL=http://<server>:3001/api/push/<token>
 ```
 
 The app's Privacy page (`/privacy.html`) says what is stored and why. Each user can download a
@@ -181,7 +258,7 @@ promises exactly this, so keep to it or change the page. Copies off the server a
 yet (`docs/backlog.md`).
 
 ```bash
-# once, on the server, from the deployed ops/ folder
+# once, on the server, with the scripts copied to ~/docker/lnshelf/ops/backup/
 crontab -e   # 0 3 * * * /home/neko/docker/lnshelf/ops/backup/lnshelf-backup.sh >> /home/neko/docker/lnshelf/backups/backup.log 2>&1
 ops/backup/restore-test.sh   # restores the newest backup into a throwaway Postgres and checks it
 ```
@@ -189,18 +266,18 @@ ops/backup/restore-test.sh   # restores the newest backup into a throwaway Postg
 Run the restore test after any change to the backup, and now and then besides. If a backup is
 ever restored, delete again every account that was deleted after it was taken.
 
-On top of that, `deploy.ps1` takes a `pg_dump` (custom format) into `backups/` on the server
-before every deploy, because migrations apply on boot and cannot be undone; the last five are
-kept. It also keeps the images it replaces as `lnshelf-api:previous` and
-`lnshelf-client:previous`. To roll back a bad release:
+On top of that, every deploy takes a `pg_dump` into `backups/` first, because migrations
+apply on boot and cannot be undone; the last five are kept ([Rolling back](#rolling-back)).
 
-```bash
-docker tag lnshelf-api:previous lnshelf-api:latest
-docker tag lnshelf-client:previous lnshelf-client:latest
-docker compose stop api
-docker compose exec -T postgres pg_restore -U lnshelf -d lnshelf --clean --if-exists < backups/pre-deploy-<stamp>.dump
-docker compose up -d --no-build
-```
+#### Monitoring
+
+[Uptime Kuma](ops/uptime-kuma/README.md) runs beside the stack on the server, on the LAN only.
+It checks `/api/health` through the public address, and it has two push monitors that expect a
+beat every 25 hours: the nightly sync (`HEARTBEAT_NIGHTLY_SYNC_URL` in the `.env`, which the API
+reads as `Heartbeat__Monitors__NightlySync`) and the nightly backup (`BACKUP_HEARTBEAT_URL`). A
+down beat, a missing beat or a failed health check sends a message to Discord. Beats carry
+counts only. Kuma shares the host, so it cannot report the host itself going down; an outside
+watchdog is in the backlog.
 
 #### Uploaded covers left behind
 
@@ -230,6 +307,7 @@ are most likely to change:
 | `Auth__InitialOwnerEmail` | empty | Who adopts the library from before users existed |
 | `Limits__MaximumSeriesPerUser`, `Limits__MaximumCoverOverridesPerUser` | `500`, `300` | Per-user storage limits |
 | `Limits__ExternalRequestsPerMinute`, `Limits__SyncRunsPerHour` | `20`, `2` | Per-user rate limits on calls that reach the metadata sources |
+| `Heartbeat__Monitors__NightlySync` | empty (no beat) | Uptime Kuma push URL the nightly sync reports to |
 | `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
 | `Covers__FileSystem__RootPath` | `/data/covers` | The cover folder (the API image mounts its volume there) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |
@@ -250,6 +328,7 @@ LnShelf/
   LnShelf.Api.Tests/        unit tests, mirroring the API's layout
   LnShelf.EndToEnd.Tests/   browser journeys (Playwright)
 docs/                       feature spec, design, phase log, backlog
+ops/                        server-side scripts: backup, deploy gate, sshd, tunnel, Uptime Kuma
 ```
 
 `CLAUDE.md` holds the coding conventions the project follows.

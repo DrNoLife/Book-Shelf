@@ -22,7 +22,7 @@ x-logging: &default-logging
 services:
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
     logging: *default-logging
     environment:
@@ -40,12 +40,13 @@ services:
       timeout: 5s
       retries: 10
 
-  # Pinned image tag: deploy.ps1 builds and ships this tag, then runs
-  # `up -d --no-build` to consume it. The build block is only for a local
-  # `docker compose -f docker-compose.production.yml build` — the server has no
-  # source tree.
+  # Pulled by digest from GHCR, never by a tag: a tag can be moved by anything that can
+  # push, a digest names exactly the bytes the release workflow built, scanned and
+  # attested. The deploy script (ops/deploy/lnshelf-deploy) sets both digests from the
+  # release; the deploy gate refuses a compose file that does not use them. The build
+  # block is only for a local `docker compose -f docker-compose.production.yml build`.
   api:
-    image: lnshelf-api:latest
+    image: ghcr.io/drnolife/lnshelf-api@${LNSHELF_API_DIGEST:?Deploy through ops/deploy/lnshelf-deploy, which sets the image digests}
     build:
       context: .
       dockerfile: Dockerfile.api
@@ -101,7 +102,7 @@ services:
   # The only public face: nginx serves the WASM bundle and proxies /api/* to the
   # API, so the browser sees one origin and the API needs no CORS (§2).
   client:
-    image: lnshelf-client:latest
+    image: ghcr.io/drnolife/lnshelf-client@${LNSHELF_CLIENT_DIGEST:?Deploy through ops/deploy/lnshelf-deploy, which sets the image digests}
     build:
       context: .
       dockerfile: Dockerfile.client

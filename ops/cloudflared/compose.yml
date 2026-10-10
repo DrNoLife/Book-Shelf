@@ -1,0 +1,44 @@
+# The Cloudflare Tunnel, as a compose project of its own (ops/cloudflared/README.md). Lives on
+# the server in ~/docker/cloudflared, next to a .env holding only CLOUDFLARE_TUNNEL_TOKEN.
+#
+# Not part of the lnshelf project on purpose: a deploy runs `docker compose up` there, which
+# could recreate the tunnel and cut the very SSH session the deploy arrived through. Here it is
+# started by hand and left alone.
+#
+# Outbound only: nothing is opened on the router. It carries two public hostnames, both set in
+# the Cloudflare dashboard: the app (http://lnshelf-client-1:80) and the deploy sshd
+# (ssh://host.docker.internal:2222, behind Cloudflare Access service auth).
+name: cloudflared
+
+# Same rotation as the lnshelf stack: three files of 10 MB, then the oldest goes.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  tunnel:
+    # Pinned by tag and digest, so a re-pushed tag cannot change what runs here.
+    image: cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
+    restart: unless-stopped
+    logging: *default-logging
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in the .env next to compose.yml}"
+    # The deploy sshd listens on the docker bridge gateway; host-gateway resolves to it.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # It needs no privileges at all, so it gets none.
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    # The lnshelf project's network, so the tunnel reaches the client container by name
+    # without the client publishing anything extra.
+    networks:
+      - lnshelf
+
+networks:
+  lnshelf:
+    name: lnshelf_default
+    external: true

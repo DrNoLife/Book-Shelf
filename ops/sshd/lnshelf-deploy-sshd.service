@@ -1,0 +1,30 @@
+# The deploy sshd (ops/sshd/README.md). Installed by hand at
+# /etc/systemd/system/lnshelf-deploy-sshd.service.
+[Unit]
+Description=LnShelf deploy sshd (ForceCommand lnshelf-deploy-gate, docker bridge only)
+Documentation=https://github.com/DrNoLife/Book-Shelf/tree/main/ops/sshd
+# It listens on the docker bridge gateway, which exists only once Docker (the snap) is up.
+After=network-online.target snap.docker.dockerd.service
+Wants=network-online.target
+# Keep retrying instead of giving up after five quick failures while docker0 is missing.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# The privilege separation directory. Created here rather than with RuntimeDirectory=, which
+# would remove it when this unit stops, from under the normal sshd that shares it.
+ExecStartPre=/usr/bin/install -d -m 0755 /run/sshd
+ExecStartPre=/usr/sbin/sshd -t -f /etc/ssh/sshd_lnshelf_deploy.conf
+ExecStart=/usr/sbin/sshd -D -e -f /etc/ssh/sshd_lnshelf_deploy.conf
+ExecReload=/usr/sbin/sshd -t -f /etc/ssh/sshd_lnshelf_deploy.conf
+ExecReload=/bin/kill -HUP $MAINPID
+# Only the listening daemon is stopped on restart. A deploy runs detached in this unit's
+# cgroup; the default control-group mode would kill it half way.
+KillMode=process
+Restart=on-failure
+RestartSec=10
+# No NoNewPrivileges or filesystem sandboxing: everything here is inherited by the gate and the
+# deploy, which need the docker snap (started through a setuid helper) and write under /home.
+
+[Install]
+WantedBy=multi-user.target

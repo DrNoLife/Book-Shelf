@@ -63,8 +63,11 @@ Set-Location -Path $PSScriptRoot   # repo root (both Dockerfiles + the compose f
 $target  = "$User@$Server"
 $sshOpts = @('-i', $Key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10')
 
+# Every remote command sees both compose files and placeholder digests (see the upload step).
+$composeEnvironment = 'export PATH="$PATH:/snap/bin" COMPOSE_FILE=docker-compose.yml:docker-compose.local.yml LNSHELF_API_DIGEST=local-build LNSHELF_CLIENT_DIGEST=local-build; '
+
 function Invoke-Remote([string]$Command) {
-    & ssh @sshOpts $target $Command
+    & ssh @sshOpts $target ($composeEnvironment + $Command)
     if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE): $Command" }
 }
 
@@ -121,6 +124,14 @@ try {
     # docker-compose.override.yml layers on top without any extra -f arguments.
     & scp @sshOpts 'docker-compose.production.yml' "${target}:$RemoteDir/docker-compose.yml"
     if ($LASTEXITCODE -ne 0) { throw 'scp (compose) failed.' }
+
+    # The compose file pulls images from GHCR by digest (the tag-driven deploy, ops/deploy).
+    # Until that path is live this script still ships locally built images, so a second file
+    # puts the local tags back, and every compose call below reads both through COMPOSE_FILE.
+    # The digests only have to be set for interpolation; the local file replaces the images.
+    $localOverride = "services:`n  api:`n    image: $ApiTag`n  client:`n    image: $ClientTag`n"
+    $localOverride | & ssh @sshOpts $target "cat > '$RemoteDir/docker-compose.local.yml'"
+    if ($LASTEXITCODE -ne 0) { throw 'Writing the local-images override failed.' }
 
     # Migrations apply on boot and cannot be rolled back, so take a dump first, while the old
     # API still owns the schema. Custom format (-Fc) is compressed and restores with pg_restore.

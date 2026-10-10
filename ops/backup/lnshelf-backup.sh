@@ -27,8 +27,11 @@ MINIMUM_FREE_MEGABYTES="${MINIMUM_FREE_MEGABYTES:-2048}"
 LOCK_FILE="${LOCK_FILE:-$LNSHELF_DIR/.ops.lock}"
 ALPINE_IMAGE="alpine:3.22"
 
-compose() {
-    docker compose -p lnshelf --project-directory "$LNSHELF_DIR" -f "$LNSHELF_DIR/docker-compose.yml" "$@"
+# The Postgres container, found by its compose labels rather than through a compose file: the
+# live compose file moves with each release (releases/<version>/) and needs the image digests
+# to interpolate, neither of which a database dump has any business knowing.
+postgres_container() {
+    docker ps --quiet         --filter label=com.docker.compose.project=lnshelf         --filter label=com.docker.compose.service=postgres
 }
 
 log() {
@@ -69,10 +72,17 @@ stamp="$(date +%Y%m%d-%H%M%S)"
 dump="$BACKUP_DIR/lnshelf-$stamp.dump"
 covers="$BACKUP_DIR/covers-$stamp.tar"
 
+postgres="$(postgres_container)"
+if [[ -z "$postgres" || "$postgres" == *$'
+'* ]]; then
+    log "Expected exactly one running lnshelf Postgres container."
+    exit 1
+fi
+
 log "Dumping the database."
-compose exec -T postgres pg_dump -U lnshelf -d lnshelf -Fc > "$dump.tmp"
+docker exec "$postgres" pg_dump -U lnshelf -d lnshelf -Fc > "$dump.tmp"
 # A dump pg_restore cannot list is not a backup; check before it can replace a good one.
-compose exec -T postgres pg_restore --list < "$dump.tmp" > /dev/null
+docker exec -i "$postgres" pg_restore --list < "$dump.tmp" > /dev/null
 mv "$dump.tmp" "$dump"
 
 log "Archiving the cover store ($COVERS_VOLUME)."

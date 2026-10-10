@@ -1,0 +1,427 @@
+# Release and deploy. Pushing a tag vX.Y.Z runs: verify -> ci -> scan -> publish -> deploy.
+#
+#   git tag v0.21.0 && git push --follow-tags        a new release
+#   gh workflow run release.yml --ref v0.20.1        roll back (or re-deploy) a published release
+#
+# On workflow_dispatch nothing is built: ci, scan and publish are skipped and deploy reads the
+# image digests from that tag's GitHub Release. There is deliberately no free-text input; the
+# only thing a run can be pointed at is a tag, and its name is validated before use.
+#
+# The rules at the top of ci.yml apply here too. In addition:
+#   - Only publish holds packages: write, and it runs no third-party scanner. scan runs Trivy
+#     on its own build of the same commit, with nothing worth stealing but the license key.
+#   - deploy holds the deploy secrets in the production environment, which only v* tags may
+#     use and which waits for the owner's approval. The server checks every claim again
+#     itself (ops/deploy/lnshelf-deploy-gate), so this workflow is not trusted either.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One release at a time across all tags, so two deploys never race to the server (which also
+# refuses a second one while the first holds its lock).
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      sha: ${{ steps.commit.outputs.sha }}
+      short-sha: ${{ steps.commit.outputs.short-sha }}
+    steps:
+      # The tag name arrives through the environment (GITHUB_REF_NAME), never through an
+      # expression inside the script, so it cannot inject shell.
+      - name: Validate the tag name
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF_TYPE" != tag ]]; then
+            echo "::error::Run this workflow on a release tag: gh workflow run release.yml --ref vX.Y.Z"
+            exit 1
+          fi
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$ ]]; then
+            echo "::error::A release tag looks like v1.2.3."
+            exit 1
+          fi
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, so the main branch is there to check ancestry against.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A sanity check that fails early and readably. The server repeats the main-branch
+      # check against GitHub's API, because nothing in this workflow is trusted there.
+      - name: Check the version and the branch
+        id: commit
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          props_version="$(sed -n 's|.*<Version>\([^<]*\)</Version>.*|\1|p' LnShelf/Directory.Build.props | head -n 1)"
+          if [[ "$props_version" != "$VERSION" ]]; then
+            echo "::error::The tag says $VERSION but LnShelf/Directory.Build.props says $props_version. Bump the props, commit, and tag that commit."
+            exit 1
+          fi
+          sha="$(git rev-parse 'HEAD^{commit}')"
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::The tagged commit is not on main. Only main is released."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short-sha=${sha:0:12}" >> "$GITHUB_OUTPUT"
+
+  ci:
+    needs: verify
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    # Mapped by name, not inherit: the called workflow gets the one secret it needs.
+    secrets:
+      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+  # The images are built here only to be scanned and are then thrown away; publish builds its
+  # own from the same commit and pinned base images. That keeps the scanner, a third-party
+  # action, out of the job that can push to the registry.
+  scan:
+    needs: verify
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the API image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.api
+          load: true
+          push: false
+          tags: lnshelf-api:scan
+          secret-envs: sixlabors_license=SixLaborsLicenseKey
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+      - name: Build the client image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.client
+          load: true
+          push: false
+          tags: lnshelf-client:scan
+
+      # Critical findings that have a fix block the release; ones without a fix would block
+      # every release until upstream acts, without anything to do here. cache is off because
+      # this job holds a secret (see ci.yml).
+      - name: Scan the API image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: lnshelf-api:scan
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Scan the client image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: lnshelf-client:scan
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          cache: 'false'
+
+  publish:
+    needs: [verify, ci, scan]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      VERSION: ${{ needs.verify.outputs.version }}
+      SHORT_SHA: ${{ needs.verify.outputs.short-sha }}
+    outputs:
+      api-digest: ${{ steps.api.outputs.digest }}
+      client-digest: ${{ steps.client.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # provenance is off because the attestation below is the provenance: signed by GitHub,
+      # verifiable with `gh attestation verify`, and it keeps the pushed digest a plain image.
+      # The source label links the package to this repository on GHCR.
+      - name: Build and push the API image
+        id: api
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.api
+          push: true
+          provenance: false
+          tags: |
+            ghcr.io/drnolife/lnshelf-api:${{ env.VERSION }}
+            ghcr.io/drnolife/lnshelf-api:sha-${{ env.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.verify.outputs.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+          secret-envs: sixlabors_license=SixLaborsLicenseKey
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+      - name: Attest the API image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/drnolife/lnshelf-api
+          subject-digest: ${{ steps.api.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and push the client image
+        id: client
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.client
+          push: true
+          provenance: false
+          tags: |
+            ghcr.io/drnolife/lnshelf-client:${{ env.VERSION }}
+            ghcr.io/drnolife/lnshelf-client:sha-${{ env.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.verify.outputs.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+
+      - name: Attest the client image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/drnolife/lnshelf-client
+          subject-digest: ${{ steps.client.outputs.digest }}
+          push-to-registry: true
+
+      # digests.txt is the record of what this tag deploys. A rollback reads it instead of
+      # rebuilding, and the server compares the digests it is asked to deploy against it.
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          CLIENT_DIGEST: ${{ steps.client.outputs.digest }}
+        run: |
+          for digest in "$API_DIGEST" "$CLIENT_DIGEST"; do
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::The image build returned no usable digest."
+              exit 1
+            fi
+          done
+          digests="$RUNNER_TEMP/digests.txt"
+          printf 'api=%s\nclient=%s\n' "$API_DIGEST" "$CLIENT_DIGEST" > "$digests"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # A re-run of this job pushed new images; the release must name those.
+            gh release upload "$GITHUB_REF_NAME" "$digests" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            notes="$(printf 'Images, pulled by digest:\n\n    ghcr.io/drnolife/lnshelf-api@%s\n    ghcr.io/drnolife/lnshelf-client@%s\n\nWhat changed is in the in-app changelog.' "$API_DIGEST" "$CLIENT_DIGEST")"
+            gh release create "$GITHUB_REF_NAME" "$digests" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --title "LnShelf $VERSION" --notes "$notes"
+          fi
+
+  deploy:
+    needs: [verify, publish]
+    # On a tag push, only after publish succeeded. On workflow_dispatch publish is skipped
+    # (it needs ci and scan, which are), and deploy runs from the existing release.
+    if: >-
+      !cancelled()
+      && needs.verify.result == 'success'
+      && (needs.publish.result == 'success'
+          || (github.event_name == 'workflow_dispatch' && needs.publish.result == 'skipped'))
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARED_VERSION: 2026.10.0
+      # From the asset digest GitHub records for cloudflared-linux-amd64 in that release,
+      # which matches the checksum Cloudflare lists in the release notes. A changed binary
+      # under the same version fails the install instead of receiving the deploy secrets.
+      CLOUDFLARED_SHA256: d33ff2d14475178d2012c2c56beba87389ac5ded27649519f198a7d3134a99db
+      VERSION: ${{ needs.verify.outputs.version }}
+      SHA: ${{ needs.verify.outputs.sha }}
+    steps:
+      - name: Resolve the image digests
+        id: digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED_API_DIGEST: ${{ needs.publish.outputs.api-digest }}
+          PUBLISHED_CLIENT_DIGEST: ${{ needs.publish.outputs.client-digest }}
+        run: |
+          api_digest=""
+          client_digest=""
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --pattern digests.txt --dir "$RUNNER_TEMP/release"
+            while IFS= read -r line; do
+              if [[ "$line" =~ ^api=(sha256:[0-9a-f]{64})$ ]]; then
+                api_digest="${BASH_REMATCH[1]}"
+              elif [[ "$line" =~ ^client=(sha256:[0-9a-f]{64})$ ]]; then
+                client_digest="${BASH_REMATCH[1]}"
+              fi
+            done < "$RUNNER_TEMP/release/digests.txt"
+          else
+            api_digest="$PUBLISHED_API_DIGEST"
+            client_digest="$PUBLISHED_CLIENT_DIGEST"
+          fi
+          for digest in "$api_digest" "$client_digest"; do
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::No valid image digests for $GITHUB_REF_NAME. Only releases published by this workflow can be deployed."
+              exit 1
+            fi
+          done
+          echo "api=$api_digest" >> "$GITHUB_OUTPUT"
+          echo "client=$client_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Install cloudflared
+        run: |
+          binary="$RUNNER_TEMP/cloudflared"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$binary" \
+            "https://github.com/cloudflare/cloudflared/releases/download/$CLOUDFLARED_VERSION/cloudflared-linux-amd64"
+          echo "$CLOUDFLARED_SHA256  $binary" | sha256sum --check --strict
+          chmod 755 "$binary"
+
+      # ssh reaches the server through cloudflared, which presents the Access service token;
+      # Cloudflare Access refuses the connection without it. On the server the key can only
+      # run lnshelf-deploy-gate. The host key is pinned from DEPLOY_KNOWN_HOSTS, never learned.
+      - name: Deploy through the tunnel
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          API_DIGEST: ${{ steps.digests.outputs.api }}
+          CLIENT_DIGEST: ${{ steps.digests.outputs.client }}
+        run: |
+          if [[ ! "$DEPLOY_SSH_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]; then
+            echo "::error::DEPLOY_SSH_HOST must be a plain hostname."
+            exit 1
+          fi
+          ssh_directory="$RUNNER_TEMP/ssh"
+          (umask 077 && mkdir -p "$ssh_directory")
+          (umask 077 && printf '%s\n' "$DEPLOY_SSH_KEY" > "$ssh_directory/deploy_key")
+          (umask 077 && printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$ssh_directory/known_hosts")
+
+          run_on_server() {
+            ssh -F /dev/null -T \
+              -i "$ssh_directory/deploy_key" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$ssh_directory/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null \
+              -o HostKeyAlias="$DEPLOY_SSH_HOST" \
+              -o ProxyCommand="$RUNNER_TEMP/cloudflared access ssh --hostname %h" \
+              -o ConnectTimeout=30 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=4 \
+              -o LogLevel=ERROR \
+              "neko@$DEPLOY_SSH_HOST" "$1"
+          }
+
+          # Server output is shown with workflow commands switched off, so a log line can
+          # never be read as ::add-mask:: or ::error:: by the runner.
+          show_server_output() {
+            local token
+            token="$(openssl rand -hex 16)"
+            echo "::stop-commands::$token"
+            printf '%s\n' "$1"
+            echo "::$token::"
+          }
+
+          echo "Asking the server to deploy $VERSION ($SHA)."
+          if ! output="$(run_on_server "deploy $VERSION $SHA $API_DIGEST $CLIENT_DIGEST" 2>&1)"; then
+            show_server_output "$output"
+            echo "::error::The server refused the deploy or could not be reached."
+            exit 1
+          fi
+          show_server_output "$output"
+
+          # The deploy runs detached on the server, so a dropped connection cannot kill it
+          # half way. Poll until it records a result: pre-deploy dump, pull, up to 90 s of
+          # health checks, and possibly a rollback with another 90 s.
+          deadline=$((SECONDS + 1200))
+          unreachable=0
+          while true; do
+            sleep 10
+            if output="$(run_on_server "status $VERSION" 2>&1)"; then
+              unreachable=0
+              state="${output%%$'\n'*}"
+              case "$state" in
+                succeeded)
+                  show_server_output "$output"
+                  echo "Deployed $VERSION."
+                  exit 0
+                  ;;
+                failed)
+                  show_server_output "$output"
+                  echo "::error::The deploy of $VERSION failed on the server. Its log is above; it rolled back if it could."
+                  exit 1
+                  ;;
+                running)
+                  echo "Still deploying."
+                  ;;
+                *)
+                  echo "The server has no result for $VERSION yet."
+                  ;;
+              esac
+            else
+              unreachable=$((unreachable + 1))
+              if (( unreachable >= 6 )); then
+                show_server_output "$output"
+                echo "::error::Lost the connection to the server for a minute. The deploy may still finish there; check 'status $VERSION'."
+                exit 1
+              fi
+            fi
+            if (( SECONDS >= deadline )); then
+              show_server_output "$output"
+              echo "::error::No result after 20 minutes."
+              exit 1
+            fi
+          done
+
+      - name: Remove the deploy key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/ssh"

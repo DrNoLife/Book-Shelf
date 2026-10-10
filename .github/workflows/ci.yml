@@ -1,17 +1,64 @@
+# Build, test and image build for every push to main and every pull request; release.yml calls
+# it too, so a tag is only published after the same checks pass.
+#
+# Rules for every workflow in this repository. It is public, so a workflow is attack surface:
+#   - Never trigger on pull_request_target or workflow_run. Both run with this repository's
+#     secrets and a writable token while being reachable from a fork's pull request.
+#   - The top-level permissions are read-only; every job declares exactly what it needs.
+#   - Every action is pinned by full commit SHA with its version in a comment. A tag can be
+#     moved to other code; a commit cannot. Dependabot keeps the pins current.
+#   - Every checkout sets persist-credentials: false, so the token is not left in .git/config
+#     for a later step or a build script to read.
+#   - No caches in jobs that hold secrets. A cache written by one run is restored by later
+#     ones, so a poisoned cache would execute next to the secret.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
+    secrets:
+      SIXLABORS_LICENSE_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request makes the older run worthless. Runs on main and the
+# release run are never cancelled: each is the record of what that commit did.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build-test:
+  # ImageSharp 4 will not compile without the Six Labors license key, and GitHub withholds
+  # secrets from pull requests opened from forks. Without this job those runs die deep inside
+  # a compiler error; with it they stop here and say why.
+  license-key:
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
-      - uses: actions/checkout@v4
+      - name: Require the Six Labors license key
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+        run: |
+          if [[ -z "$SixLaborsLicenseKey" ]]; then
+            echo "::error title=Missing SIXLABORS_LICENSE_KEY::ImageSharp 4 needs a Six Labors license key to compile. Pull requests from forks do not receive repository secrets, so CI cannot build them; a maintainer has to run the checks from a branch in this repository."
+            exit 1
+          fi
 
-      - uses: actions/setup-dotnet@v4
+  build-test:
+    needs: license-key
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -42,10 +89,14 @@ jobs:
   end-to-end:
     needs: build-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -63,9 +114,49 @@ jobs:
       - name: Journeys
         run: dotnet test LnShelf/LnShelf.EndToEnd.Tests -c Release --no-build -p:RunEndToEnd=true
 
+      # Traces are screenshots and DOM snapshots of the synthetic test shelf, readable by
+      # anyone on a public repository. A week is enough to debug a red run.
       - name: Upload Playwright traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-traces
           path: LnShelf/LnShelf.EndToEnd.Tests/bin/Release/net10.0/playwright-traces/
+          retention-days: 7
+
+  # Both Dockerfiles, built and thrown away. A change that breaks an image would otherwise
+  # only surface when a release tag is pushed.
+  images:
+    needs: license-key
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # The build record artifact is downloadable by anyone on a public repository, and this
+      # job holds the license key. Nothing in it should leak the key, but nothing needs it.
+      DOCKER_BUILD_RECORD_UPLOAD: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the API image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.api
+          push: false
+          # A BuildKit secret, read from the variable below: it never reaches a layer or the
+          # build history, unlike a build argument.
+          secret-envs: sixlabors_license=SixLaborsLicenseKey
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+      - name: Build the client image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.client
+          push: false
