@@ -29,10 +29,10 @@ services:
     # The deploy sshd listens on the docker bridge gateway; host-gateway resolves to it.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # It needs no privileges at all, so it gets none.
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
+    # No cap_drop or no-new-privileges, although it needs no privileges: the cloudflared
+    # binary carries file capabilities, and with either setting the kernel refuses to exec
+    # it ("operation not permitted"), so the container never starts. Tried on the server
+    # (snap Docker 29.8) on 2026-10-10.
     # The lnshelf project's network, so the tunnel reaches the client container by name
     # without the client publishing anything extra.
     networks:

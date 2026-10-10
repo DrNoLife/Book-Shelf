@@ -59,6 +59,18 @@ done
 less "$work"/*
 ```
 
+### 3. to 5., in one go
+
+[`install.sh`](install.sh) does steps 3 to 5 below (scripts, host key, authorised key, config,
+unit, ufw rule, start) and prints the host key line for `DEPLOY_KNOWN_HOSTS`. Generate the key
+of step 4 first, as `neko`, then:
+
+```bash
+sudo ./install.sh ~/.lnshelf-deploy-key/id.pub
+```
+
+The steps it runs, for reading or for doing by hand:
+
 ### 3. Install the scripts, the host key, the config and the unit
 
 ```bash
