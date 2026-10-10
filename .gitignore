@@ -50,6 +50,9 @@ docker-compose.override.yml
 # fixtures live in Fixtures/ folders inside the test project and are deeper
 # than root, so this root-only pattern leaves them alone.
 /*.csv
+# The owner's own export, kept locally for import work; removed from history before the
+# repository went public.
+/docs/story-graph-export.csv
 
 # ---- IDE & editor ----
 .vs/
