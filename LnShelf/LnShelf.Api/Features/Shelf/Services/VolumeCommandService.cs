@@ -134,37 +134,10 @@ public sealed class VolumeCommandService(
             return null;
         }
 
-        var affected = series.Volumes.Where(volume => volume.Number <= request.ThroughNumber).ToList();
-        var anyBecameRead = false;
+        var outcome = BulkVolumeStateWriter.ApplyThrough(
+            series, request.ThroughNumber, request.Read, request.Owned, stampedOn: timeProvider.Today());
 
-        foreach (var volume in affected)
-        {
-            var state = EnsureState(volume);
-
-            if (request.Read is { } readStatus)
-            {
-                anyBecameRead |=
-                    readStatus is ReadStatus.Read && state.ReadStatus is not ReadStatus.Read;
-
-                state.ReadStatus = readStatus;
-                state.ReadAt = readStatus is ReadStatus.Read ? state.ReadAt ?? timeProvider.Today() : null;
-            }
-
-            if (request.Owned is { } owned)
-            {
-                state.Owned = owned;
-                state.OwnedFormat = owned ? state.OwnedFormat ?? OwnedFormat.Physical : null;
-
-                // The same stamp the single-volume path makes, so a volume bought through
-                // the bulk bar is not the one kind of owned volume with no purchase date.
-                if (owned)
-                {
-                    state.PurchasedAt ??= timeProvider.Today();
-                }
-            }
-        }
-
-        if (anyBecameRead)
+        if (outcome.AnyBecameRead)
         {
             // The series is already loaded with its user state here, so no second read.
             StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
@@ -175,7 +148,7 @@ public sealed class VolumeCommandService(
         logger.LogInformation(
             "Bulk change on {SeriesId}: volumes 1–{ThroughNumber} ({AffectedCount} of {TrackedCount}) "
             + "read={Read} owned={Owned}",
-            seriesId, request.ThroughNumber, affected.Count, series.Volumes.Count, request.Read, request.Owned);
+            seriesId, request.ThroughNumber, outcome.AffectedCount, series.Volumes.Count, request.Read, request.Owned);
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }

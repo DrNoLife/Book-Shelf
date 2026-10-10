@@ -23,4 +23,26 @@ public sealed record AddSeriesRequest
     /// which format was actually stored.
     /// </summary>
     public required Format Format { get; init; }
+
+    /// <summary>
+    /// "Start with": volumes 1..N are marked read as the series goes on the shelf. Null or
+    /// zero adds it untouched, on Plan to start; anything above zero puts it on Reading.
+    /// </summary>
+    // No read date is stamped on them: the add does not know when they were read, and
+    // today would be a date the stats page then believes.
+    public int? InitialReadCount { get; init; }
+
+    /// <summary>
+    /// "Start with": volumes 1..N are marked owned. Never fewer than
+    /// <see cref="InitialReadCount"/> — the add raises it to that, because the start-with
+    /// control treats a read volume as one on the shelf.
+    /// </summary>
+    public int? InitialOwnedCount { get; init; }
+
+    /// <summary>
+    /// The highest start-with count accepted for a series whose source publishes no volume
+    /// count. With a count, the count is the limit.
+    /// </summary>
+    // Shared so the preview's steppers stop exactly where the API would start refusing.
+    public const int InitialCountLimitWithoutVolumeCount = 30;
 }

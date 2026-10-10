@@ -26,9 +26,12 @@ public sealed class AddSeriesPipeline(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var startingState = SeriesStartingState.From(request);
         var flow = FlowFor(AddSeriesSource.Of(request));
         var sourceId = flow.SourceIdOf(request);
 
+        // An already-tracked series answers as it is: the reader's state on it is theirs, and
+        // a start-with sent from a stale search page must not overwrite it.
         var existing = await FindTrackedAsync(flow.Identifies(sourceId), cancellationToken);
         if (existing is not null)
         {
@@ -55,6 +58,10 @@ public sealed class AddSeriesPipeline(
         }
 
         await userLimits.EnsureRoomForSeriesAsync(adding: 1, cancellationToken);
+
+        // Before the save, so the series and the reader's place in it are one write: a race
+        // lost below detaches both together and leaves the winner's state alone.
+        startingState.ApplyTo(series);
 
         dbContext.Series.Add(series);
 
@@ -92,13 +99,16 @@ public sealed class AddSeriesPipeline(
         }
 
         logger.LogInformation(
-            "Added {TitleEnglish} ({Format}) from {Source} {SourceId} as {SeriesId} with {VolumeCount} volumes",
+            "Added {TitleEnglish} ({Format}) from {Source} {SourceId} as {SeriesId} with {VolumeCount} volumes, "
+            + "starting with {ReadCount} read and {OwnedCount} owned",
             series.TitleEnglish,
             series.Format,
             flow.Source,
             sourceId,
             series.Id,
-            series.Volumes.Count);
+            series.Volumes.Count,
+            startingState.ReadCount,
+            startingState.OwnedCount);
 
         return ToAddedResponse(series, await CompleteAsync(series.Id, cancellationToken));
     }
