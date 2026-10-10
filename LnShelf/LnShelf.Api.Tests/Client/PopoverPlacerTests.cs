@@ -100,12 +100,12 @@ public sealed class PopoverPlacerTests
     [Fact]
     public void TheRowsOnlySomeVolumesHaveAreCountedIntoTheHeight()
     {
-        // A released, unowned volume carries the Saxo link, a read volume its read date and
+        // A released, unowned volume carries the Saxo link, a read volume its read-date row and
         // one with an override "Remove cover". Rows missing from the nominal height are how
         // a menu came to hang off the bottom of a phone screen with its last row below the fold.
         var plain = Volume(description: null) with { IsOut = false };
         var toBuy = plain with { IsOut = true };
-        var read = plain with { ReadAt = new DateOnly(2026, 1, 2) };
+        var read = plain with { ReadStatus = ReadStatus.Read };
         var overridden = plain with { HasCoverOverride = true };
 
         VolumePopover.HeightFor(plain).ShouldBe(VolumePopover.Height);

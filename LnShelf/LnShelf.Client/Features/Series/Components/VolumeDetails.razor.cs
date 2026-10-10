@@ -67,6 +67,14 @@ public partial class VolumeDetails
         await Settled.InvokeAsync();
     }
 
+    // Neither read-date handler raises Settled: editing a date is a correction the reader
+    // wants to see land, like switching the edition of an owned volume, so the popover
+    // stays open. An empty value is the native clear button, and means "no date".
+    private Task OnReadDateChangedAsync(ChangeEventArgs args) =>
+        SeriesState.SetReadDateAsync(Volume, ReadDateInput.Parse(args.Value?.ToString()));
+
+    private Task OnReadDateClearedAsync() => SeriesState.SetReadDateAsync(Volume, readAt: null);
+
     private async Task OnOwnershipAsync(Ownership choice)
     {
         if (choice == CurrentOwnership)

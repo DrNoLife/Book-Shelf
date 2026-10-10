@@ -16,11 +16,32 @@
                           Stretch="true"
                           Inset="true" />
 
-        @* When it was read, where the shelf knows — the tile's caption has no room for it
-           and design.md fixes what may go there, so this is its home. *@
-        @if (Volume.ReadAt is { } readAt)
+        @* When it was read — the tile's caption has no room for it and design.md fixes what
+           may go there, so this is its home. A read volume's date is editable, because
+           volumes marked read in a batch all carry the day they were ticked off. The input
+           saves on change; there is no Save button to forget. *@
+        @if (Volume.ReadStatus is ReadStatus.Read)
         {
-            <span class="field__note tabular">Read @readAt.Full</span>
+            <div class="read-date">
+                <label class="read-date__label">
+                    <span class="field__note">Read on</span>
+                    <input class="read-date__input tabular"
+                           type="date"
+                           aria-label="Read date"
+                           value="@ReadDateInput.Format(Volume.ReadAt)"
+                           min="@ReadDateInput.EarliestText"
+                           max="@ReadDateInput.Format(ReadDateInput.Today)"
+                           disabled="@IsBusy"
+                           @onchange="OnReadDateChangedAsync" />
+                </label>
+
+                @if (Volume.ReadAt is not null)
+                {
+                    <button type="button" class="ghost" disabled="@IsBusy" @onclick="OnReadDateClearedAsync">
+                        Clear date
+                    </button>
+                }
+            </div>
         }
     </div>
 

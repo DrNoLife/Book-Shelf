@@ -4,6 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 [Route("api/volumes")]
 public sealed class VolumesController(
     IVolumeCommandService volumeCommandService,
+    IVolumeReadDateCommandService volumeReadDateCommandService,
     IOptions<CoverImageOptions> coverOptions) : ControllerBase
 {
     /// <summary>
@@ -17,6 +18,20 @@ public sealed class VolumesController(
         CancellationToken cancellationToken)
     {
         var detail = await volumeCommandService.SetReadAsync(volumeId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
+    /// Sets or clears when a read volume was read. A separate route from the status
+    /// because it corrects the date and never changes what is read.
+    /// </summary>
+    [HttpPut("{volumeId:guid}/read-date")]
+    public async Task<ActionResult<SeriesDetailResponse>> SetReadDateAsync(
+        Guid volumeId,
+        [FromBody] SetVolumeReadDateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var detail = await volumeReadDateCommandService.SetAsync(volumeId, request, cancellationToken);
         return detail is null ? NotFound() : Ok(detail);
     }
 

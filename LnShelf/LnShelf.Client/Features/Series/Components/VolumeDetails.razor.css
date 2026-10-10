@@ -18,6 +18,26 @@
   color: var(--muted);
 }
 
+/* "Read on [date] Clear date". The input is 16px so a phone does not zoom the page on focus. */
+.read-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.read-date__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.read-date__input {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: 16px;
+}
+
 .cover-actions {
   display: flex;
   flex-wrap: wrap;

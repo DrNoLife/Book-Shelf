@@ -6,7 +6,8 @@ public sealed class SeriesController(
     ISeriesCommandService seriesCommandService,
     ISeriesDetailQueryService seriesDetailQueryService,
     ITrackedSeriesQueryService trackedSeriesQueryService,
-    IVolumeCommandService volumeCommandService) : ControllerBase
+    IVolumeCommandService volumeCommandService,
+    IVolumeReadDateCommandService volumeReadDateCommandService) : ControllerBase
 {
     /// <summary>
     /// The external ids of the series already on the shelf, for the search page's
@@ -41,6 +42,20 @@ public sealed class SeriesController(
         CancellationToken cancellationToken)
     {
         var detail = await volumeCommandService.SetBulkAsync(seriesId, request, cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
+    /// Sets or clears the read date of several read volumes at once. Answers with the
+    /// refreshed series.
+    /// </summary>
+    [HttpPut("{seriesId:guid}/volumes/read-date")]
+    public async Task<ActionResult<SeriesDetailResponse>> SetReadDatesAsync(
+        Guid seriesId,
+        [FromBody] SetVolumeReadDatesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var detail = await volumeReadDateCommandService.SetManyAsync(seriesId, request, cancellationToken);
         return detail is null ? NotFound() : Ok(detail);
     }
 

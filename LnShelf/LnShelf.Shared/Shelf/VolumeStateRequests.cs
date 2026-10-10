@@ -37,3 +37,25 @@ public sealed record BulkVolumeStateRequest
     /// <summary>Null leaves ownership alone.</summary>
     public bool? Owned { get; init; }
 }
+
+/// <summary>
+/// Sets, or clears, when one read volume was read — the correction for volumes ticked
+/// off long after the fact, which all carry the day they were ticked.
+/// </summary>
+public sealed record SetVolumeReadDateRequest
+{
+    /// <summary>The day it was read; null clears the date and leaves the volume read.</summary>
+    public DateOnly? ReadAt { get; init; }
+}
+
+/// <summary>
+/// The same correction for several volumes of one series at once. Every volume named has
+/// to be read — the request is refused whole otherwise, so nothing is half applied.
+/// </summary>
+public sealed record SetVolumeReadDatesRequest
+{
+    public required IReadOnlyList<Guid> VolumeIds { get; init; }
+
+    /// <summary>The day they were read; null clears the date on each.</summary>
+    public DateOnly? ReadAt { get; init; }
+}

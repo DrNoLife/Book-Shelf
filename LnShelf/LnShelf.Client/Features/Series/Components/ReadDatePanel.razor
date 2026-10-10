@@ -1,0 +1,23 @@
+@* The select mode's "Set read date…": one date for every selected volume that is read. An
+   inline panel under the toolbar rather than a modal, so the selection it applies to stays in
+   view above it. *@
+
+<form class="read-date-panel" aria-label="Set read date" @onsubmit="ApplyAsync">
+    <label class="read-date-panel__field">
+        <span class="eyebrow">Read on</span>
+        <input class="read-date-panel__input tabular"
+               type="date"
+               aria-label="Read date for the selected volumes"
+               min="@ReadDateInput.EarliestText"
+               max="@ReadDateInput.Format(ReadDateInput.Today)"
+               @bind="_text"
+               @bind:event="onchange" />
+    </label>
+
+    <p class="read-date-panel__scope fine">@ScopeLine</p>
+
+    <div class="read-date-panel__actions">
+        <button type="submit" class="tertiary" disabled="@(!CanApply)">Apply</button>
+        <button type="button" class="ghost" disabled="@SeriesState.IsSaving" @onclick="CancelAsync">Cancel</button>
+    </div>
+</form>

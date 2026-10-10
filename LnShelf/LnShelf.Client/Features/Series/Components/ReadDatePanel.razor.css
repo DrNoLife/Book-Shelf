@@ -1,0 +1,35 @@
+/* A full row under the toolbar's buttons. */
+.read-date-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-basis: 100%;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surf);
+}
+
+.read-date-panel__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 16px so a phone does not zoom the page when the input takes focus. */
+.read-date-panel__input {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: 16px;
+}
+
+.read-date-panel__scope {
+  flex: 1 1 200px;
+}
+
+.read-date-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

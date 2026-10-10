@@ -30,6 +30,7 @@ public static class ShelfFeatureExtensions
             services.AddScoped<ISeriesCommandService, SeriesCommandService>();
             services.AddScoped<ISeriesDetailQueryService, SeriesDetailQueryService>();
             services.AddScoped<IVolumeCommandService, VolumeCommandService>();
+            services.AddScoped<IVolumeReadDateCommandService, VolumeReadDateCommandService>();
             services.AddScoped<ShelfSeeder>();
             return services;
         }

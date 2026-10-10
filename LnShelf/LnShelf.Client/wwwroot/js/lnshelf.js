@@ -70,6 +70,11 @@ window.lnshelf = {
     // keeps the last row reachable without counting rows in C#.
     moveMenuFocus: function (container, step) {
         if (!container) return;
+
+        // A date input uses the arrows itself, to step the month, day or year under the
+        // cursor; moving focus away would make the read date impossible to edit by keyboard.
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
         const items = Array.from(container.querySelectorAll('button:not(:disabled)'));
         if (items.length === 0) return;
 

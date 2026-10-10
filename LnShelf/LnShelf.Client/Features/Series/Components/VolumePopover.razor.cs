@@ -27,8 +27,8 @@ public partial class VolumePopover
     /// <summary>"Remove cover", which only a volume carrying an override shows.</summary>
     private const double RemoveCoverRowHeight = 44;
 
-    /// <summary>"Read 23 Nov 2021", which only a volume with a read date shows.</summary>
-    private const double ReadDateNoteHeight = 21;
+    /// <summary>"Read on [date] Clear date", which only a read volume shows.</summary>
+    private const double ReadDateRowHeight = 52;
 
     /// <summary>"Using Apple Books (your choice)", which only a volume whose date was picked shows.</summary>
     private const double ChoiceNoteHeight = 21;
@@ -49,9 +49,9 @@ public partial class VolumePopover
             height += ChoiceNoteHeight;
         }
 
-        if (volume.ReadAt is not null)
+        if (volume.ReadStatus is ReadStatus.Read)
         {
-            height += ReadDateNoteHeight;
+            height += ReadDateRowHeight;
         }
 
         if (IsBuyable(volume))
