@@ -1,0 +1,42 @@
+@* One segment per volume, stretched to fill the width it is given: the phone's progress
+   strip, on a "Continue reading" card and in a series' progress card. The same four kinds
+   and the same channels as the tick strip — fill strength, a ring for to buy, hollow and
+   dashed for not out — so it survives grayscale. One segment can carry a light ring: the
+   volume a card is about to act on. Decorative to a screen reader; AriaLabel says it all. *@
+
+<div class="segments @(Large ? "segments--large" : null)"
+     role="img"
+     aria-label="@AriaLabel"
+     style="@ColumnsStyle">
+    @for (var index = 0; index < Kinds.Count; index++)
+    {
+        <span class="segment @KindClass(Kinds[index]) @(index == HighlightedIndex ? "segment--next" : null)"></span>
+    }
+</div>
+
+@code {
+    /// <summary>One entry per volume, in number order.</summary>
+    [Parameter] public required IReadOnlyList<VolumeTickKind> Kinds { get; set; }
+
+    /// <summary>The spoken summary — "17 of 22 read".</summary>
+    [Parameter] public required string AriaLabel { get; set; }
+
+    /// <summary>The segment to ring, by position in <see cref="Kinds"/>; null for none.</summary>
+    [Parameter] public int? HighlightedIndex { get; set; }
+
+    /// <summary>8px instead of 6px, for the series page's progress card.</summary>
+    [Parameter] public bool Large { get; set; }
+
+    // The column count is data, so it is the one inline style: a stylesheet cannot know how
+    // many volumes a series has.
+    private string ColumnsStyle =>
+        $"grid-template-columns: repeat({Math.Max(1, Kinds.Count).ToString(CultureInfo.InvariantCulture)}, minmax(0, 1fr))";
+
+    private static string KindClass(VolumeTickKind kind) => kind switch
+    {
+        VolumeTickKind.Read => "segment--read",
+        VolumeTickKind.OwnedUnread => "segment--owned",
+        VolumeTickKind.ToBuy => "segment--tobuy",
+        _ => "segment--notout",
+    };
+}

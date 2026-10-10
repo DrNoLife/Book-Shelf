@@ -83,14 +83,23 @@ public sealed class EndToEndFixture : IAsyncLifetime
     /// <paramref name="signedIn"/> is false. The only place a context is created, so the
     /// login lives in one place.
     /// </summary>
-    public async Task<IBrowserContext> NewContextAsync(bool signedIn = true, TestUser? user = null)
+    /// <param name="viewport">A screen size, for a journey on the phone layout; null is Playwright's desktop default.</param>
+    public async Task<IBrowserContext> NewContextAsync(bool signedIn = true, TestUser? user = null, ViewportSize? viewport = null)
     {
         var browser = _browser ?? throw new InvalidOperationException("The fixture has not been initialised.");
 
-        var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        var options = new BrowserNewContextOptions { BaseURL = Factory.BaseAddress.ToString() };
+        if (viewport is not null)
         {
-            BaseURL = Factory.BaseAddress.ToString(),
-        });
+            // A phone-sized screen is a phone: touch, a coarse pointer and the mobile viewport
+            // rules, so the journey sees what a thumb sees.
+            var isPhone = viewport.Width <= 720;
+            options.ViewportSize = viewport;
+            options.HasTouch = isPhone;
+            options.IsMobile = isPhone;
+        }
+
+        var context = await browser.NewContextAsync(options);
 
         // The context's request API shares its cookie jar, so the session cookie set here is
         // the one every page in the context sends.

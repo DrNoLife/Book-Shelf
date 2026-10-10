@@ -14,11 +14,14 @@ public abstract class JourneyTest(EndToEndFixture fixture) : IAsyncLifetime
 
     protected IPage Page => _page ?? throw new InvalidOperationException("The journey has not been initialised.");
 
+    /// <summary>The screen the journey runs on; a phone journey overrides it. Null is the desktop default.</summary>
+    protected virtual ViewportSize? Viewport => null;
+
     public async Task InitializeAsync()
     {
         await fixture.ResetAsync();
 
-        _context = await fixture.NewContextAsync();
+        _context = await fixture.NewContextAsync(viewport: Viewport);
         _page = await _context.NewPageAsync();
     }
 

@@ -1,7 +1,8 @@
 @inject ApiUrlBuilder ApiUrl
 
-@* The next unread volume you already own, per series. Open goes to the series, where
-   the volume is marked read: the library's cards carry no volume ids to act on. *@
+@* The next unread volume you already own, per series (design.md, Library). "Mark Vol 18
+   read" writes straight away — the toast's Undo is the way back — and Open goes to the
+   series for anything more. *@
 
 <section class="continue" aria-labelledby="continue-title">
     <div class="section-head">
@@ -35,7 +36,13 @@
                     <span class="entry__unread">@UnreadText(card.Backlog)</span>
 
                     <div class="entry__actions">
-                        <a class="tertiary" href="@($"/series/{card.SeriesId}")">
+                        <button type="button"
+                                class="tertiary"
+                                disabled="@IsBusy"
+                                @onclick="() => Finished.InvokeAsync(entry)">
+                            Mark Vol @entry.NextVolumeNumber read<span class="visually-hidden"> of @card.TitleEnglish</span>
+                        </button>
+                        <a class="secondary" href="@($"/series/{card.SeriesId}")">
                             Open <span class="visually-hidden">@card.TitleEnglish</span>
                         </a>
                     </div>
@@ -47,6 +54,10 @@
 
 @code {
     [Parameter] public required IReadOnlyList<ContinueReadingEntry> Entries { get; set; }
+
+    [Parameter] public bool IsBusy { get; set; }
+
+    [Parameter] public EventCallback<ContinueReadingEntry> Finished { get; set; }
 
     private static string UnreadText(int backlog) =>
         backlog == 1 ? "Last unread volume on your shelf" : $"{backlog} unread volumes on your shelf";

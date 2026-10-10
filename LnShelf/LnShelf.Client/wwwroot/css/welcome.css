@@ -104,3 +104,106 @@
   .hero { padding-block: var(--space-8); }
   .preview__stats { gap: var(--space-5); }
 }
+
+/* --- phones (the mobile mockup) ---
+   The same breakpoint the app uses (app.css, "the phone breakpoint"). A header with the mark
+   and Sign in, the hero, the "Just finished?" card in place of the shelf preview, the
+   features as a plain list, and a sticky "Continue with Google" bar at the bottom edge. */
+
+.preview-phone,
+.sign-in-bar { display: none; }
+
+@media (max-width: 720px) {
+  body { padding-bottom: calc(var(--control-thumb) + var(--space-6) + env(safe-area-inset-bottom)); }
+
+  .frame { padding-inline: var(--space-5); }
+
+  .site-header { border-bottom: 0; padding-block: var(--space-5) 0; }
+  .site-nav { display: none; }
+  .brand__name { font-size: var(--fs-large); }
+
+  .hero { padding-block: var(--space-8) var(--space-6); }
+  .hero__row { gap: var(--space-8); }
+  .hero__copy { flex-basis: 100%; gap: var(--space-4); }
+  .hero h1 { font-size: var(--fs-stat); }
+  .hero .lead { font-size: var(--fs-lead); }
+
+  /* The hero's own buttons give way to the sticky bar, which is the same sign-in link. */
+  .hero__actions,
+  .hero .fine { display: none; }
+
+  .preview { display: none; }
+
+  .preview-phone {
+    flex: 1 1 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    background: var(--surf);
+    border: 1px solid var(--line);
+  }
+
+  .preview-phone__eyebrow {
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .preview-phone__row { display: flex; align-items: center; gap: var(--space-3); }
+
+  .preview-phone__cover {
+    flex: 0 0 52px;
+    height: 76px;
+    border-radius: var(--radius-sm);
+    background: var(--cover-placeholder);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
+  .preview-phone__text { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+  .preview-phone__title { font-family: var(--serif); font-size: var(--fs-large); line-height: 1.15; }
+
+  .preview-phone__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--control-large);
+    border-radius: var(--radius-lg);
+    background: var(--text);
+    color: var(--bg);
+    font-weight: 600;
+  }
+
+  /* The feature band becomes a plain list: no band, no cards, the words doing the work. */
+  .band { padding-block: var(--space-6); background: none; border-block: 0; }
+  .band .title-section { font-size: var(--fs-panel-title); }
+  .cards { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .card { padding: 0; border: 0; background: none; gap: 2px; }
+
+  .how { padding-block: var(--space-6); }
+  .how .title-section { font-size: var(--fs-panel-title); }
+  .steps { gap: var(--space-5); }
+
+  /* The closing call to action would repeat the sticky bar right above it. */
+  .closing { display: none; }
+
+  .site-footer { border-top: 0; }
+
+  .sign-in-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom));
+    background: var(--chrome-translucent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+  }
+}

@@ -1,0 +1,58 @@
+/* Fixed to the bottom edge, over the content: the page reserves the bar's height (.page in
+   app.css), and the bar is translucent and blurred so what scrolls under it still reads as
+   the page. The home-indicator inset is padding under the tabs, never under the labels. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  min-height: var(--tab-bar-height);
+  padding: var(--space-2) 10px calc(var(--space-2) + env(safe-area-inset-bottom));
+  background: var(--chrome-translucent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 48px;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.tab:hover { color: var(--text); }
+
+/* "You are here" in the full text colour and a heavier label — never the accent, which the
+   bar spends on "+" alone. */
+.tab--current,
+.tab--current:hover {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tab-bar__add {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.tab-bar__add:hover { background: var(--acc-deep); color: var(--on-acc); }
+
+/* The global ring follows a control's radius; a round button needs a round ring. */
+.tab-bar__add:focus-visible { border-radius: 50%; }

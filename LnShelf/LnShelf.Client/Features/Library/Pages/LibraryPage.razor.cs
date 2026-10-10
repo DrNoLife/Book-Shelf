@@ -1,3 +1,5 @@
+using LnShelf.Client.Features.Profile;
+
 namespace LnShelf.Client.Features.Library.Pages;
 
 public partial class LibraryPage : IDisposable
@@ -7,6 +9,15 @@ public partial class LibraryPage : IDisposable
 
     [Inject]
     public required PreferencesState Preferences { get; set; }
+
+    [Inject]
+    public required FinishVolumeState Finishing { get; set; }
+
+    /// <summary>Only for the phone header's avatar letter.</summary>
+    [Inject]
+    public required ProfileState Profile { get; set; }
+
+    private string? AvatarInitial => Profile.User is { } user ? ProfileInitial.For(user.DisplayName) : null;
 
     private LibraryResponse? Library => LibraryState.Library;
 
@@ -50,10 +61,23 @@ public partial class LibraryPage : IDisposable
     private IReadOnlyList<OutNowEntry> OutNowEntries =>
         LibraryState.Overview is { } overview ? LibraryHighlights.OutNow(overview.Cards, take: 8) : [];
 
+    /// <summary>
+    /// The phone's carousel: more than the desktop's three, because a swipe costs nothing and
+    /// a row of three cards on a phone is one and a half screens.
+    /// </summary>
+    private IReadOnlyList<ContinueReadingEntry> UpNextEntries =>
+        LibraryState.Overview is { } overview ? LibraryHighlights.ContinueReading(overview.Cards, take: 12) : [];
+
+    /// <summary>Every series behind on buying: the phone list prints three and counts the rest.</summary>
+    private IReadOnlyList<OutNowEntry> AllOutNowEntries =>
+        LibraryState.Overview is { } overview ? LibraryHighlights.OutNow(overview.Cards, take: overview.Cards.Count) : [];
+
     protected override async Task OnInitializedAsync()
     {
         LibraryState.Changed += OnStateChanged;
         Preferences.Changed += OnStateChanged;
+        Finishing.Changed += OnStateChanged;
+        Profile.Changed += OnStateChanged;
 
         // The density and sort come from the server row, so they are read before the
         // grid is drawn — a grid that re-flows a moment after landing reads as a bug.
@@ -66,15 +90,22 @@ public partial class LibraryPage : IDisposable
         LibraryState.SetSort(Preferences.LibrarySort);
 
         await LibraryState.LoadAsync();
+
+        // After the shelf, never before it: the avatar letter is decoration, the shelf is not.
+        await Profile.LoadUserAsync();
     }
 
     public void Dispose()
     {
         LibraryState.Changed -= OnStateChanged;
         Preferences.Changed -= OnStateChanged;
+        Finishing.Changed -= OnStateChanged;
+        Profile.Changed -= OnStateChanged;
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private Task OnFinishedAsync(ContinueReadingEntry entry) => Finishing.FinishAsync(entry);
 
     private Task OnFormatSelectedAsync(Format? format) => LibraryState.SelectFormatAsync(format);
 

@@ -20,7 +20,39 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
-        new("0.17.0", new DateOnly(2026, 10, 10), "Your own shelf",
+        new("0.18.0", new DateOnly(2026, 10, 10), "On your phone",
+            Features: [
+                "LN Shelf has a proper phone layout: a tab bar along the bottom for Library, Upcoming, Stats and " +
+                    "Profile, with a big \"+\" in the middle for adding a series.",
+                "Swipe through \"Up next\" on your phone and tap \"I finished Vol 18\" to mark it read. Tapped too " +
+                    "soon? Undo it from the message that pops up.",
+                "On a phone, tapping a volume opens a sheet from the bottom with its reading, ownership and cover " +
+                    "controls, and the series page keeps \"Mark Vol N read\" and \"Buy\" pinned to the bottom edge.",
+            ],
+            Improvements: [
+                "The Continue reading cards in the library can mark the next volume read in one click, on the desktop too.",
+                "On phones, Import, the changelog, sync status and Sign out live in a settings list on your profile.",
+                "The sign-in page works on a phone, with Continue with Google pinned to the bottom.",
+                "\"Sync now\" starts in the background and returns at once, so a long sync no longer times out or " +
+                    "stops when you close the tab. Starting a second one while the first is running says so.",
+                "The nightly sync saves each series as it goes, so a restart or one bad series no longer throws " +
+                    "away the whole night's work, and a run that was cut short says so in the sidebar.",
+                "Covers fetched from the sources go through the same checks as the ones you upload: only real " +
+                    "images, capped in size, and stored as the app's own copy. Oversized images are refused " +
+                    "before they can use up the server's memory.",
+                "An import takes up to 300 series per file and tells you how many yours has if it is over; very " +
+                    "long titles are shortened instead of failing the upload.",
+                "Every deploy now backs up the database first and keeps the previous version to roll back to.",
+            ],
+            Fixes: [
+                "Adding the same series twice at the same moment, from a double-click or two tabs, shows it as " +
+                    "already on your shelf instead of an error. Other edits that collide now ask you to reload " +
+                    "instead of failing with a server error.",
+                "A brief database hiccup during the nightly sync no longer stops the whole app.",
+                "Phone browsers no longer zoom the page out because of a hidden label that made it far too wide.",
+            ]
+        ),
+        new("0.17.0",new DateOnly(2026, 10, 10), "Your own shelf",
             Features: [
                 "Sign in with Google and get a shelf of your own: every user has separate series, volumes, " +
                     "imports, sync history and preferences, and sign-up is open. The login runs on the server " +

@@ -42,3 +42,9 @@
 @media (max-width: 860px) {
   .profile__aside { max-width: none; }
 }
+
+@media (max-width: 720px) {
+  .profile { --page-gap: var(--space-6); }
+
+  .profile__main { gap: var(--space-7); }
+}

@@ -76,6 +76,11 @@ services:
         - sixlabors_license
     restart: unless-stopped
     logging: *default-logging
+    # Decoding cover images is the API's one large allocation (up to the 40-megapixel
+    # cap, about 160 MB per image). The ceiling keeps a bad image or a leak from
+    # starving Postgres and the other stacks on the shared host; the .NET GC reads it
+    # from the cgroup and sizes its heap to fit.
+    mem_limit: 1g
     depends_on:
       postgres:
         condition: service_healthy

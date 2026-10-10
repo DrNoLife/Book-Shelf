@@ -15,7 +15,7 @@
                 <span class="cover__label tabular">Vol @Series.Counts.Tracked</span>
             }
         </div>
-        <p class="hero__caption">Cover shows latest volume</p>
+        <p class="hero__caption desktop-only">Cover shows latest volume</p>
     </div>
 
     <div class="hero__body">
@@ -50,7 +50,7 @@
 
         @if (Series.Genres.Count > 0)
         {
-            <div class="tags">
+            <div class="tags desktop-only">
                 @foreach (var genre in Series.Genres)
                 {
                     <span class="tag" @key="genre">@genre</span>
@@ -94,21 +94,23 @@
             <TrackingStatusControl Series="Series" />
 
             @* The CTA names the volume you actually need next (design.md). *@
+            @* On a phone the Buy link is in the sticky action bar and the source links are in
+               the More sheet (SeriesActionBar, SeriesActionsSheet), as the mockup lays out. *@
             @if (Series.Counts.NextToBuyNumber is { } nextToBuy)
             {
-                <a class="primary button--large" href="@SaxoSearchUrl(nextToBuy)" target="_blank" rel="noopener noreferrer">
+                <a class="primary button--large desktop-only" href="@SaxoSearchUrl(nextToBuy)" target="_blank" rel="noopener noreferrer">
                     Buy Vol @nextToBuy on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
                 </a>
             }
             @if (Series.AniListId is { } aniListId)
             {
-                <a class="ghost button--large" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
+                <a class="ghost button--large desktop-only" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
                     AniList <Icon Name="IconName.ArrowUpRight" Size="11" />
                 </a>
             }
             @if (Series.MangaUpdatesId is { } mangaUpdatesId)
             {
-                <a class="ghost button--large" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
+                <a class="ghost button--large desktop-only" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
                     MangaUpdates <Icon Name="IconName.ArrowUpRight" Size="11" />
                 </a>
             }

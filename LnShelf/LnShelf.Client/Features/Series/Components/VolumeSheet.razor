@@ -1,0 +1,34 @@
+@inject ApiUrlBuilder ApiUrl
+
+@* A volume's details on a phone (the mobile mockup): the popover's VolumeDetails in a bottom
+   sheet, with the cover, "Vol 18" and its state in words on top. Choices land while the sheet
+   stays open — Done, Escape or the scrim closes it — so the reader sees the tile change. *@
+
+<BottomSheet AriaLabel="@($"Volume {Volume.Number}")" Closed="Closed">
+    <div class="summary">
+        <span class="summary__cover" aria-hidden="true">
+            @if (VolumeCoverUrl.For(ApiUrl, Volume, CoverVersion) is { } coverUrl)
+            {
+                <img class="summary__art" src="@coverUrl" alt="" />
+            }
+        </span>
+        <div class="summary__text">
+            <h2 class="summary__title">Vol @Volume.Number</h2>
+            <span class="summary__state">@StateLine</span>
+            @if (DateChoice is { } dateChoice)
+            {
+                <span class="fine">@ConflictText.ChoiceMarker(dateChoice)</span>
+            }
+        </div>
+    </div>
+
+    @if (Description is { } description)
+    {
+        <p class="summary__blurb">@description</p>
+    }
+
+    <VolumeDetails Volume="Volume"
+                   SeriesTitle="@SeriesTitle"
+                   IsBusy="IsBusy"
+                   CoverPickRequested="CoverPickRequested" />
+</BottomSheet>

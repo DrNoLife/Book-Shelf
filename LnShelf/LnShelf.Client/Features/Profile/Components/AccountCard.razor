@@ -13,7 +13,8 @@
     </div>
 
     <div class="account__actions">
-        <button type="button" class="secondary" @onclick="SignOutAsync" disabled="@_busy">Sign out</button>
+        @* On a phone, Sign out is the settings list's last row (ProfileSettingsList). *@
+        <button type="button" class="secondary desktop-only" @onclick="SignOutAsync" disabled="@_busy">Sign out</button>
         @* A plain link, not a fetch: the browser streams the file with the session cookie, which
            needs no script and keeps the whole export out of the app's memory. The download
            attribute also keeps Blazor's router from treating the click as navigation. *@

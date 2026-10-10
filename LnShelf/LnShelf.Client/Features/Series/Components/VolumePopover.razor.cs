@@ -73,16 +73,7 @@ public partial class VolumePopover
         return !string.IsNullOrWhiteSpace(volume.Description);
     }
 
-    /// <summary>Out and not owned — the "To buy" state, the one that offers the link.</summary>
-    private static bool IsBuyable(VolumeResponse volume) => volume.IsOut && !volume.Owned;
-
-    /// <summary>The single ownership choice: not owned, or owned in one edition.</summary>
-    private enum Ownership
-    {
-        None,
-        Physical,
-        Digital,
-    }
+    private static bool IsBuyable(VolumeResponse volume) => VolumeDetails.IsBuyable(volume);
 
     [Parameter]
     public required VolumeResponse Volume { get; set; }
@@ -109,16 +100,11 @@ public partial class VolumePopover
     public EventCallback<VolumeResponse> CoverPickRequested { get; set; }
 
     [Inject]
-    public required SeriesState SeriesState { get; set; }
-
-    [Inject]
     public required IJSRuntime JavaScript { get; set; }
 
     private ElementReference _menuElement;
 
     private bool HasDescription => HasBlurb(Volume);
-
-    private bool CanBuy => IsBuyable(Volume);
 
     /// <summary>
     /// The blurb split into paragraphs, the shape the API's sanitizer guarantees (a blank
@@ -131,26 +117,6 @@ public partial class VolumePopover
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : [];
 
-    private static readonly IReadOnlyList<SegmentedOption<ReadStatus>> ReadOptions =
-    [
-        new(ReadStatus.Unread, "Unread", "Unread"),
-        new(ReadStatus.Reading, "Reading", "Reading"),
-        new(ReadStatus.Read, "Read", "Read"),
-    ];
-
-    private static readonly IReadOnlyList<SegmentedOption<Ownership>> OwnershipOptions =
-    [
-        new(Ownership.None, "No", "Not owned"),
-        new(Ownership.Physical, "Physical", "Owned, physical edition"),
-        new(Ownership.Digital, "Digital", "Owned, digital edition"),
-    ];
-
-    // An owned volume with no recorded edition is physical: that is what the API writes
-    // for it the moment it is marked owned without one.
-    private Ownership CurrentOwnership => !Volume.Owned
-        ? Ownership.None
-        : Volume.OwnedFormat is OwnedFormat.Digital ? Ownership.Digital : Ownership.Physical;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -159,47 +125,6 @@ public partial class VolumePopover
             // becomes a usable click-away signal.
             await JavaScript.InvokeVoidAsync("lnshelf.focusFirstItem", _menuElement);
         }
-    }
-
-    private async Task OnReadAsync(ReadStatus status)
-    {
-        await SeriesState.SetReadAsync(Volume, status);
-        await Closed.InvokeAsync();
-    }
-
-    private async Task OnOwnershipAsync(Ownership choice)
-    {
-        if (choice == CurrentOwnership)
-        {
-            return;
-        }
-
-        var wasOwned = Volume.Owned;
-
-        await SeriesState.SetOwnedAsync(
-            Volume,
-            owned: choice is not Ownership.None,
-            choice switch
-            {
-                Ownership.Physical => OwnedFormat.Physical,
-                Ownership.Digital => OwnedFormat.Digital,
-                _ => null,
-            });
-
-        // Switching the edition of an owned volume stays open: it is a correction the
-        // user may want to see land before deciding they are done.
-        if (!wasOwned || choice is Ownership.None)
-        {
-            await Closed.InvokeAsync();
-        }
-    }
-
-    private Task OnPickCoverAsync() => CoverPickRequested.InvokeAsync(Volume);
-
-    private async Task OnRemoveCoverAsync()
-    {
-        await SeriesState.RemoveCoverAsync(Volume);
-        await Closed.InvokeAsync();
     }
 
     private async Task OnKeyDownAsync(KeyboardEventArgs args)

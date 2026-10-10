@@ -6,6 +6,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 /// </summary>
 public sealed class NightlySyncBackgroundService(
     IServiceScopeFactory scopeFactory,
+    SyncRunGate gate,
     IOptions<SyncOptions> options,
     IOptions<OpenLibraryOptions> lookupOptions,
     TimeProvider timeProvider,
@@ -36,20 +37,46 @@ public sealed class NightlySyncBackgroundService(
                 return;
             }
 
-            await RunOnceAsync(stoppingToken);
+            try
+            {
+                await RunOnceAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
         }
     }
 
+    /// <summary>
+    /// One night: a run per user. Never throws, except for shutdown.
+    /// </summary>
     // One run per user, each in its own scope acting as that user, so every user gets their
     // own run, discrepancies and sidebar summary, and the owner filters keep each run to that
     // user's series (feature-spec §7). The lookup allowance is the night's, shared by all.
-    private async Task RunOnceAsync(CancellationToken stoppingToken)
+    //
+    // Public so the failure handling can be tested without waiting for 04:00.
+    public async Task RunOnceAsync(CancellationToken stoppingToken)
     {
-        var budget = new LookupBudget(lookupOptions.Value.MaximumLookupsPerNight);
-
-        foreach (var userId in await UserIdsAsync(stoppingToken))
+        try
         {
-            await RunForUserAsync(userId, budget, stoppingToken);
+            var budget = new LookupBudget(lookupOptions.Value.MaximumLookupsPerNight);
+
+            foreach (var userId in await UserIdsAsync(stoppingToken))
+            {
+                await RunForUserAsync(userId, budget, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // The database blinking at 04:00 used to escape ExecuteAsync from the user query,
+            // and .NET answers an escaped BackgroundService exception by stopping the whole
+            // host. Tonight is lost either way; tomorrow's run is what this keeps.
+            logger.LogError(exception, "The nightly sync failed before it could finish; trying again tomorrow");
         }
     }
 
@@ -68,6 +95,15 @@ public sealed class NightlySyncBackgroundService(
 
     private async Task RunForUserAsync(Guid userId, LookupBudget budget, CancellationToken stoppingToken)
     {
+        // Skipped rather than waited for: a "Sync now" already under way is doing tonight's
+        // work for this shelf, and a second run straight after it would only repeat it.
+        using var lease = gate.TryEnter(userId);
+        if (lease is null)
+        {
+            logger.LogInformation("A sync for user {UserId} is already running; skipping tonight's", userId);
+            return;
+        }
+
         // A scope per run: the sync service is scoped because the DbContext is.
         await using var scope = scopeFactory.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId);

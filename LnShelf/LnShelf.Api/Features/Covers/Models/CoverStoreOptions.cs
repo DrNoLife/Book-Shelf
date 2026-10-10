@@ -40,6 +40,16 @@ public sealed class CoverStoreOptions
     [Range(1, 10000)]
     public int MaximumCoverEdge { get; set; } = 1000;
 
+    /// <summary>
+    /// The most pixels an incoming cover may decode to (width x height), checked from the
+    /// header before any decoding.
+    /// </summary>
+    // 40 megapixels is a 5000 x 8000 scan, far past any real cover, and decodes to about
+    // 160 MB of RGBA — the allocation this exists to bound. The byte limits do not: a tiny
+    // compressed file can claim an enormous canvas.
+    [Range(1d, 500_000_000d)]
+    public long MaximumDecodedPixels { get; set; } = 40_000_000;
+
     /// <summary>Webp quality, 1-100.</summary>
     [Range(1, 100)]
     public int CoverQuality { get; set; } = 82;

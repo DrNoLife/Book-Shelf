@@ -93,23 +93,7 @@ public partial class VolumeTile
     private string? ReadDateText =>
         Volume.ReadAt is { } readAt ? $"Read {readAt.Full}" : null;
 
-    /// <summary>
-    /// The override already arrives as the volume's cover key (the projection prefers
-    /// it), so the tile only has to defeat the browser cache when there is one.
-    /// </summary>
-    private string? CoverUrl
-    {
-        get
-        {
-            if (Volume.CoverObjectKey is not { } coverObjectKey)
-            {
-                return null;
-            }
-
-            var url = ApiUrl.Cover(coverObjectKey);
-            return Volume.HasCoverOverride ? $"{url}?v={CoverVersion}" : url;
-        }
-    }
+    private string? CoverUrl => VolumeCoverUrl.For(ApiUrl, Volume, CoverVersion);
 
     private string StateClass => State switch
     {

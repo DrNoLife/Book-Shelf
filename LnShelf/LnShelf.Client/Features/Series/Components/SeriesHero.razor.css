@@ -182,3 +182,44 @@
 @media (max-width: 620px) {
   .hero__cover { flex-basis: 160px; }
 }
+
+/* Phones (the mobile mockup): a compact hero. A 96px cover beside the meta line and the
+   title, and everything else — synopsis, status chips, relation — full width under both.
+   The body's own box steps aside (display: contents) so its children can join the hero's
+   grid; the order in the markup is already the order on screen. */
+@media (max-width: 720px) {
+  .hero {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: var(--space-4);
+    row-gap: var(--space-3);
+    align-items: start;
+  }
+
+  .hero__body { display: contents; }
+
+  .hero__cover { grid-column: 1; grid-row: 1 / span 3; }
+
+  .cover { border-radius: var(--radius-md); }
+
+  .hero__meta { grid-column: 2; grid-row: 1; font-size: var(--fs-small); gap: 6px; }
+
+  .hero__title {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: var(--fs-panel-title);
+    line-height: 1.1;
+  }
+
+  .hero__subtitle { grid-column: 2; grid-row: 3; font-size: var(--fs-small); }
+
+  .synopsis,
+  .hero__actions,
+  .hero__relation { grid-column: 1 / -1; }
+
+  .hero__actions { margin-top: 0; }
+
+  .synopsis__body { font-size: var(--fs-body); }
+
+  .synopsis__toggle { min-height: var(--control-large); padding: 0 var(--space-4); }
+}

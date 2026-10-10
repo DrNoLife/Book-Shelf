@@ -28,3 +28,27 @@
 }
 
 .header__meta { color: var(--muted); }
+
+/* Phones (the mobile mockup): the avatar, the name and the meta line centred in one column. */
+@media (max-width: 720px) {
+  .header {
+    flex-direction: column;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .header__avatar {
+    width: 88px;
+    height: 88px;
+    font-size: var(--fs-stat);
+  }
+
+  .header__text {
+    flex: none;
+    align-items: center;
+  }
+
+  .header__text .title-page { font-size: var(--fs-stat-small); line-height: 1.05; }
+
+  .header__meta { font-size: var(--fs-body); }
+}

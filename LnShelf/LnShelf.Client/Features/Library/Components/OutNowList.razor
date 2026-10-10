@@ -1,0 +1,50 @@
+@inject ApiUrlBuilder ApiUrl
+
+@* The phone's "Out now" (the mobile mockup): the few series most behind on buying, one row
+   each, with the Saxo link at thumb reach. The desktop's OutNow lists more in a wider row;
+   both draw from the same entries. *@
+
+<section class="out-now" aria-labelledby="out-now-phone-title">
+    <div class="section-head">
+        <h2 id="out-now-phone-title" class="out-now__title">Out now</h2>
+        <a class="out-now__all" href="upcoming">@AllText →</a>
+    </div>
+
+    <ul class="out-now__list">
+        @foreach (var entry in Entries.Take(Shown))
+        {
+            var card = entry.Card;
+
+            <li class="out-now__row" @key="card.SeriesId">
+                <span class="out-now__thumb" aria-hidden="true">
+                    @if (card.CoverObjectKey is { } coverObjectKey)
+                    {
+                        <img class="out-now__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                    }
+                </span>
+
+                <span class="out-now__text">
+                    <a class="out-now__name" href="@($"/series/{card.SeriesId}")">@card.TitleEnglish</a>
+                    <span class="out-now__range tabular">@OutNowText.For(entry)</span>
+                </span>
+
+                <a class="secondary button--large out-now__buy"
+                   href="@SaxoSearch.UrlFor(card.TitleEnglish, entry.FirstVolumeNumber)"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="@($"Vol {entry.FirstVolumeNumber} of {card.TitleEnglish} on Saxo")">
+                    Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+                </a>
+            </li>
+        }
+    </ul>
+</section>
+
+@code {
+    /// <summary>Three rows, as the mockup has it; the head links to the rest.</summary>
+    private const int Shown = 3;
+
+    [Parameter] public required IReadOnlyList<OutNowEntry> Entries { get; set; }
+
+    private string AllText => Entries.Count == 1 ? "1 series" : $"{Entries.Count} series";
+}

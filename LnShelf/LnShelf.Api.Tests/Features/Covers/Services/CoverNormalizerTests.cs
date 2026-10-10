@@ -16,9 +16,8 @@ namespace LnShelf.Api.Tests.Features.Covers.Services;
 //
 // Images are generated in-memory with the same library the subject uses rather than kept as
 // binary fixtures — the inputs here are shapes and sizes, and a checked-in .png would say
-// less about the case than two numbers do. MinioCoverStore and CoverFetcher are deliberately
-// untested: one needs MinIO and the other needs the network, and neither has a decision in
-// it that this project would learn anything from faking.
+// less about the case than two numbers do. MinioCoverStore is deliberately untested: it needs
+// MinIO and has no decision in it that this project would learn anything from faking.
 public sealed class CoverNormalizerTests
 {
     [Fact]
@@ -196,6 +195,19 @@ public sealed class CoverNormalizerTests
         normalized.ShouldBeNull();
     }
 
+    [Theory]
+    [InlineData(200, 300, false)]
+    [InlineData(200, 301, true)]
+    public async Task NormalizeAsync_AgainstThePixelCap_RefusesOnlyWhatIsOver(int width, int height, bool refused)
+    {
+        // The cap is on width x height, read from the header before decoding: a small file
+        // can claim a canvas that would take gigabytes to decode. Exactly at the cap is fine.
+        var normalized = await Normalizer(maximumDecodedPixels: 200 * 300).NormalizeAsync(
+            Png(width, height), CancellationToken.None);
+
+        (normalized is null).ShouldBe(refused);
+    }
+
     [Fact]
     public async Task NormalizeAsync_ACancelledToken_ThrowsRatherThanReturningNull()
     {
@@ -208,12 +220,16 @@ public sealed class CoverNormalizerTests
             () => Normalizer().NormalizeAsync(Png(200, 300), cancellation.Token));
     }
 
-    private static CoverNormalizer Normalizer(int maximumCoverEdge = 1000, int coverQuality = 82) =>
+    private static CoverNormalizer Normalizer(
+        int maximumCoverEdge = 1000,
+        int coverQuality = 82,
+        long maximumDecodedPixels = 40_000_000) =>
         new(
             Options.Create(new CoverStoreOptions
             {
                 MaximumCoverEdge = maximumCoverEdge,
                 CoverQuality = coverQuality,
+                MaximumDecodedPixels = maximumDecodedPixels,
             }),
             NullLogger<CoverNormalizer>.Instance);
 

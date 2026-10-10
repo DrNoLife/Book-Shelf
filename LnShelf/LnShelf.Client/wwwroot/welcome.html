@@ -7,7 +7,7 @@
      SignInRedirectHandler); js/welcome.js hands the page they came from on to the login. -->
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>LN Shelf</title>
     <meta name="description" content="Track your light novels, manga and web novels volume by volume." />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -49,6 +49,20 @@
                         <a class="ghost button--large" href="#how">See how it works</a>
                     </div>
                     <p class="fine">Sign in with your Google account. No separate password.</p>
+                </div>
+
+                <!-- The phone's illustration (the mobile mockup): the one card a reader sees after
+                     finishing a volume. Not live data. -->
+                <div class="preview-phone" aria-hidden="true">
+                    <span class="preview-phone__eyebrow">Just finished?</span>
+                    <div class="preview-phone__row">
+                        <span class="preview-phone__cover"></span>
+                        <div class="preview-phone__text">
+                            <span class="preview-phone__title">Vol 18 is next</span>
+                            <div class="bar"><span class="bar__read" style="--share: 77%"></span><span class="bar__owned" style="--share: 14%"></span></div>
+                        </div>
+                    </div>
+                    <span class="preview-phone__button">Mark Vol 18 read</span>
                 </div>
 
                 <!-- An illustration of the shelf, not live data. -->
@@ -152,6 +166,13 @@
             <a href="privacy.html">Privacy</a>
         </div>
     </footer>
+
+    <!-- The phone's sticky sign-in (the mobile mockup): the one thing to do on this page stays
+         under the thumb while the rest scrolls. Hidden on a wide screen, where the hero's own
+         button is in view. -->
+    <div class="sign-in-bar">
+        <a class="tertiary button--thumb button--block" data-sign-in href="api/auth/login?returnUrl=%2F">Continue with Google</a>
+    </div>
 
     <script src="js/welcome.js"></script>
 </body>

@@ -26,6 +26,14 @@ public sealed class ProblemDetailsExceptionHandler(
             InvalidInputException => (StatusCodes.Status400BadRequest, "Invalid input", exception.Message),
             ConflictException => (StatusCodes.Status409Conflict, "Not allowed in this state", exception.Message),
 
+            // Two requests racing to write the same row: the database's unique index caught
+            // what the check-then-insert before it could not. Nothing is broken, so not a 500;
+            // the message is ours, because Postgres's names an index nobody can act on.
+            DbUpdateException { IsUniqueViolation: true } => (
+                StatusCodes.Status409Conflict,
+                "Changed at the same time",
+                "This was changed at the same time somewhere else. Reload and try again."),
+
             // The upstream's own words as the detail, rather than this app's wrapper
             // sentence: "The AniList API has been temporarily disabled due to severe
             // stability issues" is the only part a person can act on.

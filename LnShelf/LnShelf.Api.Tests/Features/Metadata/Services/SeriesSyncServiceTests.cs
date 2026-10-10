@@ -9,7 +9,7 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 /// </summary>
 public sealed class SeriesSyncServiceTests
 {
-    private const long MangaUpdatesId = 24348008396;
+    internal const long MangaUpdatesId = 24348008396;
 
     [Fact]
     public async Task RunAsync_AnUnlinkedSeries_LinksItAndRecordsNothingToReview()
@@ -394,7 +394,7 @@ public sealed class SeriesSyncServiceTests
         (await dbContext.Volumes.ToListAsync()).ShouldAllBe(volume => !volume.IsReleased);
     }
 
-    private static ReleaseSourceMatch Linked(int? volumeCount) => new()
+    internal static ReleaseSourceMatch Linked(int? volumeCount) => new()
     {
         Outcome = ReleaseMatchOutcome.Linked,
         MatchedExternalId = MangaUpdatesId,
@@ -410,7 +410,7 @@ public sealed class SeriesSyncServiceTests
         },
     };
 
-    private static SeriesSyncService CreateService(LnShelfDbContext dbContext, ReleaseSourceMatch match)
+    internal static SeriesSyncService CreateService(LnShelfDbContext dbContext, ReleaseSourceMatch match)
     {
         var matcher = Substitute.For<IReleaseSourceMatcher>();
         matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
@@ -419,7 +419,7 @@ public sealed class SeriesSyncServiceTests
         return CreateService(dbContext, matcher);
     }
 
-    private static SeriesSyncService CreateService(
+    internal static SeriesSyncService CreateService(
         LnShelfDbContext dbContext,
         IReleaseSourceMatcher matcher,
         IVolumeEnrichmentSource? enrichmentSource = null)
@@ -468,7 +468,7 @@ public sealed class SeriesSyncServiceTests
             NullLogger<SeriesSyncService>.Instance);
     }
 
-    private static async Task SeedSeriesAsync(
+    internal static async Task SeedSeriesAsync(
         LnShelfDbContext dbContext,
         int volumeCount,
         bool withUserState = false,

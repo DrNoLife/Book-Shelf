@@ -1,0 +1,26 @@
+/* The frame (popover or sheet) spaces this block from its head; inside, the same 16px
+   rhythm the popover always had between its rows. */
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The read date, where the shelf knows one: a fact about the volume, not something to press. */
+.field__note {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.cover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

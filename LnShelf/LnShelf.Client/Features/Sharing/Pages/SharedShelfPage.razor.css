@@ -29,3 +29,11 @@
     gap: var(--space-6) var(--space-4);
   }
 }
+
+/* Phones: three covers across, like the library's shelf, instead of two running long. */
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+}

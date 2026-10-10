@@ -39,6 +39,31 @@ public sealed class ProfileState(HttpClient httpClient)
         return response.StatusCode;
     }
 
+    /// <summary>
+    /// Only who is signed in, for the library's avatar on a phone. Skipped when the user is
+    /// already known; a failure leaves the avatar on its fallback rather than reporting.
+    /// </summary>
+    public async Task LoadUserAsync(CancellationToken cancellationToken = default)
+    {
+        if (User is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            User = await httpClient.GetFromJsonAsync<CurrentUserResponse>("api/auth/me", cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            // The avatar is a shortcut to the profile, not information; without a name it
+            // shows the person icon and still works.
+            return;
+        }
+
+        Changed?.Invoke();
+    }
+
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         LoadFailed = false;

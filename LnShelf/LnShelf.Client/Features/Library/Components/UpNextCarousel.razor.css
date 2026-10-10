@@ -1,0 +1,25 @@
+/* Runs edge to edge — out through the page gutter — so a card scrolls off the screen rather
+   than vanishing at the gutter, then pads the gutter back so the first card lines up with the
+   text above it. */
+.carousel {
+  display: flex;
+  gap: var(--space-3);
+  margin-inline: calc(-1 * var(--page-gutter));
+  padding-inline: var(--page-gutter);
+  scroll-padding-inline: var(--page-gutter);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.carousel::-webkit-scrollbar { display: none; }
+
+/* A sliver after the last card, so the trailing gutter survives the scroll container. */
+.carousel::after {
+  content: "";
+  flex: 0 0 1px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .carousel { scroll-behavior: smooth; }
+}

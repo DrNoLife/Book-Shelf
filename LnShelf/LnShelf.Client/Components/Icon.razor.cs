@@ -21,6 +21,8 @@ public enum IconName
     GridNine,
     ImageSquare,
     User,
+    CaretRight,
+    DotsThree,
 }
 
 public partial class Icon
@@ -50,6 +52,8 @@ public partial class Icon
         IconName.GridNine => GridNinePath,
         IconName.ImageSquare => ImageSquarePath,
         IconName.User => UserPath,
+        IconName.CaretRight => CaretRightPath,
+        IconName.DotsThree => DotsThreePath,
         _ => throw new ArgumentOutOfRangeException(nameof(Name), Name, "Unknown icon."),
     };
 
@@ -126,4 +130,11 @@ public partial class Icon
         "M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0," +
         "13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06," +
         "56.06,0,0,1,72,96Z";
+
+    private const string CaretRightPath =
+        "M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z";
+
+    private const string DotsThreePath =
+        "M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0," +
+        "12,12A12,12,0,0,0,60,116Z";
 }

@@ -1,0 +1,41 @@
+@inject ApiUrlBuilder ApiUrl
+
+@* One series in the phone's "Up next" carousel: the volume to read next, big, and one button
+   that marks it finished. The button writes straight away — the toast's Undo is the way back,
+   which is kinder to a thumb than a confirmation would be. *@
+
+<article class="next">
+    <div class="next__top">
+        <div class="next__cover" aria-hidden="true">
+            @if (Card.CoverObjectKey is { } coverObjectKey)
+            {
+                <img class="next__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+            }
+            else
+            {
+                <span class="next__word">Volume</span>
+                <span class="next__number tabular">@Entry.NextVolumeNumber</span>
+            }
+        </div>
+
+        <div class="next__body">
+            <span class="next__kicker">
+                <FormatBadge Value="Card.Format" />
+                <span class="eyebrow tabular">Vol @Entry.NextVolumeNumber of @Card.Published</span>
+            </span>
+            <h3 class="next__title"><a href="@($"/series/{Card.SeriesId}")">@Card.TitleEnglish</a></h3>
+            <span class="next__shelf">@ShelfText</span>
+        </div>
+    </div>
+
+    <VolumeSegmentStrip Kinds="OutKinds"
+                        HighlightedIndex="NextIndex"
+                        AriaLabel="@($"{Card.Read} of {Card.Published} read")" />
+
+    <button type="button"
+            class="tertiary button--thumb button--block"
+            disabled="@IsBusy"
+            @onclick="() => Finished.InvokeAsync(Entry)">
+        I finished Vol @Entry.NextVolumeNumber<span class="visually-hidden"> of @Card.TitleEnglish</span>
+    </button>
+</article>

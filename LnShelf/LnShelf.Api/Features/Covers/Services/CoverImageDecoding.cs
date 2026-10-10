@@ -24,5 +24,9 @@ public static class CoverImageDecoding
             new PngConfigurationModule(),
             new WebpConfigurationModule(),
             new GifConfigurationModule()),
+
+        // The first frame only. A cover is a still, and an animated GIF or WebP can carry
+        // hundreds of full-size frames that would each be decoded and held for nothing.
+        MaxFrames = 1,
     };
 }

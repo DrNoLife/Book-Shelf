@@ -1,0 +1,52 @@
+/* Above everything else on the page, the tab bar (z 30) and the volume popover (z 40)
+   included: while the sheet is open it is the only thing that can be touched. */
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: var(--scrim);
+  cursor: pointer;
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 10px var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-2);
+  border-radius: 22px 22px 0 0;
+  background: var(--surf);
+  animation: sheet-rise 180ms ease-out;
+}
+
+/* The grab handle: a cue that this is a sheet, not a page. Decorative; Done closes it. */
+.sheet__handle {
+  align-self: center;
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+
+.sheet__guard { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+
+@keyframes sheet-rise {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}

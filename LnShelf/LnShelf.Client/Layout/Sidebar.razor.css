@@ -209,3 +209,11 @@
   .sidebar ::deep .foot__link,
   .foot__button { white-space: nowrap; }
 }
+
+/* Phones: no strip at all. The bottom tab bar (MobileTabBar) carries the five places, and
+   what only the sidebar had — Import, Changelog, Privacy, the sync note, Sign out — is on the
+   profile's settings list. The component stays mounted, hidden, because it is also the shell
+   that keeps the sync note and the import count fresh. */
+@media (max-width: 720px) {
+  .sidebar { display: none; }
+}

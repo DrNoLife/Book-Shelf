@@ -20,10 +20,17 @@
         <p class="progress__prose">@ProseLine</p>
     </div>
 
-    <ThreeSegmentBar Read="Series.Counts.Read"
-                     Owned="Series.Counts.Owned"
-                     Published="Series.Counts.Published"
-                     Large="true" />
+    @* The bar on a wide screen; on a phone, one segment per volume (the mobile mockup), which
+       says the same thing and also where the gaps are. *@
+    <div class="desktop-only">
+        <ThreeSegmentBar Read="Series.Counts.Read"
+                         Owned="Series.Counts.Owned"
+                         Published="Series.Counts.Published"
+                         Large="true" />
+    </div>
+    <div class="phone-only">
+        <VolumeSegmentStrip Kinds="VolumeKinds" AriaLabel="Progress by volume" Large="true" />
+    </div>
 
     @if (FootLine is { } footLine)
     {

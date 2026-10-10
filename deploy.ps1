@@ -122,6 +122,26 @@ try {
     & scp @sshOpts 'docker-compose.production.yml' "${target}:$RemoteDir/docker-compose.yml"
     if ($LASTEXITCODE -ne 0) { throw 'scp (compose) failed.' }
 
+    # Migrations apply on boot and cannot be rolled back, so take a dump first, while the old
+    # API still owns the schema. Custom format (-Fc) is compressed and restores with pg_restore.
+    # Skipped only when postgres is not running yet (the very first deploy); a failed dump of
+    # a running database stops the deploy. The last five are kept.
+    Write-Host '==> Backing up the database before migrating…' -ForegroundColor Cyan
+    $dumpName = "pre-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss').dump"
+    Invoke-Remote ("cd '$RemoteDir' && mkdir -p backups && " +
+        "if [ -n `"`$(docker compose ps --status running -q postgres 2>/dev/null)`" ]; then " +
+        "docker compose exec -T postgres pg_dump -U lnshelf -d lnshelf -Fc > backups/$dumpName && " +
+        "ls -1t backups/pre-deploy-*.dump | tail -n +6 | xargs -r rm -f && echo `"    backup: backups/$dumpName`"; " +
+        "else echo '    postgres is not running yet; nothing to back up'; fi")
+
+    # Keep the images being replaced under a :previous tag, so the prune below cannot delete
+    # them and a bad release can be rolled back by retagging (README.md, Deploy).
+    $previousTags = foreach ($tag in $ApiTag, $ClientTag) {
+        $previous = $tag -replace ':[^:/]+$', ':previous'
+        "{ docker image inspect $tag >/dev/null 2>&1 && docker tag $tag $previous || true; }"
+    }
+    Invoke-Remote ($previousTags -join ' && ')
+
     Write-Host '==> Loading images + restarting the stack…' -ForegroundColor Cyan
     # Only the prune is allowed to fail — it is housekeeping. The `|| true` is braced to it
     # alone: unbraced, it (and the `; echo`) covered the whole && chain, so a failed load or

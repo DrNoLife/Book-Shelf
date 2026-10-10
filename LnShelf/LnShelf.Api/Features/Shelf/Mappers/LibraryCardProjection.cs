@@ -100,6 +100,28 @@ public static class LibraryCardProjection
                 .Select(volume => (int?)volume.Number)
                 .FirstOrDefault(),
 
+            // The next volume to read: owned and not read, lowest number first — the same
+            // two conditions as Backlog, so the card never offers a volume Backlog does not
+            // count. Number and id are two scalar subqueries rather than one object, which
+            // is what keeps this translatable to one SQL statement.
+            NextToReadVolumeId = series.Volumes
+                .Where(volume =>
+                    volume.UserState != null
+                    && volume.UserState.Owned
+                    && volume.UserState.ReadStatus != ReadStatus.Read)
+                .OrderBy(volume => volume.Number)
+                .Select(volume => (Guid?)volume.Id)
+                .FirstOrDefault(),
+
+            NextToReadNumber = series.Volumes
+                .Where(volume =>
+                    volume.UserState != null
+                    && volume.UserState.Owned
+                    && volume.UserState.ReadStatus != ReadStatus.Read)
+                .OrderBy(volume => volume.Number)
+                .Select(volume => (int?)volume.Number)
+                .FirstOrDefault(),
+
             // The soonest date still ahead of us — the rows view's next-volume column
             // when there is nothing to buy. Null across the whole shelf today, because
             // no source publishes per-volume dates (backlog: the enrichment spike).

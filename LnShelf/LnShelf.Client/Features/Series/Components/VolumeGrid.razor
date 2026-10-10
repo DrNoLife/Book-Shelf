@@ -63,15 +63,33 @@
                tabindex="-1"
                aria-hidden="true" />
 
-    @if (OpenVolume is { } openVolume && _placement is { } placement)
+    @* One volume's details: a bottom sheet on a phone, a popover beside the tile elsewhere.
+       Which one was decided when it opened (OnMenuRequestedAsync), not by CSS, because the
+       popover is placed from a measurement and the sheet is not. *@
+    @if (OpenVolume is { } openVolume)
     {
-        <VolumePopover Volume="openVolume"
-                       SeriesTitle="@Series.TitleEnglish"
-                       Placement="placement"
-                       DateChoice="Series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, openVolume.Number)"
-                       IsBusy="SeriesState.IsSaving"
-                       Closed="OnMenuClosedAsync"
-                       CoverPickRequested="OnCoverPickRequestedAsync" />
+        var dateChoice = Series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, openVolume.Number);
+
+        @if (_isSheet)
+        {
+            <VolumeSheet Volume="openVolume"
+                         SeriesTitle="@Series.TitleEnglish"
+                         DateChoice="dateChoice"
+                         IsBusy="SeriesState.IsSaving"
+                         CoverVersion="SeriesState.CoverVersion"
+                         Closed="OnMenuClosedAsync"
+                         CoverPickRequested="OnCoverPickRequestedAsync" />
+        }
+        else if (_placement is { } placement)
+        {
+            <VolumePopover Volume="openVolume"
+                           SeriesTitle="@Series.TitleEnglish"
+                           Placement="placement"
+                           DateChoice="dateChoice"
+                           IsBusy="SeriesState.IsSaving"
+                           Closed="OnMenuClosedAsync"
+                           CoverPickRequested="OnCoverPickRequestedAsync" />
+        }
     }
 
     @* The legend names every state in words, which is the channel that survives both

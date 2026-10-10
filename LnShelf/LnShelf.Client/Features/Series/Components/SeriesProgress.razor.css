@@ -22,3 +22,17 @@
 @media (max-width: 620px) {
   .progress__prose { margin-left: 0; text-align: left; }
 }
+
+/* Phones: the mockup's progress card — the three figures spread across one row, a tighter
+   card around them. */
+@media (max-width: 720px) {
+  .progress ::deep .panel {
+    --panel-padding: var(--space-4);
+    --panel-gap: var(--space-3);
+  }
+
+  .progress__row {
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+  }
+}

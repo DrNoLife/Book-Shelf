@@ -42,6 +42,17 @@ public sealed record LibraryCardResponse
     public int? NextToBuyNumber { get; init; }
 
     /// <summary>
+    /// The lowest-numbered volume that is owned and not read — what "Continue reading" offers
+    /// to mark finished. Null when nothing on the shelf is waiting.
+    /// </summary>
+    // The id rides along with the number so the library can mark the volume read in one
+    // click; without it the card could only link to the series page and leave the work there.
+    public Guid? NextToReadVolumeId { get; init; }
+
+    /// <summary>The number of <see cref="NextToReadVolumeId"/>'s volume. Null when nothing is waiting.</summary>
+    public int? NextToReadNumber { get; init; }
+
+    /// <summary>
     /// The earliest date a volume that is not out yet carries. Null when no source has
     /// dated anything — which is currently every series (backlog: the enrichment spike).
     /// </summary>

@@ -43,10 +43,22 @@ public sealed class ImportBatchBuilder(
                 $"That file has {books.Count} rows; the limit is {options.Value.MaximumRowCount}.");
         }
 
+        // Fitted before grouping, so the group count below and the keys stored are the same.
+        var fitted = books.Select(book => book.FittedToColumns()).ToList();
+
+        // Refused before the first search: everything after this line costs upstream calls.
+        var groupCount = fitted.Select(book => book.SeriesKey).Distinct(StringComparer.Ordinal).Count();
+        if (groupCount > options.Value.MaximumGroupCount)
+        {
+            throw new InvalidInputException(
+                $"That file has {groupCount} series; one import can take up to {options.Value.MaximumGroupCount}. "
+                + "Split the export and import it in parts.");
+        }
+
         var batch = new ImportBatch
         {
             Id = Guid.CreateVersion7(),
-            FileName = fileName,
+            FileName = fileName.Truncated(ImportColumnLimits.FileName),
             UploadedAt = timeProvider.GetUtcNow(),
             RowCount = books.Count,
         };
@@ -54,7 +66,7 @@ public sealed class ImportBatchBuilder(
         // Sequential, not parallel. Politeness is the point: each group costs one
         // AniList search plus a handful of cover fetches, and a fan-out over 11
         // groups would spike both for no gain a human would notice.
-        foreach (var grouping in books.GroupBy(book => book.SeriesKey, StringComparer.Ordinal))
+        foreach (var grouping in fitted.GroupBy(book => book.SeriesKey, StringComparer.Ordinal))
         {
             batch.Groups.Add(await CreateGroupAsync(grouping, cancellationToken));
         }

@@ -134,6 +134,52 @@ public sealed class LibraryCardProjectionTests
         card.ToBuy.ShouldBe(2);
     }
 
+    /// <summary>
+    /// Volume 1 is read, 2 is not owned, 3 is being read, 4 is owned and unread — so the next
+    /// to read is 3: owned, not read, and "Reading" still counts, the same as Backlog.
+    /// </summary>
+    [Fact]
+    public void ToCard_LowestOwnedVolumeNotRead_IsTheNextToRead()
+    {
+        var series = CreateSeriesWithOneVolume(ReadStatus.Read, owned: true, releaseDaysFromToday: -100);
+        var reading = new Volume
+        {
+            Id = Guid.CreateVersion7(),
+            Number = 3,
+            IsReleased = true,
+            UserState = new VolumeUserState { ReadStatus = ReadStatus.Reading, Owned = true },
+        };
+        series.Volumes.Add(new Volume
+        {
+            Id = Guid.CreateVersion7(),
+            Number = 4,
+            IsReleased = true,
+            UserState = new VolumeUserState { ReadStatus = ReadStatus.Unread, Owned = true },
+        });
+        series.Volumes.Add(reading);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 2, IsReleased = true });
+
+        var card = ToCard(series);
+
+        card.NextToReadNumber.ShouldBe(3);
+        card.NextToReadVolumeId.ShouldBe(reading.Id);
+    }
+
+    [Theory]
+    [InlineData(ReadStatus.Read, true)]
+    [InlineData(ReadStatus.Unread, false)]
+    [InlineData(ReadStatus.Reading, false)]
+    public void ToCard_NothingOwnedAndUnread_HasNoNextToRead(ReadStatus readStatus, bool owned)
+    {
+        var series = CreateSeriesWithOneVolume(readStatus, owned, releaseDaysFromToday: -10);
+
+        var card = ToCard(series);
+
+        card.NextToReadNumber.ShouldBeNull();
+        card.NextToReadVolumeId.ShouldBeNull();
+        card.Backlog.ShouldBe(0);
+    }
+
     [Fact]
     public void ToCard_CaughtUpSeries_HasNoNextToBuy()
     {

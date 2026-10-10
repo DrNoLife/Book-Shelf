@@ -1,0 +1,36 @@
+/* A row that scrolls itself rather than the page: the one thing on a phone screen allowed to
+   run wider than the screen. The scrollbar is hidden because the cut-off last chip already
+   says "there is more"; a 4px bar under 44px pills is noise. */
+.chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: 0 0 auto;
+  min-height: var(--control-large);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-body);
+  white-space: nowrap;
+}
+
+.chip:hover:not(:disabled):not(.chip--on) { color: var(--text); border-color: var(--line-3); }
+
+/* The chosen chip: the light fill, as the mockup draws it. Neutral, because choosing a filter
+   is not the call to action. */
+.chip--on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.chip:disabled { opacity: 0.45; cursor: default; }

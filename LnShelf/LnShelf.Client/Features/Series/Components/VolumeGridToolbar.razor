@@ -8,12 +8,16 @@
     <p class="volumes__hint">Click opens the menu · shift-click toggles owned · ←↑↓→ + space cycles read</p>
 
     @* Tiles or list, for this series. Choosing here sets an override on the series;
-       the global default lives in preferences, and "Follow" gives it back. *@
-    <SegmentedControl TValue="VolumeView"
-                      Options="ViewOptions"
-                      Value="View"
-                      ValueChanged="OnViewChosenAsync"
-                      AriaLabel="Volume view" />
+       the global default lives in preferences, and "Follow" gives it back. On a phone the
+       header keeps only Select (the mobile mockup); this and the "Mark 1–N" pair move to
+       the page's More sheet (SeriesActionsSheet). *@
+    <span class="desktop-only">
+        <SegmentedControl TValue="VolumeView"
+                          Options="ViewOptions"
+                          Value="View"
+                          ValueChanged="OnViewChosenAsync"
+                          AriaLabel="Volume view" />
+    </span>
 
     @* Only offered where there is something to show. A control that does nothing on
        90% of the shelf is worse than no control (design.md — control audit), and the
@@ -21,7 +25,7 @@
     @if (HasAnyTitle)
     {
         <button type="button"
-                class="@(Preferences.ShowVolumeTitles ? "tertiary" : "secondary")"
+                class="@(Preferences.ShowVolumeTitles ? "tertiary" : "secondary") desktop-only"
                 aria-pressed="@Preferences.ShowVolumeTitles.ToAriaState()"
                 title="@TitlesTitle"
                 @onclick="OnTitlesToggledAsync">
@@ -34,7 +38,7 @@
         @* The override is visible and reversible — a series quietly ignoring the global
            preference with no way to say so would be the bug. *@
         <button type="button"
-                class="ghost"
+                class="ghost desktop-only"
                 title="@($"This series is set to {View}; follow the {Preferences.VolumeView} default instead")"
                 @onclick="OnFollowGlobalAsync">
             Follow default
@@ -65,11 +69,11 @@
     {
         @* The counts are computed into the labels, the way design.md computes the next
            needed volume into "Vol 12 on Saxo". *@
-        <button type="button" class="secondary" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
+        <button type="button" class="secondary desktop-only" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
                 @onclick="MarkReadThroughAsync">
             Mark 1–@ReadThrough read
         </button>
-        <button type="button" class="secondary" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
+        <button type="button" class="secondary desktop-only" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
                 @onclick="MarkOwnedThroughAsync">
             Mark 1–@OwnedThrough owned
         </button>

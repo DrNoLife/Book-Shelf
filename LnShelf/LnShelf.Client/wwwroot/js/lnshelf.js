@@ -1,6 +1,7 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
 // C#: read a rendered layout, move focus between sibling elements, hand a
-// dropped file to a file input, and copy a link to the clipboard.
+// dropped file to a file input, copy a link to the clipboard, and ask whether the
+// phone layout is showing.
 window.lnshelf = {
     // The volume grid is auto-fill, so its column count is a layout fact rather than
     // a constant. Counting the tiles that share the first row's offsetTop is the
@@ -48,6 +49,21 @@ window.lnshelf = {
         if (!container) return;
         const items = container.querySelectorAll('button:not(:disabled)');
         if (items.length > 0) items[0].focus();
+    },
+
+    // The other end of a dialog, for the focus guard before its first control: Shift+Tab
+    // from the top wraps to the bottom instead of leaving the dialog.
+    focusLastItem: function (container) {
+        if (!container) return;
+        const items = container.querySelectorAll('button:not(:disabled), a[href]');
+        if (items.length > 0) items[items.length - 1].focus();
+    },
+
+    // The phone breakpoint, asked from code for the one choice CSS cannot make: a volume's
+    // details open as a bottom sheet on a phone and as a popover beside the tile elsewhere.
+    // The same width app.css documents under "the phone breakpoint".
+    isPhoneLayout: function () {
+        return window.matchMedia('(max-width: 720px)').matches;
     },
 
     // Arrow keys inside a menu wrap, which is what a menu is expected to do and what

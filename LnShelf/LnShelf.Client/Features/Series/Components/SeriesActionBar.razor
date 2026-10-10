@@ -1,0 +1,30 @@
+@* The phone's sticky bottom bar on a series (the mobile mockup): the next owned volume to
+   mark read, and — when something is out and not owned — the accent Buy link. It takes the
+   tab bar's place on this page; the top bar's back button is the way out. Nothing to do,
+   no bar. *@
+
+@if (NextToRead is not null || Series.Counts.NextToBuyNumber is not null)
+{
+    <div class="action-bar phone-only">
+        @if (NextToRead is { } next)
+        {
+            <button type="button"
+                    class="tertiary button--thumb action-bar__mark"
+                    disabled="@SeriesState.IsSaving"
+                    @onclick="() => MarkReadAsync(next)">
+                Mark Vol @next.Number read
+            </button>
+        }
+
+        @if (Series.Counts.NextToBuyNumber is { } nextToBuy)
+        {
+            <a class="primary button--thumb action-bar__buy"
+               href="@SaxoSearch.UrlFor(Series.TitleEnglish, nextToBuy)"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="@($"Buy Vol {nextToBuy} on Saxo")">
+                Buy @nextToBuy <Icon Name="IconName.ArrowUpRight" Size="12" />
+            </a>
+        }
+    </div>
+}

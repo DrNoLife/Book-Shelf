@@ -1,0 +1,60 @@
+@* What can be done to one volume: its reading status, whether and how it is owned, the Buy
+   link when it is to buy, and its cover. One component in two frames — the popover beside a
+   tile on a wide screen, the bottom sheet on a phone — so the two cannot drift apart.
+   Reading and ownership are two independent choices, each always laid out (the segmented
+   control's buttons carry aria-pressed), so nothing here has to be discovered. *@
+
+<div class="details">
+    <div class="field">
+        <span class="eyebrow">Reading</span>
+        <SegmentedControl TValue="ReadStatus"
+                          Options="ReadOptions"
+                          Value="Volume.ReadStatus"
+                          ValueChanged="OnReadAsync"
+                          Disabled="IsBusy"
+                          AriaLabel="Reading status"
+                          Stretch="true"
+                          Inset="true" />
+
+        @* When it was read, where the shelf knows — the tile's caption has no room for it
+           and design.md fixes what may go there, so this is its home. *@
+        @if (Volume.ReadAt is { } readAt)
+        {
+            <span class="field__note tabular">Read @readAt.Full</span>
+        }
+    </div>
+
+    @* Ownership and edition in one choice: "No" is not owned, and the other two are owned
+       in that edition. The model already says exactly this (Owned plus OwnedFormat). *@
+    <div class="field">
+        <span class="eyebrow">On your shelf</span>
+        <SegmentedControl TValue="Ownership"
+                          Options="OwnershipOptions"
+                          Value="CurrentOwnership"
+                          ValueChanged="OnOwnershipAsync"
+                          Disabled="IsBusy"
+                          AriaLabel="Ownership"
+                          Stretch="true"
+                          Inset="true" />
+    </div>
+
+    @if (IsBuyable(Volume))
+    {
+        <a class="primary button--large" href="@SaxoSearch.UrlFor(SeriesTitle, Volume.Number)" target="_blank" rel="noopener noreferrer">
+            Buy Vol @Volume.Number on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+        </a>
+    }
+
+    <div class="cover-actions">
+        <button type="button" class="secondary" disabled="@IsBusy" @onclick="OnPickCoverAsync">
+            @(Volume.HasCoverOverride ? "Replace cover…" : "Set cover…")
+        </button>
+
+        @if (Volume.HasCoverOverride)
+        {
+            <button type="button" class="ghost" disabled="@IsBusy" @onclick="OnRemoveCoverAsync">
+                Remove cover
+            </button>
+        }
+    </div>
+</div>

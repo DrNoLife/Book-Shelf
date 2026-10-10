@@ -30,8 +30,10 @@
 
     <ThreeSegmentBar Read="Card.Read" Owned="Card.Owned" Published="Card.Published" />
 
-    @* Printed, not hovered: hover-only information is forbidden by design.md. *@
-    <div class="card__counts">
+    @* Printed, not hovered: hover-only information is forbidden by design.md. A phone's
+       three-across grid has room for "read / out" only, as the mobile mockup prints it. *@
+    <span class="card__fraction tabular phone-only" title="@($"{Card.Read} read of {Card.Published} out")">@Card.Read / @Card.Published</span>
+    <div class="card__counts desktop-only">
         <span class="tabular" title="@($"{Card.Read} read · {Card.Owned} owned · {Card.Published} out")">
             @Card.Read · @Card.Owned · @Card.Published
         </span>

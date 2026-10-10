@@ -1,0 +1,47 @@
+/* One card cut into rows by hairlines, the mockup's settings list. */
+.settings {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf);
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-thumb);
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-size: var(--fs-lead);
+  text-align: left;
+  text-decoration: none;
+}
+
+.settings__row:first-child { border-top: 0; }
+
+.settings__row:hover:not(.settings__row--static):not(:disabled) { background: var(--raise); color: var(--text-strong); }
+
+.settings__row:disabled { opacity: 0.45; cursor: default; }
+
+.settings__aside {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--faint);
+  font-size: var(--fs-caption);
+}
+
+.settings__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings__message { margin: var(--space-3) var(--space-4); }

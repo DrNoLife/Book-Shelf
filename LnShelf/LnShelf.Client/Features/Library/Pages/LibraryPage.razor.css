@@ -9,6 +9,12 @@
   gap: 18px;
 }
 
+/* The chip row runs out through the page gutter, like the carousel, so a chip scrolls off
+   the screen edge rather than being cut at the gutter. */
+.shelf__chips { margin-inline: calc(-1 * var(--page-gutter)); }
+
+.shelf__chips ::deep .chips { padding-inline: var(--page-gutter); }
+
 /* The type and the colour are global (app.css); only the padding is this page's. */
 .notice { padding: 8px 0; }
 
@@ -46,5 +52,25 @@
   .grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
     gap: 12px 9px;
+  }
+}
+
+/* Phones (the mobile mockup): a tighter rhythm, section titles a step smaller, and the
+   covers three across with the gutters the mockup draws. */
+@media (max-width: 720px) {
+  .library { --page-gap: var(--space-7); }
+
+  .shelf { gap: 14px; }
+
+  .shelf__title { font-size: var(--fs-panel-title); }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+
+  .grid--compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px 8px;
   }
 }

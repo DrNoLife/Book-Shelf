@@ -57,7 +57,39 @@ public sealed class AddSeriesPipeline(
         await userLimits.EnsureRoomForSeriesAsync(adding: 1, cancellationToken);
 
         dbContext.Series.Add(series);
-        await dbContext.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        // A double-click or two tabs: both requests passed the lookup above before either
+        // saved, and the unique index refused the second. The series is on the shelf, which
+        // is what was asked for, so the loser answers exactly as the sequential path does.
+        catch (DbUpdateException exception) when (exception.IsUniqueViolation)
+        {
+            // Everything pending is this add's (the series and its volumes); left tracked, any
+            // later save in this scope would try to insert them again.
+            foreach (var entry in dbContext.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            var winner = await FindTrackedAsync(flow.Identifies(sourceId), cancellationToken);
+            if (winner is null)
+            {
+                // A different unique index (the other catalogue's id): not this race, so the
+                // central handler answers it.
+                throw;
+            }
+
+            logger.LogInformation(
+                "{Source} series {SourceId} was added by a concurrent request as {SeriesId}; nothing written",
+                flow.Source,
+                sourceId,
+                winner.SeriesId);
+
+            return winner;
+        }
 
         logger.LogInformation(
             "Added {TitleEnglish} ({Format}) from {Source} {SourceId} as {SeriesId} with {VolumeCount} volumes",

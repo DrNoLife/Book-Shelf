@@ -1,0 +1,43 @@
+.up-next-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.up-next-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.up-next-head__count {
+  font-size: var(--fs-caption);
+  color: var(--faint);
+}
+
+.up-next-head__title {
+  font-size: var(--fs-stat-medium);
+  line-height: 1;
+}
+
+/* The profile disc: the same initial-on-a-disc as the profile header, at touch size. */
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-large);
+  height: var(--control-large);
+  border-radius: 50%;
+  background: var(--pressed);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: var(--fs-large);
+  line-height: 1;
+}
+
+.avatar:hover { border-color: var(--line-3); color: var(--text-strong); }
+
+.avatar:focus-visible { border-radius: 50%; }

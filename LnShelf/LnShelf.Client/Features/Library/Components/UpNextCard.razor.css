@@ -1,0 +1,86 @@
+/* A card a little narrower than the phone, so the next one peeks in from the right and says
+   "swipe". It snaps to the start edge, inside the page gutter. */
+.next {
+  flex: 0 0 min(316px, calc(100vw - 2 * var(--page-gutter) - var(--space-6)));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf);
+}
+
+.next__top {
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* The cover, or without one the volume number set big on the placeholder: the number is
+   the news on this card. */
+.next__cover {
+  position: relative;
+  flex: 0 0 104px;
+  height: 156px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-3) 10px 10px var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line), 0 10px 24px var(--shadow-lift);
+}
+
+.next__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.next__word {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.next__number {
+  font-family: var(--serif);
+  font-size: var(--fs-page-title);
+  line-height: 0.85;
+  color: var(--text);
+}
+
+.next__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.next__kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.next__title {
+  font-size: var(--fs-card-title);
+  line-height: 1.1;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.next__title a { color: var(--text); }
+.next__title a:hover { color: var(--text-strong); }
+
+.next__shelf {
+  margin-top: auto;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}

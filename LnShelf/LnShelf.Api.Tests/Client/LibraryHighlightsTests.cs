@@ -8,28 +8,31 @@ namespace LnShelf.Api.Tests.Client;
 public sealed class LibraryHighlightsTests
 {
     [Fact]
-    public void ContinueReading_PicksTheLowestOwnedUnreadVolume()
+    public void ContinueReading_UsesTheServersNextVolume_AndRemembersItsStatusForUndo()
     {
         var card = Card(
             "Overlord",
             backlog: 2,
+            nextToRead: 3,
             ticks:
             [
                 Tick(1, owned: true, ReadStatus.Read),
                 Tick(2, owned: false, ReadStatus.Unread),
-                Tick(3, owned: true, ReadStatus.Unread),
+                Tick(3, owned: true, ReadStatus.Reading),
                 Tick(4, owned: true, ReadStatus.Unread),
             ]);
 
-        var entries = LibraryHighlights.ContinueReading([card], take: 3);
+        var entry = LibraryHighlights.ContinueReading([card], take: 3).ShouldHaveSingleItem();
 
-        entries.ShouldHaveSingleItem().NextVolumeNumber.ShouldBe(3);
+        entry.NextVolumeNumber.ShouldBe(3);
+        entry.NextVolumeId.ShouldBe(card.NextToReadVolumeId!.Value);
+        entry.NextVolumeReadStatus.ShouldBe(ReadStatus.Reading);
     }
 
     [Fact]
     public void ContinueReading_LeavesOutDroppedSeriesAndSeriesWithNothingUnread()
     {
-        var dropped = Card("Dropped", backlog: 1, status: TrackingStatus.Dropped, ticks: [Tick(1, owned: true, ReadStatus.Unread)]);
+        var dropped = Card("Dropped", backlog: 1, nextToRead: 1, status: TrackingStatus.Dropped, ticks: [Tick(1, owned: true, ReadStatus.Unread)]);
         var caughtUp = Card("Caught up", ticks: [Tick(1, owned: true, ReadStatus.Read)]);
 
         LibraryHighlights.ContinueReading([dropped, caughtUp], take: 3).ShouldBeEmpty();
@@ -39,9 +42,9 @@ public sealed class LibraryHighlightsTests
     public void ContinueReading_PutsTheMostRecentlyReadFirst_AndTakesOnlyTheRequestedCount()
     {
         IReadOnlyList<VolumeTickResponse> unread = [Tick(1, owned: true, ReadStatus.Unread)];
-        var older = Card("Older", backlog: 1, lastReadAt: new DateOnly(2026, 1, 1), ticks: unread);
-        var newer = Card("Newer", backlog: 1, lastReadAt: new DateOnly(2026, 6, 1), ticks: unread);
-        var never = Card("Never", backlog: 1, ticks: unread);
+        var older = Card("Older", backlog: 1, nextToRead: 1, lastReadAt: new DateOnly(2026, 1, 1), ticks: unread);
+        var newer = Card("Newer", backlog: 1, nextToRead: 1, lastReadAt: new DateOnly(2026, 6, 1), ticks: unread);
+        var never = Card("Never", backlog: 1, nextToRead: 1, ticks: unread);
 
         var entries = LibraryHighlights.ContinueReading([older, never, newer], take: 2);
 
@@ -89,6 +92,7 @@ public sealed class LibraryHighlightsTests
         int backlog = 0,
         int toBuy = 0,
         int? nextToBuy = null,
+        int? nextToRead = null,
         TrackingStatus status = TrackingStatus.Reading,
         DateOnly? lastReadAt = null,
         IReadOnlyList<VolumeTickResponse>? ticks = null) =>
@@ -107,6 +111,8 @@ public sealed class LibraryHighlightsTests
             Backlog = backlog,
             Tracked = ticks?.Count ?? 0,
             NextToBuyNumber = nextToBuy,
+            NextToReadNumber = nextToRead,
+            NextToReadVolumeId = nextToRead is null ? null : Guid.NewGuid(),
             LastReadAt = lastReadAt,
             VolumeTicks = ticks ?? [],
         };

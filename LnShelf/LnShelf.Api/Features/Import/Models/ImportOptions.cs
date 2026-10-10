@@ -47,4 +47,14 @@ public sealed class ImportOptions
 
     [Range(1, 100_000)]
     public int MaximumRowCount { get; set; } = 10_000;
+
+    /// <summary>
+    /// The most series one upload may contain.
+    /// </summary>
+    // The row cap alone did not bound the expensive part: every series costs an AniList
+    // search and a few cover fetches, one after another in a single request, so 10,000
+    // one-book series was 10,000 searches. 300 is several times a large real shelf, and
+    // past it the request would outlive the proxies in front of the API anyway.
+    [Range(1, 10_000)]
+    public int MaximumGroupCount { get; set; } = 300;
 }

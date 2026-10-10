@@ -1,0 +1,49 @@
+/* Floats above the page, clear of the phone's tab bar; on a wide screen it sits in the
+   bottom-right corner, out of the way of the shelf. */
+.toast-region {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 35;
+  width: min(420px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+/* The mockup's toast: the light fill, so it reads as something that just happened rather
+   than as part of the page. */
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-xl);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 12px 30px var(--shadow-lift);
+  pointer-events: auto;
+  animation: toast-rise 160ms ease-out;
+}
+
+.toast__text {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+@keyframes toast-rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@media (max-width: 720px) {
+  .toast-region {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
+    width: auto;
+  }
+}

@@ -39,3 +39,10 @@
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Phones: the group steps aside so its three controls join the bar's own wrapping, which
+   packs the format tabs, sort, view and density into two rows instead of four. */
+@media (max-width: 720px) {
+  .bar { gap: var(--space-2); }
+  .bar__group { display: contents; }
+}

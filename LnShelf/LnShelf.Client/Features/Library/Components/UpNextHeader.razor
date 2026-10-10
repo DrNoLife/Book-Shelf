@@ -1,0 +1,36 @@
+@* The phone library's header (the mobile mockup): what is waiting, the section's name in the
+   serif, and a round shortcut to the profile — on a phone the profile is also where Import,
+   the changelog and signing out live. *@
+
+<header class="up-next-head">
+    <div class="up-next-head__text">
+        <span class="up-next-head__count">@WaitingText</span>
+        <h2 class="up-next-head__title">Up next</h2>
+    </div>
+
+    <a class="avatar" href="profile" aria-label="Profile">
+        @if (Initial is { } initial)
+        {
+            <span aria-hidden="true">@initial</span>
+        }
+        else
+        {
+            <Icon Name="IconName.User" Size="20" />
+        }
+    </a>
+</header>
+
+@code {
+    /// <summary>Owned and unread volumes across the shelf.</summary>
+    [Parameter] public required int Waiting { get; set; }
+
+    /// <summary>The avatar's letter; null while the user is not known, which draws the person icon.</summary>
+    [Parameter] public string? Initial { get; set; }
+
+    private string WaitingText => Waiting switch
+    {
+        0 => "Nothing waiting on your shelf",
+        1 => "1 waiting on your shelf",
+        _ => $"{Waiting} waiting on your shelf",
+    };
+}

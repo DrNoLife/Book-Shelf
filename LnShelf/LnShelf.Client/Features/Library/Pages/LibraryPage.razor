@@ -9,23 +9,57 @@
            header's eyebrow already name it for everyone else. *@
         <h1 class="visually-hidden">Library</h1>
 
+        @* Two headers and two pairs of lists over one shelf: the desktop's (design.md, Library)
+           and the phone's (the mobile mockup). Exactly one of each pair is displayed — the
+           .desktop-only / .phone-only switch in app.css — and both read the same entries. *@
         @if (Library is not null)
         {
-            <LibraryHeader Totals="Library.Totals" />
+            <div class="desktop-only">
+                <LibraryHeader Totals="Library.Totals" />
+            </div>
+            <div class="phone-only">
+                <UpNextHeader Waiting="Library.Totals.Backlog" Initial="@AvatarInitial" />
+            </div>
         }
 
         @if (ContinueEntries.Count > 0)
         {
-            <ContinueReading Entries="ContinueEntries" />
+            <div class="desktop-only">
+                <ContinueReading Entries="ContinueEntries" IsBusy="Finishing.IsBusy" Finished="OnFinishedAsync" />
+            </div>
+        }
+
+        @if (UpNextEntries.Count > 0)
+        {
+            <div class="phone-only">
+                <UpNextCarousel Entries="UpNextEntries" IsBusy="Finishing.IsBusy" Finished="OnFinishedAsync" />
+            </div>
         }
 
         @if (OutNowEntries.Count > 0)
         {
-            <OutNow Entries="OutNowEntries" />
+            <div class="desktop-only">
+                <OutNow Entries="OutNowEntries" />
+            </div>
+            <div class="phone-only">
+                <OutNowList Entries="AllOutNowEntries" />
+            </div>
         }
 
         <section class="shelf" aria-labelledby="shelf-title">
-            <h2 id="shelf-title" class="title-section">Shelf</h2>
+            <div class="section-head">
+                <h2 id="shelf-title" class="title-section shelf__title">Shelf</h2>
+                @if (Library is not null)
+                {
+                    <span class="section-head__aside phone-only tabular">@Library.Totals.Read read · @Library.Totals.Owned owned</span>
+                }
+            </div>
+
+            @* The status filter as chips on a phone; the segmented control in the toolbar
+               is the same filter on a wider screen. *@
+            <div class="phone-only shelf__chips">
+                <ShelfChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
+            </div>
 
             <LibraryToolbar TextFilter="@LibraryState.TextFilter"
                             TextFilterChanged="OnTextFilterChanged"
@@ -35,7 +69,9 @@
                             DensityChanged="OnDensityChangedAsync"
                             View="Preferences.LibraryView"
                             ViewChanged="OnViewChangedAsync">
-                <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
+                <div class="desktop-only">
+                    <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
+                </div>
                 <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
             </LibraryToolbar>
 
@@ -97,3 +133,7 @@
 
     </div>
 </div>
+
+@* The receipt for "I finished Vol N", with its Undo — for the desktop card and the phone
+   carousel alike. *@
+<UndoToast />

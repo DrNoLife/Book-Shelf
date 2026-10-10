@@ -5,7 +5,11 @@
 .app {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  /* dvh, not vh: on a phone 100vh is the height with the browser's toolbars hidden, so the
+     bottom of the frame — the tab bar's row — sat under the address bar. vh stays as the
+     fallback for a browser that has no dvh. */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
 }
@@ -14,10 +18,36 @@
    right hairline is the only separation. Each page brings its own gutter and
    width (the .page frame in app.css), so this column adds neither. */
 .main {
+  /* The containing block for anything absolutely positioned inside a page — every
+     .visually-hidden label, for one. Without it those resolved against the document and
+     escaped this scroller's clipping, so a visually-hidden label in a sideways-scrolled
+     carousel widened the whole document, and a phone browser zoomed out to fit it. */
+  position: relative;
   min-width: 0;
   overflow-y: auto;
   background: var(--bg);
 }
+
+/* Focus arrives here only from the skip link, programmatically; a ring around the whole
+   content column would be noise. */
+.main:focus { outline: none; }
+
+/* Off screen until it has focus, then pinned top-left above everything. */
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 60;
+  min-height: var(--control-large);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--raise);
+  color: var(--text);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible { transform: none; }
 
 /* Below 861px there is no room for a 240px column, so the shell turns on its side:
    the sidebar becomes the top strip (Sidebar.razor.css) and the content column keeps
@@ -28,4 +58,11 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
+}
+
+/* Phones: the sidebar is gone (Sidebar.razor.css) and the bottom tab bar floats over the
+   content, so the frame is one column and the page itself reserves the bar's height
+   (the .page rule in app.css). */
+@media (max-width: 720px) {
+  .app { grid-template-rows: minmax(0, 1fr); }
 }

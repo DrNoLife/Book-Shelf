@@ -24,6 +24,21 @@ public sealed class SeriesSyncService(
 
         var run = await StartRunAsync(coversWholeShelf: true, cancellationToken);
 
+        try
+        {
+            await SweepAsync(run, budget, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            await FinishInterruptedRunAsync(run, exception, cancellationToken);
+            throw;
+        }
+
+        return await FinishRunAsync(run, $"{run.SeriesRefreshed} series refreshed", cancellationToken);
+    }
+
+    private async Task SweepAsync(SyncRun run, LookupBudget budget, CancellationToken cancellationToken)
+    {
         // Sync skips any series without an external id (feature-spec §4.2) — a
         // manual WebNovel entry has nothing to refresh against.
         //
@@ -35,12 +50,16 @@ public sealed class SeriesSyncService(
         // The user state comes along because the refresh raises HasNewVolume on it — the
         // one field sync writes (CLAUDE.md). Without the Include it would be null here and
         // the badge would never appear.
+        //
+        // Split: Volumes and SourceChoices are two collections, and one joined query would
+        // return every volume once per source choice.
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
             .Include(candidate => candidate.UserState)
             .Include(candidate => candidate.SourceChoices)
             .Where(candidate => candidate.AniListId != null || candidate.MangaUpdatesId != null)
             .OrderBy(candidate => candidate.TitleEnglish)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var linkedExternalIds = series
@@ -56,8 +75,6 @@ public sealed class SeriesSyncService(
         {
             await RefreshOneAsync(candidate, run, linkedExternalIds, budget, cancellationToken);
         }
-
-        return await FinishRunAsync(run, $"{run.SeriesRefreshed} series refreshed", cancellationToken);
     }
 
     public async Task<SyncRun?> RunForSeriesAsync(Guid seriesId, CancellationToken cancellationToken)
@@ -91,18 +108,30 @@ public sealed class SeriesSyncService(
         // No AniListId check here, unlike the sweep. Being asked about one series by id is
         // not the same as choosing which series to sweep, and a manual WebNovel entry can
         // still be matched by title.
-        await RefreshOneAsync(series, run, linkedExternalIds, budget, cancellationToken);
+        try
+        {
+            await RefreshOneAsync(series, run, linkedExternalIds, budget, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            await FinishInterruptedRunAsync(run, exception, cancellationToken);
+            throw;
+        }
 
         return await FinishRunAsync(run, $"{series.TitleEnglish} refreshed", cancellationToken);
     }
 
     /// <summary>
-    /// One series, with the failure isolation that makes a run survive it.
+    /// One series, with the failure isolation that makes a run survive it, saved on its own.
     /// </summary>
     // Per-series failure isolation (CLAUDE.md — the sync job's sanctioned exception to
     // "don't swallow"). Community metadata is flaky; one series failing must not cost the
     // other seven their refresh, and on the single-series path it must not fail the request
     // that triggered it either — the series is already on the shelf by then.
+    //
+    // A save per series rather than one at the end of the run: a shutdown at 04:40 or one
+    // row the database refused used to lose the whole night's work. Each series is now its
+    // own unit — saved when it succeeds, discarded whole when it does not.
     private async Task RefreshOneAsync(
         Series series,
         SyncRun run,
@@ -114,6 +143,10 @@ public sealed class SeriesSyncService(
         {
             await refresher.RefreshAsync(series, run, linkedExternalIds, budget, cancellationToken);
             run.SeriesRefreshed++;
+
+            // The run's counters ride along, so the sidebar's figures never get ahead of
+            // what is actually saved.
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
         // Only the caller's own cancellation stops the run. An HttpClient timeout also
         // surfaces as a cancelled task, with nobody having asked for it — and letting that
@@ -123,14 +156,51 @@ public sealed class SeriesSyncService(
         {
             throw;
         }
+        // A DbUpdateException from the save lands here too: a row the database refused is
+        // that series' failure, not the run's.
         catch (Exception exception)
         {
+            // Everything this series did goes, including the discrepancies it recorded on
+            // the run and its share of the run's counters. Keeping the discrepancies would
+            // leave the review list asking about a refresh that never landed; the next run
+            // meets the same disagreement and records it again.
+            dbContext.ChangeTracker.DiscardPendingChanges();
+
             run.Failures++;
             logger.LogWarning(
                 exception,
                 "Sync failed for {TitleEnglish} (AniList {AniListId}); continuing",
                 series.TitleEnglish,
                 series.AniListId);
+        }
+    }
+
+    /// <summary>
+    /// Closes a run that stopped before its last series, so it never sits "in progress"
+    /// forever. Best effort: the original failure is the one the caller sees.
+    /// </summary>
+    // CancellationToken.None when the caller cancelled — that token is already spent, and
+    // the shutdown that spent it is exactly when the run row most needs its ending written.
+    private async Task FinishInterruptedRunAsync(SyncRun run, Exception exception, CancellationToken cancellationToken)
+    {
+        // Whatever the interrupted series had half-done is not worth keeping (RefreshOneAsync).
+        dbContext.ChangeTracker.DiscardPendingChanges();
+
+        var lead = cancellationToken.IsCancellationRequested
+            ? $"Interrupted after {run.SeriesRefreshed} series refreshed"
+            : $"Stopped by an error after {run.SeriesRefreshed} series refreshed";
+
+        try
+        {
+            await FinishRunAsync(run, lead, CancellationToken.None);
+        }
+        catch (Exception finishException)
+        {
+            logger.LogError(
+                finishException,
+                "Could not record the end of sync run {SyncRunId}, which stopped early: {Reason}",
+                run.Id,
+                exception.Message);
         }
     }
 

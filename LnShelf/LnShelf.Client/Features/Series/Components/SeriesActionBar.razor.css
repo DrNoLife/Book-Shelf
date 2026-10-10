@@ -1,0 +1,22 @@
+/* Pinned to the bottom edge where the tab bar sits on every other page, with the same
+   translucent ground and the home-indicator inset beneath it. The page reserves its height
+   (.page in app.css). */
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--chrome-translucent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+}
+
+/* Placement only: the mark button takes the room and the Buy link keeps its own width —
+   unless it is alone, when it takes the row. */
+.action-bar__mark,
+.action-bar__buy:only-child { flex: 1 1 auto; }

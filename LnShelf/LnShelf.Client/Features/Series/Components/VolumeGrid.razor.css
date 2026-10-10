@@ -41,6 +41,16 @@
   .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }
 
+/* Phones (the mobile mockup): five across, whatever the width, so a 22-volume series is
+   five short rows rather than eight of three. The tiles are ~62px wide here; the caption
+   ellipsises and every state still has its mark. */
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-2);
+  }
+}
+
 /* The cover picker's input exists in the DOM but is never seen, for the same reason as
    the tile's own (VolumeTile.razor.css): InputFile renders the browser's "Choose file"
    button otherwise. */
@@ -50,4 +60,19 @@
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Phones: "Volumes" and Select share the first row, as the mockup has them; the count line
+   drops under both. The identity box steps aside so its two children can be placed apart. */
+@media (max-width: 720px) {
+  .volumes__head { gap: var(--space-1) var(--space-3); }
+
+  .volumes__identity { display: contents; }
+
+  .volumes__title { font-size: var(--fs-panel-title); }
+
+  .volumes__count {
+    order: 2;
+    flex-basis: 100%;
+  }
 }

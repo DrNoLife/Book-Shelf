@@ -42,6 +42,11 @@ public partial class SeriesPage : IDisposable
     /// <summary>The series the volume selection belongs to.</summary>
     private Guid _selectionSeriesId;
 
+    /// <summary>Whether the phone's More sheet is open.</summary>
+    private bool _isActionsOpen;
+
+    private ElementReference _moreButton;
+
     /// <summary>
     /// True until the series behind *this* route is the one in hand.
     /// </summary>
@@ -110,6 +115,24 @@ public partial class SeriesPage : IDisposable
     {
         await SeriesState.ResetSourceAsync(conflict);
         await SyncState.LoadAsync();
+    }
+
+    private void OpenActions() => _isActionsOpen = true;
+
+    /// <summary>Closes the More sheet and hands focus back to the button that opened it.</summary>
+    private async Task CloseActionsAsync()
+    {
+        _isActionsOpen = false;
+        StateHasChanged();
+        await _moreButton.FocusAsync();
+    }
+
+    /// <summary>The sheet's "Remove from shelf…": out of the sheet first, so the prompt is not behind it.</summary>
+    private async Task OnDeleteFromSheetAsync()
+    {
+        _isActionsOpen = false;
+        StateHasChanged();
+        await OnDeleteAsync();
     }
 
     protected override void OnInitialized()

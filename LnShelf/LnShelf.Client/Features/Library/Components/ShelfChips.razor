@@ -1,0 +1,28 @@
+@* The status filter on a phone: the same LibraryFilter state the desktop's segmented control
+   sets, as a row of chips that scrolls sideways. The mockup's five come first, in its order;
+   the other three follow rather than disappear (design.md: nothing the app does today may
+   vanish without a replacement). Terminology is fixed — never paraphrased. *@
+
+<ChipGroup TValue="LibraryFilter"
+           Options="Options"
+           Value="Selected"
+           ValueChanged="SelectedChanged"
+           AriaLabel="Status filter" />
+
+@code {
+    [Parameter] public required LibraryFilter Selected { get; set; }
+
+    [Parameter] public EventCallback<LibraryFilter> SelectedChanged { get; set; }
+
+    private static readonly IReadOnlyList<SegmentedOption<LibraryFilter>> Options =
+    [
+        new(LibraryFilter.All, "All", "Everything on the shelf"),
+        new(LibraryFilter.Reading, "Reading", "Series you are reading"),
+        new(LibraryFilter.Behind, "Behind", "Something to buy or something to read"),
+        new(LibraryFilter.PlanToStart, "Plan to start", "Series you plan to start"),
+        new(LibraryFilter.Completed, "Completed", "Series you finished"),
+        new(LibraryFilter.Backlog, "Backlog", "Owned and unread"),
+        new(LibraryFilter.UpToDate, "Up to date", "Nothing to buy and nothing to read"),
+        new(LibraryFilter.Dropped, "Dropped", "Series you dropped"),
+    ];
+}

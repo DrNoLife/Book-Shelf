@@ -1,3 +1,5 @@
+using LnShelf.Api.Tests.Data.Fixtures;
+
 namespace LnShelf.Api.Tests.Errors;
 
 /// <summary>
@@ -58,6 +60,30 @@ public sealed class ProblemDetailsExceptionHandlerTests
     {
         ProblemDetailsExceptionHandler.Describe(new ConflictException("not in this state"))
             .StatusCode.ShouldBe(409);
+    }
+
+    [Fact]
+    public void Describe_AUniqueViolation_Is409AndSaysToReload()
+    {
+        // Two requests racing to write one row: the index caught it, nothing is broken, and
+        // reloading shows the row the other request wrote.
+        var (statusCode, _, detail) = ProblemDetailsExceptionHandler.Describe(
+            RefusingSaveInterceptor.UniqueViolation());
+
+        statusCode.ShouldBe(409);
+        detail.ShouldNotBeNull().ShouldContain("Reload");
+    }
+
+    [Fact]
+    public void Describe_AnyOtherDatabaseRefusal_StaysA500()
+    {
+        // A foreign key failing is a defect of ours, not a race, and must not be dressed up
+        // as "try again".
+        var foreignKey = new Microsoft.EntityFrameworkCore.DbUpdateException(
+            "An error occurred while saving the entity changes.",
+            new Npgsql.PostgresException("violates foreign key constraint", "ERROR", "ERROR", Npgsql.PostgresErrorCodes.ForeignKeyViolation));
+
+        ProblemDetailsExceptionHandler.Describe(foreignKey).StatusCode.ShouldBe(500);
     }
 
     [Fact]

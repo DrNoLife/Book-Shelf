@@ -192,3 +192,11 @@
   outline: 2px dashed var(--acc-soft);
   outline-offset: 2px;
 }
+
+/* Phones: five tiles across leave ~62px for a caption, room for "Vol 18" and no more, so the
+   extra parts step back rather than ellipsise into "Vol 12 · To…". Each state keeps two
+   channels on the tile itself (mark, ring, hatch, dashed edge), the accessible label still
+   speaks the state, and the volume's sheet prints it in full. */
+@media (max-width: 720px) {
+  .tile__caption-part { display: none; }
+}

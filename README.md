@@ -181,6 +181,19 @@ policy, so keep to it or change the page: a nightly `pg_dump` of the `lnshelf` d
 copy of the `override/` prefix in the cover bucket, 14 daily copies, the oldest deleted. If a
 backup is ever restored, delete again every account that was deleted after it was taken.
 
+On top of that, `deploy.ps1` takes a `pg_dump` (custom format) into `backups/` on the server
+before every deploy, because migrations apply on boot and cannot be undone; the last five are
+kept. It also keeps the images it replaces as `lnshelf-api:previous` and
+`lnshelf-client:previous`. To roll back a bad release:
+
+```bash
+docker tag lnshelf-api:previous lnshelf-api:latest
+docker tag lnshelf-client:previous lnshelf-client:latest
+docker compose stop api
+docker compose exec -T postgres pg_restore -U lnshelf -d lnshelf --clean --if-exists < backups/pre-deploy-<stamp>.dump
+docker compose up -d --no-build
+```
+
 #### Uploaded covers left behind
 
 Deleting a series, a cover or an account removes the uploaded cover files. Series deleted

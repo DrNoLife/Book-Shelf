@@ -4,11 +4,24 @@
    than blending them into one word.
 
    The segmented control, not a dropdown: four choices, always laid out, one press each.
-   Its buttons carry aria-pressed, so the current status is announced. *@
+   Its buttons carry aria-pressed, so the current status is announced.
 
-<SegmentedControl TValue="TrackingStatus"
-                  Options="StatusOptions"
-                  Value="Series.TrackingStatus"
-                  ValueChanged="OnChosenAsync"
-                  Disabled="SeriesState.IsSaving"
-                  AriaLabel="Your status" />
+   On a phone the same four choices are chips that scroll sideways (the mobile mockup):
+   four segments do not fit across 390px. Only one of the two is ever displayed. *@
+
+<span class="desktop-only">
+    <SegmentedControl TValue="TrackingStatus"
+                      Options="StatusOptions"
+                      Value="Series.TrackingStatus"
+                      ValueChanged="OnChosenAsync"
+                      Disabled="SeriesState.IsSaving"
+                      AriaLabel="Your status" />
+</span>
+
+<ChipGroup class="phone-only"
+           TValue="TrackingStatus"
+           Options="StatusOptions"
+           Value="Series.TrackingStatus"
+           ValueChanged="OnChosenAsync"
+           Disabled="SeriesState.IsSaving"
+           AriaLabel="Your status" />

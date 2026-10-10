@@ -1,0 +1,55 @@
+@* The phone's "More" (the mobile mockup's ⋯ in the top bar): everything the desktop hero and
+   volume header lay out that a 390px page has no room for — the volume view, the "Mark 1–N"
+   pair, the source links and removing the series. Nothing here is new; it is where these
+   live on a phone. *@
+
+<BottomSheet AriaLabel="Series actions" Closed="Closed">
+    <h2 class="actions__title">@Series.TitleEnglish</h2>
+
+    <div class="actions__field">
+        <span class="eyebrow">Volumes as</span>
+        <SegmentedControl TValue="VolumeView"
+                          Options="ViewOptions"
+                          Value="View"
+                          ValueChanged="OnViewChosenAsync"
+                          Disabled="SeriesState.IsSaving"
+                          AriaLabel="Volume view"
+                          Stretch="true"
+                          Inset="true" />
+    </div>
+
+    <div class="actions__group">
+        <button type="button" class="secondary button--large" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
+                @onclick="MarkReadThroughAsync">
+            @(ReadThrough is { } readThrough ? $"Mark 1–{readThrough} read" : "Everything out is read")
+        </button>
+        <button type="button" class="secondary button--large" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
+                @onclick="MarkOwnedThroughAsync">
+            @(OwnedThrough is { } ownedThrough ? $"Mark 1–{ownedThrough} owned" : "Everything out is owned")
+        </button>
+    </div>
+
+    @if (Series.AniListId is not null || Series.MangaUpdatesId is not null)
+    {
+        <div class="actions__group">
+            @if (Series.AniListId is { } aniListId)
+            {
+                <a class="ghost button--large" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
+                    AniList <Icon Name="IconName.ArrowUpRight" Size="11" />
+                </a>
+            }
+            @if (Series.MangaUpdatesId is { } mangaUpdatesId)
+            {
+                <a class="ghost button--large" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
+                    MangaUpdates <Icon Name="IconName.ArrowUpRight" Size="11" />
+                </a>
+            }
+        </div>
+    }
+
+    @* The same confirm-first removal as the page's danger zone, which stays at the foot of the
+       page as well: the cost is printed there, and the prompt names it again. *@
+    <button type="button" class="destructive button--large" disabled="@SeriesState.IsSaving" @onclick="() => DeleteRequested.InvokeAsync()">
+        Remove from shelf…
+    </button>
+</BottomSheet>

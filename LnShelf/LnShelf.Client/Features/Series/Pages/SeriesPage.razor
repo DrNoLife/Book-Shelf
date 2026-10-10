@@ -4,10 +4,28 @@
 <div class="page series">
     <div class="page__stack">
 
-        <NavLink class="back" href="">
+        <NavLink class="back desktop-only" href="">
             <Icon Name="IconName.CaretLeft" Size="14" />
             <span>Library</span>
         </NavLink>
+
+        @* The phone's top row (the mobile mockup): back, and More for what the narrow page
+           has no room to lay out. Both 44px icon buttons. *@
+        <div class="top-bar phone-only">
+            <a class="icon-button" href="" aria-label="Back to library">
+                <Icon Name="IconName.CaretLeft" Size="22" />
+            </a>
+            <button type="button"
+                    class="icon-button"
+                    aria-label="More"
+                    aria-haspopup="dialog"
+                    aria-expanded="@_isActionsOpen.ToAriaState()"
+                    disabled="@(Series is null)"
+                    @ref="_moreButton"
+                    @onclick="OpenActions">
+                <Icon Name="IconName.DotsThree" Size="22" />
+            </button>
+        </div>
 
         @if (SeriesState.LoadFailed)
         {
@@ -65,6 +83,13 @@
 
             @* At the very foot, quiet, and saying what it costs before it is pressed —
                a destructive action should be findable, not prominent. *@
+            <SeriesActionBar Series="Series" />
+
+            @if (_isActionsOpen)
+            {
+                <SeriesActionsSheet Series="Series" Closed="CloseActionsAsync" DeleteRequested="OnDeleteFromSheetAsync" />
+            }
+
             <section class="danger" aria-labelledby="danger-title">
                 <div>
                     <h2 id="danger-title" class="title-panel">Remove from library</h2>

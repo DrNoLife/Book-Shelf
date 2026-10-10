@@ -1,0 +1,23 @@
+@typeparam TValue
+
+@* The phone's filter row: one choice out of several, laid out as pills that scroll sideways
+   rather than wrap. The segmented control's job on a screen too narrow for its segments —
+   same options record, same aria-pressed — in the mockup's phone look: the chosen chip is
+   the light fill, never the accent (a filter is not an action). *@
+
+<div @attributes="AdditionalAttributes" class="@CssClass" role="group" aria-label="@AriaLabel">
+    @foreach (var option in Options)
+    {
+        var isOn = EqualityComparer<TValue>.Default.Equals(option.Value, Value);
+
+        <button type="button"
+                class="chip @(isOn ? "chip--on" : null)"
+                aria-pressed="@isOn.ToAriaState()"
+                disabled="@Disabled"
+                title="@option.Title"
+                @key="option.Value"
+                @onclick="() => OnChosenAsync(option.Value)">
+            @option.Label
+        </button>
+    }
+</div>

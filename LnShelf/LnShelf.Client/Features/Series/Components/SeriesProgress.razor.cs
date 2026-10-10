@@ -5,6 +5,22 @@ public partial class SeriesProgress
     [Parameter]
     public required SeriesDetailResponse Series { get; set; }
 
+    /// <summary>
+    /// One kind per volume for the phone's segment strip: the six tile states folded into the
+    /// strip's four, the way the library's ticks fold them (VolumeTickResponse.Kind).
+    /// </summary>
+    private IReadOnlyList<VolumeTickKind> VolumeKinds =>
+    [
+        .. Series.Volumes.Select(volume => VolumeTileStateMap.For(volume) switch
+        {
+            VolumeTileState.Read => VolumeTickKind.Read,
+            VolumeTileState.OwnedUnread => VolumeTickKind.OwnedUnread,
+            VolumeTileState.Reading => volume.Owned ? VolumeTickKind.OwnedUnread : VolumeTickKind.ToBuy,
+            VolumeTileState.ToBuy => VolumeTickKind.ToBuy,
+            _ => VolumeTickKind.NotOut,
+        }),
+    ];
+
     /// <summary>Volumes the shelf tracks that are not out yet.</summary>
     private int AnnouncedCount => Series.Counts.NotOut;
 

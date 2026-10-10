@@ -1,0 +1,49 @@
+@using LnShelf.Client.Features.Sync
+
+@* The phone's settings list (the mobile mockup): on a phone there is no sidebar, so what only
+   the sidebar carried — Import, the changelog, privacy, the sync note and signing out — is
+   listed here, one 52px row each. Only rows that do something real; the mockup's "Shown on
+   profile" and "Store links" have no feature behind them and are left out (design.md, Not
+   built). *@
+
+<nav class="settings" aria-label="Settings">
+    <a class="settings__row" href="import">
+        <span>Import &amp; export</span>
+        <span class="settings__aside">
+            @if (ReviewCount > 0)
+            {
+                <Pill Tone="PillTone.Attention">@ReviewCount to review</Pill>
+            }
+            <Icon Name="IconName.CaretRight" Size="14" />
+        </span>
+    </a>
+
+    <a class="settings__row" href="changelog">
+        <span>Changelog</span>
+        <span class="settings__aside"><Icon Name="IconName.CaretRight" Size="14" /></span>
+    </a>
+
+    <a class="settings__row" href="privacy.html">
+        <span>Privacy</span>
+        <span class="settings__aside"><Icon Name="IconName.CaretRight" Size="14" /></span>
+    </a>
+
+    @* A fact, not a place: the last sync run, with the same words the sidebar prints. *@
+    <div class="settings__row settings__row--static" title="@SyncDetail">
+        <span>Sync</span>
+        <span class="settings__aside">
+            <SignalDot Tone="SyncTone" />
+            <span>@SyncHeadline</span>
+        </span>
+    </div>
+
+    <button type="button" class="settings__row" disabled="@_isSigningOut" @onclick="SignOutAsync">
+        <span>Sign out</span>
+        <span class="settings__aside settings__email">@Email</span>
+    </button>
+
+    @if (_message is { } message)
+    {
+        <p class="notice notice--message settings__message" role="alert">@message</p>
+    }
+</nav>

@@ -102,9 +102,16 @@
   --control:         40px;
   --control-large:   44px;
 
+  /* A thumb-sized call to action on a phone: "I finished Vol 18", the sticky bottom bars */
+  --control-thumb:   52px;
+
   /* Layout */
   --sidebar-width: 240px;
   --page-gutter:   clamp(20px, 4vw, 56px);
+
+  /* The phone's bottom tab bar, without the safe-area inset that is added under it. Content
+     and anything floating above the bar (the undo toast) offset by this. */
+  --tab-bar-height: 66px;
 
   /* Focus. --acc-soft as a stroke, not --acc: a focus ring must never be mistaken
      for a primary button's fill. */
@@ -137,6 +144,9 @@
   --shadow-mark:       rgba(14, 12, 16, 0.9);     /* a tile mark over light artwork */
 
   --selected-ring:     var(--text);               /* the tile whose menu is open: 2px, offset 3px */
+
+  --chrome-translucent: rgba(18, 16, 20, 0.92);   /* the phone's tab bar and sticky bars, blurred over the page */
+  --scrim:             rgba(0, 0, 0, 0.55);       /* behind a bottom sheet */
 }
 
 /* --------------------------------------------------------------------------- */
@@ -372,6 +382,16 @@ h1[tabindex="-1"]:focus { outline: none; }
   margin: 0 auto;
 }
 
+/* Phones: a tighter top, and the bottom reserves the tab bar (and the home-indicator inset
+   under it) so the last thing on a page can always be scrolled clear of the bar. The series
+   page's sticky action bar is the same height, so the one reserve serves both. */
+@media (max-width: 720px) {
+  .page {
+    padding-top: var(--space-6);
+    padding-bottom: calc(var(--space-8) + var(--tab-bar-height) + env(safe-area-inset-bottom));
+  }
+}
+
 /* --- buttons ---
 
    Global rather than per-component for the reason the eyebrow is: they belong to the
@@ -468,6 +488,47 @@ h1[tabindex="-1"]:focus { outline: none; }
   min-height: var(--control-large);
   padding: 0 var(--space-5);
   border-radius: var(--radius-lg);
+}
+
+/* A finger needs the 44px target the design sets for coarse pointers — the segmented
+   control already grows to it. A mouse keeps the 40px the desktop design draws. */
+@media (pointer: coarse) {
+  .primary,
+  .secondary,
+  .tertiary,
+  .ghost,
+  .destructive { min-height: var(--control-large); }
+}
+
+/* The phone's thumb-sized call to action, 52px: "I finished Vol 18", the sticky bars. */
+.button--thumb {
+  min-height: var(--control-thumb);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-lead);
+}
+
+/* Takes the whole width it is given — a card's single action on a phone. */
+.button--block { width: 100%; }
+
+/* --- the phone breakpoint ---
+
+   One width decides "phone": 720px and below the sidebar gives way to the bottom tab bar
+   and the screens switch to their phone layouts. Custom properties cannot be used inside a
+   media query, so the number is written out wherever a stylesheet needs it — always
+   (max-width: 720px) / (min-width: 721px) — and js/lnshelf.js asks the same question
+   (isPhoneLayout) for the one choice made in code: bottom sheet or popover.
+
+   The two utilities below show or hide a whole block. !important because they must beat
+   the component's own display rule, which a scoped selector would otherwise win on
+   specificity. */
+
+@media (min-width: 721px) {
+  .phone-only { display: none !important; }
+}
+
+@media (max-width: 720px) {
+  .desktop-only { display: none !important; }
 }
 
 /* --- notices ---

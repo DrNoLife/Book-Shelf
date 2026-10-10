@@ -1,0 +1,36 @@
+@* The phone's navigation (design: the mobile mockups): four places and, in the middle, the
+   round accent "+" for Search & add — the one call to action the shell carries. Plain <a>s
+   rather than NavLink, because the current tab has to say aria-current="page" and the
+   active test is this component's own (the series page counts as no tab).
+
+   Not drawn on a series page: that page's sticky action bar takes the bottom edge, as the
+   mockup lays it out, and its back button is the way out. *@
+
+@if (!IsHidden)
+{
+    <nav class="tab-bar phone-only" aria-label="Main">
+        @foreach (var tab in Tabs)
+        {
+            @if (tab.IsAdd)
+            {
+                <a class="tab-bar__add"
+                   href="@tab.Href"
+                   aria-label="@tab.Label"
+                   aria-current="@(IsCurrent(tab) ? "page" : null)"
+                   @key="tab.Href">
+                    <Icon Name="tab.Icon" Size="22" />
+                </a>
+            }
+            else
+            {
+                <a class="tab @(IsCurrent(tab) ? "tab--current" : null)"
+                   href="@tab.Href"
+                   aria-current="@(IsCurrent(tab) ? "page" : null)"
+                   @key="tab.Href">
+                    <Icon Name="tab.Icon" Size="22" />
+                    <span>@tab.Label</span>
+                </a>
+            }
+        }
+    </nav>
+}

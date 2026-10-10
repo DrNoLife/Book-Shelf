@@ -54,3 +54,28 @@
   font-size: var(--fs-caption);
   color: var(--muted);
 }
+
+/* Phones: one row of covers that scrolls sideways, out through the page gutter, rather than
+   two columns running down a dozen screens. */
+@media (max-width: 720px) {
+  .grid {
+    display: flex;
+    gap: var(--space-3);
+    margin-inline: calc(-1 * var(--page-gutter));
+    padding-inline: var(--page-gutter);
+    scroll-padding-inline: var(--page-gutter);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .grid::-webkit-scrollbar { display: none; }
+
+  .grid > li {
+    flex: 0 0 112px;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  .entry__label { font-size: var(--fs-body); }
+}

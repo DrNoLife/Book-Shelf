@@ -76,3 +76,32 @@
   /* Narrow cards: the pill drops under the numbers rather than squeezing them. */
   .card__counts { flex-wrap: wrap; }
 }
+
+/* Phones (the mobile mockup): three covers across, so each card keeps the cover, the bar,
+   "read / out" and a short title. The format badge and the status dot would cover half of a
+   110px cover; the series page says both. */
+.card__fraction {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+@media (max-width: 720px) {
+  .card { gap: 7px; }
+
+  .cover { border-radius: var(--radius-sm); }
+
+  .cover__badge,
+  .cover__dot { display: none; }
+
+  .cover__new { top: 6px; right: 6px; }
+
+  .card__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    font-size: var(--fs-body);
+    line-height: 1.25;
+  }
+}

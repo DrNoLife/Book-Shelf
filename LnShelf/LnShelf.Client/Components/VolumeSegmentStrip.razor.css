@@ -1,0 +1,33 @@
+.segments {
+  display: grid;
+  gap: 3px;
+}
+
+.segments--large { gap: 2px; }
+
+.segment {
+  display: block;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.segments--large .segment { height: 8px; }
+
+/* The tick strip's fills, for the same reasons (VolumeTickStrip.razor.css): --read done,
+   --owned in hand, --track out and unbought with a ring so it survives grayscale. */
+.segment--read { background: var(--read); }
+.segment--owned { background: var(--owned); }
+
+.segment--tobuy {
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.segment--notout {
+  background: transparent;
+  border: 1px dashed var(--line-2);
+}
+
+/* The volume the card's button will mark: a light ring around it, offset by nothing so the
+   row of segments does not move. */
+.segment--next { box-shadow: 0 0 0 1.5px var(--text); }

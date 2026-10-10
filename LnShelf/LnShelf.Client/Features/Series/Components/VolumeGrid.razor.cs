@@ -43,6 +43,9 @@ public partial class VolumeGrid
 
     private PopoverPlacement? _placement;
 
+    /// <summary>True when the open volume is shown in the phone's bottom sheet rather than the popover.</summary>
+    private bool _isSheet;
+
     private VolumeResponse? OpenVolume =>
         Selection.OpenMenuVolumeId is { } openId
             ? Series.Volumes.FirstOrDefault(volume => volume.VolumeId == openId)
@@ -84,6 +87,7 @@ public partial class VolumeGrid
         _tilesSeriesId = Series.SeriesId;
         _tiles.Clear();
         _placement = null;
+        _isSheet = false;
     }
 
     /// <summary>
@@ -96,6 +100,17 @@ public partial class VolumeGrid
         if (Selection.OpenMenuVolumeId == volume.VolumeId)
         {
             Selection.CloseMenu();
+            return;
+        }
+
+        // A phone gets the bottom sheet, which needs no measurement: it always rises from
+        // the bottom edge. Asked at the moment of opening, so rotating a tablet between two
+        // taps gets whichever suits the width it now has.
+        _isSheet = await JavaScript.InvokeAsync<bool>("lnshelf.isPhoneLayout");
+        if (_isSheet)
+        {
+            _placement = null;
+            Selection.OpenMenu(volume);
             return;
         }
 

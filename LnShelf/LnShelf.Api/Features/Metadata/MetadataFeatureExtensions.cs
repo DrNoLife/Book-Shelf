@@ -287,6 +287,14 @@ public static class MetadataFeatureExtensions
             // One nightly loop, no job framework (CLAUDE.md).
             services.AddHostedService<NightlySyncBackgroundService>();
 
+            // "Sync now" runs in the background too. Registered as a singleton first and then
+            // as the hosted service, so the controller and the host share the one instance
+            // that owns the queue. The gate is what keeps it and the nightly loop off the same
+            // shelf at once.
+            services.AddSingleton<SyncRunGate>();
+            services.AddSingleton<ManualSyncRunner>();
+            services.AddHostedService(provider => provider.GetRequiredService<ManualSyncRunner>());
+
             return services;
         }
     }

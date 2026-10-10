@@ -12,6 +12,9 @@ public static class LibraryClientExtensions
             // The named seam: the grid and the sidebar render from one library fetch.
             services.AddScoped<LibraryState>();
 
+            // "I finished Vol N" and its undo, shared by the desktop card and the phone carousel.
+            services.AddScoped<FinishVolumeState>();
+
             return services;
         }
     }

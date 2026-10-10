@@ -10,7 +10,7 @@ public sealed class ImportBatchConfiguration : IEntityTypeConfiguration<ImportBa
         // Assigned by the application (see SeriesConfiguration).
         builder.Property(batch => batch.Id).ValueGeneratedNever();
 
-        builder.Property(batch => batch.FileName).HasMaxLength(400).IsRequired();
+        builder.Property(batch => batch.FileName).HasMaxLength(ImportColumnLimits.FileName).IsRequired();
 
         builder.HasOne<User>().WithMany().HasForeignKey(batch => batch.OwnerId).OnDelete(DeleteBehavior.Cascade);
 
@@ -34,8 +34,8 @@ public sealed class ImportGroupConfiguration : IEntityTypeConfiguration<ImportGr
         builder.Property(group => group.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(group => group.Reason).HasConversion<string>().HasMaxLength(32).IsRequired();
 
-        builder.Property(group => group.SeriesKey).HasMaxLength(400).IsRequired();
-        builder.Property(group => group.SeriesTitle).HasMaxLength(400).IsRequired();
+        builder.Property(group => group.SeriesKey).HasMaxLength(ImportColumnLimits.SeriesKey).IsRequired();
+        builder.Property(group => group.SeriesTitle).HasMaxLength(ImportColumnLimits.SeriesTitle).IsRequired();
 
         // One group per series key per batch — the grouping key is the identity.
         builder.HasIndex(group => new { group.ImportBatchId, group.SeriesKey }).IsUnique();
@@ -60,12 +60,12 @@ public sealed class ImportRowConfiguration : IEntityTypeConfiguration<ImportRow>
         builder.HasKey(row => row.Id);
         builder.Property(row => row.Id).ValueGeneratedNever();
 
-        builder.Property(row => row.RawTitle).HasMaxLength(600).IsRequired();
-        builder.Property(row => row.Author).HasMaxLength(400);
-        builder.Property(row => row.Isbn).HasMaxLength(32);
+        builder.Property(row => row.RawTitle).HasMaxLength(ImportColumnLimits.RawTitle).IsRequired();
+        builder.Property(row => row.Author).HasMaxLength(ImportColumnLimits.Author);
+        builder.Property(row => row.Isbn).HasMaxLength(ImportColumnLimits.Isbn);
 
         // Capped where Volume.Title is capped: this is the value that ends up there.
-        builder.Property(row => row.Subtitle).HasMaxLength(400);
+        builder.Property(row => row.Subtitle).HasMaxLength(ImportColumnLimits.Subtitle);
 
         builder.Property(row => row.ReadStatus).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(row => row.OwnedFormat).HasConversion<string>().HasMaxLength(32);
