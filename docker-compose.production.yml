@@ -113,23 +113,9 @@ services:
     ports:
       - "8091:80"
 
-  # HTTPS in front of the client, through a Cloudflare Tunnel (README.md, Deploy). Login
-  # needs it: Google only redirects to https:// hosts. The tunnel is created in the
-  # Cloudflare dashboard with a public hostname pointing at http://client:80, and its
-  # token goes in the .env. Off unless COMPOSE_PROFILES=tunnel, so the stack still runs
-  # on the plain port without one. Outbound only: nothing is opened on the router.
-  tunnel:
-    image: cloudflare/cloudflared:2026.10.0
-    profiles: ["tunnel"]
-    restart: unless-stopped
-    logging: *default-logging
-    command: tunnel --no-autoupdate run
-    environment:
-      # Not :? like the others: compose interpolates every service, profile or not, so a
-      # required variable here would stop the stack without a tunnel from starting.
-      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:-}"
-    depends_on:
-      - client
+  # HTTPS comes from a Cloudflare Tunnel that runs as its own compose project
+  # (ops/cloudflared), not here: a deploy runs `up` on this project and must never be
+  # able to recreate the tunnel its own SSH session arrives through.
 
 # Build-time only; no service mounts it at runtime.
 secrets:

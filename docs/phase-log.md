@@ -6,6 +6,67 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Monitoring, CI/CD by tag, and getting ready to go public (0.21.0 and 0.21.1, 2026-10-10)
+
+**Heartbeats (0.21.0).** New `Features/Monitoring` slice with the `IHeartbeat` seam.
+`HttpHeartbeat` GETs a monitor's push URL with `status=up|down&msg=<counts>` (the query is
+replaced, so Kuma's pasted sample query does no harm), never throws, and does nothing for a
+monitor with no URL (an empty `.env` value binds to null and is handled). The nightly sync
+beats up when every shelf's run completed and down when one failed outright or the night
+never started. `Heartbeat__Monitors__NightlySync` in compose; the backup script pings
+`BACKUP_HEARTBEAT_URL`. Uptime Kuma's compose and setup are in `ops/uptime-kuma`; it is not
+started yet, because its first visitor becomes its admin and that should be the owner.
+
+**Audit findings with a security angle closed (0.21.1).** #22: `BadHttpRequestException`
+keeps its own status (413 for a cover over 8 MB) instead of a 500. #21:
+`PoliteRateLimitHandler` buffers the response body under the per-attempt deadline, so a
+source that stalls mid-body fails one item. `.research/audit-2026-10-09.md` now has a status
+table: 18 fixed, 1 superseded, 14 open (UX and test gaps, none security-relevant).
+
+**CI/CD by tag (in the repo, not live yet).** `ci.yml` pins every action by SHA, sets
+per-job permissions, builds both images without pushing (audit #31), and keeps Playwright
+traces 7 days. The browser journeys flaked on GitHub runners waiting 5 s for the first cards;
+the expect timeout is 15 s now. `release.yml`: verify (tag = `<Version>`, commit on main) →
+reusable CI → Trivy scan → GHCR push with provenance attestations and a `digests.txt`
+release asset → deploy behind the `production` environment's approval. Rollback re-runs an
+older tag's workflow and rebuilds nothing. CodeQL (C# build-mode none, plus the workflows) and
+Dependabot (with a 7-day cooldown, and Postgres majors ignored, after it immediately proposed
+17 → 18) are in.
+
+**The deploy path.** A separate sshd on the docker bridge, reachable only through the
+Cloudflare Tunnel behind an Access *service auth* policy, whose single key (restricted,
+`from=` the docker networks) can run only `lnshelf-deploy-gate`. The gate accepts exactly
+`deploy <semver> <sha> <api digest> <client digest>` and `status <semver>`, matched whole with
+`BASH_REMATCH`, and checks against GitHub's public API that the commit is on main, the tag
+points at it and the digests are the published ones. It fetches compose by commit SHA and
+starts `lnshelf-deploy` detached: pre-deploy dump, pull by digest, `up`, a health check that
+must report the new version, automatic rollback only when the migration count did not change.
+Tested in containers by the agent that wrote it (refusals of `ls`, `;id`, newlines, PTY, wrong
+digests, wrong tag SHA, out-of-range key). The tunnel moves to its own compose project
+(`ops/cloudflared`) so a deploy can never restart it; compose pulls images by digest, and
+`deploy.ps1` keeps working meanwhile through a `docker-compose.local.yml` that puts the local
+tags back.
+
+**Hardening.** The client runs `nginx-unprivileged` as uid 101 and still listens on 80
+(Docker allows unprivileged low ports), so the tunnel target did not change. Base images are
+pinned by digest, Postgres to 17.11 (what the server already ran).
+
+**History rewrite, prepared.** gitleaks and trufflehog over the original history found no
+tokens; only connection strings (test dummies, dev, and the old production password, rotated
+today). A `git filter-repo` dry run on a mirror (main only: drops
+`docs/story-graph-export.csv`, scrubs the old MinIO password, the LAN IP and a work address
+from files and messages, maps the author email to the GitHub noreply address) scans clean. It
+has to be redone at the moment of going public and pushed to a fresh repository, because
+GitHub keeps old commits reachable by SHA.
+
+**Owner steps left** (each with exact instructions in the linked README): create the new
+public repository and retire the old one; rulesets, environment, secrets
+(README, Deploying); move the tunnel (`ops/cloudflared`); install the deploy sshd and gate
+(`ops/sshd`, needs sudo); start Uptime Kuma and add the Discord webhook (`ops/uptime-kuma`);
+then tag the first release.
+
+---
+
 ## Covers in a folder, nightly backups, MinIO gone (0.20.0 and 0.20.1, 2026-10-10)
 
 **Why.** A production-readiness review found no backups at all (the README and the privacy

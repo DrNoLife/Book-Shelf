@@ -421,6 +421,14 @@ dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # a
 
 `dotnet ef` is a local tool — `dotnet tool restore` first.
 
+**Releasing** is a version tag, nothing else: bump `<Version>` in
+`LnShelf/Directory.Build.props`, add the matching top entry in `ChangelogCatalog.cs`
+(a test ties them), commit, `git tag v<version> && git push --follow-tags`. The release
+workflow builds, scans, publishes to GHCR by digest and deploys after the owner approves
+(README, Deploying). Migrations stay backward compatible for one release
+(`.claude/rules/data-access.md`). Server-side scripts live in `ops/` and are installed
+by hand.
+
 ---
 
 ## Phase awareness

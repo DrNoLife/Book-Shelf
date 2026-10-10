@@ -652,11 +652,11 @@ measurably slow (testing.md: measure, don't vibe).
 
 ```yaml
 services:
-  client:   # nginx: serves WASM publish output, proxies /api → api
+  client:   # nginx-unprivileged: serves WASM publish output, proxies /api → api
+    image: ghcr.io/drnolife/lnshelf-client@<digest>
     ports: ["8091:80"]        # plain HTTP on the LAN; HTTPS comes from the tunnel (§7 needs it)
-  tunnel:   # optional (profile "tunnel"): Cloudflare Tunnel, public hostname → http://client:80
-    depends_on: [api]
   api:
+    image: ghcr.io/drnolife/lnshelf-api@<digest>
     environment: [ConnectionStrings__Db, Sync__Hour,
                   Auth__ClientId, Auth__ClientSecret, Auth__InitialOwnerEmail]   # §7; secrets from the server's .env
     volumes: [covers:/data/covers]
@@ -667,7 +667,15 @@ volumes: { pgdata: {}, covers: {} }
 ```
 
 Images built via multi-stage Dockerfiles (`sdk` → `aspnet` for the API;
-`sdk` publish → `nginx:alpine` for the client). Backups are
+`sdk` publish → `nginx-unprivileged` for the client), base images pinned by
+digest. A `v*` tag builds, scans (Trivy), attests and pushes them to GHCR, and
+the server pulls them by digest only. The deploy reaches the server through the
+Cloudflare Tunnel, which runs as its own compose project (`ops/cloudflared`) so
+a deploy can never restart it, into a separate sshd whose one key can only run
+the deploy gate (`ops/deploy`, `ops/sshd`). The gate verifies the commit, tag
+and digests against GitHub itself; `lnshelf-deploy` dumps the database, starts
+the release and rolls back automatically when health fails and no migration
+ran (README, Deploying). Backups are
 `ops/backup/lnshelf-backup.sh` from the host's crontab: a verified `pg_dump`
 and a tar of the covers volume every night, 14 kept, with a restore test
 beside it (README, Backups). Synced covers could be fetched again; uploaded

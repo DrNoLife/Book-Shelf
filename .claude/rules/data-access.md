@@ -35,3 +35,8 @@ General C# standards still apply — see root `CLAUDE.md`.
   `CLAUDE.md`).
 - Migrations: single-project — `dotnet ef migrations add <Name> --project
   LnShelf/LnShelf.Api` (see Commands in root `CLAUDE.md`).
+- **Migrations stay backward compatible for one release** (expand, then contract):
+  add a column or table in one release and stop using/remove the old one in a later
+  release. The deploy rolls back the image automatically only when no migration ran,
+  and going back one image must always be safe against the newer schema (README,
+  Rolling back).
