@@ -23,6 +23,9 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     permissions:
+      # actions: read lets the action read its own workflow run, which it needs on a
+      # private repository; without it the upload fails "Resource not accessible".
+      actions: read
       contents: read
       security-events: write
     strategy:
