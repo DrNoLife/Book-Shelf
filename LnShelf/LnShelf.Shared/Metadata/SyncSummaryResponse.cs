@@ -69,6 +69,9 @@ public sealed record SyncDiscrepancyResponse
     /// <summary>Null means unresolved — waiting for a person.</summary>
     public MetadataSourceName? ResolvedWith { get; init; }
 
+    /// <summary>True when <see cref="ResolvedWith"/> is the user's pick, not the precedence list's.</summary>
+    public bool ResolvedByChoice { get; init; }
+
     public int? VolumeNumber { get; init; }
     public string? Note { get; init; }
 

@@ -46,6 +46,15 @@ public sealed record ReleaseSeriesInfo
     public bool IsCompleted { get; init; }
 
     /// <summary>
+    /// The same reading as <see cref="IsCompleted"/> with the whole word: Ongoing, Hiatus,
+    /// Cancelled or Completed. What a source choice writes when the user takes this source's
+    /// word on publication status.
+    /// </summary>
+    // Beside IsCompleted rather than replacing it: automatic behaviour still only ever writes
+    // the "finished" direction, and keys on that boolean.
+    public PublicationStatus PublicationStatus { get; init; }
+
+    /// <summary>
     /// Volumes the source says exist, parsed out of its free-text status. Null
     /// when the text says nothing a parser should trust.
     /// </summary>

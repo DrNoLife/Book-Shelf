@@ -94,8 +94,8 @@
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
-.row--read .swatch { background: var(--acc); box-shadow: none; }
-.row--owned .swatch { background: var(--acc-deep); box-shadow: none; }
+.row--read .swatch { background: var(--read); box-shadow: none; }
+.row--owned .swatch { background: var(--owned); box-shadow: none; }
 
 /* Reading keeps its ring-and-glow identity from the tile, at swatch size. */
 .row--reading .swatch {

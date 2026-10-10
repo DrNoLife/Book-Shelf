@@ -24,6 +24,8 @@ public sealed class SeriesWriteSurfaceTests
     [InlineData(nameof(SeriesDetailClient.SetOwnedAsync))]
     [InlineData(nameof(SeriesDetailClient.SetCoverAsync))]
     [InlineData(nameof(SeriesDetailClient.RemoveCoverAsync))]
+    [InlineData(nameof(SeriesDetailClient.ChooseSourceAsync))]
+    [InlineData(nameof(SeriesDetailClient.ResetSourceAsync))]
     public void SeriesDetailClient_EverySingleVolumeWrite_AnswersWithTheWholeSeries(string methodName) =>
         typeof(SeriesDetailClient)
             .GetMethod(methodName)
@@ -105,7 +107,7 @@ public sealed class SeriesWriteSurfaceTests
 
         foreach (var status in Enum.GetNames<TrackingStatus>())
         {
-            codeBehind.ShouldContain($"nameof(TrackingStatus.{status})");
+            codeBehind.ShouldContain($"new(TrackingStatus.{status},");
         }
 
         // Choosing what is already chosen writes nothing.

@@ -1,69 +1,142 @@
 /* ---------------------------------------------------------------------------
-   Design tokens — the :root block from docs/design.md, verbatim.
+   Design tokens — docs/design.md is the written form of this file.
    These names are the vocabulary: components use the variables, never raw hex.
+   The app is dark-only (color-scheme: dark below); there is no light palette.
    --------------------------------------------------------------------------- */
 
 :root {
   /* Ground — warm near-blacks, never pure black or neutral gray */
-  --ink:   #08070b;                      /* page ground (behind everything) */
-  --bg:    #131017;                      /* app background */
-  --surf:  #1c1823;                      /* cards, inputs, controls */
-  --raise: #241f2d;                      /* raised/hover surfaces */
+  --ink:      #0e0c10;                   /* behind the app frame; rarely visible */
+  --bg:       #121014;                   /* page */
+  --sidebar:  #151216;                   /* the navigation column and feature bands */
+  --surf-low: #161318;                   /* list rows sitting inside a bordered list */
+  --surf:     #1a171c;                   /* cards, panels, inputs, controls */
+  --raise:    #241f25;                   /* hover, the active nav row, floating menus */
+  --pressed:  #2e2830;                   /* the chosen segment; also --track */
 
   /* Lines — warm off-white at low alpha, not gray borders */
-  --line:   rgba(244, 240, 234, 0.10);   /* default hairline */
-  --line-2: rgba(244, 240, 234, 0.18);   /* interactive borders */
+  --line:   rgba(237, 230, 221, 0.10);   /* default hairline: cards, dividers */
+  --line-2: rgba(237, 230, 221, 0.18);   /* interactive borders */
+  --line-3: rgba(237, 230, 221, 0.30);   /* hover on an interactive border */
 
-  /* Text — one hue, three strengths */
-  --text:  #f4f0ea;                      /* warm off-white */
-  --muted: rgba(244, 240, 234, 0.56);    /* secondary */
-  --faint: rgba(244, 240, 234, 0.34);    /* tertiary, labels, fine print */
+  /* Text — one hue, strengths by value */
+  --text:        #ede6dd;                /* warm off-white; links too */
+  --text-strong: #ffffff;                /* link hover only */
+  --muted:       #b3aaa0;                /* secondary */
+  --faint:       #8c847b;                /* tertiary, labels, fine print */
 
-  /* Accent — persimmon, one family, three values */
-  --acc:      #ff5a36;                   /* primary: read progress, CTAs, LN badge, active */
-  --acc-soft: #ff9d80;                   /* links, "reading" labels, soft highlights */
-  --acc-deep: #83301c;                   /* owned-unread: same hue, receded */
-  --track:    #2b2534;                   /* empty progress track, unowned */
+  /* Accent — one family. It is the call to action, never the progress. */
+  --acc:      #d9533a;                   /* primary buttons, the brand mark, "to buy" outline */
+  --acc-deep: #b8432c;                   /* pressed / hover on an --acc fill */
+  --acc-soft: #ee8c74;                   /* text-weight accent: "Reading" label, focus ring */
+  --on-acc:   #ffffff;                   /* text on any --acc fill */
 
-  /* The one cool color in the system */
-  --ok: #6fb6a2;                         /* "Ongoing" publication dot only */
+  /* Progress — deliberately neutral, so the accent stays free to mean "act" */
+  --read:  #ede6dd;                      /* read */
+  --owned: #6e655d;                      /* owned, unread */
+  --track: #2e2830;                      /* not owned; the empty part of a bar */
+
+  /* The two signal colours. Each means one thing, everywhere. */
+  --ok:         #7fb48a;                 /* healthy: still publishing, up to date, last sync fine */
+  --amber:      #e8a33d;                 /* look at this: new volume, to review, sources disagree */
+  --on-amber:   #1a1408;                 /* text on an --amber fill */
+  --amber-line: #5a4520;                 /* the conflict panel's border */
+  --amber-wash: #1e1912;                 /* the conflict panel's fill */
+
+  /* A destructive action: text and border only, never a fill */
+  --danger:      #f0a090;
+  --danger-line: #6a2e26;
 
   /* Type */
-  --serif: "Instrument Serif", Georgia, serif;   /* display */
-  --sans:  "Manrope", system-ui, sans-serif;     /* everything else */
+  --serif: "Instrument Serif", Georgia, serif;                       /* display */
+  --sans:  "Geist", "Helvetica Neue", system-ui, sans-serif;         /* everything else */
+}
+
+/* ---------------------------------------------------------------------------
+   Scales. Every size, gap and radius a component needs comes from here, so a
+   screen never invents a 13th font size or a 5th corner.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Type scale: sans */
+  --fs-micro:   11px;                    /* captions under tiles, badge text */
+  --fs-small:   12px;                    /* eyebrows, pill text, fine print */
+  --fs-caption: 13px;                    /* secondary lines, footers */
+  --fs-body:    14px;                    /* default */
+  --fs-lead:    15px;                    /* the sentence under a page header, a panel title */
+  --fs-large:   18px;                    /* landing copy */
+
+  /* Type scale: serif display (weight 400 only; hierarchy is size alone) */
+  --fs-card-title:    21px;              /* a series title on a wide card */
+  --fs-series-title:  18px;              /* a series title under a cover */
+  --fs-panel-title:   28px;              /* "Vol 18", "Reading now" */
+  --fs-section-title: 30px;              /* "Continue reading", "Volumes", "Shelf" */
+  --fs-stat-small:    30px;              /* a figure in a narrow card */
+  --fs-stat-medium:   40px;              /* a figure in a preview */
+  --fs-stat:          44px;              /* a figure inside a panel */
+  --fs-stat-hero:     64px;              /* the library header's figures */
+  --fs-page-title:    54px;              /* the series title, the profile name */
+  --fs-brand:         24px;
+
+  /* Spacing */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  48px;
+  --space-10: 64px;
+
+  /* Radii */
+  --radius-sm:   6px;                    /* covers, tiles, tags */
+  --radius-md:   8px;                    /* nav rows, small buttons, list items */
+  --radius-lg:  10px;                    /* controls, inputs, segmented containers, large buttons */
+  --radius-xl:  14px;                    /* cards and panels */
+  --radius-pill: 999px;
+
+  /* Control heights — 40 is the default, 44 for a primary call to action (touch) */
+  --control-segment: 34px;
+  --control:         40px;
+  --control-large:   44px;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --page-gutter:   clamp(20px, 4vw, 56px);
+
+  /* Focus. --acc-soft as a stroke, not --acc: a focus ring must never be mistaken
+     for a primary button's fill. */
+  --focus-ring:   2px solid var(--acc-soft);
+  --focus-offset: 2px;
 }
 
 /* ---------------------------------------------------------------------------
    Values that docs/design.md fixes in its component specs but does not put in
-   the token block. Declared here so components still reference variables and
-   never carry a raw hex of their own.
+   the token blocks above. Declared here so components still reference variables
+   and never carry a raw colour of their own (a test asserts it).
    --------------------------------------------------------------------------- */
 
 :root {
-  --line-3:            rgba(244, 240, 234, 0.30); /* hover on an interactive border */
+  --cover-placeholder: #1e1a20;                   /* a coverless tile or card */
+  --hatch:             #2a2529;                   /* the "not out yet" hatch stripe */
 
-  --on-acc:            #1a0c07;                  /* text on any persimmon fill */
-  --cover-placeholder: #1a1620;                  /* coverless tile */
-  --hatch:             #221d2b;                  /* the "not out" hatch stripe */
+  --badge-bg:          rgba(18, 16, 20, 0.78);    /* the format badge: reads over a cover and over the page */
 
-  --badge-manga-bg:    rgba(20, 17, 25, 0.82);
-  --badge-manga-ring:  rgba(244, 240, 234, 0.28);
-  --badge-wn-bg:       rgba(20, 17, 25, 0.7);
+  --dot-completed:     rgba(237, 230, 221, 0.34);
+  --dot-hiatus-ring:   rgba(237, 230, 221, 0.55);
+  --dot-cancelled:     rgba(237, 230, 221, 0.16);
+  --dot-halo:          rgba(14, 12, 16, 0.55);    /* so a dot reads on any cover */
 
-  --dot-completed:     rgba(244, 240, 234, 0.34);
-  --dot-hiatus-ring:   rgba(244, 240, 234, 0.55);
-  --dot-cancelled:     rgba(244, 240, 234, 0.16);
-  --dot-halo:          rgba(8, 7, 11, 0.55);     /* so a dot reads on any cover */
+  --glow-new:          rgba(232, 163, 61, 0.55);  /* the new-volume card edge, amber */
+  --glow-reading:      rgba(217, 83, 58, 0.45);   /* the reading tile's halo */
+  --acc-wash:          rgba(217, 83, 58, 0.12);   /* a tinted row */
 
-  --glow-new:          rgba(255, 90, 54, 0.75);  /* new-volume card edge */
-  --glow-reading:      rgba(255, 90, 54, 0.45);  /* the reading tile's halo */
-  --acc-wash:          rgba(255, 90, 54, 0.10);  /* active nav / chip tint */
+  --shadow-lift:       rgba(0, 0, 0, 0.45);       /* menus and popovers, lifted */
+  --shadow-mark:       rgba(14, 12, 16, 0.9);     /* a tile mark over light artwork */
 
-  --shadow-lift:       rgba(8, 7, 11, 0.55);     /* menus and popovers, lifted */
-  --shadow-mark:       rgba(8, 7, 11, 0.9);      /* a tile mark over light artwork */
-
-  --sidebar-top:       #17131e;
-  --sidebar-bottom:    #120f17;
+  --selected-ring:     var(--text);               /* the tile whose menu is open: 2px, offset 3px */
 }
 
 /* --------------------------------------------------------------------------- */
@@ -76,18 +149,19 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--ink);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
+  /* Counts must line up across cards: 8 / 11 / 14. Geist's digits are proportional
+     by default, so this is set once for the whole page rather than per component. */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* The serif is a display face: weight 400 only, hierarchy from size alone.
-   design.md scopes the -0.01em tracking to page titles and stat numbers, so it
-   is applied where those live rather than to every heading. */
+/* The serif is a display face: weight 400 only, hierarchy from size alone. */
 h1, h2, h3, h4 {
   margin: 0;
   font-family: var(--serif);
@@ -96,14 +170,16 @@ h1, h2, h3, h4 {
 
 p { margin: 0; }
 
-a { color: var(--acc-soft); text-decoration: none; }
-a:hover { color: var(--acc); }
+/* Links are the text colour, not an accent: the accent is reserved for the call to
+   action. A link inside running prose says so with .text-link (underlined). */
+a { color: var(--text); text-decoration: none; }
+a:hover { color: var(--text-strong); }
 
-/* Tells the browser to draw its own remaining chrome — scrollbars, focus rings on
-   things it owns, form controls in other engines — from the dark palette. */
+/* Tells the browser to draw its own remaining chrome — scrollbars, form controls in
+   other engines — from the dark palette. */
 :root { color-scheme: dark; }
 
-::selection { background: rgba(255, 90, 54, 0.3); }
+::selection { background: var(--acc-wash); }
 ::placeholder { color: var(--faint); }
 
 button {
@@ -131,8 +207,8 @@ select {
   font-size: inherit;
   color: var(--text);
   background: var(--surf);
-  border: 1px solid var(--line-2);
-  border-radius: 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   -webkit-appearance: none;
   appearance: none;
 }
@@ -147,10 +223,10 @@ input[type="number"]::-webkit-outer-spin-button {
   appearance: none;
 }
 
-/* Checkboxes and radios, if one is ever needed, tint from the accent instead of
-   the OS blue. */
+/* Checkboxes and radios tint from the neutral, like every other "on" in the system —
+   the accent is for actions. */
 input[type="checkbox"],
-input[type="radio"] { accent-color: var(--acc); }
+input[type="radio"] { accent-color: var(--text); }
 
 /* Chrome paints autofilled fields a solid pale yellow. An inset shadow the size of
    the field is the only way to cover it. */
@@ -166,88 +242,272 @@ input:-webkit-autofill:focus {
   scrollbar-width: thin;
 }
 
-/* Every control gets a visible keyboard ring. Deliberately --acc-soft as a
-   stroke, not --acc: the volume tile's "reading" state already owns a persimmon
-   ring plus glow, and focus must not be mistaken for it. */
+/* Every control gets a visible keyboard ring (see --focus-ring). */
 :focus-visible {
-  outline: 2px solid var(--acc-soft);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
 }
 
+/* FocusOnNavigate moves focus to the page's h1 so a screen reader announces the new page.
+   That is programmatic focus on a non-interactive heading; a ring there is noise. */
+h1[tabindex="-1"]:focus { outline: none; }
+
+/* --- type roles ---
+
+   Global classes rather than per-component rules: they belong to the design, and
+   copied into scoped stylesheets they drift (the eyebrow was 10px in one place and
+   11px in another). A screen picks a role; it does not restate one. */
+
 .eyebrow {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--faint);
 }
 
-/* --- the three primitives every page reaches for ---
+/* The one big serif line of a page: the series title, the profile name. */
+.title-page {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--fs-page-title);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
 
-   Buttons and notices are global rather than per-component for the reason the eyebrow
-   is: they belong to the design, not to a feature. Copied into five and six scoped
-   stylesheets respectively they had already drifted — two button paddings and three
-   notice paddings, none of them design.md's. */
+/* A section of a page: "Continue reading", "Volumes", "Shelf". */
+.title-section {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--fs-section-title);
+  line-height: 1.15;
+}
 
-/* design.md, Controls: --acc fill, --on-acc text, 600 12.5px, radius 7, padding 8×13. */
+/* A series title on a card or in a list. */
+.title-card {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--fs-card-title);
+  line-height: 1.2;
+  text-wrap: pretty;
+}
+
+/* A panel's heading is sans, 600 — the serif is for the page's own voice, not for
+   the labels of the boxes on it. */
+.title-panel {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: var(--fs-lead);
+  line-height: 1.3;
+}
+
+/* The sentence under a page header. */
+.lead {
+  font-size: var(--fs-lead);
+  color: var(--muted);
+}
+
+/* Fine print — and the one wry line per view. */
+.fine {
+  font-size: var(--fs-caption);
+  color: var(--faint);
+}
+
+/* A link inside running text: the only underlined thing in the system. */
+.text-link {
+  color: var(--acc-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.text-link:hover { color: var(--text-strong); }
+
+/* The head of a section: its title on the left, one quiet line or link on the right. */
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.section-head__aside { font-size: var(--fs-caption); color: var(--faint); }
+
+/* Counts must line up across cards (the body sets this too; this is for the one
+   component that resets it). */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Visible to a screen reader, not to the eye. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- the page frame ---
+
+   Every page in the content column sits in .page > .page__stack. The page owns the
+   gutter and the bottom space; the stack owns the max width and the rhythm between
+   sections. A screen adjusts the rhythm with the two custom properties, not by
+   restating the rules:
+
+     --page-width  1240px (library) · 1280px (series) · 1200px (profile)
+     --page-gap    48px   (library) · 40px   (series) · 36px   (profile)   */
+
+.page {
+  box-sizing: border-box;
+  padding: var(--space-8) var(--page-gutter) 80px;
+}
+
+.page__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap, var(--space-9));
+  max-width: var(--page-width, 1240px);
+  margin: 0 auto;
+}
+
+/* --- buttons ---
+
+   Global rather than per-component for the reason the eyebrow is: they belong to the
+   design, not to a feature. They work on <button> and <a> alike, and a scoped
+   stylesheet may only place them (SharedStylePrimitiveTests).
+
+     .primary     the call to action: accent fill. One per view.
+     .secondary   a plain action: outlined, on the surface colour.
+     .tertiary    the quiet inverse: a light fill, for "Mark Vol 18 read".
+     .ghost       text only, for a link-like action beside a button.
+     .destructive a destructive action: danger-coloured text and border, never a fill.
+     .button--large  44px tall for a touch-first call to action; pairs with any of them. */
+
+.primary,
+.secondary,
+.tertiary,
+.ghost,
+.destructive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control);
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .primary {
-  padding: 8px 13px;
-  border-radius: 7px;
   background: var(--acc);
+  border-color: var(--acc);
   color: var(--on-acc);
-  font-size: 12.5px;
   font-weight: 600;
 }
 
-.primary:disabled { opacity: 0.45; cursor: default; }
+.primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--acc-deep);
+  border-color: var(--acc-deep);
+  color: var(--on-acc);
+}
 
-/* design.md, Controls: transparent, 1px --line-2 border, --muted text, 500 12.5px. */
 .secondary {
-  padding: 7px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 7px;
-  background: none;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 500;
+  background: var(--surf);
+  border-color: var(--line-2);
+  color: var(--text);
 }
 
-.secondary:hover:not(:disabled) { border-color: var(--line-3); color: var(--text); }
+.secondary:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--line-3);
+  background: var(--raise);
+  color: var(--text-strong);
+}
 
-.secondary:disabled { opacity: 0.45; cursor: default; }
+.tertiary {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+}
 
-/* One line of state, in body text. Pages add their own padding where the surrounding
+.tertiary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--bg);
+}
+
+.ghost {
+  padding: 0 var(--space-3);
+  color: var(--muted);
+}
+
+.ghost:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--text-strong); }
+
+.destructive {
+  background: transparent;
+  border-color: var(--danger-line);
+  color: var(--danger);
+}
+
+.destructive:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--acc-wash); }
+
+.primary:disabled,
+.secondary:disabled,
+.tertiary:disabled,
+.ghost:disabled,
+.destructive:disabled { opacity: 0.45; cursor: default; }
+
+.button--large {
+  min-height: var(--control-large);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-lg);
+}
+
+/* --- notices ---
+
+   One line of state, in body text. Pages add their own padding where the surrounding
    layout needs it; the type and the colour are fixed here. */
+
 .notice {
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 
-/* A refusal. Persimmon as text weight, never as a fill — a warning is not an action
-   (design.md's colour discipline). */
+/* A refusal. Accent as text weight, never as a fill — a warning is not an action. */
 .notice--warning { color: var(--acc-soft); }
 
 /* Success and failure both land here, so the line is stated rather than tinted; the
    words carry which one it was. */
 .notice--message {
-  padding: 8px 11px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line-2);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--surf);
   color: var(--text);
 }
 
 /* Fine print — the one wry line per view, and the quiet notes beside it. */
-.notice--quiet { font-size: 11px; color: var(--faint); }
-
-/* Counts must line up across cards. */
-.tabular { font-variant-numeric: tabular-nums; }
+.notice--quiet { font-size: var(--fs-small); color: var(--faint); }
 
 .boot {
   padding: 2rem;
   color: var(--faint);
-  font-size: 13px;
+  font-size: var(--fs-body);
+}
+
+/* The static pages (privacy, signed out) are prose inside .boot; their links have no
+   other cue than an underline. */
+.boot a {
+  color: var(--acc-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 #blazor-error-ui {
@@ -258,7 +518,7 @@ input:-webkit-autofill:focus {
   background: var(--surf);
   border-top: 1px solid var(--acc);
   color: var(--text);
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
 }
 
 /* The template ships this link unstyled, so it rendered as a bare browser-blue anchor

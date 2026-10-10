@@ -1,0 +1,30 @@
+@using LnShelf.Shared.Auth
+
+@* The avatar is an initial on a plain disc: there is no picture and no handle to show, since
+   the sign-in holds only the email (see CurrentUserResponse). *@
+
+<header class="header">
+    <div class="header__avatar title-page" aria-hidden="true">@Initial</div>
+
+    <div class="header__text">
+        <h1 class="title-page">@User.DisplayName</h1>
+        <p class="header__meta">@SinceText</p>
+    </div>
+</header>
+
+@code {
+    [Parameter] public required CurrentUserResponse User { get; set; }
+
+    /// <summary>The earliest read date on the shelf, when any read volume carries one.</summary>
+    [Parameter] public DateOnly? FirstReadAt { get; set; }
+
+    private string Initial => User.DisplayName.Length == 0
+        ? "?"
+        : char.ToUpperInvariant(User.DisplayName[0]).ToString();
+
+    // "Reading since" is the honest line when the shelf has dates; without any, the account's
+    // age is the only date there is.
+    private string SinceText => FirstReadAt is { } first
+        ? $"Reading since {first.ToString("MMM yyyy", CultureInfo.InvariantCulture)}"
+        : $"Member since {User.CreatedAt.ToString("MMM yyyy", CultureInfo.InvariantCulture)}";
+}

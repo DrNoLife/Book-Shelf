@@ -55,23 +55,20 @@ public sealed class SeriesDeleteControlTests
 
     [Theory]
     [InlineData(".danger")]
-    [InlineData(".danger__button")]
     [InlineData(".danger__fine")]
     public void SeriesPageStylesheet_EveryClassTheMarkupUses_IsStyled(string selector) =>
         ClientSource.ReadAllText(StylesheetPath).ShouldContain(selector);
 
     [Fact]
-    public void SeriesPageStylesheet_TheDeleteButton_BorrowsTheAccentRatherThanInventingARed()
+    public void SeriesPage_TheDeleteButton_IsTheSharedDestructiveButton()
     {
-        var stylesheet = ClientSource.ReadAllText(StylesheetPath);
-
-        // design.md fixes the palette and there is no danger token in it. Persimmon already
-        // is this system's "look here", so the control reaches for that on hover instead of
-        // introducing a colour the shelf does not own.
-        stylesheet.ShouldContain("color: var(--acc)");
+        // The danger colour belongs to the global .destructive class (app.css), which a
+        // scoped stylesheet may not repaint — so the button wears it rather than restyling
+        // its own.
+        ClientSource.ReadAllText(MarkupPath).ShouldContain("class=\"destructive\"");
 
         // No raw hex anywhere in this stylesheet — the rule that keeps the palette one file.
-        stylesheet.ShouldNotContain("#");
+        ClientSource.ReadAllText(StylesheetPath).ShouldNotContain("#");
     }
 
     [Fact]

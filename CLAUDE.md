@@ -165,8 +165,11 @@ from writes** — command/query separation at the service boundary.
 
 - **Local Postgres is the source of truth for user state.** AniList/MangaUpdates
   are the source of truth for *metadata* (volume lists, dates, covers). Never
-  overwrite user state during a sync; never hand-edit synced metadata (add a
-  local-override column instead if the need arises — flag it first).
+  overwrite user state during a sync; never hand-edit synced metadata. The one
+  sanctioned override is the user's explicit source choice on a recorded
+  disagreement (`SourceChoice`, owner-approved 2026-10-10): sync follows the
+  chosen source for that field and never deletes the choice. Any other override
+  still needs a local-override column, flagged first.
 - **Every external call sits behind a seam** (see Architecture principles).
   Nothing outside `Features/Metadata` knows what AniList is.
 - **Be a polite API citizen.** Respect AniList's rate limit (90 req/min);
@@ -366,6 +369,10 @@ subfolder; if earlier work put them elsewhere, move them.
   commands call `ICurrentUser.ActAs(userId)` in their own scope instead. A new
   root entity implements `IOwned` and gets a filter in `ApplyOwnerFilters`.
   Every endpoint requires a user unless it says `[AllowAnonymous]`.
+  The read-only shared shelf is the one request path that resolves an owner from
+  `shelf_share` and reads through `ICurrentUser.ActAs` in a child scope;
+  `shelf_share` and `app_user` are the only unfiltered tables, each with its
+  reason in feature-spec §7.
   Details: `docs/feature-spec.md` §7.
 
 ---
@@ -407,6 +414,7 @@ dotnet run --project LnShelf/LnShelf.Api -- isbn-discover --out ../../docs/isbn-
 dotnet run --project LnShelf/LnShelf.Api -- isbn-apply    --in  ../../docs/isbn-review.csv
 dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [--format LightNovel]
 dotnet run --project LnShelf/LnShelf.Api -- subtitle-backfill
+dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # all shelves; no --user needed
 ```
 
 `dotnet ef` is a local tool — `dotnet tool restore` first.

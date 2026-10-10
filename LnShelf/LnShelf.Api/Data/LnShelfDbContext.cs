@@ -22,9 +22,14 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
 
     public DbSet<User> Users => Set<User>();
 
+    /// <summary>Public shelf links (Features/Sharing). Unfiltered on purpose, like Users.</summary>
+    public DbSet<ShelfShare> ShelfShares => Set<ShelfShare>();
+
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
     public DbSet<SyncDiscrepancyValue> SyncDiscrepancyValues => Set<SyncDiscrepancyValue>();
+
+    public DbSet<SourceChoice> SourceChoices => Set<SourceChoice>();
 
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportGroup> ImportGroups => Set<ImportGroup>();
@@ -52,6 +57,8 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     // children that request paths query by their own id are filtered through their root.
     // Children reached only through a root (volume user state, import rows and candidates,
     // discrepancies) are covered by the root's filter; OwnerFiltersTests holds that list.
+    // ShelfShare is unfiltered on purpose (Features/Sharing): it is how an anonymous request
+    // learns whom to act for, the same reason User is.
     private void ApplyOwnerFilters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Series>().HasQueryFilter(OwnerFilter, series => series.OwnerId == CurrentOwnerId);
@@ -61,6 +68,7 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
 
         modelBuilder.Entity<Volume>().HasQueryFilter(OwnerFilter, volume => volume.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SeriesUserState>().HasQueryFilter(OwnerFilter, state => state.Series!.OwnerId == CurrentOwnerId);
+        modelBuilder.Entity<SourceChoice>().HasQueryFilter(OwnerFilter, choice => choice.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<ImportGroup>().HasQueryFilter(OwnerFilter, group => group.Batch!.OwnerId == CurrentOwnerId);
     }
 

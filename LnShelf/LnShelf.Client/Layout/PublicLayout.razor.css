@@ -1,0 +1,54 @@
+.public {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* A slim band, the sidebar's colour, so the brand reads as the app's own frame. */
+.public__top {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 0 var(--page-gutter);
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--line);
+}
+
+.public__main { flex: 1 0 auto; }
+
+.public__foot {
+  padding: var(--space-6) var(--page-gutter) var(--space-8);
+  border-top: 1px solid var(--line);
+}
+
+/* --- brand: the sidebar's mark and wordmark --- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.brand:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-md);
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.brand__name {
+  font-family: var(--serif);
+  font-size: var(--fs-brand);
+  line-height: 1;
+}

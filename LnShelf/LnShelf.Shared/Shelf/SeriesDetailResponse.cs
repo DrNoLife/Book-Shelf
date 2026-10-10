@@ -1,3 +1,4 @@
+using LnShelf.Shared.Metadata;
 using LnShelf.Shared.Preferences;
 
 namespace LnShelf.Shared.Shelf;
@@ -65,6 +66,12 @@ public sealed record SeriesDetailResponse
     public SeriesRelationResponse? Relation { get; init; }
 
     public required IReadOnlyList<VolumeResponse> Volumes { get; init; }
+
+    /// <summary>
+    /// The sources the user has picked on this series' disagreements — what the quiet
+    /// "Using X (your choice)" markers read.
+    /// </summary>
+    public IReadOnlyList<SourceChoiceResponse> SourceChoices { get; init; } = [];
 }
 
 /// <summary>The hero's numbers, on the same rules as the library card.</summary>

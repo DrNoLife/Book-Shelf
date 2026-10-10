@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 
 namespace LnShelf.Client.Features.Sync;
 
@@ -22,12 +23,13 @@ public sealed class SyncState(HttpClient httpClient)
         {
             using var response = await httpClient.GetAsync("api/sync/latest", cancellationToken);
 
-            // 204 is the honest answer for "nothing has ever been synced".
-            Latest = response.StatusCode is HttpStatusCode.NoContent
+            // 204 is the honest answer for "nothing has ever been synced". Anything else that
+            // is not a success (a 401 mid-session, a 502 from nginx) has no JSON body to read.
+            Latest = response.StatusCode is HttpStatusCode.NoContent || !response.IsSuccessStatusCode
                 ? null
                 : await response.Content.ReadFromJsonAsync<SyncSummaryResponse>(cancellationToken);
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
         {
             // The footer says "not synced yet" either way; there is nothing else the
             // browser can do about an API that is down.

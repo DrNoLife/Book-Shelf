@@ -20,6 +20,7 @@ public enum IconName
     SquaresFour,
     GridNine,
     ImageSquare,
+    User,
 }
 
 public partial class Icon
@@ -48,6 +49,7 @@ public partial class Icon
         IconName.SquaresFour => SquaresFourPath,
         IconName.GridNine => GridNinePath,
         IconName.ImageSquare => ImageSquarePath,
+        IconName.User => UserPath,
         _ => throw new ArgumentOutOfRangeException(nameof(Name), Name, "Unknown icon."),
     };
 
@@ -119,4 +121,9 @@ public partial class Icon
         "16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52" +
         "-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144," +
         "100Z";
+
+    private const string UserPath =
+        "M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0," +
+        "13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06," +
+        "56.06,0,0,1,72,96Z";
 }

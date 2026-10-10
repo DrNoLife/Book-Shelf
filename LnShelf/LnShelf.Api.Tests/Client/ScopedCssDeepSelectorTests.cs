@@ -11,10 +11,11 @@ namespace LnShelf.Api.Tests.Client;
 public sealed class ScopedCssDeepSelectorTests
 {
     /// <summary>
-    /// Framework components that render their own root element, which therefore never
-    /// carries the parent's scope attribute.
+    /// Components that render their own root element, which therefore never carries the
+    /// parent's scope attribute: the framework's, and the shared primitives that take a class
+    /// for placement.
     /// </summary>
-    private static readonly string[] ChildComponents = ["NavLink", "InputFile"];
+    private static readonly string[] ChildComponents = ["NavLink", "InputFile", "Panel", "SearchField"];
 
     [Fact]
     public void ClassesOnChildComponentsAreOnlyStyledThroughDeep()

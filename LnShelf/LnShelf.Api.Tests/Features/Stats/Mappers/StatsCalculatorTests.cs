@@ -155,4 +155,42 @@ public sealed class StatsCalculatorTests
         longest[0].Read.ShouldBe(5);
         longest[0].Tracked.ShouldBe(6);
     }
+
+    [Fact]
+    public void Calculate_FirstReadAt_IsTheEarliestReadDateAndNullWhenNoneIsDated()
+    {
+        var overlord = CreateSeries(
+            "Overlord",
+            volumes:
+            [
+                InPrint(1, owned: true, ReadStatus.Read, readAt: new DateOnly(2024, 3, 9)),
+                InPrint(2, owned: true, ReadStatus.Read, readAt: new DateOnly(2021, 10, 2)),
+                InPrint(3, owned: true, ReadStatus.Read),
+            ]);
+
+        StatsCalculator.Calculate([overlord], Today).FirstReadAt.ShouldBe(new DateOnly(2021, 10, 2));
+        StatsCalculator.Calculate([CreateSeries("Undated", volumes: [InPrint(1, owned: true, ReadStatus.Read)])], Today)
+            .FirstReadAt.ShouldBeNull();
+        StatsCalculator.Calculate([], Today).FirstReadAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Calculate_RecentlyRead_IsLatestFirstCappedAtFiveAndSkipsUndatedAndUnread()
+    {
+        var overlord = CreateSeries(
+            "Overlord",
+            volumes:
+            [
+                .. Enumerable.Range(1, 6).Select(number =>
+                    InPrint(number, owned: true, ReadStatus.Read, readAt: new DateOnly(2026, 9, number))),
+                InPrint(7, owned: true, ReadStatus.Read),
+                InPrint(8, owned: true, ReadStatus.Unread, readAt: new DateOnly(2026, 9, 28)),
+            ]);
+
+        var recent = StatsCalculator.Calculate([overlord], Today).RecentlyRead;
+
+        recent.Select(read => read.VolumeNumber).ShouldBe([6, 5, 4, 3, 2]);
+        recent[0].SeriesTitle.ShouldBe("Overlord");
+        recent[0].ReadAt.ShouldBe(new DateOnly(2026, 9, 6));
+    }
 }

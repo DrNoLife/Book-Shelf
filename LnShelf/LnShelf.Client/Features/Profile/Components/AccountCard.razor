@@ -1,0 +1,58 @@
+@using LnShelf.Shared.Auth
+
+@* Who you are signed in as, and the two ways out: sign out, or delete everything. Deleting
+   asks for a typed word first and then calls the API's account deletion, which removes only
+   the signed-in user's own data. *@
+
+<Panel aria-labelledby="account-title">
+    <h2 class="title-panel" id="account-title">Account</h2>
+
+    <div class="account__row">
+        <span class="account__key">Signed in with Google</span>
+        <span class="account__value">@User.Email</span>
+    </div>
+
+    <div class="account__actions">
+        <button type="button" class="secondary" @onclick="SignOutAsync" disabled="@_busy">Sign out</button>
+        @* A plain link, not a fetch: the browser streams the file with the session cookie, which
+           needs no script and keeps the whole export out of the app's memory. The download
+           attribute also keeps Blazor's router from treating the click as navigation. *@
+        <a class="secondary" href="api/auth/account/export" download>Export my data</a>
+    </div>
+    <p class="fine">
+        Export downloads your account, shelf, imports and sync records as one JSON file.
+        <a class="text-link" href="privacy.html">What is stored and why</a>
+    </p>
+
+    @if (!_confirming)
+    {
+        <button type="button" class="destructive account__delete" @onclick="BeginConfirm">Delete account…</button>
+    }
+    else
+    {
+        <form class="confirm" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-help"
+              @onsubmit="DeleteAsync">
+            <h3 class="title-panel" id="confirm-title">Delete your account?</h3>
+            <p class="fine" id="confirm-help">
+                This deletes your account and everything on your shelf, straight away and for good.
+                Other readers' shelves are not touched. Type <strong>@DeleteConfirmation.Word</strong> to confirm.
+            </p>
+
+            <label class="confirm__field">
+                <span class="visually-hidden">Type @DeleteConfirmation.Word to confirm</span>
+                <input @ref="_typedInput" type="text" autocomplete="off" spellcheck="false"
+                       placeholder="@DeleteConfirmation.Word" @bind="_typed" @bind:event="oninput" />
+            </label>
+
+            <div class="account__actions">
+                <button type="submit" class="destructive" disabled="@(!CanDelete)">Delete my account and all my data</button>
+                <button type="button" class="ghost" @onclick="CancelConfirm" disabled="@_busy">Cancel</button>
+            </div>
+        </form>
+    }
+
+    @if (_message is not null)
+    {
+        <p class="notice notice--message" role="alert">@_message</p>
+    }
+</Panel>

@@ -61,7 +61,7 @@ public sealed class SeriesRefresherTests
         discrepancy.Values.Single(value => value.Source is MetadataSourceName.AniList)
             .Value.ShouldBe("Completed");
         discrepancy.Values.Single(value => value.Source is MetadataSourceName.MangaUpdates)
-            .Value.ShouldBe("not completed");
+            .Value.ShouldBe("Ongoing");
     }
 
     [Fact]
@@ -263,6 +263,8 @@ public sealed class SeriesRefresherTests
             matcher,
             releaseSource,
             NoMetadata(),
+            new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
+            new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 NoEnrichment(),
@@ -278,6 +280,7 @@ public sealed class SeriesRefresherTests
         Title = "Youjo Senki",
         VolumeCount = volumeCount,
         IsCompleted = isCompleted,
+        PublicationStatus = isCompleted ? PublicationStatus.Completed : PublicationStatus.Ongoing,
         RawStatus = rawStatus ?? $"{volumeCount} Volumes ({(isCompleted ? "Complete" : "Ongoing")})",
     };
 

@@ -1,3 +1,4 @@
+using LnShelf.Api.Data;
 using LnShelf.Api.Features.Auth.Abstractions;
 using LnShelf.Api.Features.Auth.Models;
 using LnShelf.Api.Features.Auth.Services;
@@ -19,6 +20,7 @@ public sealed class EndToEndFixture : IAsyncLifetime
     private EndToEndWebApplicationFactory? _factory;
     private IPlaywright? _playwright;
     private IBrowser? _browser;
+    private Guid _userAId;
 
     public static string TracesDirectory => Path.Combine(AppContext.BaseDirectory, "playwright-traces");
 
@@ -55,10 +57,25 @@ public sealed class EndToEndFixture : IAsyncLifetime
         await signIn.SignInAsync(TestUser.B.ProviderIdentity(), CancellationToken.None);
 
         var userAId = Guid.Parse(userA!.FindFirst(LnShelfClaims.UserId)!.Value);
+        _userAId = userAId;
         scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userAId);
         await scope.ServiceProvider.GetRequiredService<ShelfSeeder>().SeedAsync(CancellationToken.None);
 
         CoverStore.Clear();
+    }
+
+    /// <summary>
+    /// Runs <paramref name="seed"/> against the shelf as user A, for a journey that needs a
+    /// state the app only reaches through a sync — a recorded disagreement between sources.
+    /// </summary>
+    public async Task SeedAsync(Func<LnShelfDbContext, Task> seed)
+    {
+        ArgumentNullException.ThrowIfNull(seed);
+
+        await using var scope = Factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(_userAId);
+
+        await seed(scope.ServiceProvider.GetRequiredService<LnShelfDbContext>());
     }
 
     /// <summary>

@@ -1,18 +1,24 @@
 @page "/changelog"
 @using LnShelf.Shared.Changelog
 
-@* Text-first and quiet, per design.md: no cards, no color-coding by release —
-   just the eyebrow naming the running version and a plain list underneath. *@
+@* Release notes, per design.md: the page frame of Library and Profile, serif release titles,
+   version and date as quiet metadata. The newest release is the one panel on the page and
+   carries the "Latest" pill; everything older is a plain list on hairlines, so the eye lands
+   on what is new. On wide screens a sticky index lists every version. *@
 
-<h1 class="changelog__title">Changelog</h1>
+<div class="page">
+    <div class="page__stack changelog">
 
-<div class="changelog">
+        <NavLink class="changelog__back" href="">
+            <Icon Name="IconName.CaretLeft" Size="13" />
+            <span>Back to library</span>
+        </NavLink>
 
-    <div class="changelog__top">
-        <p class="eyebrow">Changelog@(State.Response is { } response ? $" · v{response.CurrentVersion}" : "")</p>
-    </div>
+        <header class="changelog__header">
+            <p class="eyebrow">Changelog@(State.Response is { } response ? $" · running v{response.CurrentVersion}" : "")</p>
+            <h1 class="title-page">What's new</h1>
+        </header>
 
-    <div class="changelog__body">
         @if (State.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>
@@ -27,25 +33,61 @@
         }
         else
         {
-            <div class="entries">
-                @foreach (var entry in loaded.Entries)
-                {
-                    <section class="entry" @key="entry.Version">
-                        <p class="entry__meta">
-                            <span class="entry__version">v@(entry.Version)</span>
-                            <span class="entry__date tabular">@entry.Date.Full</span>
+            var latest = loaded.Entries[0];
+
+            <div class="changelog__columns">
+                <div class="changelog__releases">
+                    <Panel class="release release--latest" id="@AnchorId(latest)" aria-labelledby="@HeadingId(latest)">
+                        <p class="release__meta">
+                            <Pill Tone="PillTone.Outline">Latest</Pill>
+                            <span class="release__version">v@(latest.Version)</span>
+                            <span class="release__date tabular">@latest.Date.Full</span>
                         </p>
-                        <h2 class="entry__title">@entry.Title</h2>
-                        <ul class="entry__changes">
-                            @foreach (var change in entry.Changes)
+                        <h2 id="@HeadingId(latest)" class="title-section release__title">@latest.Title</h2>
+                        <ul class="release__changes">
+                            @foreach (var change in latest.Changes)
                             {
                                 <li>@change</li>
                             }
                         </ul>
-                    </section>
-                }
+                    </Panel>
+
+                    @if (loaded.Entries.Count > 1)
+                    {
+                        <div class="changelog__older">
+                            @foreach (var entry in loaded.Entries.Skip(1))
+                            {
+                                <section class="release release--older" @key="entry.Version" id="@AnchorId(entry)" aria-labelledby="@HeadingId(entry)">
+                                    <p class="release__meta">
+                                        <span class="release__version">v@(entry.Version)</span>
+                                        <span class="release__date tabular">@entry.Date.Full</span>
+                                    </p>
+                                    <div class="release__body">
+                                        <h2 id="@HeadingId(entry)" class="title-card release__title">@entry.Title</h2>
+                                        <ul class="release__changes">
+                                            @foreach (var change in entry.Changes)
+                                            {
+                                                <li>@change</li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </section>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <nav class="changelog__index" aria-label="Versions">
+                    <p class="eyebrow">Versions</p>
+                    <ul>
+                        @foreach (var entry in loaded.Entries)
+                        {
+                            <li><NavLink href="@($"changelog#{AnchorId(entry)}")">v@(entry.Version)</NavLink></li>
+                        }
+                    </ul>
+                </nav>
             </div>
         }
-    </div>
 
+    </div>
 </div>

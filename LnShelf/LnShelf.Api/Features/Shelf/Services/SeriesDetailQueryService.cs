@@ -23,6 +23,7 @@ public sealed class SeriesDetailQueryService(LnShelfDbContext dbContext, TimePro
         dbContext.Series
             .AsNoTracking()
             .Include(series => series.UserState)
+            .Include(series => series.SourceChoices)
             .Include(series => series.Volumes).ThenInclude(volume => volume.UserState)
             .FirstOrDefaultAsync(series => series.Id == seriesId, cancellationToken);
 

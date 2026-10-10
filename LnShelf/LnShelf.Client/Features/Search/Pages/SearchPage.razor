@@ -59,6 +59,7 @@
                        which one depends on who answered. *@
                     <SearchResultRow Result="result"
                                      IsBusy="SearchState.IsBusy"
+                                     IsOnShelf="SearchState.IsOnShelf(result)"
                                      Added="OnAddedAsync"
                                      @key="(result.Source, result.AniListId, result.MangaUpdatesId)" />
                 }

@@ -38,6 +38,7 @@ public sealed class SeriesSyncService(
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
             .Include(candidate => candidate.UserState)
+            .Include(candidate => candidate.SourceChoices)
             .Where(candidate => candidate.AniListId != null || candidate.MangaUpdatesId != null)
             .OrderBy(candidate => candidate.TitleEnglish)
             .ToListAsync(cancellationToken);
@@ -64,6 +65,7 @@ public sealed class SeriesSyncService(
         var series = await dbContext.Series
             .Include(candidate => candidate.Volumes)
             .Include(candidate => candidate.UserState)
+            .Include(candidate => candidate.SourceChoices)
             .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
 
         if (series is null)
@@ -226,9 +228,18 @@ public sealed class SeriesSyncService(
             parts.Add($"{run.EnrichmentGaps} volumes not in {enrichmentSource.SourceName}");
         }
 
-        if (run.Discrepancies.Count > 0)
+        // Only the ones nobody has settled. A disagreement the precedence list or the user
+        // resolved is still recorded, but it is not waiting for anything; the client's own
+        // count has always read it this way.
+        // Counted per (series, field, volume), the way the review list reads them: one run can
+        // record two rows for one volume's date, and that is one item to the person reading.
+        var toReview = run.Discrepancies
+            .GroupBy(discrepancy => (discrepancy.SeriesId, discrepancy.Field, discrepancy.VolumeNumber))
+            .Select(rows => RecordedDisagreement.FromRows(rows, run.StartedAt))
+            .Count(disagreement => disagreement.Discrepancy.ResolvedWith is null);
+        if (toReview > 0)
         {
-            parts.Add($"{run.Discrepancies.Count} to review");
+            parts.Add($"{toReview} to review");
         }
 
         if (run.Failures + run.EnrichmentFailures > 0)

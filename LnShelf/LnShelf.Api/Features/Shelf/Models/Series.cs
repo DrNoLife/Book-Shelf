@@ -89,6 +89,19 @@ public sealed class Series : IOwned
 
     public DateTimeOffset? LastSyncedAt { get; set; }
 
+    /// <summary>
+    /// How many volumes MangaUpdates counted at the last refresh. Null until one has.
+    /// </summary>
+    // Plain source metadata, the same class of fact as Volume.IsReleased and MangaUpdatesId,
+    // not a derived state: it is what the release source said and nothing on the shelf can
+    // recompute it. Kept because resetting a source choice has to put IsReleased back exactly
+    // (a volume is out when its number is within this count), and re-reading it from an old
+    // discrepancy row would mean parsing a log.
+    public int? ReleaseSourceVolumeCount { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
+
+    /// <summary>The user's picks of a source on recorded disagreements. User data.</summary>
+    public ICollection<SourceChoice> SourceChoices { get; set; } = [];
 }

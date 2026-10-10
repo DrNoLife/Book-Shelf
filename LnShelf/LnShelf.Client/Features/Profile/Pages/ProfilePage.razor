@@ -1,0 +1,49 @@
+@page "/profile"
+@using LnShelf.Client.Features.Profile.Components
+@using LnShelf.Client.Features.Sharing.Components
+
+@* The user page (design.md, Profile): who you are, what you have read, and the account.
+   The left column is the reading record; the right column is for the cards that act on the
+   account. The shelf-sharing card sits above the account card. No readers/followers card: there
+   are no followers in the product. *@
+
+<div class="page">
+    <div class="page__stack profile">
+
+        <NavLink class="profile__back" href="">
+            <Icon Name="IconName.CaretLeft" Size="13" />
+            <span>Back to library</span>
+        </NavLink>
+
+        @if (State.LoadFailed)
+        {
+            <h1 class="visually-hidden">Profile</h1>
+            <p class="notice">Could not reach the API.</p>
+        }
+        else if (State.User is not { } user || State.Stats is not { } stats)
+        {
+            <h1 class="visually-hidden">Profile</h1>
+            <p class="notice">Loading your profile…</p>
+        }
+        else
+        {
+            <ProfileHeader User="user" FirstReadAt="stats.FirstReadAt" />
+
+            <ProfileTotals Stats="stats" ReadingSeries="State.Reading.Count" />
+
+            <div class="profile__columns">
+                <div class="profile__main">
+                    <ReadingNowSection Cards="State.Reading" />
+                    <YearByMonthChart Stats="stats" />
+                    <RecentlyFinishedList Reads="stats.RecentlyRead" />
+                </div>
+
+                <div class="profile__aside">
+                    <ShelfSharingCard />
+                    <AccountCard User="user" />
+                </div>
+            </div>
+        }
+
+    </div>
+</div>

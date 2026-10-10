@@ -1,19 +1,18 @@
 @using LnShelf.Shared.Preferences
 
-@* The header's working furniture: narrow the shelf, reorder it, tighten it, or add
-   to it. Nothing here is a native control — see Dropdown and the density toggle. *@
+@* The shelf's working furniture: narrow it, reorder it, tighten it. The filters arrive as
+   ChildContent so the page decides which ones sit beside the search field. Adding a
+   series lives in the page header now. *@
 
 <div class="bar">
 
-    <div class="bar__field">
-        <span class="bar__icon"><Icon Name="IconName.MagnifyingGlass" Size="13" /></span>
-        <input class="bar__input"
-               type="search"
-               placeholder="Type to filter…"
-               aria-label="Filter the shelf by title"
-               value="@TextFilter"
-               @oninput="OnTextInput" />
-    </div>
+    <SearchField class="bar__field"
+                 AriaLabel="Filter the shelf by title"
+                 Placeholder="Filter by title"
+                 Value="@TextFilter"
+                 ValueChanged="TextFilterChanged" />
+
+    <div class="bar__filters">@ChildContent</div>
 
     <div class="bar__group">
         <Dropdown Options="SortOptions"
@@ -22,17 +21,16 @@
                   AriaLabel="Sort the shelf" />
 
         @* Two views of the same set. Words rather than icons: "rows" and "covers" are
-           not shapes anyone recognises, and the quiet raised fill keeps this from
-           competing with the format tabs' persimmon pill. *@
+           not shapes anyone recognises. *@
         <SegmentedControl TValue="LibraryView"
                           Options="ViewOptions"
                           Value="View"
                           ValueChanged="OnViewChangedAsync"
                           AriaLabel="Library view" />
 
-        @* Two channels, not colour alone: the pressed segment carries the raised fill
-           and the icon differs between the two densities. Disabled rather than hidden in
-           the rows view: a control that vanishes reads as a bug, one that says why it is
+        @* Two channels, not colour alone: the pressed segment carries the fill and the
+           icon differs between the two densities. Disabled rather than hidden in the
+           rows view: a control that vanishes reads as a bug, one that says why it is
            inert does not. *@
         <SegmentedControl TValue="GridDensity"
                           Options="DensityOptions"
@@ -41,16 +39,13 @@
                           AriaLabel="Grid density"
                           Disabled="IsDensityDisabled"
                           DisabledTitle="density applies to the covers view" />
-
-        <NavLink class="bar__add" href="search">
-            <Icon Name="IconName.Plus" Size="13" />
-            <span>Add series</span>
-        </NavLink>
     </div>
 
 </div>
 
 @code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
     [Parameter] public string TextFilter { get; set; } = string.Empty;
 
     [Parameter] public EventCallback<string> TextFilterChanged { get; set; }
@@ -90,9 +85,6 @@
         new(nameof(LibrarySort.RecentlyUpdated), "Recently synced"),
         new(nameof(LibrarySort.LastRead), "Last read"),
     ];
-
-    private Task OnTextInput(ChangeEventArgs args) =>
-        TextFilterChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
 
     private Task OnSortChangedAsync(string value) =>
         SortChanged.InvokeAsync(Enum.Parse<LibrarySort>(value));

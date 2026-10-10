@@ -14,13 +14,22 @@ owned). Metadata flows in from AniList and MangaUpdates; user state lives in
 local Postgres and is never touched by sync. Deployed as Docker containers on
 the home network behind a reverse proxy.
 
-**Non-goals (v1):** shared shelves between users, social features, reviews/ratings sync,
+**Non-goals (v1):** shared shelves between users, social features (followers, feeds,
+comparing shelves, recommendations), reviews/ratings sync,
 in-volume page progress, anime tracking, mobile app (the web UI is
 responsive; that's the mobile story). **Offline mode is explicitly killed**,
 superseding the UI spec's "works offline-read; writes queue" line: a service
 worker, write queue, and reconciliation are a project of their own, and this
 app lives on the same home network as its user. If the API is down, the app
 is down — honestly.
+
+**[amended 2026-10-10] One social feature is in: a read-only shelf by link (§4.8).**
+A user may make their shelf public, which gives it an unguessable link that anyone can
+open without signing in. It is read-only and shows a fixed, small view: series, cover
+art and how far the owner has read, never what they own, what they paid, their notes,
+their dropped series or who they are. There are no followers, no profiles to browse, no
+list of public shelves and no way to find a shelf except being given its link. Everything
+else in the social list above stays a non-goal until it is specified on its own.
 
 ## 2. Architecture & topology
 
@@ -147,6 +156,13 @@ The series/volume tracking domain.
     silent overwrite: it is recorded and the existing value is left alone.
   - **Volume counts and publication status:** MangaUpdates.
   - **Everything else:** AniList.
+  - **A user's explicit choice of source overrides the precedence for that one
+    field** **[amended 2026-10-10]**: the series page shows a recorded
+    disagreement side by side and lets the reader pick a source (`SourceChoice`,
+    §5). Sync then follows the chosen source's fresh value for that field and
+    never creates, edits or deletes the choice; the disagreement is still
+    recorded each run, as resolved by choice. Release dates, the volume count and
+    publication status can be chosen; `SeriesLink` cannot (backlog item 2).
   - Discrepancies land in the sync log — structured as `SyncDiscrepancy` rows
     (§5), carrying one `(source, value)` pair per disagreeing source, never
     silently resolved.
@@ -280,6 +296,56 @@ Everything else — volumes read per month split by format, backlog trend,
 spend-over-time, completion rate — stays post-v1. Purchase price is captured
 from v1 so that history exists when the page arrives.
 
+### 4.8 Sharing (read-only shelf by link) **[added 2026-10-10]**
+
+The first feature that deliberately crosses the per-user owner filters (§7), so it does it
+through one explicit, reviewed read path and nowhere else.
+
+**The setting.** "Who can see your shelf" on the user page: **Private** (the default) or
+**Public by link**. Public creates a `ShelfShare` row holding a fresh token: 16 random
+bytes, base64url, 22 characters. Private deletes the row. **New link** replaces the token.
+Either way the old link is a 404 from the next request on: nothing caches the lookup.
+Going public again after private gives a new link, so an old link never comes back.
+Deleting the account deletes the row (cascade from the user).
+A "Followers" setting is not built; the mockup's third option waits for followers.
+
+**The link.** `/shared/{token}` on the app's own origin. A Blazor page with its own
+layout: no sidebar, no signed-in calls, so a visitor without a session is never sent to
+the login. Anyone who has the link can see the shelf; that is the whole access model, and
+the card says so in plain words.
+
+**What a visitor sees — fixed, not configurable [decision]:**
+- per series: English and romaji title, format, publication status, tracking status
+  (Reading, Plan to start, Completed), the series' cover art, volumes read and volumes out;
+- three totals: volumes read, series reading, series completed.
+
+Never shown: ownership in any form, purchase prices, notes, read dates, dropped series,
+volume covers and the user's uploaded covers, internal ids, the user's email or name.
+"Out" on the shared card counts a volume that has a past date, that the release source
+calls released, or that the owner has read. The library's rule also counts owned volumes
+as out, which would let the out count give ownership away. The profile toggles in the
+mockup (progress, read dates, owned, dropped) are not built; each is an additive column
+on `ShelfShare` when one is wanted.
+
+**The read path.** `GET /api/shared/{token}` is anonymous. It
+1. rejects a token that is not 22 base64url characters (404, no database call);
+2. looks the token up in `shelf_share`, which is not owner-filtered because it is how a
+   scope learns whom to act for, the same reason `app_user` is not;
+3. opens **its own DI scope**, calls `ICurrentUser.ActAs(ownerId)` there, and reads the
+   shelf through the ordinary owner filters with a projection that can only produce the
+   fields above. The request's own scope stays anonymous.
+Unknown, revoked and malformed tokens all answer the same 404. Covers come from
+`GET /api/shared/{token}/covers/{**objectKey}`, which serves only the series art of a
+series that is visible on that shelf.
+
+**Abuse.** The token's 128 bits make guessing pointless; rate limits per client address
+(`Sharing:RequestsPerMinute`, `Sharing:CoverRequestsPerMinute`) keep the anonymous
+endpoints from becoming a load generator. The address is right behind the Cloudflare
+Tunnel because the forwarded headers walk two hops (`ForwardLimit = 2`). Responses are
+`Cache-Control: no-store` (covers: `private`, so no shared cache such as the Cloudflare
+edge keeps them past a revoke); the page is served `X-Robots-Tag: noindex` and
+`Referrer-Policy: no-referrer`. The app never logs the token.
+
 ## 5. Data model
 
 ```
@@ -293,7 +359,11 @@ Series
   PublicationStatus (Ongoing|Completed|Hiatus|Cancelled),
   Publisher, StartYear, Genres[], Author, Illustrator,
   RelatedSeriesId (nullable, the LN↔manga link),
-  LastSyncedAt
+  LastSyncedAt,
+  ReleaseSourceVolumeCount (nullable int)
+  -- [amended 2026-10-10] MangaUpdates' last count, written by every refresh. Plain
+  -- source metadata, like Volume.IsReleased: a reset of a source choice needs it to
+  -- put IsReleased back exactly, and nothing else on the shelf records it.
 
 Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),
@@ -366,10 +436,27 @@ SyncRun
 SyncDiscrepancy
   Id, SyncRunId (FK), SeriesId (FK), SeriesTitle,
   Field (VolumeCount|ReleaseDate|Status|SeriesLink),
-  ResolvedWith (AniList|MangaUpdates|OpenLibrary, nullable),
+  ResolvedWith (AniList|MangaUpdates|OpenLibrary|AppleBooks, nullable),
+  ResolvedByChoice (bool, default false),
   VolumeNumber (nullable), Note (nullable)
   -- the structured landing place for §4.2's "recorded, never silently
   -- picked"; surfaced in the series-detail sync note when present
+  -- [amended 2026-10-10] ResolvedByChoice says whether the precedence list or the
+  -- user picked ResolvedWith in that run. Readers still work out "settled by your
+  -- choice" from the choice that stands now, so a reset shows at once.
+
+SourceChoice  [added 2026-10-10 — owner-approved]
+  Id, SeriesId (FK → Series, cascade), Field (VolumeCount|ReleaseDate|Status),
+  VolumeNumber (nullable; set exactly for the per-volume ReleaseDate),
+  Source (AniList|MangaUpdates|OpenLibrary|AppleBooks),
+  ReplacedValue (nullable), ChosenAt
+  -- unique on (SeriesId, Field, VolumeNumber), nulls not distinct
+  -- the user's pick of which source decides one field after the sources disagreed.
+  -- User data: sync reads it and never writes, replaces or deletes it. It stores
+  -- the chosen *source*, not a frozen value, so it follows that source's updates.
+  -- Owned through the Series root (owner filter via Series). ReplacedValue is the
+  -- one thing a reset cannot re-derive — AniList's status, which the nightly sweep
+  -- never re-reads — so a Status choice of MangaUpdates keeps what it displaced.
 
 SyncDiscrepancyValue
   Id, SyncDiscrepancyId (FK), Source (AniList|MangaUpdates|OpenLibrary), Value
@@ -398,6 +485,9 @@ ImportRow (staging)
   -- so the shelf does not spend Open Library requests re-deriving it.
 
 UserPreferences  (single row)
+
+ShelfShare  (UserId PK → app_user, cascade · Token unique · CreatedAt)
+            not owner-filtered: it is what an anonymous request resolves to an owner (§4.8)
 ```
 
 Ownership axes are split (`Owned` + `OwnedFormat`) per the UI spec's early
@@ -435,7 +525,17 @@ POST   /api/import/{batchId}/commit
 POST   /api/sync            (global)  |  POST /api/series/{id}/sync
 GET    /api/sync/latest                            sidebar summary + discrepancies
 
+GET    /api/series/{id}/conflicts                  every disagreement of the last sweep, side by side
+PUT    /api/series/{id}/source-choice  { field, volumeNumber?, source }   pick a source; answers with the series
+DELETE /api/series/{id}/source-choice?field=&volumeNumber=                reset to automatic; answers with the series
+
 GET/PUT /api/preferences
+
+GET    /api/sharing                                Private/Public and the current token
+PUT    /api/sharing          { isPublic }          Public issues a token, Private deletes it
+POST   /api/sharing/regenerate                     new token, old link dead (409 when Private)
+GET    /api/shared/{token}                         anonymous, read-only shelf (§4.8)
+GET    /api/shared/{token}/covers/{objectKey}      anonymous, series art of that shelf only
 ```
 
 Query/command service split behind each controller per CLAUDE.md.
@@ -477,6 +577,8 @@ bundle holds no token at all:
   current user (children are filtered through their root). With no current
   user a query sees nothing and a new root cannot be saved, so a forgotten
   scope fails closed. Another user's id is a 404, never a 403.
+  The one deliberate crossing is the shared shelf (§4.8): an anonymous request resolves a
+  token to an owner in `shelf_share` and reads as that owner in a scope of its own.
 - **Background work acts as each user.** The nightly sync runs once per user,
   each in its own scope after `ICurrentUser.ActAs`, sharing one lookup
   allowance for the night (`OpenLibrary:MaximumLookupsPerNight`); console
@@ -491,9 +593,10 @@ bundle holds no token at all:
   (cascade from the user row, then their volume covers in the store).
   Covers are served `private` and per-volume covers only to their owner.
 - **Closed by default.** A fallback authorization policy requires a signed-in
-  owner on every endpoint. The only anonymous ones are `GET /api/auth/login`
-  and `GET /api/health` (version and database reachability, which deploy.ps1
-  polls). An API call without a session gets a 401 ProblemDetails, never a
+  owner on every endpoint. The only anonymous ones are `GET /api/auth/login`,
+  `GET /api/health` (version and database reachability, which deploy.ps1
+  polls) and the two shared-shelf reads `GET /api/shared/{token}` and its
+  covers (§4.8). An API call without a session gets a 401 ProblemDetails, never a
   redirect.
 - **The client's only auth code** is `SignInRedirectHandler`: on a 401 it
   sends the browser to `/api/auth/login?returnUrl=…`. "Sign out" posts

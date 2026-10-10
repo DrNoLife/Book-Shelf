@@ -2,7 +2,7 @@
    list is drawn by the operating system, so it arrives with system fonts, system
    colours and a white background no stylesheet can reach. *@
 
-<div class="dropdown" @onfocusout="OnFocusOutAsync">
+<div class="dropdown" @ref="_root" @onfocusout="OnFocusOutAsync">
     <button type="button"
             class="dropdown__button"
             aria-haspopup="listbox"

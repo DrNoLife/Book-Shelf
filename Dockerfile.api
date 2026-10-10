@@ -19,7 +19,11 @@ COPY LnShelf/ LnShelf/
 # The embedded development fixture. Committed under docs/ so it has one home;
 # the csproj links it rather than keeping a copy that could drift.
 COPY docs/seed-library.json docs/
-RUN dotnet publish LnShelf/LnShelf.Api/LnShelf.Api.csproj -c Release -o /app --no-restore
+# ImageSharp 4 validates a Six Labors license key at compile time. It arrives as a BuildKit
+# secret (docker build --secret id=sixlabors_license) and exists only as an environment
+# variable of this one command, so it never lands in a layer or in the build history.
+# Restore above needs no key; only compilation does.
+RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey     dotnet publish LnShelf/LnShelf.Api/LnShelf.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app

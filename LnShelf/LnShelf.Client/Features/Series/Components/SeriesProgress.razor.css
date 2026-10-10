@@ -1,0 +1,24 @@
+/* The wrapper reaches the Panel root through ::deep, where the padding variables live. The
+   block is a little roomier than the default card (design.md: 24px). */
+.progress ::deep .panel {
+  --panel-padding: var(--space-6);
+  --panel-gap: var(--space-5);
+}
+
+.progress__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3) var(--space-7);
+}
+
+.progress__prose {
+  margin-left: auto;
+  font-size: var(--fs-body);
+  color: var(--muted);
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .progress__prose { margin-left: 0; text-align: left; }
+}

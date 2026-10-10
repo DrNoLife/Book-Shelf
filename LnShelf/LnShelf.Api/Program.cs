@@ -3,6 +3,7 @@ using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Releases;
+using LnShelf.Api.Features.Sharing;
 using LnShelf.Api.Features.Shelf;
 using LnShelf.Api.Features.Stats;
 
@@ -22,6 +23,7 @@ builder.Services.AddMetadata(builder.Configuration);
 builder.Services.AddCovers(builder.Configuration);
 builder.Services.AddImport(builder.Configuration);
 builder.Services.AddPreferences();
+builder.Services.AddSharing(builder.Configuration);
 builder.Services.AddReleases();
 builder.Services.AddStats();
 builder.Services.AddAuth(builder.Configuration, builder.Environment);

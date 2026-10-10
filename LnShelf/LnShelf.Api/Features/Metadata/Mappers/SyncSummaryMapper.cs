@@ -5,7 +5,11 @@ public static class SyncSummaryMapper
 {
     extension(SyncRun run)
     {
-        public SyncSummaryResponse ToResponse() => new()
+        /// <param name="choices">
+        /// The user's current choices: a disagreement one of them covers reads as settled by
+        /// it, and a recorded choice that has since been reset reads as unresolved again.
+        /// </param>
+        public SyncSummaryResponse ToResponse(IReadOnlyCollection<SourceChoice> choices) => new()
         {
             RunId = run.Id,
             StartedAt = run.StartedAt,
@@ -30,16 +34,21 @@ public static class SyncSummaryMapper
             Discrepancies =
             [
                 .. run.Discrepancies
-                    .OrderBy(discrepancy => discrepancy.ResolvedWith is not null)
-                    .ThenBy(discrepancy => discrepancy.SeriesTitle, StringComparer.OrdinalIgnoreCase)
-                    .Select(discrepancy => discrepancy.ToResponse()),
+                    // One entry per (series, field, volume), merged the way the series page reads
+                    // them, so the sidebar's "to review" count and the list agree.
+                    .GroupBy(discrepancy => (discrepancy.SeriesId, discrepancy.Field, discrepancy.VolumeNumber))
+                    .Select(rows => RecordedDisagreement.FromRows(rows, run.StartedAt).Discrepancy)
+                    .Select(discrepancy => discrepancy.ToResponse(
+                        choices.FirstOrDefault(choice => choice.Covers(discrepancy))))
+                    .OrderBy(response => response.ResolvedWith is not null)
+                    .ThenBy(response => response.SeriesTitle, StringComparer.OrdinalIgnoreCase),
             ],
         };
     }
 
     extension(SyncDiscrepancy discrepancy)
     {
-        public SyncDiscrepancyResponse ToResponse() => new()
+        public SyncDiscrepancyResponse ToResponse(SourceChoice? choice = null) => new()
         {
             SeriesId = discrepancy.SeriesId,
             SeriesTitle = discrepancy.SeriesTitle,
@@ -59,7 +68,8 @@ public static class SyncSummaryMapper
                         Value = value.Value,
                     }),
             ],
-            ResolvedWith = discrepancy.ResolvedWith,
+            ResolvedWith = discrepancy.ResolutionUnder(choice).Source,
+            ResolvedByChoice = discrepancy.ResolutionUnder(choice).ByChoice,
             VolumeNumber = discrepancy.VolumeNumber,
             Note = discrepancy.Note,
         };

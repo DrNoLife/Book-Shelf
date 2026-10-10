@@ -1,0 +1,61 @@
+@using LnShelf.Shared.Stats
+
+@* January to December of the current year. The stats carry the last twelve months, which always
+   contain every month of this year so far; the months still to come are left empty. Every column
+   prints its own figure, so nothing is hover-only. *@
+
+<section class="section" aria-labelledby="by-month">
+    <div class="section-head">
+        <h2 class="title-section" id="by-month">@Year, month by month</h2>
+        <a class="section-head__aside" href="/stats">Full stats</a>
+    </div>
+
+    <ol class="chart" aria-label="Volumes read per month in @Year">
+        @foreach (var month in Months)
+        {
+            <li class="column" @key="month.Number">
+                <span class="column__value tabular" aria-hidden="true">@(month.Count > 0 ? month.Count.ToString(CultureInfo.InvariantCulture) : "")</span>
+                <span class="column__plot" aria-hidden="true">
+                    <span class="bar @(month.IsFuture ? "bar--future" : month.Count == 0 ? "bar--empty" : null)" style="@(month.Count > 0 ? $"height: {HeightPercent(month)}" : null)"></span>
+                </span>
+                <span class="column__month" aria-hidden="true">@month.Letter</span>
+                <span class="visually-hidden">@month.Name: @(month.IsFuture ? "not yet" : $"{month.Count} read")</span>
+            </li>
+        }
+    </ol>
+
+    @if (Stats.ReadWithoutDate > 0)
+    {
+        <p class="notice notice--quiet">
+            @Stats.ReadWithoutDate read @(Stats.ReadWithoutDate == 1 ? "volume carries" : "volumes carry") no read date and
+            @(Stats.ReadWithoutDate == 1 ? "is" : "are") left off the chart.
+        </p>
+    }
+</section>
+
+@code {
+    private sealed record ChartMonth(int Number, string Name, string Letter, int Count, bool IsFuture);
+
+    [Parameter] public required StatsResponse Stats { get; set; }
+
+    // The window ends on the current month, so its last entry names the year and the month.
+    private DateOnly Current => Stats.ReadPerMonth[^1].Month;
+
+    private int Year => Current.Year;
+
+    private int Maximum => Months.Max(month => month.Count);
+
+    private List<ChartMonth> Months =>
+    [
+        .. Enumerable.Range(1, 12).Select(number =>
+        {
+            var name = new DateOnly(Year, number, 1).ToString("MMMM", CultureInfo.InvariantCulture);
+            var count = Stats.ReadPerMonth.FirstOrDefault(month => month.Month.Year == Year && month.Month.Month == number)?.Total ?? 0;
+
+            return new ChartMonth(number, name, name[..1], count, IsFuture: number > Current.Month);
+        }),
+    ];
+
+    private string HeightPercent(ChartMonth month) =>
+        (month.Count * 100m / Maximum).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+}

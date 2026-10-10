@@ -12,14 +12,14 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await OpenSeriesAsync();
 
         await Volume(10).ClickAsync();
-        await Page.GetByRole(AriaRole.Menuitemradio, new() { Name = "Read", Exact = true }).ClickAsync();
+        await ReadingChoice("Read").ClickAsync();
         await Assertions.Expect(Volume(10).Locator(".tile__mark")).ToBeVisibleAsync();
 
         await Page.ReloadAsync();
         await Volume(10).ClickAsync();
 
-        await Assertions.Expect(Page.GetByRole(AriaRole.Menuitemradio, new() { Name = "Read", Exact = true }))
-            .ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(ReadingChoice("Read"))
+            .ToHaveAttributeAsync("aria-pressed", "true");
     }
 
     [Fact]
@@ -33,8 +33,8 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await Page.ReloadAsync();
         await Volume(12).ClickAsync();
 
-        await Assertions.Expect(Page.GetByRole(AriaRole.Menuitemcheckbox))
-            .ToHaveAttributeAsync("aria-checked", "true");
+        // Owned, and an edition the model always has: shown as Physical when none was recorded.
+        await Assertions.Expect(OwnershipChoice("Physical")).ToHaveAttributeAsync("aria-pressed", "true");
     }
 
     [Fact]
@@ -64,12 +64,41 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         (await CoverCountAfterSaveAsync()).ShouldBeGreaterThan(0);
     }
 
+    // The status control is a row of pressed-state buttons, so choosing is a real mouse
+    // click on one of them: the one thing a unit test of its state cannot see.
+    [Fact]
+    public async Task SeriesPage_ChooseTrackingStatus_StatusPersistsAfterReload()
+    {
+        await OpenSeriesAsync();
+
+        await TrackingChoice("Dropped").ClickAsync();
+        await Assertions.Expect(TrackingChoice("Dropped")).ToHaveAttributeAsync("aria-pressed", "true");
+        await WaitForSaveAsync();
+
+        await Page.ReloadAsync();
+
+        await Assertions.Expect(TrackingChoice("Dropped")).ToHaveAttributeAsync("aria-pressed", "true");
+    }
+
     private async Task OpenSeriesAsync()
     {
         var seriesId = await ShelfLookup.SeriesIdAsync(Page, SeriesTitle);
         await Page.GotoAsync($"/series/{seriesId}");
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
     }
+
+    private ILocator TrackingChoice(string name) =>
+        Page.GetByRole(AriaRole.Group, new() { Name = "Your status" })
+            .GetByRole(AriaRole.Button, new() { Name = name, Exact = true });
+
+    // The volume panel's two choices; only one panel is open at a time.
+    private ILocator ReadingChoice(string name) =>
+        Page.GetByRole(AriaRole.Group, new() { Name = "Reading status" })
+            .GetByRole(AriaRole.Button, new() { Name = name, Exact = true });
+
+    private ILocator OwnershipChoice(string name) =>
+        Page.GetByRole(AriaRole.Group, new() { Name = "Ownership" })
+            .GetByRole(AriaRole.Button, new() { Name = name, Exact = true });
 
     // The tile in the grid, or the row in the list: both carry data-volume.
     private ILocator Volume(int number) => Page.Locator($"button[data-volume='{number}']");
@@ -79,7 +108,7 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await Volume(volumeNumber).ClickAsync();
 
         var chooser = await Page.RunAndWaitForFileChooserAsync(
-            () => Page.GetByRole(AriaRole.Menuitem, new() { Name = "Set cover…" }).ClickAsync(),
+            () => Page.GetByRole(AriaRole.Button, new() { Name = "Set cover…" }).ClickAsync(),
             new() { Timeout = 5_000 });
 
         await chooser.SetFilesAsync(StubImageHandler.ImagePath);

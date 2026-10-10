@@ -1,0 +1,9 @@
+@* A figure and the word for it: "17 read". The number is the serif display face, the word
+   is body text beside it (or under it, Stacked). A caller lays several out with its own
+   flex or grid; the figure itself sets only its inside. *@
+
+<span class="stat @SizeClass @(Stacked ? "stat--stacked" : null)">
+    <span class="stat__value @(Quiet ? "stat__value--quiet" : null)">@Value</span>
+    <span class="stat__label">@Label</span>
+    @ChildContent
+</span>

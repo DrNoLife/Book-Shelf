@@ -11,7 +11,7 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   padding: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--cover-placeholder);
 
@@ -59,8 +59,8 @@
 
 /* --- the six states, each with two channels --------------------------------- */
 
-/* Read: persimmon strip + check mark. */
-.tile--read .tile__strip { background: var(--acc); }
+/* Read: light strip + check mark. */
+.tile--read .tile__strip { background: var(--read); }
 
 /* Reading: ring + glow + book-open icon + the "Reading" label under the tile. */
 .tile--reading {
@@ -71,11 +71,11 @@
   box-shadow: 0 0 0 1.5px var(--acc), 0 0 14px var(--glow-reading);
 }
 
-.tile--reading .tile__strip { background: var(--acc); }
+.tile--reading .tile__strip { background: var(--read); }
 
-/* Owned, unread: the receded strip is itself the second channel — same hue as
+/* Owned, unread: the receded strip is itself the second channel — the same family as
    read, visibly darker, which is what keeps the two apart in grayscale. */
-.tile--owned .tile__strip { background: var(--acc-deep); }
+.tile--owned .tile__strip { background: var(--owned); }
 
 /* To buy: no strip, plus desaturation and dimming — the state that is literally
    grayscale. */
@@ -132,8 +132,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 2px var(--acc-soft);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 2px var(--selected-ring);
   pointer-events: none;
 }
 
@@ -145,7 +145,7 @@
 .tile:focus-visible {
   outline: 2px solid var(--acc-soft);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 /* --- caption ----------------------------------------------------------------- */
@@ -157,7 +157,7 @@
 .tile__caption {
   display: block;
   min-height: 15px;
-  font-size: 11px;
+  font-size: var(--fs-small);
   line-height: 1.35;
   color: var(--muted);
   white-space: nowrap;

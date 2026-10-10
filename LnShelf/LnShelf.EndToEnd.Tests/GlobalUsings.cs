@@ -1,3 +1,4 @@
+global using System.Text.RegularExpressions;
 global using LnShelf.Api.Features.Covers.Abstractions;
 global using LnShelf.Api.Features.Covers.Models;
 global using LnShelf.Api.Features.Covers.Services;

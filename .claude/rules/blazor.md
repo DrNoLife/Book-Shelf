@@ -33,7 +33,7 @@ long; logic shouldn't.
 
 **The design is settled — `docs/design.md` is the visual source of truth.**
 All tokens (`--ink`, `--acc`, `--acc-deep`, …), the type pairing (Instrument
-Serif display / Manrope), component specs, and voice rules live there. Use the
+Serif display / Geist), component specs, and voice rules live there. Use the
 CSS variables, never raw hex; don't invent new colors, weights, or synonyms
 for the fixed terminology (To buy / Backlog / Behind / Up to date).
 
@@ -41,8 +41,11 @@ for the fixed terminology (To buy / Backlog / Behind / Up to date).
   owned-unread / to-buy / unreleased / announced) are fully specified in
   `docs/design.md` — always two channels per state (strip/ring/filter + icon
   or label), never color alone; must survive real cover art and grayscale.
-- **Format badges (`LN` / `Manga` / `WN`) are one shared component** with a
-  fixed color mapping — never restyled per usage site.
+- **Format badges (`LN` / `Manga` / `WN`) are one shared component** with one
+  fixed look — never restyled per usage site.
+- **Shared primitives live in `Components/`** (`Panel`, `StatFigure`, `Pill`,
+  `SignalDot`, `SegmentedControl`, `SearchField`, `Dropdown`) and the buttons
+  are global classes in `app.css`. Compose and place them; don't repaint them.
 - **Progress bars are the three-segment kind** (read / owned / published) —
   one shared component, used at library-card and series-detail sizes.
 - **Cover images always render from the local cache endpoint**, never hotlink

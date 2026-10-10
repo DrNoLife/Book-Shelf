@@ -84,6 +84,35 @@ public sealed class SeriesSyncServiceTests
     }
 
     [Fact]
+    public async Task RunAsync_SummaryCountsOnlyUnresolvedAsToReview()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedSeriesAsync(dbContext, volumeCount: 18);
+
+        // Overlord: the counts differ, but the row is settled in the shelf's favour, so
+        // nothing is waiting on a person and the sidebar must not say it is.
+        var settled = await CreateService(dbContext, Linked(volumeCount: 16)).RunAsync(CancellationToken.None);
+
+        settled.Discrepancies.ShouldHaveSingleItem().ResolvedWith.ShouldNotBeNull();
+        settled.Summary.ShouldNotContain("to review");
+
+        // An unmatched series is the open kind, and is counted.
+        await using var unmatchedContext = CreateDbContext();
+        await SeedSeriesAsync(unmatchedContext, volumeCount: 3);
+        var unmatched = await CreateService(
+                unmatchedContext,
+                new ReleaseSourceMatch
+                {
+                    Outcome = ReleaseMatchOutcome.AlreadyLinked,
+                    Score = 96,
+                    Explanation = "Already linked to another series.",
+                })
+            .RunAsync(CancellationToken.None);
+
+        unmatched.Summary.ShouldContain("1 to review");
+    }
+
+    [Fact]
     public async Task RunAsync_TheSourceKnowsMoreVolumes_CreatesTheMissingOnesWithoutDates()
     {
         await using var dbContext = CreateDbContext();
@@ -418,6 +447,8 @@ public sealed class SeriesSyncServiceTests
             matcher,
             releaseSource,
             NoMetadata(),
+            new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
+            new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 enrichmentSource,

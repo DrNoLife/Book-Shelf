@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+
+@* The frame for a page a visitor without an account opens: the shared shelf. No sidebar,
+   because the sidebar loads the signed-in user's sync state, and a 401 from that would send
+   a stranger to the login. This layout injects nothing and calls nothing. *@
+
+<div class="public">
+    <header class="public__top">
+        <a class="brand" href="">
+            <span class="brand__mark"><Icon Name="IconName.Books" Size="16" /></span>
+            <span class="brand__name">LN Shelf</span>
+        </a>
+    </header>
+
+    <main class="public__main">
+        @Body
+    </main>
+
+    <footer class="public__foot">
+        <p class="fine">
+            Kept with LN Shelf, a light novel and manga tracker.
+            <a class="text-link" href="privacy.html">Privacy</a>
+        </p>
+    </footer>
+</div>

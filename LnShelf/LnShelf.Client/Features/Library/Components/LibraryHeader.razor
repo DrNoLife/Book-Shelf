@@ -2,41 +2,29 @@
    line says what they mean without a single piece of jargon. *@
 
 <header class="header">
-    <p class="eyebrow">@Eyebrow · @Totals.SeriesCount series</p>
+    <div class="header__figures">
+        <p class="eyebrow">Library · @Totals.SeriesCount series</p>
 
-    <div class="header__row">
-        <div class="stats">
-            @* Read is the one figure the mockup tints: it is the number the whole
-               progress story is about, so it carries the text-weight accent. *@
-            <p class="stat">
-                <span class="stat__value stat__value--accent tabular">@Totals.Read</span>
-                <span class="stat__label">read</span>
-            </p>
-            <p class="stat">
-                <span class="stat__value tabular">@Totals.Owned</span>
-                <span class="stat__label">owned</span>
-            </p>
-            <p class="stat">
-                <span class="stat__value tabular">@Totals.Published</span>
-                <span class="stat__label">published</span>
-            </p>
+        <div class="header__stats">
+            <StatFigure Value="@Totals.Read.ToString()" Label="read" Size="StatSize.Hero" />
+            <StatFigure Value="@Totals.Owned.ToString()" Label="owned" Size="StatSize.Hero" />
+            @* "Out" is the context for the other two, not the news, so it recedes. *@
+            <StatFigure Value="@Totals.Published.ToString()" Label="out" Size="StatSize.Hero" Quiet="true" />
         </div>
 
-        <p class="header__prose">
-            @Totals.Backlog bought and unread. @Totals.ToBuy out there you haven't bought.
+        <p class="lead">
+            @Totals.Backlog on your shelf waiting. @Totals.ToBuy out there you haven't bought.
         </p>
     </div>
+
+    <NavLink class="primary button--large" href="search">
+        <Icon Name="IconName.Plus" Size="16" />
+        <span>Add series</span>
+    </NavLink>
 </header>
 
 @code {
     /// <summary>Totals across the current format scope, not the filtered subset.</summary>
     [Parameter]
     public required LibraryTotals Totals { get; set; }
-
-    /// <summary>
-    /// The section marker. The page decides it, because the rows view spends its one
-    /// wry line here.
-    /// </summary>
-    [Parameter]
-    public string Eyebrow { get; set; } = "Library";
 }

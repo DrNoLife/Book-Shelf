@@ -95,6 +95,17 @@ written to `bin/Release/net10.0/playwright-traces/`.
 `deploy.ps1` builds both images locally, copies them to the server over SSH and restarts
 the stack there with [`docker-compose.production.yml`](docker-compose.production.yml).
 
+### Six Labors license key
+
+Cover handling uses ImageSharp 4, which refuses to compile without a Six Labors license
+key (a free community license, applied for at sixlabors.com). The key is read from the
+`SixLaborsLicenseKey` environment variable, set once as a user environment variable on
+the machine that builds, and is never committed (`sixlabors.lic` is git-ignored as a
+safety net). `deploy.ps1` stops early if it is missing and hands it to `docker build` as
+a BuildKit secret, so it does not end up in an image layer. Any other build needs it too,
+including `docker compose -f docker-compose.production.yml build` and CI, where it has to
+be a secret exposed to the build and test jobs as the `SixLaborsLicenseKey` variable.
+
 ### Login
 
 The API runs the OpenID Connect login itself and keeps the session in a cookie. Every
@@ -153,9 +164,32 @@ Then, from your machine:
 # or set LNSHELF_DEPLOY_SERVER, LNSHELF_DEPLOY_USER and LNSHELF_DEPLOY_URL once
 ```
 
-Each user can read what is stored about them, and delete their account and all of it, on
-the app's Privacy page (`/privacy.html`). Use that address as the privacy policy link on
-the Google consent screen.
+The app's Privacy page (`/privacy.html`) says what is stored and why. Each user can download a
+copy of their data, and delete their account and all of it, from their profile. Use
+the page's address as the privacy policy link on the Google consent screen. The record of
+processing, the breach routine and the owner's checklist are in
+[`docs/privacy-record.md`](docs/privacy-record.md).
+
+Container logs are rotated by the compose file (three files of 10 MB per service). Check that
+the server's `docker-compose.override.yml` and `/etc/docker/daemon.json` do not replace that
+setting.
+
+#### Backups
+
+Nothing in this repository takes backups; the host does. The privacy page assumes this
+policy, so keep to it or change the page: a nightly `pg_dump` of the `lnshelf` database plus a
+copy of the `override/` prefix in the cover bucket, 14 daily copies, the oldest deleted. If a
+backup is ever restored, delete again every account that was deleted after it was taken.
+
+#### Uploaded covers left behind
+
+Deleting a series, a cover or an account removes the uploaded cover files. Series deleted
+before that was true left theirs in MinIO. One-off cleanup, safe to re-run (add `--dry-run` to
+only count):
+
+```bash
+docker compose -f docker-compose.production.yml exec api dotnet LnShelf.Api.dll cover-orphan-sweep
+```
 
 The client is published on port 8091 for the TLS proxy to forward to. Migrations run
 when the API starts, and the deploy checks `/api/health`, the one endpoint open without

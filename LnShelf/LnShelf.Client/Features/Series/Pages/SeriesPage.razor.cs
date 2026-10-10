@@ -87,50 +87,30 @@ public partial class SeriesPage : IDisposable
         }
     }
 
-    /// <summary>
-    /// What the last run actually did, plus anything about this series it left for a
-    /// person.
-    /// </summary>
+    /// <summary>What the last run actually did, or that there has not been one.</summary>
     // The mockup's line is "Volume list and dates refreshed nightly from AniList. Last
     // run 04:12, Vol 15 moved from 5 Sep to 12 Sep." The dates half of that cannot be
     // written — no source publishes them — so this says what is true instead.
-    private IReadOnlyList<string> SyncLines
-    {
-        get
-        {
-            if (SyncState.Latest is not { } latest)
-            {
-                return ["Not synced yet."];
-            }
-
-            var lines = new List<string> { $"Last run {latest.SyncedAtLabel} — {latest.Summary}" };
-
-            var unresolved = latest.Discrepancies
-                .Where(discrepancy => discrepancy.SeriesId == SeriesId && discrepancy.NeedsReview)
-                .ToList();
-
-            foreach (var discrepancy in unresolved)
-            {
-                // The disagreement's own sentence, whichever sources are in it — the
-                // shelf now reads three, and this line used to name exactly two.
-                lines.Add(discrepancy.Field is SyncDiscrepancyField.SeriesLink
-                    ? "Not linked to a release source yet — waiting on you."
-                    : $"{Where(discrepancy)}{discrepancy.Field}: {discrepancy.Disagreement}.");
-            }
-
-            return lines;
-        }
-    }
+    private string SyncLine => SyncState.Latest is { } latest
+        ? $"Last run {latest.SyncedAtLabel} — {latest.Summary}"
+        : "Not synced yet.";
 
     /// <summary>
-    /// "Vol 15 — " when the disagreement is about one volume, nothing when it is about
-    /// the series.
+    /// Takes a source's word for a disagreement, then refreshes the sidebar: its "to review"
+    /// count is worked out from the choices that stand, so it moves with this one.
     /// </summary>
-    // Per-volume dates made this necessary: "ReleaseDate: MangaUpdates says in print,
-    // OpenLibrary says 2026-12-05" is unreadable without knowing which volume it is
-    // about, and every date disagreement is about exactly one.
-    private static string Where(SyncDiscrepancyResponse discrepancy) =>
-        discrepancy.VolumeNumber is { } volumeNumber ? $"Vol {volumeNumber} — " : string.Empty;
+    private async Task OnChooseSourceAsync(SourceConflictResponse conflict, MetadataSourceName source)
+    {
+        await SeriesState.ChooseSourceAsync(conflict, source);
+        await SyncState.LoadAsync();
+    }
+
+    /// <summary>Hands the disagreement back to the usual rules; the sidebar's count comes back with it.</summary>
+    private async Task OnResetSourceAsync(SourceConflictResponse conflict)
+    {
+        await SeriesState.ResetSourceAsync(conflict);
+        await SyncState.LoadAsync();
+    }
 
     protected override void OnInitialized()
     {

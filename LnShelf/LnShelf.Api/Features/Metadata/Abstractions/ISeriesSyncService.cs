@@ -31,4 +31,7 @@ public interface ISyncQueryService
 {
     /// <returns>Null when nothing has ever been synced.</returns>
     Task<SyncSummaryResponse?> GetLatestAsync(CancellationToken cancellationToken);
+
+    /// <summary>A run just made, as the sidebar prints it: with the user's choices applied.</summary>
+    Task<SyncSummaryResponse> DescribeAsync(SyncRun run, CancellationToken cancellationToken);
 }

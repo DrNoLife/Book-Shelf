@@ -1,0 +1,61 @@
+/* The conflict panel's own layout: a lead (dot and words), a native disclosure holding the
+   side-by-side diff, and the buttons. Tokens only; the panel's amber is Panel's own Warning
+   tone, and the buttons are the global ones, which this sheet does not restyle. */
+.source-conflict__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.source-conflict__text { min-width: 0; }
+
+.source-conflict__sentence {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.source-conflict__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* One row per source: the name, then its value and whether the shelf shows it. */
+.source-conflict__diff {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-2) 0;
+}
+
+.source-conflict__row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.source-conflict__source { color: var(--muted); }
+
+.source-conflict__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.source-conflict__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Narrow: the rows stack and the buttons wrap, as the mockup does. */
+@media (max-width: 560px) {
+  .source-conflict__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

@@ -13,7 +13,7 @@ namespace LnShelf.Api.Tests.Client;
 public sealed class SharedStylePrimitiveTests
 {
     /// <summary>The primitives that live in wwwroot/css/app.css and nowhere else.</summary>
-    private static readonly string[] GlobalPrimitives = ["primary", "secondary", "notice"];
+    private static readonly string[] GlobalPrimitives = ["primary", "secondary", "tertiary", "ghost", "destructive", "notice"];
 
     /// <summary>Properties that say where a thing sits rather than what it looks like.</summary>
     private static readonly string[] Placement =

@@ -3,6 +3,11 @@
 # client, and a compose file. Migrations under Features/**/Migrations are
 # source and are committed — never ignore them.
 
+# ---- Secrets ----
+# Six Labors license file; the key normally comes from the SixLaborsLicenseKey environment
+# variable, this is the safety net in case someone drops a file in the tree.
+sixlabors.lic
+
 # ---- Build output ----
 [Bb]in/
 [Oo]bj/

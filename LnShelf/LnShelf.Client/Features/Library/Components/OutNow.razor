@@ -1,0 +1,39 @@
+@* Volumes that are out and not on the shelf, one line per series. The button says what
+   it does: it opens a Saxo search for the first volume to buy. *@
+
+<section class="outnow" aria-labelledby="outnow-title">
+    <div class="section-head">
+        <h2 id="outnow-title" class="title-section">Out now, not on your shelf</h2>
+        <NavLink class="outnow__all" href="upcoming">All upcoming →</NavLink>
+    </div>
+
+    <Panel Flush="true">
+        <ul class="outnow__list">
+            @foreach (var entry in Entries)
+            {
+                var card = entry.Card;
+
+                <li class="outnow__row" @key="card.SeriesId">
+                    <FormatBadge Value="card.Format" />
+                    <a class="outnow__title" href="@($"/series/{card.SeriesId}")">@card.TitleEnglish</a>
+                    <span class="outnow__range tabular">@RangeText(entry, card.ToBuy)</span>
+                    <a class="secondary outnow__buy"
+                       href="@SaxoSearch.UrlFor(card.TitleEnglish, entry.FirstVolumeNumber)"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Vol @entry.FirstVolumeNumber on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+                    </a>
+                </li>
+            }
+        </ul>
+    </Panel>
+</section>
+
+@code {
+    [Parameter] public required IReadOnlyList<OutNowEntry> Entries { get; set; }
+
+    // Not a range: the missing volumes need not be contiguous, so "Vol 4–9" would
+    // claim volumes the user may already own.
+    private static string RangeText(OutNowEntry entry, int toBuy) =>
+        toBuy == 1 ? $"Vol {entry.FirstVolumeNumber}" : $"{toBuy} volumes";
+}

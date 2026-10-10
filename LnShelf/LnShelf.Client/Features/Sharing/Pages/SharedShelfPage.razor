@@ -1,0 +1,77 @@
+@page "/shared/{Token}"
+@layout PublicLayout
+@using LnShelf.Client.Features.Sharing.Components
+@using LnShelf.Shared.Sharing
+
+@* The read-only shelf anyone with the link sees (feature-spec §4.8). Built from the user
+   page's anatomy: a header, the totals strip, then the covers grouped by what the owner is
+   doing with them. It never names the owner: the shelf has no display name to show, and the
+   email it does have is not for strangers.
+
+   A dead link is answered here, in place. Navigating to /not-found would bring in
+   MainLayout, whose sidebar calls the signed-in API and would send a visitor to the login. *@
+
+<PageTitle>A shared shelf · LN Shelf</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+
+<div class="page shared">
+    <div class="page__stack">
+
+        @if (Shelf is { } shelf)
+        {
+            <header class="shared__head">
+                <p class="eyebrow">Shared shelf · @SeriesCountText(shelf.Series.Count)</p>
+                <h1 class="title-page" tabindex="-1">A shelf, shared with you</h1>
+                <p class="lead">What is on it and how far it has been read. You can look; nothing here can be changed.</p>
+            </header>
+
+            <SharedShelfTotalsRow Totals="shelf.Totals" />
+
+            @if (shelf.Series.Count == 0)
+            {
+                <p class="fine">Nothing on this shelf yet.</p>
+            }
+
+            @foreach (var group in Groups(shelf))
+            {
+                <section class="group" aria-labelledby="@group.HeadingId" @key="group.HeadingId">
+                    <div class="section-head">
+                        <h2 class="title-section" id="@group.HeadingId">@group.Title</h2>
+                        <span class="section-head__aside">@SeriesCountText(group.Cards.Count)</span>
+                    </div>
+
+                    <div class="grid">
+                        @foreach (var card in group.Cards)
+                        {
+                            <SharedSeriesCard Card="card" Token="Token" />
+                        }
+                    </div>
+                </section>
+            }
+
+            <p class="fine">Numbers under each cover: read · out. What the owner has bought, their notes and the series they dropped stay private.</p>
+        }
+        else if (IsNotShared)
+        {
+            <header class="shared__head">
+                <h1 class="title-page" tabindex="-1">This shelf isn't shared</h1>
+                <p class="lead">The link may have changed, or the shelf was made private again. Ask for a new link.</p>
+            </header>
+        }
+        else if (Message is { } message)
+        {
+            <header class="shared__head">
+                <h1 class="title-page" tabindex="-1">A shared shelf</h1>
+                <p class="notice notice--warning">@message</p>
+            </header>
+        }
+        else
+        {
+            <h1 class="visually-hidden" tabindex="-1">A shared shelf</h1>
+            <p class="notice">Loading the shelf…</p>
+        }
+
+    </div>
+</div>

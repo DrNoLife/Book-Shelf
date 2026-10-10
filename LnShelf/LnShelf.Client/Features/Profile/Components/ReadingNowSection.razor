@@ -1,0 +1,50 @@
+@inject ApiUrlBuilder ApiUrl
+
+<section class="section" aria-labelledby="reading-now">
+    <h2 class="title-section" id="reading-now">Reading now</h2>
+
+    @if (Cards.Count == 0)
+    {
+        <p class="notice">Nothing marked as reading. Set a series to Reading and it shows up here.</p>
+    }
+    else
+    {
+        <ul class="grid">
+            @foreach (var card in Cards)
+            {
+                <li @key="card.SeriesId">
+                    <a class="entry" href="@($"/series/{card.SeriesId}")">
+                        <span class="entry__cover" aria-hidden="true">
+                            @if (card.CoverObjectKey is { } coverObjectKey)
+                            {
+                                <img class="entry__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="entry__label">@card.TitleEnglish</span>
+                            }
+                        </span>
+                        <span class="entry__title">@card.TitleEnglish</span>
+                        <span class="entry__next tabular">@NextText(card)</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter] public required IReadOnlyList<LibraryCardResponse> Cards { get; set; }
+
+    // The lowest volume that is out and not read yet; the ticks are the card's own facts, so
+    // this agrees with the library's bar.
+    private static string NextText(LibraryCardResponse card)
+    {
+        var next = card.VolumeTicks
+            .Where(tick => tick.IsOut && tick.ReadStatus is not ReadStatus.Read)
+            .Select(tick => (int?)tick.Number)
+            .Min();
+
+        return next is { } number ? $"Vol {number} next" : "Caught up";
+    }
+}

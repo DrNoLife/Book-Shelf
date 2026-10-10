@@ -14,31 +14,12 @@
          ChangelogCatalogTests enforces that mechanically. Pre-1.0 scheme: bump the
          MINOR for a feature batch, the PATCH for a fix-only batch. Releasing a batch is:
          add the changelog entry, bump this. -->
-    <Version>0.16.0</Version>
+    <Version>0.17.0</Version>
 
     <!-- TreatWarningsAsErrors only covers the compiler. MSBuild warnings —
          assembly version conflicts, NuGet audit advisories — are defects by the
          same standard, so they fail the build too. -->
     <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
   </PropertyGroup>
-
-  <!-- ImageSharp 3.1.12 advisories, reviewed 2026-10-09 and suppressed here rather than by
-       turning audit off, so a new advisory still fails the build. The fix is ImageSharp
-       4.1.2+, which needs a Six Labors license key to build (a free community licence can be applied
-       for at licensing.sixlabors.com; upgrade once one is in hand). Why each is acceptable until then:
-         - TIFF decoding (wmxv) and the TIFF CCITT T4/T6 encoders (j9gm, jjfr): covers are
-           decoded with JPEG, PNG, WebP and GIF only (CoverImageDecoding), and the app never
-           encodes TIFF.
-         - HistogramEqualization (j3p4): never called.
-         - ICC CLUT allocation (gwg2): reachable through a JPEG or PNG upload, but the
-           worst case is a large allocation (denial of service) in a single-user app.
-       Delete this group with the upgrade. -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
-  </ItemGroup>
 
 </Project>

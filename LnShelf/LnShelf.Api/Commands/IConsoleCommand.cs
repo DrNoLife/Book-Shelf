@@ -16,6 +16,13 @@ public interface IConsoleCommand
     /// <summary>One line, printed when the name given matches nothing.</summary>
     string Description { get; }
 
+    /// <summary>
+    /// Whether the command works on one user's shelf, so the runner makes it act as that
+    /// user (<c>--user</c>, or the only user). False for a command that looks across every
+    /// shelf and so needs none.
+    /// </summary>
+    bool ActsOnOneShelf => true;
+
     /// <returns>The process exit code. Zero is success.</returns>
     Task<int> RunAsync(ConsoleCommandLine commandLine, CancellationToken cancellationToken);
 }

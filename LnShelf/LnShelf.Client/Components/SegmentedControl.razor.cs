@@ -30,6 +30,20 @@ public partial class SegmentedControl<TValue>
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Fills the width it is given, every segment equally wide. For the three-way choices
+    /// inside a panel (Unread / Reading / Read), where ragged segments would look unfinished.
+    /// </summary>
+    [Parameter]
+    public bool Stretch { get; set; }
+
+    /// <summary>
+    /// Sits on the page colour instead of the surface colour, for a control placed on a
+    /// --surf panel — otherwise the container would vanish into the panel behind it.
+    /// </summary>
+    [Parameter]
+    public bool Inset { get; set; }
+
     /// <summary>Why the control is inert, appended to each segment's own title.</summary>
     [Parameter]
     public string? DisabledTitle { get; set; }

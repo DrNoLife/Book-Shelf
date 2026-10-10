@@ -112,13 +112,46 @@ per-series notification preferences UI (the mute flag exists in the model),
 Discord webhook as `IReleaseNotifier` implementation #2, and the "date moved"
 notification — which un-parks only if spike #1 delivers dates.
 
+## 0. Owner feedback after the multi-user deploy (2026-10-10) — next up
+
+- **Search & add keeps saying "Add"** for a series that was just added. The row should
+  show it is on the shelf (and not offer Add again).
+- **"Not owned" / "Owned" wording is confusing.** The menu item reads "Not owned", and
+  clicking it makes the volume owned. Reword so the label says what clicking does, or is
+  a clear on/off state.
+- **The tracking-status dropdown at the top of the series page does not seem to work.**
+  Reproduce and fix.
+- **The changelog was not updated** for the audit fixes, e2e, login and multi-user work.
+  Add the entry and bump `Version` in Directory.Build.props (ChangelogCatalogTests).
+- **The sync text in the sidebar** is not good. Rework or hide it (and it is now per user).
+- **A real favicon.** `wwwroot/favicon.png` and `icon-192.png` are placeholders; make
+  one that fits docs/design.md and use it on the static pages too.
+- **A landing page for visitors who are not signed in**: what LN Shelf is, why it is
+  useful, and a clear "Sign in with Google". Today a signed-out visitor goes straight to
+  Google's login with no explanation. Static, like privacy.html, so it needs no session.
+- **Redesign.** The current UI is fine but far from good. The owner has a new design from
+  another Claude session to start from (the link is kept outside the repo, because it
+  carries a share key). Do the landing page as part of it.
+- **A user page** (in the same design): your own account and shelf at a glance. Natural
+  home for signing out, the account details now on privacy.html, and deleting the account.
+- **Something social, to explore (nothing decided).** Ideas so far:
+  - Shared series: "you both read 86: you are on vol 11, they are on vol 13".
+  - A spoiler-aware feed: activity on a volume you have not read yet is blurred.
+  - Recommendations from people you follow, weighted by how much your shelves overlap.
+  - A shareable read-only shelf by link, before real followers. Cheap, and gets most of
+    the value; the natural first step.
+  Notes for when this is picked up: feature-spec §1 lists social features as a non-goal,
+  so it is a spec change first. Shelves are separate copies per user, so matching "the
+  same series" across users goes by external id (AniList, MangaUpdates), not by row id.
+  Sharing anything crosses the owner filters on purpose, so it needs its own explicit,
+  reviewed read path rather than lifting the filters.
+- **Production data must never be wiped.** Every migration and deploy keeps existing
+  data; take a backup first (as done on 2026-10-09/10) and never reset the database.
+
 ## 7. Sundry, when passing by
 
-- **ImageSharp 3.1.12 advisories [flagged, 2026-10-09].** Five published advisories,
-  suppressed by id in `LnShelf/Directory.Build.props` with the reason each does not
-  apply (covers decode JPEG, PNG, WebP and GIF only). The fix is 4.1.2+, which needs a
-  Six Labors license key at build time; a free community licence can be applied for.
-  Upgrade and delete the suppressions once a key is in hand (CI needs it as a secret).
+- **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
+  suppressions are gone; the license key comes from `SixLaborsLicenseKey` (README, Deploy).
 - **Low-severity findings from the 2026-10-09 audit** are listed in
   `.research/audit-2026-10-09.md`. The medium ones are fixed; the rest are open.
 

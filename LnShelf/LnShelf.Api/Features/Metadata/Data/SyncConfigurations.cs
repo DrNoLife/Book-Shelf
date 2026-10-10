@@ -38,6 +38,8 @@ public sealed class SyncDiscrepancyConfiguration : IEntityTypeConfiguration<Sync
         builder.Property(discrepancy => discrepancy.ResolvedWith)
             .HasConversion<string>().HasMaxLength(32);
 
+        builder.Property(discrepancy => discrepancy.ResolvedByChoice).HasDefaultValue(false);
+
         builder.Property(discrepancy => discrepancy.SeriesTitle).HasMaxLength(400).IsRequired();
         builder.Property(discrepancy => discrepancy.Note).HasMaxLength(1000);
 

@@ -1,13 +1,13 @@
 .volumes {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .volumes__head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 10px 24px;
 }
@@ -19,15 +19,9 @@
   flex-wrap: wrap;
 }
 
-/* design.md fixes section headings at 26px serif. */
-.volumes__title {
-  font-size: 26px;
-  line-height: 1;
-}
-
 .volumes__count {
-  font-size: 11.5px;
-  color: var(--muted);
+  font-size: var(--fs-caption);
+  color: var(--faint);
 }
 
 /* Tiles are small and numerous, so the grid fills rather than pinning a count. */

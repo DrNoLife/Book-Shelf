@@ -89,23 +89,36 @@ public sealed class VolumeFactWriter(
             return;
         }
 
+        var choice = series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, volume.Number);
+
+        // The user took a store's or a library's date for this volume, so that source alone
+        // writes it. In either direction, and past both the conflict below and the precedence
+        // check after it: a choice is the one thing that outranks them. The date also decides
+        // whether the volume is out, which is why IsReleased is cleared — left set, the count
+        // would call a volume out that the chosen date says is not.
+        if (choice is { Source: not MetadataSourceName.MangaUpdates } chosen)
+        {
+            if (facts.Source == chosen.Source)
+            {
+                WriteDate(volume, releaseDate, facts.Source, run);
+                volume.IsReleased = false;
+            }
+
+            return;
+        }
+
         if (releaseDate > today && volume.IsReleased)
         {
-            run.Discrepancies.Add(new SyncDiscrepancy
-            {
-                Id = Guid.CreateVersion7(),
-                SeriesId = series.Id,
-                SeriesTitle = series.TitleEnglish,
-                Field = SyncDiscrepancyField.ReleaseDate,
-                VolumeNumber = volume.Number,
-                ResolvedWith = null,
-                Note = $"Record {facts.SourceRecordKey} from {facts.SourceName}. "
-                       + "The date was not written; the count still decides whether this volume is out.",
-            }
-                .Says(MetadataSourceName.MangaUpdates, "in print")
-                .Says(
-                    facts.Source,
-                    releaseDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            // Under a MangaUpdates choice the row says so: the count keeps deciding, by the
+            // user's word rather than by the precedence list's.
+            run.Discrepancies.Add(SyncDiscrepancies.ReleaseDate(
+                series,
+                volume,
+                facts.Source,
+                releaseDate,
+                $"Record {facts.SourceRecordKey} from {facts.SourceName}. "
+                + "The date was not written; the count still decides whether this volume is out.",
+                choice));
 
             logger.LogInformation(
                 "{TitleEnglish} volume {VolumeNumber}: the release source says in print, {SourceName} says "
@@ -127,8 +140,13 @@ public sealed class VolumeFactWriter(
             return;
         }
 
+        WriteDate(volume, releaseDate, facts.Source, run);
+    }
+
+    private static void WriteDate(Volume volume, DateOnly releaseDate, MetadataSourceName source, SyncRun run)
+    {
         volume.ReleaseDate = releaseDate;
-        volume.ReleaseDateSource = facts.Source;
+        volume.ReleaseDateSource = source;
         run.DatesMoved++;
     }
 

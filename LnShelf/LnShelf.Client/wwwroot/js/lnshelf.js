@@ -1,6 +1,6 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
-// C#: read a rendered layout, move focus between sibling elements, and hand a
-// dropped file to a file input.
+// C#: read a rendered layout, move focus between sibling elements, hand a
+// dropped file to a file input, and copy a link to the clipboard.
 window.lnshelf = {
     // The volume grid is auto-fill, so its column count is a layout fact rather than
     // a constant. Counting the tiles that share the first row's offsetTop is the
@@ -117,5 +117,12 @@ window.lnshelf = {
     // series' read history, ownership and prices with no way back.
     confirm: function (message) {
         return window.confirm(message);
+    },
+
+    // The shared-shelf link's "Copy link". The clipboard needs a secure context (the
+    // tunnel's https, or localhost); on plain LAN http this rejects, and the card tells
+    // the user to copy the link from its field instead.
+    copyText: function (text) {
+        return navigator.clipboard.writeText(text);
     }
 };

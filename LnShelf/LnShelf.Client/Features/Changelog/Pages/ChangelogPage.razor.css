@@ -1,93 +1,142 @@
-.changelog__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-}
-
 .changelog {
-  display: flex;
-  flex-direction: column;
+  --page-width: 1100px;
+  --page-gap: var(--space-8);
 }
 
-.changelog__top {
-  padding: 22px 26px 20px;
-  border-bottom: 1px solid var(--line);
-}
-
-.changelog__body {
-  padding: 22px 26px 26px;
-}
-
-/* The type and the colour are global (app.css); only the padding is this page's. */
-.notice { padding: 8px 0; }
-
-.entries {
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
-  max-width: 66ch;
-}
-
-.entry {
-  display: flex;
-  flex-direction: column;
+/* NavLink renders its own <a>, so the rule has to go through ::deep. */
+.changelog ::deep .changelog__back {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  align-self: flex-start;
+  min-height: 36px;
+  white-space: nowrap;
+  color: var(--muted);
 }
 
-/* A quiet hairline between entries rather than a card per release — the whole
-   page is one running list, not a stack of separate panels. */
-.entry:not(:first-child) {
-  padding-top: 22px;
-  border-top: 1px solid var(--line);
-}
+.changelog ::deep .changelog__back:hover { color: var(--text-strong); }
 
-.entry__meta {
+.changelog__header {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 11.5px;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.changelog__columns {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-9);
+}
+
+.changelog__releases {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.release__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
   color: var(--faint);
 }
 
-.entry__version { color: var(--muted); font-weight: 600; }
+.release__version { color: var(--muted); font-weight: 600; }
 
-.entry__title {
-  font-size: 19px;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-}
-
-.entry__changes {
-  margin: 4px 0 0;
+.release__changes {
+  margin: 0;
   padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: var(--space-2);
   line-height: 1.5;
   color: var(--muted);
 }
 
-.entry__changes li::marker { color: var(--faint); }
+.release__changes li::marker { color: var(--faint); }
 
-@media (max-width: 860px) {
-  .changelog__title {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip-path: none;
-    padding: 18px 16px 0;
-    font-size: 30px;
+/* The latest release is the only panel; its heading and list get a little more air. */
+.changelog__releases ::deep .release--latest {
+  --panel-padding: var(--space-6);
+  --panel-gap: var(--space-3);
+  scroll-margin-top: var(--space-6);
+}
+
+/* Older releases: metadata in a quiet left rail, the title and list beside it, a hairline
+   between releases rather than a card each. */
+.changelog__older {
+  display: flex;
+  flex-direction: column;
+}
+
+.release--older {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--space-6);
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: var(--space-6);
+}
+
+.release--older .release__meta {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.release__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The version index only earns its place where there is room beside the list. */
+.changelog__index {
+  display: none;
+  flex: 0 0 150px;
+  position: sticky;
+  top: var(--space-6);
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.changelog__index ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border-left: 1px solid var(--line);
+}
+
+.changelog__index ::deep a {
+  display: block;
+  padding: 3px 0 3px var(--space-3);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.changelog__index ::deep a:hover { color: var(--text-strong); }
+
+@media (min-width: 1000px) {
+  .changelog__index { display: flex; }
+}
+
+@media (max-width: 640px) {
+  .release--older {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 
-  .changelog__top { padding: 14px 16px; }
-  .changelog__body { padding: 16px 16px 22px; }
+  .release--older .release__meta {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+  }
 }

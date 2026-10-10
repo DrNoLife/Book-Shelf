@@ -8,7 +8,7 @@
 
     <header class="volumes__head">
         <div class="volumes__identity">
-            <h2 class="volumes__title">Volumes</h2>
+            <h2 class="volumes__title title-section">Volumes</h2>
             <p class="volumes__count tabular">@CountLine</p>
         </div>
 
@@ -66,7 +66,9 @@
     @if (OpenVolume is { } openVolume && _placement is { } placement)
     {
         <VolumePopover Volume="openVolume"
+                       SeriesTitle="@Series.TitleEnglish"
                        Placement="placement"
+                       DateChoice="Series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, openVolume.Number)"
                        IsBusy="SeriesState.IsSaving"
                        Closed="OnMenuClosedAsync"
                        CoverPickRequested="OnCoverPickRequestedAsync" />

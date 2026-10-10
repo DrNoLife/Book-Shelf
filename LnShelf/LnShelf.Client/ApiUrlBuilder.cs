@@ -12,4 +12,8 @@ public sealed class ApiUrlBuilder(HttpClient httpClient)
 {
     public string Cover(string objectKey) =>
         new Uri(httpClient.BaseAddress!, $"api/covers/{objectKey}").ToString();
+
+    /// <summary>Series art on a shared shelf, through that shelf's own anonymous route (feature-spec §4.8).</summary>
+    public string SharedCover(string token, string objectKey) =>
+        new Uri(httpClient.BaseAddress!, $"api/shared/{Uri.EscapeDataString(token)}/covers/{objectKey}").ToString();
 }

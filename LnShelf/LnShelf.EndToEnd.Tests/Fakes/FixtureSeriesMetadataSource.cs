@@ -15,6 +15,13 @@ public sealed class FixtureSeriesMetadataSource : ISeriesMetadataSource
     public const string KnownQuery = "mushoku";
     public const int MushokuTenseiNovelId = 85470;
 
+    // The captured detail query did not ask for coverImage, so the light novel gets a cover
+    // URL here, without touching the payload the unit tests map. Adding it then caches a series
+    // cover through the real CoverFetcher, which StubImageHandler answers, so a journey can
+    // reach that art the way a visitor would (the shared-shelf cover checks rely on it).
+    private const string MushokuTenseiNovelCoverUrl =
+        "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx85470.jpg";
+
     private static readonly Lazy<IReadOnlyList<SeriesSearchResult>> SearchResults = new(LoadSearchResults);
     private static readonly Lazy<SeriesMetadata> MushokuTenseiNovel = new(LoadMushokuTenseiNovel);
 
@@ -50,7 +57,7 @@ public sealed class FixtureSeriesMetadataSource : ISeriesMetadataSource
         var media = Load<AniListMediaData>("anilist-media-85470-mushoku-tensei-novel.json").Media
                     ?? throw new InvalidOperationException("The Mushoku Tensei fixture carries no media.");
 
-        return AniListMediaMapper.ToSeriesMetadata(media);
+        return AniListMediaMapper.ToSeriesMetadata(media) with { CoverImageUrl = MushokuTenseiNovelCoverUrl };
     }
 
     // Through AniListGraphQlClient.JsonOptions, so the fixtures are read exactly as the

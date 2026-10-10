@@ -1,0 +1,13 @@
+.signal {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.signal--large { width: 10px; height: 10px; }
+
+.signal--ok { background: var(--ok); }
+.signal--attention { background: var(--amber); }
+.signal--quiet { background: var(--faint); }

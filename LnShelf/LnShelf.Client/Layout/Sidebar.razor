@@ -1,43 +1,48 @@
 @using LnShelf.Client.Features.Library
+@using LnShelf.Client.Features.Sync
 
 <aside class="sidebar">
 
     <div class="brand">
-        <span class="brand__mark"><Icon Name="IconName.Books" Size="12" /></span>
+        <span class="brand__mark"><Icon Name="IconName.Books" Size="16" /></span>
         <span class="brand__name">LN Shelf</span>
     </div>
 
-    <nav class="nav">
+    <nav class="nav" aria-label="Main">
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="" Match="NavLinkMatch.All">
-            <Icon Name="IconName.Books" Size="15" />
-            <span>Library</span>
+            <Icon Name="IconName.Books" Size="16" />
+            <span class="nav__label">Library</span>
         </NavLink>
 
-        @* Not in the v2 mockup's nav, which predates the import flow existing.
-           It is a real page with a real route, so it gets a real row. *@
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="search">
-            <Icon Name="IconName.MagnifyingGlass" Size="15" />
-            <span>Search &amp; add</span>
-        </NavLink>
-
-        <NavLink class="nav__row" ActiveClass="nav__row--active" href="import">
-            <Icon Name="IconName.FileArrowUp" Size="15" />
-            <span>Import</span>
+            <Icon Name="IconName.MagnifyingGlass" Size="16" />
+            <span class="nav__label">Search &amp; add</span>
         </NavLink>
 
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="upcoming">
-            <Icon Name="IconName.CalendarBlank" Size="15" />
-            <span>Upcoming</span>
+            <Icon Name="IconName.CalendarBlank" Size="16" />
+            <span class="nav__label">Upcoming</span>
         </NavLink>
 
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="stats">
-            <Icon Name="IconName.ChartBar" Size="15" />
-            <span>Stats</span>
+            <Icon Name="IconName.ChartBar" Size="16" />
+            <span class="nav__label">Stats</span>
+        </NavLink>
+
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="import">
+            <Icon Name="IconName.FileArrowUp" Size="16" />
+            <span class="nav__label">Import</span>
+            @* Series the matcher could not place by itself; the count is what makes the
+               queue findable without opening the page. *@
+            @if (ReviewCount > 0)
+            {
+                <Pill Tone="PillTone.Attention">@ReviewCount to review</Pill>
+            }
         </NavLink>
     </nav>
 
     <div class="shelves">
-        <p class="eyebrow">Shelves</p>
+        <p class="eyebrow">Smart shelves</p>
         @if (Shelves is not null)
         {
             @foreach (var shelf in Shelves)
@@ -56,31 +61,38 @@
         }
     </div>
 
-    <div class="sync">
-        <p class="eyebrow">Sync</p>
-        @* Transparent, not magical (design.md): every line here is a number the run
-           actually produced, including the line about what it could not do. *@
+    <div class="bottom">
+
+        @* Only the link: the page itself is the profile screen's. *@
+        <NavLink class="nav__row" ActiveClass="nav__row--active" href="profile">
+            <Icon Name="IconName.User" Size="16" />
+            <span class="nav__label">Profile</span>
+        </NavLink>
+
+        @* Short on purpose: the run's own numbers (design.md: transparent, not magical)
+           live in the tooltip rather than as five lines of fine print. *@
         @if (LatestSync is { } latest)
         {
-            <p class="sync__line">Synced @latest.SyncedAtLabel</p>
-            @foreach (var line in SummaryLines)
-            {
-                <p class="sync__line">@line</p>
-            }
+            <p class="sync" title="@latest.Detail">
+                <SignalDot Tone="latest.Tone(Now)" />
+                <span>@latest.Headline(Now)@(latest.Attention is { } attention ? $" · {attention}" : null)</span>
+            </p>
         }
         else
         {
-            <p class="sync__line">Not synced yet</p>
-            <p class="sync__line">Nothing has been refreshed against a release source</p>
+            <p class="sync" title="@SyncStatusText.NeverSyncedDetail">
+                <SignalDot Tone="SignalTone.Quiet" />
+                <span>@SyncStatusText.NeverSyncedHeadline</span>
+            </p>
         }
-    </div>
 
-    @* Quiet on purpose — a real page with a real route, but not a shelf-navigation
-       row, so it sits below the sync panel rather than in .nav with Library/Search/Import. *@
-    <div class="foot">
-        <NavLink class="foot__link" href="changelog">Changelog</NavLink>
-        <a class="foot__link" href="privacy.html">Privacy</a>
-        <button type="button" class="foot__link foot__button" @onclick="OnSignOutAsync">Sign out</button>
+        @* Quiet on purpose — real pages with real routes, but not shelf navigation. *@
+        <div class="foot">
+            <NavLink class="foot__link" href="changelog">Changelog</NavLink>
+            <a class="foot__link" href="privacy.html">Privacy</a>
+            <button type="button" class="foot__link foot__button" @onclick="OnSignOutAsync">Sign out</button>
+        </div>
+
     </div>
 
 </aside>

@@ -1,7 +1,6 @@
-@* Covers do the talking: the card adds a badge, a dot and the bar, and nothing
-   else. A card is a link now that the series-detail route exists — which is also
-   what finally lets it have a hover response, since the hover has a tap
-   equivalent (following the link). *@
+@* Covers do the talking: the card adds a badge, a dot, the bar and the three numbers.
+   A card is a link, which is also what lets it have a hover response, since the hover
+   has a tap equivalent (following the link). *@
 @inject ApiUrlBuilder ApiUrl
 
 <a class="card @(Card.HasNewVolume ? "card--new" : null)" href="@($"/series/{Card.SeriesId}")">
@@ -20,18 +19,38 @@
         }
 
         <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
+
+        @if (Card.HasNewVolume)
+        {
+            <span class="cover__new"><Pill Tone="PillTone.Attention">New · Vol @Card.Published</Pill></span>
+        }
+
         <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
     </div>
 
     <ThreeSegmentBar Read="Card.Read" Owned="Card.Owned" Published="Card.Published" />
 
-    <div class="card__foot">
-        <h3 class="card__title">@Card.TitleEnglish</h3>
+    @* Printed, not hovered: hover-only information is forbidden by design.md. *@
+    <div class="card__counts">
+        <span class="tabular" title="@($"{Card.Read} read · {Card.Owned} owned · {Card.Published} out")">
+            @Card.Read · @Card.Owned · @Card.Published
+        </span>
 
-        @* Printed, not hovered: at narrow widths this is the only way the counts
-           are reachable, and design.md forbids hover-only information. *@
-        <p class="card__counts tabular">@Card.Read / @Card.Owned / @Card.Published</p>
+        @if (Card.ToBuy > 0)
+        {
+            <Pill Tone="PillTone.Buy">@Card.ToBuy to buy</Pill>
+        }
+        else if (Card.Backlog > 0)
+        {
+            <Pill Tone="PillTone.Neutral">@Card.Backlog unread</Pill>
+        }
+        else if (Card.Published > 0)
+        {
+            <Pill Tone="PillTone.Ok">Up to date</Pill>
+        }
     </div>
+
+    <h3 class="card__title title-card">@Card.TitleEnglish</h3>
 
 </a>
 

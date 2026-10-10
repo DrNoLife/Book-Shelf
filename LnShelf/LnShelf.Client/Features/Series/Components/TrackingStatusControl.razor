@@ -3,15 +3,12 @@
    (CLAUDE.md — Series status vs Publication status), so the hero states both rather
    than blending them into one word.
 
-   A dropdown rather than the segmented control the view toggles use: four word-length
-   segments is a third of the hero's meta row, and this is a choice made rarely — it
-   should be readable at rest and cheap to reach, not permanently laid out. *@
+   The segmented control, not a dropdown: four choices, always laid out, one press each.
+   Its buttons carry aria-pressed, so the current status is announced. *@
 
-<span class="tracking">
-    <span class="tracking__label">Tracking</span>
-    <Dropdown Options="StatusOptions"
-              Value="@Series.TrackingStatus.ToString()"
-              ValueChanged="OnChosenAsync"
-              Disabled="SeriesState.IsSaving"
-              AriaLabel="How you are tracking this series" />
-</span>
+<SegmentedControl TValue="TrackingStatus"
+                  Options="StatusOptions"
+                  Value="Series.TrackingStatus"
+                  ValueChanged="OnChosenAsync"
+                  Disabled="SeriesState.IsSaving"
+                  AriaLabel="Your status" />

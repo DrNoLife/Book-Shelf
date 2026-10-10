@@ -1,0 +1,57 @@
+@using LnShelf.Shared.Sharing
+@inject ApiUrlBuilder ApiUrl
+
+@* One series on a shared shelf: the library card's anatomy (cover, bar, numbers, title)
+   without anything a visitor must not see or cannot do. Not a link: the series page is the
+   owner's, and there is nothing on it a visitor may open. *@
+
+<article class="card">
+
+    <div class="cover">
+        @if (Card.CoverObjectKey is { } coverObjectKey)
+        {
+            @* Through the shared shelf's own cover route, which serves series art of this
+               shelf only. alt is empty: the title is right below. *@
+            <img class="cover__art" src="@ApiUrl.SharedCover(Token, coverObjectKey)" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="cover__title" aria-hidden="true">@Card.TitleEnglish</span>
+        }
+
+        <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
+        <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
+    </div>
+
+    @* Two parts, not the shared three-segment bar: that one names its middle segment
+       "owned", and ownership is exactly what this page does not show. Read in --read over
+       the --track of what is out, the same reading as the library's bar. *@
+    <div class="progress" role="img" aria-label="@ProgressLabel" title="@ProgressLabel">
+        @if (Card.Read > 0)
+        {
+            <span class="progress__read" style="flex: @Card.Read 1 0"></span>
+        }
+        @if (Unread > 0)
+        {
+            <span class="progress__rest" style="flex: @Unread 1 0"></span>
+        }
+    </div>
+
+    <p class="card__counts tabular">@Card.Read read · @Card.Out out</p>
+
+    <h3 class="card__title">@Card.TitleEnglish</h3>
+
+</article>
+
+@code {
+    [Parameter]
+    public required SharedSeriesCardResponse Card { get; set; }
+
+    /// <summary>The link's token, which the cover route needs.</summary>
+    [Parameter]
+    public required string Token { get; set; }
+
+    private int Unread => Math.Max(0, Card.Out - Card.Read);
+
+    private string ProgressLabel => $"{Card.Read} of {Card.Out} out read";
+}

@@ -3,53 +3,60 @@ namespace LnShelf.Client.Features.Series.Components;
 public partial class VolumePopover
 {
     /// <summary>
-    /// Nominal size, used to decide the flip before the menu is measurable: the head, the
-    /// three read rows, the owned row, "Set cover…", the footer and the hairlines between.
+    /// Nominal size, used to decide the flip before the panel is measurable: the head, the
+    /// reading and ownership choices, "Set cover…", the footer and the gaps between.
     /// </summary>
-    public const double Width = 208;
-    public const double Height = 250;
+    public const double Width = 296;
+    public const double Height = 330;
 
     /// <summary>
-    /// The nominal size with a blurb in it: wider, because 208px of prose is four words a
-    /// line, and taller by the clamped blurb plus its hairline.
+    /// The nominal size with a blurb in it: wider, because prose at 296px is a short line,
+    /// and taller by the clamped blurb.
     /// </summary>
-    // The placement is computed before the menu exists, from these numbers rather than
-    // from a measurement — so a menu that grew and did not say so would be placed as if it
-    // were still 250 tall and hang off the bottom of the screen. Which is exactly what
-    // happened: measured at 400x850 the described menu of an owned volume renders 403px
-    // tall against the 372 this claimed, and hung 18px off the bottom of the screen with
-    // "Set cover…" and the drop hint below the fold. The rows that only some volumes have
-    // are now named and counted rather than left inside one number that drifts.
-    public const double DescribedWidth = 248;
-    public const double DescribedHeight = 386;
+    // The placement is computed before the panel exists, from these numbers rather than
+    // from a measurement — so a panel that grew and did not say so would be placed as if
+    // it were still its smallest and hang off the bottom of the screen. The rows that only
+    // some volumes have are named and counted rather than left inside one number that
+    // drifts.
+    public const double DescribedWidth = 320;
+    public const double DescribedHeight = 430;
 
-    /// <summary>The edition buttons, which only an owned volume shows.</summary>
-    private const double EditionRowHeight = 33;
+    /// <summary>"Buy Vol 18 on Saxo", which only a released, unowned volume shows.</summary>
+    private const double BuyRowHeight = 60;
 
     /// <summary>"Remove cover", which only a volume carrying an override shows.</summary>
-    private const double RemoveCoverRowHeight = 32;
+    private const double RemoveCoverRowHeight = 44;
 
     /// <summary>"Read 23 Nov 2021", which only a volume with a read date shows.</summary>
     private const double ReadDateNoteHeight = 21;
 
-    /// <summary>The nominal size this volume's menu will take, blurb or no blurb.</summary>
+    /// <summary>"Using Apple Books (your choice)", which only a volume whose date was picked shows.</summary>
+    private const double ChoiceNoteHeight = 21;
+
+    /// <summary>The nominal size this volume's panel will take, blurb or no blurb.</summary>
     public static double WidthFor(VolumeResponse volume) =>
         HasBlurb(volume) ? DescribedWidth : Width;
 
-    public static double HeightFor(VolumeResponse volume)
+    /// <param name="hasChoiceNote">Whether the reader picked this volume's date source.</param>
+    public static double HeightFor(VolumeResponse volume, bool hasChoiceNote = false)
     {
         ArgumentNullException.ThrowIfNull(volume);
 
         var height = HasBlurb(volume) ? DescribedHeight : Height;
+
+        if (hasChoiceNote)
+        {
+            height += ChoiceNoteHeight;
+        }
 
         if (volume.ReadAt is not null)
         {
             height += ReadDateNoteHeight;
         }
 
-        if (volume.Owned)
+        if (IsBuyable(volume))
         {
-            height += EditionRowHeight;
+            height += BuyRowHeight;
         }
 
         if (volume.HasCoverOverride)
@@ -66,11 +73,30 @@ public partial class VolumePopover
         return !string.IsNullOrWhiteSpace(volume.Description);
     }
 
+    /// <summary>Out and not owned — the "To buy" state, the one that offers the link.</summary>
+    private static bool IsBuyable(VolumeResponse volume) => volume.IsOut && !volume.Owned;
+
+    /// <summary>The single ownership choice: not owned, or owned in one edition.</summary>
+    private enum Ownership
+    {
+        None,
+        Physical,
+        Digital,
+    }
+
     [Parameter]
     public required VolumeResponse Volume { get; set; }
 
     [Parameter]
     public required PopoverPlacement Placement { get; set; }
+
+    /// <summary>The source the reader picked for this volume's release date, or null for automatic.</summary>
+    [Parameter]
+    public MetadataSourceName? DateChoice { get; set; }
+
+    /// <summary>The series' title, which the Saxo search is built from.</summary>
+    [Parameter]
+    public required string SeriesTitle { get; set; }
 
     [Parameter]
     public bool IsBusy { get; set; }
@@ -92,6 +118,8 @@ public partial class VolumePopover
 
     private bool HasDescription => HasBlurb(Volume);
 
+    private bool CanBuy => IsBuyable(Volume);
+
     /// <summary>
     /// The blurb split into paragraphs, the shape the API's sanitizer guarantees (a blank
     /// line between paragraphs) and the same split the hero's synopsis does.
@@ -103,23 +131,31 @@ public partial class VolumePopover
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : [];
 
-    private sealed record ReadChoice(ReadStatus Status, string Label, string SwatchClass);
-
-    private static readonly IReadOnlyList<ReadChoice> ReadChoices =
+    private static readonly IReadOnlyList<SegmentedOption<ReadStatus>> ReadOptions =
     [
-        new(ReadStatus.Unread, "Unread", "swatch--unread"),
-        new(ReadStatus.Reading, "Reading", "swatch--reading"),
-        new(ReadStatus.Read, "Read", "swatch--read"),
+        new(ReadStatus.Unread, "Unread", "Unread"),
+        new(ReadStatus.Reading, "Reading", "Reading"),
+        new(ReadStatus.Read, "Read", "Read"),
     ];
 
-    private static readonly IReadOnlyList<OwnedFormat> Editions =
-        [OwnedFormat.Physical, OwnedFormat.Digital];
+    private static readonly IReadOnlyList<SegmentedOption<Ownership>> OwnershipOptions =
+    [
+        new(Ownership.None, "No", "Not owned"),
+        new(Ownership.Physical, "Physical", "Owned, physical edition"),
+        new(Ownership.Digital, "Digital", "Owned, digital edition"),
+    ];
+
+    // An owned volume with no recorded edition is physical: that is what the API writes
+    // for it the moment it is marked owned without one.
+    private Ownership CurrentOwnership => !Volume.Owned
+        ? Ownership.None
+        : Volume.OwnedFormat is OwnedFormat.Digital ? Ownership.Digital : Ownership.Physical;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Focus moves into the menu so the keyboard can reach it and so focus-out
+            // Focus moves into the panel so the keyboard can reach it and so focus-out
             // becomes a usable click-away signal.
             await JavaScript.InvokeVoidAsync("lnshelf.focusFirstItem", _menuElement);
         }
@@ -131,16 +167,32 @@ public partial class VolumePopover
         await Closed.InvokeAsync();
     }
 
-    private async Task OnOwnedToggleAsync()
+    private async Task OnOwnershipAsync(Ownership choice)
     {
-        await SeriesState.SetOwnedAsync(Volume, !Volume.Owned);
-        await Closed.InvokeAsync();
-    }
+        if (choice == CurrentOwnership)
+        {
+            return;
+        }
 
-    // The edition stays open: switching physical to digital is a correction the user
-    // may want to see land on the tile before deciding they are done.
-    private Task OnEditionAsync(OwnedFormat edition) =>
-        SeriesState.SetOwnedAsync(Volume, owned: true, edition);
+        var wasOwned = Volume.Owned;
+
+        await SeriesState.SetOwnedAsync(
+            Volume,
+            owned: choice is not Ownership.None,
+            choice switch
+            {
+                Ownership.Physical => OwnedFormat.Physical,
+                Ownership.Digital => OwnedFormat.Digital,
+                _ => null,
+            });
+
+        // Switching the edition of an owned volume stays open: it is a correction the
+        // user may want to see land before deciding they are done.
+        if (!wasOwned || choice is Ownership.None)
+        {
+            await Closed.InvokeAsync();
+        }
+    }
 
     private Task OnPickCoverAsync() => CoverPickRequested.InvokeAsync(Volume);
 
@@ -163,19 +215,15 @@ public partial class VolumePopover
                     "lnshelf.moveMenuFocus", _menuElement, args.Key == "ArrowDown" ? 1 : -1);
                 return;
 
-            // Tab out of a menu means "done with the menu", the same as clicking away.
-            case "Tab":
-                await Closed.InvokeAsync();
-                return;
-
             default:
                 return;
         }
     }
 
     /// <summary>
-    /// Click-away and focus-away close the menu. The yield lets the clicked item's own
-    /// handler run first, which would otherwise be cancelled by the re-render.
+    /// Click-away and focus-away close the panel — which is also what Tab past its last
+    /// control does. The yield lets the clicked control's own handler run first, which
+    /// would otherwise be cancelled by the re-render.
     /// </summary>
     private async Task OnFocusOutAsync()
     {

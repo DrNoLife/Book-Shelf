@@ -1,0 +1,24 @@
+.gallery { --page-gap: var(--space-7); }
+
+.gallery__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-5);
+}
+
+.gallery__swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.gallery__narrow { max-width: 320px; }

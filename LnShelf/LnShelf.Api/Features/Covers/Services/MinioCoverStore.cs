@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Minio;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
@@ -88,6 +89,20 @@ public sealed class MinioCoverStore(
         await minioClient.RemoveObjectAsync(
             new RemoveObjectArgs().WithBucket(Bucket).WithObject(objectKey),
             cancellationToken);
+    }
+
+    public async IAsyncEnumerable<string> ListKeysAsync(
+        string prefix,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await EnsureBucketAsync(cancellationToken);
+
+        var arguments = new ListObjectsArgs().WithBucket(Bucket).WithPrefix(prefix).WithRecursive(true);
+
+        await foreach (var item in minioClient.ListObjectsEnumAsync(arguments, cancellationToken))
+        {
+            yield return item.Key;
+        }
     }
 
     public void Dispose() => _bucketGate.Dispose();

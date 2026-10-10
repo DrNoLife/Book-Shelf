@@ -14,6 +14,8 @@
 
   Prerequisites (one-time):
     - Docker Desktop running locally.
+    - The Six Labors license key in the SixLaborsLicenseKey environment variable (user scope is
+      fine); ImageSharp 4 will not compile without it. See README.md, Deploy.
     - SSH key auth to the server (key at $Key).
     - The server address and account, as parameters or in LNSHELF_DEPLOY_SERVER and
       LNSHELF_DEPLOY_USER. They are not written here, so the script holds nothing about
@@ -82,10 +84,21 @@ function Wait-ForHttpOk([string]$Uri, [int]$Attempts = 20, [int]$DelaySeconds = 
     return $false
 }
 
+# ImageSharp 4 needs a Six Labors license key to compile. Look in the user scope as well:
+# a variable set with setx or System Properties is invisible to a shell opened before it was set.
+if (-not $env:SixLaborsLicenseKey) {
+    $env:SixLaborsLicenseKey = [Environment]::GetEnvironmentVariable('SixLaborsLicenseKey', 'User')
+}
+if (-not $env:SixLaborsLicenseKey) {
+    throw 'SixLaborsLicenseKey is not set (checked the process and the user environment). ImageSharp 4 needs a Six Labors license key to build; see README.md, Deploy.'
+}
+
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 Write-Host '==> Building images locally…' -ForegroundColor Cyan
-& docker build -t $ApiTag -f Dockerfile.api .
+# The key goes in as a BuildKit secret read from the environment variable (never --build-arg,
+# which would be recorded in the image history).
+& docker build --secret id=sixlabors_license,env=SixLaborsLicenseKey -t $ApiTag -f Dockerfile.api .
 if ($LASTEXITCODE -ne 0) { throw 'docker build (api) failed.' }
 & docker build -t $ClientTag -f Dockerfile.client .
 if ($LASTEXITCODE -ne 0) { throw 'docker build (client) failed.' }

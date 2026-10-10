@@ -169,6 +169,8 @@ public sealed class SeriesSyncServiceOnDemandTests
             matcher,
             releaseSource,
             NoMetadata(),
+            new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
+            new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 enrichmentSource,

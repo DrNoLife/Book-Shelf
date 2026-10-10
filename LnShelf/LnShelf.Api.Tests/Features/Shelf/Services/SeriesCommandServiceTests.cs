@@ -490,6 +490,59 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
+    public async Task DeleteAsync_ASeriesWithVolumeCovers_DeletesThemAndKeepsTheSeriesArt()
+    {
+        await using var dbContext = CreateDbContext();
+        var coverStore = Substitute.For<ICoverStore>();
+        var service = CreateService(dbContext, CreateMetadataSource(), coverStore: coverStore);
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None)).ShouldNotBeNull().SeriesId;
+
+        var volumes = await dbContext.Volumes.OrderBy(volume => volume.Number).Take(3).ToListAsync();
+        var uploaded = UploadKey(volumes[0].Id);
+        var alsoUploaded = UploadKey(volumes[2].Id);
+        var syncedArt = LnShelf.Api.Features.Covers.Models.CoverObjectKey.ForVolumeSync(volumes[1].Id, "OpenLibrary", ".jpg");
+
+        volumes[0].UserState = new VolumeUserState { VolumeId = volumes[0].Id, CoverOverrideObjectKey = uploaded };
+        volumes[1].CoverObjectKey = syncedArt;
+        volumes[2].UserState = new VolumeUserState { VolumeId = volumes[2].Id, CoverOverrideObjectKey = alsoUploaded };
+        await dbContext.SaveChangesAsync();
+
+        (await service.DeleteAsync(seriesId, CancellationToken.None)).ShouldBeTrue();
+
+        // Per-volume keys name volume ids a re-added copy will not have, so they go: the
+        // user's uploads and the synced volume art alike. The series art is shared with a
+        // re-added copy, and stays.
+        await coverStore.Received(1).DeleteAsync(uploaded, Arg.Any<CancellationToken>());
+        await coverStore.Received(1).DeleteAsync(alsoUploaded, Arg.Any<CancellationToken>());
+        await coverStore.Received(1).DeleteAsync(syncedArt, Arg.Any<CancellationToken>());
+        await coverStore.DidNotReceive().DeleteAsync(CoverObjectKey, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TheStoreRefusesAnUploadDelete_StillDeletesTheSeries()
+    {
+        await using var dbContext = CreateDbContext();
+        var coverStore = Substitute.For<ICoverStore>();
+        coverStore.DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("MinIO is down")));
+        var service = CreateService(dbContext, CreateMetadataSource(), coverStore: coverStore);
+        var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None)).ShouldNotBeNull().SeriesId;
+
+        var volume = await dbContext.Volumes.FirstAsync();
+        volume.UserState = new VolumeUserState { VolumeId = volume.Id, CoverOverrideObjectKey = UploadKey(volume.Id) };
+        await dbContext.SaveChangesAsync();
+
+        // The rows are already gone when the store is asked, so its failure is only an object
+        // the cover-orphan-sweep will remove, not a reason to say the delete did not happen.
+        (await service.DeleteAsync(seriesId, CancellationToken.None)).ShouldBeTrue();
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+    }
+
+    // Spelled out because this class's CoverObjectKey constant is a different thing.
+    private static string UploadKey(Guid volumeId) =>
+        LnShelf.Api.Features.Covers.Models.CoverObjectKey.ForVolumeOverride(volumeId, Guid.CreateVersion7(), ".webp");
+
+    [Fact]
     public async Task DeleteAsync_UnknownSeries_IsFalseRatherThanAFailure()
     {
         await using var dbContext = CreateDbContext();
@@ -911,7 +964,8 @@ public sealed class SeriesCommandServiceTests
         ISeriesMetadataSource metadataSource,
         IIsbnBackfill? isbnBackfill = null,
         ISeriesSyncService? seriesSync = null,
-        IMangaUpdatesSeriesQueryService? mangaUpdatesSource = null) =>
+        IMangaUpdatesSeriesQueryService? mangaUpdatesSource = null,
+        ICoverStore? coverStore = null) =>
         new(dbContext,
             new AddSeriesPipeline(
                 dbContext,
@@ -926,6 +980,7 @@ public sealed class SeriesCommandServiceTests
                 isbnBackfill ?? NoStagedIsbns(),
                 seriesSync ?? NoRefresh(),
                 TestUsers.Limits(dbContext), NullLogger<AddSeriesPipeline>.Instance),
+            coverStore ?? Substitute.For<ICoverStore>(),
             TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
 

@@ -39,16 +39,21 @@ public static class ConsoleCommandExtensions
 
             // Every command works on one user's shelf, the owner filters see to that, so the
             // command acts as the user named by --user, or as the only user when there is one.
-            var userId = await ResolveUserAsync(scope.ServiceProvider, commandLine, cancellationToken);
-            if (userId is { } chosen)
+            // Except one that looks across every shelf (cover-orphan-sweep), which has no
+            // single shelf to act on.
+            if (command.ActsOnOneShelf)
             {
-                scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(chosen);
-            }
-            else if (await scope.ServiceProvider.GetRequiredService<LnShelfDbContext>().Users.CountAsync(cancellationToken) > 1)
-            {
-                await Console.Error.WriteLineAsync(
-                    "There is more than one user: pass --user <email> to say whose shelf this command works on.");
-                return 2;
+                var userId = await ResolveUserAsync(scope.ServiceProvider, commandLine, cancellationToken);
+                if (userId is { } chosen)
+                {
+                    scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(chosen);
+                }
+                else if (await scope.ServiceProvider.GetRequiredService<LnShelfDbContext>().Users.CountAsync(cancellationToken) > 1)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "There is more than one user: pass --user <email> to say whose shelf this command works on.");
+                    return 2;
+                }
             }
 
             try

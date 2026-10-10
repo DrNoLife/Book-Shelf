@@ -2,10 +2,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 18px;
+  gap: 6px 20px;
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-caption);
+  color: var(--muted);
 }

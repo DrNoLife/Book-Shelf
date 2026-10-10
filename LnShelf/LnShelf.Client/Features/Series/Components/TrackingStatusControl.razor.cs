@@ -16,21 +16,21 @@ public partial class TrackingStatusControl
     /// <summary>
     /// The four tracking statuses in the domain's own words (CLAUDE.md — Series status).
     /// </summary>
-    private static readonly IReadOnlyList<DropdownOption> StatusOptions =
+    private static readonly IReadOnlyList<SegmentedOption<TrackingStatus>> StatusOptions =
     [
-        new(nameof(TrackingStatus.Reading), "Reading"),
-        new(nameof(TrackingStatus.PlanToStart), "Plan to start"),
-        new(nameof(TrackingStatus.Completed), "Completed"),
-        new(nameof(TrackingStatus.Dropped), "Dropped"),
+        new(TrackingStatus.Reading, "Reading", "Reading"),
+        new(TrackingStatus.PlanToStart, "Plan to start", "Plan to start"),
+        new(TrackingStatus.Completed, "Completed", "Completed"),
+        new(TrackingStatus.Dropped, "Dropped", "Dropped"),
     ];
 
     /// <summary>
     /// Saves the chosen status, and nothing else — a null note leaves the note alone.
     /// </summary>
-    // Choosing what is already chosen writes nothing: the menu closes on any click, and
-    // a round trip that cannot change anything is not worth the tiles going inert for.
-    private Task OnChosenAsync(string value) =>
-        Enum.TryParse<TrackingStatus>(value, out var status) && status != Series.TrackingStatus
+    // Choosing what is already chosen writes nothing: a round trip that cannot change
+    // anything is not worth the tiles going inert for.
+    private Task OnChosenAsync(TrackingStatus status) =>
+        status != Series.TrackingStatus
             ? SeriesState.SetTrackingStatusAsync(status)
             : Task.CompletedTask;
 }

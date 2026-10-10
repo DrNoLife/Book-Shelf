@@ -2,88 +2,98 @@
 @using LnShelf.Client.Features.Library.Components
 @using LnShelf.Shared.Preferences
 
-@* Visible only where the sidebar is not — narrow viewports need the orientation,
-   the desktop shell already provides it. *@
-<h1 class="library__title">Library</h1>
+<div class="page library">
+    <div class="page__stack">
 
-<div class="library">
+        @* The page's name for a screen reader and for FocusOnNavigate; the sidebar and the
+           header's eyebrow already name it for everyone else. *@
+        <h1 class="visually-hidden">Library</h1>
 
-    <div class="library__top">
         @if (Library is not null)
         {
-            <LibraryHeader Totals="Library.Totals" Eyebrow="@Eyebrow" />
+            <LibraryHeader Totals="Library.Totals" />
         }
 
-        <LibraryToolbar TextFilter="@LibraryState.TextFilter"
-                        TextFilterChanged="OnTextFilterChanged"
-                        Sort="LibraryState.Sort"
-                        SortChanged="OnSortChangedAsync"
-                        Density="Preferences.GridDensity"
-                        DensityChanged="OnDensityChangedAsync"
-                        View="Preferences.LibraryView"
-                        ViewChanged="OnViewChangedAsync" />
-
-        <div class="controls">
-            <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
-            <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
-        </div>
-
-        <GridLegend />
-    </div>
-
-    <div class="library__body">
-        @* A preference that failed to save says so where the control that failed lives
-           — silently reverting on the next load is the bug. *@
-        @if (Preferences.Message is { } preferenceMessage)
+        @if (ContinueEntries.Count > 0)
         {
-            <p class="notice notice--warning">@preferenceMessage</p>
+            <ContinueReading Entries="ContinueEntries" />
         }
 
-        @if (LibraryState.LoadFailed)
+        @if (OutNowEntries.Count > 0)
         {
-            <p class="notice">Could not reach the API.</p>
+            <OutNow Entries="OutNowEntries" />
         }
-        else if (Library is null)
-        {
-            <p class="notice">Loading the shelf…</p>
-        }
-        else if (Cards.Count == 0)
-        {
-            <p class="notice">
-                @if (!string.IsNullOrWhiteSpace(LibraryState.TextFilter))
-                {
-                    @($"Nothing here matches “{LibraryState.TextFilter}”.")
-                }
-                else
-                {
-                    @("Nothing on this shelf — and nothing hidden by a filter menu you forgot about.")
-                }
-            </p>
-        }
-        else
-        {
-            @* Two renderings of the identical set: the chips, tabs, filter text and
-               sort have all been applied before either of these sees a card. *@
-            @if (Preferences.LibraryView == LibraryView.Rows)
+
+        <section class="shelf" aria-labelledby="shelf-title">
+            <h2 id="shelf-title" class="title-section">Shelf</h2>
+
+            <LibraryToolbar TextFilter="@LibraryState.TextFilter"
+                            TextFilterChanged="OnTextFilterChanged"
+                            Sort="LibraryState.Sort"
+                            SortChanged="OnSortChangedAsync"
+                            Density="Preferences.GridDensity"
+                            DensityChanged="OnDensityChangedAsync"
+                            View="Preferences.LibraryView"
+                            ViewChanged="OnViewChangedAsync">
+                <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
+                <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
+            </LibraryToolbar>
+
+            <GridLegend />
+
+            @* A preference that failed to save says so where the control that failed lives
+               — silently reverting on the next load is the bug. *@
+            @if (Preferences.Message is { } preferenceMessage)
             {
-                <SeriesRows Cards="Cards" />
+                <p class="notice notice--warning">@preferenceMessage</p>
+            }
+
+            @if (LibraryState.LoadFailed)
+            {
+                <p class="notice">Could not reach the API.</p>
+            }
+            else if (Library is null)
+            {
+                <p class="notice">Loading the shelf…</p>
+            }
+            else if (Cards.Count == 0)
+            {
+                <p class="notice">
+                    @if (!string.IsNullOrWhiteSpace(LibraryState.TextFilter))
+                    {
+                        @($"Nothing here matches “{LibraryState.TextFilter}”.")
+                    }
+                    else
+                    {
+                        @("Nothing on this shelf — and nothing hidden by a filter menu you forgot about.")
+                    }
+                </p>
             }
             else
             {
-                <div class="@GridDensityClass">
-                    @foreach (var card in Cards)
-                    {
-                        <SeriesCard Card="card" @key="card.SeriesId" />
-                    }
-                </div>
+                @* Two renderings of the identical set: the chips, tabs, filter text and
+                   sort have all been applied before either of these sees a card. *@
+                @if (Preferences.LibraryView == LibraryView.Rows)
+                {
+                    <SeriesRows Cards="Cards" />
+                }
+                else
+                {
+                    <div class="@GridDensityClass">
+                        @foreach (var card in Cards)
+                        {
+                            <SeriesCard Card="card" @key="card.SeriesId" />
+                        }
+                    </div>
+                }
+
+                @* Counts honestly: when a filter is narrowing the view, the line says
+                   what is hidden rather than quietly reporting a smaller number. *@
+                <p class="fine">
+                    @FooterCount shown · @SortLabel · Numbers under each cover: read · owned · out.
+                </p>
             }
+        </section>
 
-            @* Counts honestly: when a filter is narrowing the view, the line says
-               what is hidden rather than quietly reporting a smaller number. *@
-            <p class="library__footer">
-                @FooterCount shown · @SortLabel
-            </p>
-        }
     </div>
-
 </div>

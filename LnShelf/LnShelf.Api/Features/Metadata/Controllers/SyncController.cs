@@ -15,7 +15,7 @@ public sealed class SyncController(
     public async Task<ActionResult<SyncSummaryResponse>> RunAsync(CancellationToken cancellationToken)
     {
         var run = await seriesSyncService.RunAsync(cancellationToken);
-        return Ok(run.ToResponse());
+        return Ok(await syncQueryService.DescribeAsync(run, cancellationToken));
     }
 
     /// <summary>

@@ -1,0 +1,15 @@
+/* The hairlines between cells are the grid's own background showing through 1px gaps. */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--line);
+}
+
+.totals__cell {
+  padding: var(--space-5);
+  background: var(--surf);
+}

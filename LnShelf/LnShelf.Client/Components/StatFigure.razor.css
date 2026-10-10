@@ -1,0 +1,32 @@
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted);
+}
+
+/* The number: serif, weight 400, tight line so a row of figures sits on one baseline. */
+.stat__value {
+  font-family: var(--serif);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.stat__value--quiet { color: var(--faint); }
+
+.stat--small .stat__value  { font-size: var(--fs-stat-small); }
+.stat--medium .stat__value { font-size: var(--fs-stat-medium); }
+.stat--large .stat__value  { font-size: var(--fs-stat); }
+
+.stat--hero { gap: var(--space-2); }
+.stat--hero .stat__value { font-size: var(--fs-stat-hero); }
+
+/* Label under the number: the profile's totals. */
+.stat--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}

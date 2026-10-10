@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace LnShelf.Client.Features.Import;
 
@@ -27,6 +28,59 @@ public sealed class ImportState(HttpClient httpClient)
     public bool IsMatching { get; private set; }
 
     public event Action? Changed;
+
+    /// <summary>
+    /// Series still waiting for a decision, across every batch that has not been applied to
+    /// the shelf. The sidebar's "to review" count.
+    /// </summary>
+    // The open queue's batch is read from the queue, not from the recent list: deciding a
+    // series updates the queue at once, and the list only on its next load. A batch that was
+    // only just uploaded is in the queue and not yet in the list at all.
+    public int PendingReviewCount
+    {
+        get
+        {
+            var openBatch = Queue?.Batch;
+
+            var batches = RecentBatches
+                .Select(batch => openBatch is not null && openBatch.BatchId == batch.BatchId ? openBatch : batch)
+                .ToList();
+
+            if (openBatch is not null && batches.All(batch => batch.BatchId != openBatch.BatchId))
+            {
+                batches.Add(openBatch);
+            }
+
+            return batches.Where(batch => batch.CommittedAt is null).Sum(batch => batch.NeedsReview);
+        }
+    }
+
+    /// <summary>Whether <see cref="RecentBatches"/> has been read at least once.</summary>
+    public bool HasLoadedBatches { get; private set; }
+
+    /// <summary>
+    /// Reads the recent batches for the sidebar's count, quietly. It leaves the busy flag and
+    /// the message alone — those belong to the import page, and an API that is down must not
+    /// put an error on a page the user has not opened.
+    /// </summary>
+    public async Task RefreshReviewCountAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            RecentBatches = await httpClient.GetFromJsonAsync<IReadOnlyList<ImportBatchResponse>>(
+                                "api/import/batches?limit=5", cancellationToken) ?? [];
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            // A non-JSON error page from the proxy throws JsonException, not HttpRequestException.
+            // The sidebar shows no count rather than a wrong one.
+        }
+        finally
+        {
+            HasLoadedBatches = true;
+            Changed?.Invoke();
+        }
+    }
 
     public async Task LoadRecentBatchesAsync(CancellationToken cancellationToken = default)
     {

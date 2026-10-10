@@ -18,6 +18,7 @@ public static class ShelfFeatureExtensions
                 .ValidateOnStart();
 
             services.AddScoped<ILibraryQueryService, LibraryQueryService>();
+            services.AddScoped<ITrackedSeriesQueryService, TrackedSeriesQueryService>();
 
             // One registration per source the shelf can add from. This is the whole of
             // what a third source costs: a new IAddSeriesFlow and a line here, with no

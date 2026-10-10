@@ -5,6 +5,7 @@ using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Preferences;
 using LnShelf.Api.Features.Releases;
+using LnShelf.Api.Features.Sharing;
 using LnShelf.Api.Features.Shelf;
 using LnShelf.Api.Features.Stats;
 using Microsoft.Extensions.Configuration;
@@ -119,6 +120,7 @@ public sealed class CompositionRootTests
         services.AddCovers(configuration);
         services.AddImport(configuration);
         services.AddPreferences();
+        services.AddSharing(configuration);
         services.AddReleases();
         services.AddStats();
 

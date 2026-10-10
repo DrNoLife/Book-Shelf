@@ -1,0 +1,40 @@
+/* design.md, "Pill": 12px, radius 999. Every tone reserves the same 1px border so
+   switching tone (a series going from "to buy" to "up to date") never resizes the row. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.pill--neutral {
+  background: var(--pressed);
+  color: var(--text);
+}
+
+.pill--outline {
+  border-color: var(--line-2);
+  color: var(--muted);
+}
+
+.pill--buy {
+  border-color: var(--acc);
+  color: var(--text);
+}
+
+.pill--attention {
+  background: var(--amber);
+  color: var(--on-amber);
+  font-weight: 600;
+}
+
+.pill--ok {
+  padding-inline: 0;
+  color: var(--ok);
+}

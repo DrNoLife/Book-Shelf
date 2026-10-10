@@ -1,0 +1,16 @@
+@using LnShelf.Shared.Stats
+
+@* The same sums the Stats page prints, so the two pages cannot disagree. *@
+
+<section class="totals" aria-label="Totals">
+    <StatFigure Value="@Stats.Formats.Sum(format => format.Read).ToString(CultureInfo.InvariantCulture)" Label="volumes read" Stacked="true" />
+    <StatFigure Value="@Stats.Formats.Sum(format => format.Owned).ToString(CultureInfo.InvariantCulture)" Label="on the shelf" Stacked="true" />
+    <StatFigure Value="@ReadingSeries.ToString(CultureInfo.InvariantCulture)" Label="series reading" Stacked="true" />
+    <StatFigure Value="@Stats.CompletedSeries.ToString(CultureInfo.InvariantCulture)" Label="series finished" Stacked="true" />
+</section>
+
+@code {
+    [Parameter] public required StatsResponse Stats { get; set; }
+
+    [Parameter] public required int ReadingSeries { get; set; }
+}

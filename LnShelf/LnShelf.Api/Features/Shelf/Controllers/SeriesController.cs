@@ -5,8 +5,19 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 public sealed class SeriesController(
     ISeriesCommandService seriesCommandService,
     ISeriesDetailQueryService seriesDetailQueryService,
+    ITrackedSeriesQueryService trackedSeriesQueryService,
     IVolumeCommandService volumeCommandService) : ControllerBase
 {
+    /// <summary>
+    /// The external ids of the series already on the shelf, for the search page's
+    /// "on shelf" marker.
+    /// </summary>
+    // The {seriesId:guid} constraint keeps "tracked" from ever matching that route.
+    [HttpGet("tracked")]
+    public async Task<ActionResult<TrackedSeriesIdsResponse>> GetTrackedIdsAsync(
+        CancellationToken cancellationToken) =>
+        Ok(await trackedSeriesQueryService.GetTrackedIdsAsync(cancellationToken));
+
     /// <summary>
     /// Everything the series-detail page renders, in one round trip (feature-spec §6).
     /// </summary>

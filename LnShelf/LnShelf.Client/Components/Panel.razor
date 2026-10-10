@@ -1,0 +1,10 @@
+@* The card every screen puts its content in: a --surf box, a hairline, radius 14.
+   The progress block, the volume panel, the profile's cards and the landing page's feature
+   cards are all this. A panel never nests a panel.
+
+   It renders a <section>, so give it a name — AriaLabel, or aria-labelledby through the
+   unmatched attributes — or it is an anonymous box to a screen reader. *@
+
+<section @attributes="AdditionalAttributes" class="@CssClass" aria-label="@AriaLabel">
+    @ChildContent
+</section>

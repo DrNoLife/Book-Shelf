@@ -240,6 +240,44 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("import_row", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SourceChoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChosenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Field")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ReplacedValue")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("VolumeNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId", "Field", "VolumeNumber")
+                        .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SeriesId", "Field", "VolumeNumber"), false);
+
+                    b.ToTable("source_choice", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -253,6 +291,11 @@ namespace LnShelf.Api.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("ResolvedByChoice")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("ResolvedWith")
                         .HasMaxLength(32)
@@ -408,6 +451,27 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("user_preferences", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Sharing.Models.ShelfShare", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("shelf_share", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>
                 {
                     b.Property<Guid>("Id")
@@ -468,6 +532,9 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<Guid?>("RelatedSeriesId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("ReleaseSourceVolumeCount")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("StartYear")
                         .HasColumnType("integer");
@@ -675,6 +742,17 @@ namespace LnShelf.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SourceChoice", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", "Series")
+                        .WithMany("SourceChoices")
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Series");
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Metadata.Models.SyncDiscrepancy", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Metadata.Models.SyncRun", null)
@@ -707,6 +785,15 @@ namespace LnShelf.Api.Migrations
                     b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
                         .WithMany()
                         .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Sharing.Models.ShelfShare", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -775,6 +862,8 @@ namespace LnShelf.Api.Migrations
 
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Series", b =>
                 {
+                    b.Navigation("SourceChoices");
+
                     b.Navigation("UserState");
 
                     b.Navigation("Volumes");

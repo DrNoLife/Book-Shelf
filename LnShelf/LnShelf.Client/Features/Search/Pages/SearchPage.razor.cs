@@ -10,7 +10,17 @@ public partial class SearchPage : IDisposable
     [Inject]
     public required LibraryState LibraryState { get; set; }
 
-    protected override void OnInitialized() => SearchState.Changed += OnStateChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        SearchState.Changed += OnStateChanged;
+
+        // The state container outlives the page, so results from an earlier visit are still
+        // here; their "On shelf" markers may be out of date if a series was deleted since.
+        if (SearchState.Results.Count > 0)
+        {
+            await SearchState.RefreshTrackedIdsAsync();
+        }
+    }
 
     public void Dispose() => SearchState.Changed -= OnStateChanged;
 

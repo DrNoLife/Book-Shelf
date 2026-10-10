@@ -21,7 +21,7 @@
     @if (HasAnyTitle)
     {
         <button type="button"
-                class="control @(Preferences.ShowVolumeTitles ? "control--on" : null)"
+                class="@(Preferences.ShowVolumeTitles ? "tertiary" : "secondary")"
                 aria-pressed="@Preferences.ShowVolumeTitles.ToAriaState()"
                 title="@TitlesTitle"
                 @onclick="OnTitlesToggledAsync">
@@ -34,7 +34,7 @@
         @* The override is visible and reversible — a series quietly ignoring the global
            preference with no way to say so would be the bug. *@
         <button type="button"
-                class="control control--quiet"
+                class="ghost"
                 title="@($"This series is set to {View}; follow the {Preferences.VolumeView} default instead")"
                 @onclick="OnFollowGlobalAsync">
             Follow default
@@ -42,7 +42,7 @@
     }
 
     <button type="button"
-            class="control @(Selection.IsSelectMode ? "control--on" : null)"
+            class="@(Selection.IsSelectMode ? "tertiary" : "secondary")"
             aria-pressed="@Selection.IsSelectMode.ToAriaState()"
             disabled="@(View == VolumeView.List)"
             title="@SelectTitle"
@@ -52,11 +52,11 @@
 
     @if (Selection.IsSelectMode)
     {
-        <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
+        <button type="button" class="secondary" disabled="@(!HasSelection || SeriesState.IsSaving)"
                 @onclick="MarkSelectedReadAsync">
             @MarkSelectedReadLabel
         </button>
-        <button type="button" class="control" disabled="@(!HasSelection || SeriesState.IsSaving)"
+        <button type="button" class="secondary" disabled="@(!HasSelection || SeriesState.IsSaving)"
                 @onclick="MarkSelectedOwnedAsync">
             @MarkSelectedOwnedLabel
         </button>
@@ -65,11 +65,11 @@
     {
         @* The counts are computed into the labels, the way design.md computes the next
            needed volume into "Vol 12 on Saxo". *@
-        <button type="button" class="control" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
+        <button type="button" class="secondary" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
                 @onclick="MarkReadThroughAsync">
             Mark 1–@ReadThrough read
         </button>
-        <button type="button" class="control" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
+        <button type="button" class="secondary" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
                 @onclick="MarkOwnedThroughAsync">
             Mark 1–@OwnedThrough owned
         </button>

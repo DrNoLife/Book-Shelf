@@ -15,9 +15,25 @@ RUN dotnet restore LnShelf/LnShelf.Client/LnShelf.Client.csproj
 COPY LnShelf/ LnShelf/
 RUN dotnet publish LnShelf/LnShelf.Client/LnShelf.Client.csproj -c Release -o /publish --no-restore
 
+# The CSP allows the one inline <script type="importmap"> by hash. Its content changes with
+# every publish (fingerprinted framework names), so the hash is computed from the published
+# index.html. CR is stripped because the HTML parser normalises line endings before hashing.
+# The capture is checked, not the digest: openssl hashes an empty string happily, so a regex
+# that stopped matching would otherwise stamp a useless hash into the CSP and build green.
+RUN perl -0777 -ne 'print $1 if /<script type="importmap">(.*?)<\/script>/s' /publish/wwwroot/index.html \
+    | tr -d '\r' > /importmap.json \
+    && grep -q '"imports"' /importmap.json \
+    && openssl dgst -sha256 -binary /importmap.json | openssl base64 -A > /importmap.sha256 \
+    && test -s /importmap.sha256
+
 FROM nginx:alpine AS runtime
 # The publish output's wwwroot is the whole site: index.html, _framework/, the
 # vendored fonts and css. Everything else in /publish is build residue.
 COPY --from=build /publish/wwwroot /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-security-headers.conf /etc/nginx/security-headers.conf
+COPY --from=build /importmap.sha256 /tmp/importmap.sha256
+RUN sed -i "s|__IMPORTMAP_SHA256__|$(cat /tmp/importmap.sha256)|" /etc/nginx/security-headers.conf \
+    && rm /tmp/importmap.sha256 \
+    && ! grep -q __IMPORTMAP_SHA256__ /etc/nginx/security-headers.conf
 EXPOSE 80

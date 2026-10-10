@@ -1,10 +1,13 @@
 @typeparam TValue
 
-@* The quiet segmented control design.md specifies for the view toggles: a --surf
-   container, the chosen segment raised. Deliberately not the format tabs' persimmon
-   pill — a view choice must never compete with the scope tabs for the same signal. *@
+@* The segmented control: one choice out of a few, always laid out. A --surf container,
+   the chosen segment on --pressed. Deliberately neutral — the accent is for actions, and
+   choosing a view or a filter is not one. Used for the format filter, the view toggles,
+   the reading and ownership choices in a volume's panel. *@
 
-<div class="toggle" role="group" aria-label="@AriaLabel">
+<div class="toggle @(Stretch ? "toggle--stretch" : null) @(Inset ? "toggle--inset" : null)"
+     role="group"
+     aria-label="@AriaLabel">
     @foreach (var option in Options)
     {
         var isOn = EqualityComparer<TValue>.Default.Equals(option.Value, Value);
@@ -14,7 +17,7 @@
                 aria-pressed="@isOn.ToAriaState()"
                 disabled="@Disabled"
                 title="@TitleFor(option)"
-                @key="option.Value"
+                aria-label="@(option.Label is null ? option.Title : null)"
                 @onclick="() => OnChosenAsync(option.Value)">
             @if (option.Icon is { } icon)
             {

@@ -42,16 +42,13 @@ public partial class LibraryPage : IDisposable
     private string GridDensityClass =>
         Preferences.GridDensity == GridDensity.Compact ? "grid grid--compact" : "grid";
 
-    /// <summary>
-    /// The rows view spends this view's one wry line on its eyebrow; the covers view
-    /// keeps the plain section marker.
-    /// </summary>
-    // design.md allows one wry line per view, in fine print, never in a control. An
-    // eyebrow is fine print, and a table of what you have not bought is the one place
-    // on the shelf where "honestly" is the joke and the description at once.
-    private string Eyebrow => Preferences.LibraryView == LibraryView.Rows
-        ? "The shelf, honestly"
-        : "Library";
+    // Both lists follow the format tab but not the status filter or the text box: they
+    // are about the whole shelf, not about whatever the grid below is narrowed to.
+    private IReadOnlyList<ContinueReadingEntry> ContinueEntries =>
+        LibraryState.Overview is { } overview ? LibraryHighlights.ContinueReading(overview.Cards, take: 3) : [];
+
+    private IReadOnlyList<OutNowEntry> OutNowEntries =>
+        LibraryState.Overview is { } overview ? LibraryHighlights.OutNow(overview.Cards, take: 8) : [];
 
     protected override async Task OnInitializedAsync()
     {

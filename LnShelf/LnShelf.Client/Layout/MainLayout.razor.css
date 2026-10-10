@@ -4,22 +4,22 @@
    pixels below the shelves. */
 .app {
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
-  background: var(--ink);
+  background: var(--bg);
 }
 
 /* Flush against the sidebar, filling the rest of the viewport. The sidebar's
-   right hairline is the only separation — the mockup has no gutter and no
-   rounded panel here. */
+   right hairline is the only separation. Each page brings its own gutter and
+   width (the .page frame in app.css), so this column adds neither. */
 .main {
   min-width: 0;
   overflow-y: auto;
   background: var(--bg);
 }
 
-/* Below 861px there is no room for a 224px column, so the shell turns on its side:
+/* Below 861px there is no room for a 240px column, so the shell turns on its side:
    the sidebar becomes the top strip (Sidebar.razor.css) and the content column keeps
    the rest. The content is still the only scroller, which is what keeps the nav on
    screen while the shelf moves under it. */

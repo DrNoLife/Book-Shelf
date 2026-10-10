@@ -1,0 +1,34 @@
+@* The numbers for this series: how much is read, owned and out, in one panel with the
+   bar under them. The hero used to carry these; they are their own block now. *@
+
+<div class="progress">
+<Panel AriaLabel="Progress">
+
+    <div class="progress__row">
+        <StatFigure Value="@Series.Counts.Read.ToString(CultureInfo.InvariantCulture)" Label="read" />
+        <StatFigure Value="@Series.Counts.Owned.ToString(CultureInfo.InvariantCulture)" Label="owned" />
+        <StatFigure Value="@Series.Counts.Published.ToString(CultureInfo.InvariantCulture)" Label="out" Quiet="true">
+            @if (AnnouncedCount > 0)
+            {
+                <span class="fine">+ @AnnouncedCount announced</span>
+            }
+            @if (Series.ChoiceFor(SyncDiscrepancyField.VolumeCount) is { } countChoice)
+            {
+                <span class="fine">@ConflictText.ChoiceMarker(countChoice)</span>
+            }
+        </StatFigure>
+        <p class="progress__prose">@ProseLine</p>
+    </div>
+
+    <ThreeSegmentBar Read="Series.Counts.Read"
+                     Owned="Series.Counts.Owned"
+                     Published="Series.Counts.Published"
+                     Large="true" />
+
+    @if (FootLine is { } footLine)
+    {
+        <p class="fine">@footLine</p>
+    }
+
+</Panel>
+</div>

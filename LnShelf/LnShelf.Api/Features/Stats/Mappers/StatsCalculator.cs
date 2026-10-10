@@ -10,6 +10,7 @@ public static class StatsCalculator
 {
     private const int MonthsShown = 12;
     private const int LongestSeriesShown = 5;
+    private const int RecentlyReadShown = 5;
 
     /// <param name="series">Loaded with volumes and both user-state rows.</param>
     /// <param name="today">Supplied by the caller so tests can pin it.</param>
@@ -40,6 +41,8 @@ public static class StatsCalculator
             CompletedSeries = shelf.Count(entry => TrackingOf(entry.Series) is TrackingStatus.Completed),
             StartedSeries = shelf.Count(entry => TrackingOf(entry.Series) is not TrackingStatus.PlanToStart),
             LongestSeries = ToLongestSeries(shelf),
+            FirstReadAt = ToDatedReads(shelf).Select(read => (DateOnly?)read.ReadAt).Min(),
+            RecentlyRead = ToRecentlyRead(shelf),
         };
     }
 
@@ -145,6 +148,26 @@ public static class StatsCalculator
             .ThenBy(longest => longest.Title, StringComparer.OrdinalIgnoreCase)
             .Take(LongestSeriesShown),
     ];
+
+    private static List<RecentlyReadResponse> ToRecentlyRead(List<ShelvedSeries> shelf) =>
+    [
+        .. ToDatedReads(shelf)
+            .OrderByDescending(read => read.ReadAt)
+            .ThenBy(read => read.SeriesTitle, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(read => read.VolumeNumber)
+            .Take(RecentlyReadShown),
+    ];
+
+    private static IEnumerable<RecentlyReadResponse> ToDatedReads(List<ShelvedSeries> shelf) =>
+        shelf.SelectMany(entry => entry.Volumes
+            .Where(volume => volume is { ReadStatus: ReadStatus.Read, ReadAt: not null })
+            .Select(volume => new RecentlyReadResponse
+            {
+                SeriesId = entry.Series.Id,
+                SeriesTitle = entry.Series.TitleEnglish,
+                VolumeNumber = volume.Number,
+                ReadAt = volume.ReadAt!.Value,
+            }));
 
     /// <summary>The first day of each of the last twelve months, oldest first.</summary>
     private static List<DateOnly> LastMonths(DateOnly today)

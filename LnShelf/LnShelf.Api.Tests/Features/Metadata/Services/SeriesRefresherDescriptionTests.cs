@@ -166,6 +166,8 @@ public sealed class SeriesRefresherDescriptionTests
             matcher,
             releaseSource,
             metadataSource,
+            new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
+            new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
                 NoCatalogue(),
                 NoEnrichment(),

@@ -1,4 +1,6 @@
+using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Profile;
 using LnShelf.Client.Features.Sync;
 
 namespace LnShelf.Client.Layout;
@@ -12,10 +14,16 @@ public partial class Sidebar : IDisposable
     public required SyncState SyncState { get; set; }
 
     [Inject]
+    public required ImportState ImportState { get; set; }
+
+    [Inject]
     public required NavigationManager Navigation { get; set; }
 
     [Inject]
-    public required HttpClient Http { get; set; }
+    public required ProfileState ProfileState { get; set; }
+
+    [Inject]
+    public required ILogger<Sidebar> Logger { get; set; }
 
     /// <summary>
     /// Ends the session, then leaves the app for a static page. Landing back in the app would
@@ -23,21 +31,27 @@ public partial class Sidebar : IDisposable
     /// </summary>
     private async Task OnSignOutAsync()
     {
-        await Http.PostAsync("api/auth/logout", content: null);
-        Navigation.NavigateTo("signed-out.html", forceLoad: true);
+        try
+        {
+            await ProfileState.SignOutAsync(_refreshCancellation.Token);
+            Navigation.NavigateTo("signed-out.html", forceLoad: true);
+        }
+        catch (HttpRequestException exception)
+        {
+            // Stay put: the session is still alive, and leaving would only look like a sign-out.
+            Logger.LogWarning(exception, "Could not sign out; the session is still active");
+        }
     }
+
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
+
+    private readonly CancellationTokenSource _refreshCancellation = new();
 
     private SyncSummaryResponse? LatestSync => SyncState.Latest;
 
-    /// <summary>
-    /// The run's own summary, one line per clause.
-    /// </summary>
-    // The server writes it as a single "·"-joined sentence, which is right for a log
-    // and wrong for a 224px column. Splitting it is presentation, so it happens here.
-    private IReadOnlyList<string> SummaryLines =>
-        LatestSync is null
-            ? []
-            : [.. LatestSync.Summary.Split(" · ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+    private int ReviewCount => ImportState.PendingReviewCount;
+
+    private static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
 
     /// <summary>
     /// One row per shelf, in the order the design lists them. "Behind on buying"
@@ -68,12 +82,50 @@ public partial class Sidebar : IDisposable
     {
         LibraryState.Changed += OnStateChanged;
         SyncState.Changed += OnStateChanged;
+        ImportState.Changed += OnStateChanged;
 
-        // The shell owns this fetch: the footer shows on every page, including ones
-        // that never load a library.
+        // The shell owns these fetches: the footer and the Import row show on every page,
+        // including ones that never load a library or an import.
         if (!SyncState.HasLoaded)
         {
             await SyncState.LoadAsync();
+        }
+
+        if (!ImportState.HasLoadedBatches)
+        {
+            await ImportState.RefreshReviewCountAsync();
+        }
+
+        _ = RefreshPeriodicallyAsync(_refreshCancellation.Token);
+    }
+
+    // The shell lives for the whole session, so a run that was "in progress" at load would
+    // otherwise be shown as stale — and eventually "did not finish" — long after it ended.
+    // Reloading on a timer re-reads the run and re-renders the relative age too.
+    private async Task RefreshPeriodicallyAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(RefreshInterval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                // One bad tick must not end the loop: nothing awaits this task, so an
+                // escaped exception would stop the refresh silently for the rest of the session.
+                try
+                {
+                    await SyncState.LoadAsync(cancellationToken);
+                    await ImportState.RefreshReviewCountAsync(cancellationToken);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    Logger.LogWarning(exception, "Sidebar refresh failed; trying again next tick");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Deliberately empty: the sidebar is being disposed.
         }
     }
 
@@ -81,6 +133,9 @@ public partial class Sidebar : IDisposable
     {
         LibraryState.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;
+        ImportState.Changed -= OnStateChanged;
+        _refreshCancellation.Cancel();
+        _refreshCancellation.Dispose();
     }
 
     /// <summary>

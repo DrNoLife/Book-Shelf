@@ -1,0 +1,66 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* --- cover: 2:3, radius 8, a ring rather than a border so it never changes size --- */
+
+.cover {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.cover__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A coverless series shows its title in the serif, as the mockup's placeholders do. */
+.cover__title {
+  padding: 14px;
+  font-family: var(--serif);
+  font-size: var(--fs-series-title);
+  line-height: 1.15;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.cover__badge { position: absolute; top: 10px; left: 10px; }
+.cover__dot { position: absolute; top: 14px; right: 12px; }
+
+/* --- progress: read over what is out --- */
+
+.progress {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--track);
+}
+
+.progress__read { background: var(--read); }
+.progress__rest { background: var(--track); }
+
+/* --- numbers and title --- */
+
+.card__counts {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.card__title {
+  font-size: var(--fs-series-title);
+  line-height: 1.2;
+  text-wrap: pretty;
+  color: var(--text);
+}

@@ -1,0 +1,53 @@
+@inject ApiUrlBuilder ApiUrl
+
+@* The next unread volume you already own, per series. Open goes to the series, where
+   the volume is marked read: the library's cards carry no volume ids to act on. *@
+
+<section class="continue" aria-labelledby="continue-title">
+    <div class="section-head">
+        <h2 id="continue-title" class="title-section">Continue reading</h2>
+        <span class="section-head__aside">Next unread volume you already own</span>
+    </div>
+
+    <div class="continue__grid">
+        @foreach (var entry in Entries)
+        {
+            var card = entry.Card;
+
+            <article class="entry" @key="card.SeriesId">
+                <div class="entry__cover" aria-hidden="true">
+                    @if (card.CoverObjectKey is { } coverObjectKey)
+                    {
+                        <img class="entry__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="entry__label tabular">Vol @entry.NextVolumeNumber</span>
+                    }
+                </div>
+
+                <div class="entry__body">
+                    <span class="entry__kicker">
+                        <FormatBadge Value="card.Format" />
+                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber of @card.Published</span>
+                    </span>
+                    <h3 class="title-card">@card.TitleEnglish</h3>
+                    <span class="entry__unread">@UnreadText(card.Backlog)</span>
+
+                    <div class="entry__actions">
+                        <a class="tertiary" href="@($"/series/{card.SeriesId}")">
+                            Open <span class="visually-hidden">@card.TitleEnglish</span>
+                        </a>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public required IReadOnlyList<ContinueReadingEntry> Entries { get; set; }
+
+    private static string UnreadText(int backlog) =>
+        backlog == 1 ? "Last unread volume on your shelf" : $"{backlog} unread volumes on your shelf";
+}

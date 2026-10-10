@@ -302,6 +302,37 @@ public sealed class MangaUpdatesSeriesMapperTests
             .ShouldBe(expected);
     }
 
+    /// <summary>
+    /// The whole word, for a source choice that writes MangaUpdates' status: the same reading
+    /// the add flow stores, so the two paths cannot name one record differently.
+    /// </summary>
+    [Theory]
+    [InlineData("10 Volumes (Complete)", PublicationStatus.Completed)]
+    [InlineData("14 Volumes (Ongoing)", PublicationStatus.Ongoing)]
+    [InlineData("17 Volumes (Hiatus)", PublicationStatus.Hiatus)]
+    [InlineData("3 Volumes (Cancelled)", PublicationStatus.Cancelled)]
+    [InlineData(null, PublicationStatus.Ongoing)]
+    public void ToSeriesInfo_CarriesTheMappedPublicationStatus(string? status, PublicationStatus expected)
+    {
+        var record = new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Status = status,
+        };
+
+        MangaUpdatesSeriesMapper.ToSeriesInfo(record).PublicationStatus.ShouldBe(expected);
+        MangaUpdatesSeriesMapper.ToSeriesMetadata(record).PublicationStatus.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void ToSeriesInfo_TheCapturedSeries_CarriesItsPublicationStatus()
+    {
+        MangaUpdatesSeriesMapper.ToSeriesInfo(MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.YoujoSenkiSeries))
+            .PublicationStatus.ShouldBe(PublicationStatus.Ongoing);
+    }
+
     /// <summary>MangaUpdates' medium words in the shelf's own vocabulary.</summary>
     [Theory]
     [InlineData("Novel", Format.LightNovel)]

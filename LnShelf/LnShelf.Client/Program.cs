@@ -2,8 +2,10 @@ using LnShelf.Client;
 using LnShelf.Client.Features.Changelog;
 using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Profile;
 using LnShelf.Client.Features.Search;
 using LnShelf.Client.Features.Series;
+using LnShelf.Client.Features.Sharing;
 using LnShelf.Client.Features.Stats;
 using LnShelf.Client.Features.Sync;
 using LnShelf.Client.Features.Upcoming;
@@ -41,6 +43,8 @@ builder.Services
     .AddSync()
     .AddChangelog()
     .AddUpcoming()
-    .AddStats();
+    .AddStats()
+    .AddProfile()
+    .AddSharing();
 
 await builder.Build().RunAsync();

@@ -1,0 +1,74 @@
+@* "Who can see your shelf" (feature-spec §4.8), for the user page's right column. Two
+   choices only: Private, or Public by link. No "Followers": there are no followers. In place
+   of the mockup's "Show on profile" checkboxes, a fixed list of what a visitor sees, because
+   the view is fixed and a checkbox that changed nothing would be a fake control. *@
+
+<Panel class="sharing" aria-labelledby="sharing-title">
+    <h2 class="title-panel" id="sharing-title">Who can see your shelf</h2>
+
+    @if (State.Sharing is not { } sharing)
+    {
+        <p class="fine">@(State.Message ?? "Loading…")</p>
+    }
+    else
+    {
+        <SegmentedControl TValue="bool"
+                          Options="VisibilityOptions"
+                          Value="sharing.IsPublic"
+                          ValueChanged="OnVisibilityChangedAsync"
+                          AriaLabel="Who can see your shelf"
+                          Disabled="State.IsBusy"
+                          Stretch="true"
+                          Inset="true" />
+
+        <p class="fine">@HelpText(sharing.IsPublic)</p>
+
+        @if (sharing is { IsPublic: true, Token: { } token })
+        {
+            <div class="link">
+                <label class="link__label" for="sharing-link">Your shelf link</label>
+                @* Read-only and selected on focus: the fallback where the clipboard is not
+                   available (plain http on the home network). *@
+                <input id="sharing-link" class="link__field" type="text" readonly
+                       value="@LinkFor(token)" onfocus="this.select()" />
+            </div>
+
+            @if (IsConfirmingNewLink)
+            {
+                <div class="confirm" role="group" aria-label="Make a new link">
+                    <p class="fine">The old link stops working, for everyone you gave it to.</p>
+                    <div class="actions">
+                        <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="OnNewLinkConfirmedAsync">Make a new link</button>
+                        <button type="button" class="ghost" @onclick="OnNewLinkCancelled">Cancel</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="actions">
+                    <button type="button" class="secondary" @onclick="() => OnCopyAsync(token)">
+                        @(HasCopied ? "Copied" : "Copy link")
+                    </button>
+                    <button type="button" class="ghost" disabled="@State.IsBusy" @onclick="OnNewLinkRequested">New link</button>
+                </div>
+            }
+
+            @if (CopyMessage is { } copyMessage)
+            {
+                <p class="notice notice--quiet" role="status">@copyMessage</p>
+            }
+        }
+
+        <dl class="scope">
+            <dt class="eyebrow">Visitors see</dt>
+            <dd class="fine">Your series, their covers, and how far you have read.</dd>
+            <dt class="eyebrow">Visitors never see</dt>
+            <dd class="fine">What you own or paid, your notes, dropped series, or who you are.</dd>
+        </dl>
+
+        @if (State.Message is { } message)
+        {
+            <p class="notice notice--warning" role="alert">@message</p>
+        }
+    }
+</Panel>

@@ -1,0 +1,56 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-4) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry__cover {
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 2 / 3;
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--cover-placeholder);
+}
+
+.entry__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A coverless series: its title stands in, in the serif, at the foot like a spine label. */
+.entry__label {
+  padding: var(--space-3);
+  font-family: var(--serif);
+  font-size: var(--fs-series-title);
+  line-height: 1.15;
+}
+
+.entry__title {
+  font-size: var(--fs-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry__next {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}

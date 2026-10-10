@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- A static page, outside the Blazor app on purpose, like signed-out.html and privacy.html:
+     a visitor with no session must see this without the app booting and asking the API for the
+     library. The client sends a signed-out visitor here when the API answers 401 (see
+     SignInRedirectHandler); js/welcome.js hands the page they came from on to the login. -->
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LN Shelf</title>
+    <meta name="description" content="Track your light novels, manga and web novels volume by volume." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preload" href="fonts/geist-400-600-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/instrument-serif-400-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/welcome.css" />
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="frame site-header__row">
+            <a class="brand" href="welcome.html">
+                <span class="brand__mark" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a1 1 0 0 1 1-1h4v16H5a1 1 0 0 1-1-1z"></path><path d="M9 4h4v16H9"></path><path d="M14 5.5l3.5-1 3 14.5-3.5 1z"></path></svg>
+                </span>
+                <span class="brand__name">LN Shelf</span>
+            </a>
+            <nav class="site-nav" aria-label="Site">
+                <a href="#how">How it works</a>
+                <a href="privacy.html">Privacy</a>
+            </nav>
+            <a class="secondary" data-sign-in href="api/auth/login?returnUrl=%2F">Sign in</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="frame hero__row">
+                <div class="hero__copy">
+                    <span class="eyebrow">Light novels · Manga · Web novels</span>
+                    <h1>Know what you've read.<br><em>Know what to buy next.</em></h1>
+                    <p class="lead">LN Shelf tracks your series volume by volume: what you've read, what's sitting on your shelf, and what has come out since you last looked.</p>
+                    <div class="hero__actions">
+                        <a class="primary button--large" data-sign-in href="api/auth/login?returnUrl=%2F">Continue with Google</a>
+                        <a class="ghost button--large" href="#how">See how it works</a>
+                    </div>
+                    <p class="fine">Sign in with your Google account. No separate password.</p>
+                </div>
+
+                <!-- An illustration of the shelf, not live data. -->
+                <div class="preview" aria-hidden="true">
+                    <div class="preview__shelf">
+                        <div class="preview__stats">
+                            <span><span class="figure">64</span> read</span>
+                            <span><span class="figure">73</span> owned</span>
+                            <span><span class="figure figure--quiet">82</span> out</span>
+                        </div>
+                        <div class="preview__grid">
+                            <div class="preview__series">
+                                <div class="preview__cover" style="--cover: #34506a"></div>
+                                <div class="bar"><span class="bar__read" style="--share: 77%"></span><span class="bar__owned" style="--share: 14%"></span></div>
+                                <span class="fine">17 · 20 · 22</span>
+                            </div>
+                            <div class="preview__series">
+                                <div class="preview__cover" style="--cover: #4f5a2e"><span class="preview__new">New</span></div>
+                                <div class="bar"><span class="bar__read" style="--share: 87%"></span><span class="bar__owned" style="--share: 6%"></span></div>
+                                <span class="fine">14 · 15 · 16</span>
+                            </div>
+                            <div class="preview__series">
+                                <div class="preview__cover" style="--cover: #4e3f66"></div>
+                                <div class="bar"><span class="bar__read" style="--share: 71%"></span><span class="bar__owned" style="--share: 14%"></span></div>
+                                <span class="fine">10 · 12 · 14</span>
+                            </div>
+                            <div class="preview__series">
+                                <div class="preview__cover" style="--cover: #6b5238"></div>
+                                <div class="bar"><span class="bar__read" style="--share: 89%"></span><span class="bar__owned" style="--share: 11%"></span></div>
+                                <span class="fine">8 · 9 · 9</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="preview__note">
+                        <span class="dot"></span>New volume out overnight
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="band" aria-labelledby="features-title">
+            <div class="frame stack">
+                <h2 id="features-title" class="title-section">Built for people who read series, not single books.</h2>
+                <div class="cards">
+                    <article class="card">
+                        <h3 class="title-panel">Volume by volume</h3>
+                        <p>Every volume is read or unread, owned or not, physical or digital, with the date you finished it.</p>
+                    </article>
+                    <article class="card">
+                        <h3 class="title-panel">Knows what's out</h3>
+                        <p>A nightly sync checks MangaUpdates, AniList, Apple Books and Open Library, and flags series with a new volume.</p>
+                    </article>
+                    <article class="card">
+                        <h3 class="title-panel">What to buy next</h3>
+                        <p>One list of what's out and not on your shelf, with a link to look the next volume up at a bookshop.</p>
+                    </article>
+                    <article class="card">
+                        <h3 class="title-panel">Bring your history</h3>
+                        <p>Import from Goodreads or StoryGraph. Read dates come along, and a review queue sorts out the unclear matches.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="how" class="how" aria-labelledby="how-title">
+            <div class="frame stack">
+                <h2 id="how-title" class="title-section">How it works</h2>
+                <ol class="steps">
+                    <li>
+                        <span class="figure figure--quiet">1</span>
+                        <h3 class="title-panel">Add a series</h3>
+                        <p>Search by title. The light novel and the manga of the same story are separate series, so you track the one you actually read.</p>
+                    </li>
+                    <li>
+                        <span class="figure figure--quiet">2</span>
+                        <h3 class="title-panel">Mark your shelf</h3>
+                        <p>Mark what you've read and what you own. The keyboard works on the volume grid, so a long series is quick to catch up.</p>
+                    </li>
+                    <li>
+                        <span class="figure figure--quiet">3</span>
+                        <h3 class="title-panel">Let it keep up</h3>
+                        <p>Come back to see what's next to read, what's new, and what you're behind on buying.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="closing">
+            <div class="frame">
+                <div class="closing__panel">
+                    <h2 class="title-section">Put your shelf in order.</h2>
+                    <a class="primary button--large" data-sign-in href="api/auth/login?returnUrl=%2F">Continue with Google</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="frame site-footer__row">
+            <span>LN Shelf · a personal project</span>
+            <a href="privacy.html">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="js/welcome.js"></script>
+</body>
+
+</html>

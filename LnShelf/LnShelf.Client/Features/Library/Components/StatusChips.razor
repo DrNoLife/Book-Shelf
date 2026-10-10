@@ -1,42 +1,27 @@
-@* Outline chips; the active one is filled and carries a dismiss that returns to
-   the whole library. Terminology is fixed — To buy / Backlog / Behind / Up to
-   date are never paraphrased. *@
+@* The status filter, as the shared segmented control. Terminology is fixed — To buy /
+   Backlog / Behind / Up to date are never paraphrased. "All" is its own segment, which
+   replaces the old dismiss mark on the active chip. *@
 
-<div class="chips" role="group" aria-label="Status filter">
-    @foreach (var option in Options)
-    {
-        var isActive = Selected == option.Filter;
-
-        <button type="button"
-                class="chip @(isActive ? "chip--active" : null)"
-                aria-pressed="@isActive.ToAriaState()"
-                @onclick="() => OnChipClicked(option.Filter, isActive)">
-            <span>@option.Label</span>
-            @if (isActive)
-            {
-                <Icon Name="IconName.Close" Size="9" />
-            }
-        </button>
-    }
-</div>
+<SegmentedControl TValue="LibraryFilter"
+                  Options="Options"
+                  Value="Selected"
+                  ValueChanged="SelectedChanged"
+                  AriaLabel="Status filter" />
 
 @code {
     [Parameter] public required LibraryFilter Selected { get; set; }
 
     [Parameter] public EventCallback<LibraryFilter> SelectedChanged { get; set; }
 
-    private static readonly (LibraryFilter Filter, string Label)[] Options =
+    private static readonly IReadOnlyList<SegmentedOption<LibraryFilter>> Options =
     [
-        (LibraryFilter.Behind, "Behind"),
-        (LibraryFilter.Reading, "Reading"),
-        (LibraryFilter.Backlog, "Backlog"),
-        (LibraryFilter.UpToDate, "Up to date"),
-        (LibraryFilter.Completed, "Completed"),
-        (LibraryFilter.PlanToStart, "Plan to start"),
-        (LibraryFilter.Dropped, "Dropped"),
+        new(LibraryFilter.All, "All", "Everything on the shelf"),
+        new(LibraryFilter.Behind, "Behind", "Something to buy or something to read"),
+        new(LibraryFilter.Reading, "Reading", "Series you are reading"),
+        new(LibraryFilter.Backlog, "Backlog", "Owned and unread"),
+        new(LibraryFilter.UpToDate, "Up to date", "Nothing to buy and nothing to read"),
+        new(LibraryFilter.Completed, "Completed", "Series you finished"),
+        new(LibraryFilter.PlanToStart, "Plan to start", "Series you plan to start"),
+        new(LibraryFilter.Dropped, "Dropped", "Series you dropped"),
     ];
-
-    /// <summary>Dismissing the active chip widens the view back to everything.</summary>
-    private Task OnChipClicked(LibraryFilter filter, bool isActive) =>
-        SelectedChanged.InvokeAsync(isActive ? LibraryFilter.All : filter);
 }

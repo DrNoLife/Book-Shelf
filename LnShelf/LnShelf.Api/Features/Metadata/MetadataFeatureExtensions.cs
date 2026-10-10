@@ -272,9 +272,17 @@ public static class MetadataFeatureExtensions
             // What happens to one series, shared by the nightly sweep and the refresh that
             // runs when a series is added (feature-spec §4.2 — "same code path").
             services.AddScoped<SeriesRefresher>();
+            services.AddScoped<ReleaseCountWriter>();
+            services.AddScoped<PublicationStatusWriter>();
 
             services.AddScoped<ISeriesSyncService, SeriesSyncService>();
             services.AddScoped<ISyncQueryService, SyncQueryService>();
+
+            // The user's pick of a source where the sources disagree. The applier is shared by
+            // the command service; the sync writers read the choices it saves.
+            services.AddScoped<SourceChoiceApplier>();
+            services.AddScoped<ISourceChoiceCommandService, SourceChoiceCommandService>();
+            services.AddScoped<ISourceConflictQueryService, SourceConflictQueryService>();
 
             // One nightly loop, no job framework (CLAUDE.md).
             services.AddHostedService<NightlySyncBackgroundService>();

@@ -37,6 +37,21 @@ public sealed record StatsResponse
 
     /// <summary>The five series with the most volumes read, most first.</summary>
     public required IReadOnlyList<LongestSeriesResponse> LongestSeries { get; init; }
+
+    /// <summary>The earliest read date on the shelf; null when no read volume carries one.</summary>
+    public DateOnly? FirstReadAt { get; init; }
+
+    /// <summary>The last few volumes marked read with a date, latest first (the profile page).</summary>
+    public IReadOnlyList<RecentlyReadResponse> RecentlyRead { get; init; } = [];
+}
+
+/// <summary>One volume the reader finished, for the profile's "Recently finished".</summary>
+public sealed record RecentlyReadResponse
+{
+    public required Guid SeriesId { get; init; }
+    public required string SeriesTitle { get; init; }
+    public required int VolumeNumber { get; init; }
+    public required DateOnly ReadAt { get; init; }
 }
 
 /// <summary>One format's share of the shelf.</summary>

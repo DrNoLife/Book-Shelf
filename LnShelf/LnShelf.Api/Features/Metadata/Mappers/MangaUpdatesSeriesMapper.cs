@@ -46,6 +46,7 @@ public static class MangaUpdatesSeriesMapper
             // a series whose text says "(Complete)". The add flow reads the same text through
             // the same rule, so the two paths cannot disagree about one record.
             IsCompleted = ToPublicationStatus(record.Status) is PublicationStatus.Completed,
+            PublicationStatus = ToPublicationStatus(record.Status),
             VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
             RawStatus = record.Status.NullIfBlank(),
         };

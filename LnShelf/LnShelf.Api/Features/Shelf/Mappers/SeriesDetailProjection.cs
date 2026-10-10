@@ -49,6 +49,18 @@ public static class SeriesDetailProjection
             Spend = ToSpend(volumes),
             Relation = null,
             Volumes = volumes,
+            SourceChoices =
+            [
+                .. series.SourceChoices
+                    .OrderBy(choice => choice.Field)
+                    .ThenBy(choice => choice.VolumeNumber)
+                    .Select(choice => new SourceChoiceResponse
+                    {
+                        Field = choice.Field,
+                        VolumeNumber = choice.VolumeNumber,
+                        Source = choice.Source,
+                    }),
+            ],
         };
     }
 

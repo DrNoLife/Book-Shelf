@@ -1,3 +1,5 @@
+using LnShelf.Api.Commands;
+using LnShelf.Api.Features.Covers.Commands;
 using Minio;
 
 namespace LnShelf.Api.Features.Covers;
@@ -55,6 +57,10 @@ public static class CoversFeatureExtensions
             services.AddScoped<ISeriesCoverCache, SeriesCoverCache>();
             services.AddScoped<ICoverCache, AniListCoverCache>();
             services.AddScoped<IVolumeCoverCache, VolumeCoverCache>();
+
+            // The one-shot that deletes uploads whose volume is gone from every shelf.
+            services.AddScoped<CoverOrphanSweeper>();
+            services.AddScoped<IConsoleCommand, CoverOrphanSweepCommand>();
 
             return services;
         }

@@ -16,10 +16,10 @@
 }
 
 /* The same three fills the three-segment bar uses, assigned the same way
-   (design.md — colour discipline): --acc is done, --acc-deep is in hand but not
+   (design.md — colour discipline): --read is done, --owned is in hand but not
    done, --track is the pile that is out and unbought. */
-.tick--read { background: var(--acc); }
-.tick--owned { background: var(--acc-deep); }
+.tick--read { background: var(--read); }
+.tick--owned { background: var(--owned); }
 
 /* To buy: the dimmed fill, plus an edge. Measured in grayscale, --track alone came
    out at luminance 38 against an 18 background — a tick you could not prove was

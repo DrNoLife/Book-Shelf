@@ -1,0 +1,29 @@
+@using LnShelf.Shared.Stats
+
+<section class="section" aria-labelledby="recently-finished">
+    <h2 class="title-section" id="recently-finished">Recently finished</h2>
+
+    @if (Reads.Count == 0)
+    {
+        <p class="notice">Nothing finished with a read date yet.</p>
+    }
+    else
+    {
+        <ul class="list">
+            @foreach (var read in Reads)
+            {
+                <li class="row" @key="(read.SeriesId, read.VolumeNumber)">
+                    <span class="row__title">
+                        <a href="@($"/series/{read.SeriesId}")">@read.SeriesTitle</a>
+                        <span class="row__volume tabular">· Vol @read.VolumeNumber</span>
+                    </span>
+                    <span class="row__date tabular">@read.ReadAt.Full</span>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter] public required IReadOnlyList<RecentlyReadResponse> Reads { get; set; }
+}

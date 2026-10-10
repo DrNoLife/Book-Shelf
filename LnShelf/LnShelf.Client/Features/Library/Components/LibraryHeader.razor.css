@@ -1,51 +1,25 @@
 .header {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
 }
 
-.header__row {
+.header__figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.header__stats {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px 30px;
-}
-
-.stats {
-  display: flex;
-  align-items: baseline;
-  gap: 26px;
-}
-
-.stat {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-}
-
-/* Hierarchy from size, never weight — the serif has one weight. */
-.stat__value {
-  font-family: var(--serif);
-  font-size: 38px;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.stat__value--accent { color: var(--acc-soft); }
-
-.stat__label {
-  font-size: 11.5px;
-  color: var(--muted);
-}
-
-.header__prose {
-  max-width: 34ch;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--muted);
+  gap: var(--space-2) var(--space-7);
 }
 
 @media (max-width: 520px) {
-  .stats { gap: 18px; }
-  .stat__value { font-size: 30px; }
+  /* Three 64px figures do not fit across a phone; the row wraps, and the gap tightens. */
+  .header__stats { gap: var(--space-2) var(--space-5); }
 }

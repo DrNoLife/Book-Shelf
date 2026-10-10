@@ -1,0 +1,61 @@
+@* One disagreement between sources, side by side. Open ones are amber and ask for a look;
+   settled ones (by the usual rules, or by the reader's pick) are a quiet panel with the same
+   controls, because amber means "look at this" and a settled one asks for nothing.
+
+   The diff sits behind a native <details>: keyboard and screen-reader native, and its
+   summary is a 40px target. The buttons say "Use X" in words, and the one the reader chose
+   says "Using X" instead — the state is in the text, never in colour alone. *@
+
+<Panel Tone="@(Conflict.NeedsReview ? PanelTone.Warning : PanelTone.Default)" AriaLabel="@Conflict.Heading">
+
+    <div class="source-conflict__lead">
+        <SignalDot Tone="@(Conflict.NeedsReview ? SignalTone.Attention : SignalTone.Quiet)" Large="true" />
+        <div class="source-conflict__text">
+            <h2 class="title-panel">@Conflict.Heading</h2>
+            <p class="source-conflict__sentence">@(Conflict.NeedsReview ? Conflict.Sentence : Conflict.SettledLine)</p>
+        </div>
+    </div>
+
+    @if (Conflict.CanChoose)
+    {
+        <details class="source-conflict__details">
+            <summary class="ghost">Details</summary>
+
+            <dl class="source-conflict__diff">
+                @foreach (var option in Conflict.Options)
+                {
+                    <div class="source-conflict__row" @key="option.Source">
+                        <dt class="source-conflict__source">@option.SourceName</dt>
+                        <dd class="source-conflict__value">
+                            <span class="tabular">@option.DisplayValue</span>
+                            <span class="fine">@StateWord(option)</span>
+                        </dd>
+                    </div>
+                }
+            </dl>
+
+            <p class="fine">@Conflict.Explanation</p>
+        </details>
+
+        <div class="source-conflict__actions">
+            @foreach (var option in Conflict.Options)
+            {
+                <button type="button"
+                        class="secondary"
+                        disabled="@(IsBusy || IsChosen(option))"
+                        @onclick="() => Chosen.InvokeAsync(option.Source)"
+                        @key="option.Source">
+                    @(IsChosen(option) ? $"Using {option.SourceName}" : $"Use {option.SourceName}")
+                </button>
+            }
+
+            @if (Conflict.Reason is SourceDisplayReason.YourChoice)
+            {
+                <button type="button" class="ghost" disabled="@IsBusy" @onclick="() => ResetRequested.InvokeAsync()">
+                    Reset to automatic
+                </button>
+            }
+        </div>
+    }
+
+</Panel>

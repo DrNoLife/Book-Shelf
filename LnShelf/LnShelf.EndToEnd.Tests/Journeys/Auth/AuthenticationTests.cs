@@ -46,9 +46,10 @@ public sealed class AuthenticationTests(EndToEndFixture fixture) : JourneyTest(f
     }
 
     // The provider is never contacted in tests, so the login request is answered here: what
-    // matters is that a browser with no session is sent to it, with the page to come back to.
+    // matters is that a browser with no session lands on the welcome page, and that signing in
+    // from there asks for the page it came from.
     [Fact]
-    public async Task AnyPage_NoSession_SendsTheBrowserToSignInAndBack()
+    public async Task AnyPage_NoSession_ShowsTheWelcomePageThenSignsInAndBack()
     {
         await using var anonymous = await Fixture.NewContextAsync(signedIn: false);
         var page = await anonymous.NewPageAsync();
@@ -56,6 +57,11 @@ public sealed class AuthenticationTests(EndToEndFixture fixture) : JourneyTest(f
 
         await page.GotoAsync("/upcoming");
 
+        // The page's two API calls both answer 401 and each asks for the welcome page, so the
+        // second load aborts the first. WaitForURL trips over the aborted one; polling the URL
+        // does not.
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/welcome\.html\?returnUrl=%2Fupcoming$"));
+        await page.GetByRole(AriaRole.Link, new() { Name = "Continue with Google" }).First.ClickAsync();
         await page.WaitForURLAsync("**/api/auth/login?returnUrl=%2Fupcoming");
     }
 }

@@ -1,0 +1,145 @@
+/* The privacy page (privacy.html). Static, so it loads app.css for tokens and type roles and
+   welcome.css for the frame, header and footer, and adds only the reading layout here. */
+
+.privacy { padding-block: var(--space-9) var(--space-10); }
+
+.privacy__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-7);
+}
+
+/* A readable column beside a contents list, once there is room for both. */
+@media (min-width: 960px) {
+  .privacy__layout {
+    grid-template-columns: 200px minmax(0, 68ch);
+    gap: var(--space-10);
+  }
+
+  .privacy__toc { position: sticky; top: var(--space-6); align-self: start; }
+}
+
+.privacy__intro { display: flex; flex-direction: column; gap: var(--space-4); }
+.privacy__intro .title-page { font-size: clamp(40px, 6vw, var(--fs-page-title)); }
+.privacy__intro .lead { max-width: 60ch; font-size: var(--fs-large); }
+
+/* Contents */
+.privacy__toc {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf);
+}
+
+.privacy__toc ol {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.privacy__toc a {
+  display: block;
+  padding-block: var(--space-1);
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.privacy__toc a:hover { color: var(--text-strong); }
+
+@media (max-width: 959px) {
+  .privacy__toc ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); column-gap: var(--space-5); }
+}
+
+/* The text */
+.privacy__body { display: flex; flex-direction: column; gap: var(--space-9); min-width: 0; }
+
+.privacy__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-margin-top: var(--space-6);
+}
+
+.privacy__section p,
+.privacy__section li { line-height: 1.65; text-wrap: pretty; }
+
+.privacy__section ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.privacy__section li::marker { color: var(--faint); }
+
+.privacy__section h3 { margin-top: var(--space-2); }
+
+.privacy__section code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surf);
+  border: 1px solid var(--line);
+  font-size: var(--fs-caption);
+}
+
+/* A short aside inside a section: the one thing to remember. */
+.privacy__note {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf);
+  color: var(--muted);
+}
+
+/* What we store: a table where there is room, a stack of labelled rows where there is not. */
+.privacy__table-wrap { border: 1px solid var(--line); border-radius: var(--radius-xl); overflow: hidden; }
+
+.privacy__table { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); }
+
+.privacy__table th,
+.privacy__table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.privacy__table thead th {
+  background: var(--sidebar);
+  color: var(--faint);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.privacy__table tbody tr:last-child th,
+.privacy__table tbody tr:last-child td { border-bottom: 0; }
+
+.privacy__table tbody th { font-weight: 600; color: var(--text); width: 22%; }
+.privacy__table td { color: var(--muted); }
+
+@media (max-width: 720px) {
+  .privacy__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .privacy__table,
+  .privacy__table tbody,
+  .privacy__table tr,
+  .privacy__table th,
+  .privacy__table td { display: block; width: auto; }
+  .privacy__table tbody th { width: auto; padding-bottom: 0; border-bottom: 0; }
+  .privacy__table td { padding-block: var(--space-1); border-bottom: 0; }
+  .privacy__table td::before {
+    content: attr(data-label) ": ";
+    color: var(--faint);
+  }
+  .privacy__table tbody tr { padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+  .privacy__table tbody tr:last-child { border-bottom: 0; }
+}
+
+/* Who else sees data: a name, then what they get. */
+.privacy__parties { list-style: none; padding: 0; gap: var(--space-4); }
+.privacy__parties strong { color: var(--text-strong); font-weight: 600; }

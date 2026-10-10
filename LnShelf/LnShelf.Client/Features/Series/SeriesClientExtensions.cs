@@ -12,6 +12,7 @@ public static class SeriesClientExtensions
             // Scoped is a WASM app's singleton. One fetch, then per-volume writes.
             services.AddScoped<SeriesDetailClient>();
             services.AddScoped<SeriesState>();
+            services.AddScoped<SourceConflictState>();
 
             // Menu and select mode: page state, deliberately separate from the series.
             services.AddScoped<VolumeSelectionState>();

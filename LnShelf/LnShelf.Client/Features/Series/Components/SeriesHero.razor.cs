@@ -43,36 +43,40 @@ public partial class SeriesHero
         _expandedSeriesId = IsDescriptionExpanded ? null : Series.SeriesId;
 
     /// <summary>
-    /// "Kadokawa · 2013 – · 14 volumes out", with the clauses that have no data left
-    /// out rather than rendered empty. AniList supplies no publisher, so a real series
-    /// usually starts at the year.
+    /// "Carlo Zen, illustrated by Shinobu Shinotsuki · Kadokawa", with the clauses that
+    /// have no data left out rather than rendered empty. Null when none has any.
     /// </summary>
-    private string FactsLine
+    private string? CreditsLine
     {
         get
         {
             var parts = new List<string>();
 
+            if (!string.IsNullOrWhiteSpace(Series.Author)) parts.Add(Series.Author);
+            if (!string.IsNullOrWhiteSpace(Series.Illustrator))
+            {
+                parts.Add($"illustrated by {Series.Illustrator}");
+            }
+
+            var credits = string.Join(", ", parts);
+
             if (!string.IsNullOrWhiteSpace(Series.Publisher))
             {
-                parts.Add(Series.Publisher);
+                credits = credits.Length == 0 ? Series.Publisher : $"{credits} · {Series.Publisher}";
             }
 
-            if (Series.StartYear is { } startYear)
-            {
-                parts.Add(Series.PublicationStatus is PublicationStatus.Completed
-                    ? startYear.ToString(CultureInfo.InvariantCulture)
-                    : $"{startYear} –");
-            }
-
-            parts.Add($"{Series.Counts.Published} volumes out");
-            return string.Join(" · ", parts);
+            return credits.Length == 0 ? null : credits;
         }
     }
 
-    /// <summary>
-    /// "Yōjo Senki · 幼女戦記 — Carlo Zen, illustrated by Shinobu Shinotsuki".
-    /// </summary>
+    /// <summary>"Since 2014" while it runs, "2014" once it has ended.</summary>
+    private string? YearLine => Series.StartYear is { } startYear
+        ? Series.PublicationStatus is PublicationStatus.Completed
+            ? startYear.ToString(CultureInfo.InvariantCulture)
+            : $"Since {startYear}"
+        : null;
+
+    /// <summary>"Yōjo Senki · 幼女戦記".</summary>
     private string SubtitleLine
     {
         get
@@ -81,61 +85,7 @@ public partial class SeriesHero
             if (!string.IsNullOrWhiteSpace(Series.TitleRomaji)) titles.Add(Series.TitleRomaji);
             if (!string.IsNullOrWhiteSpace(Series.TitleNative)) titles.Add(Series.TitleNative);
 
-            var credits = new List<string>();
-            if (!string.IsNullOrWhiteSpace(Series.Author)) credits.Add(Series.Author);
-            if (!string.IsNullOrWhiteSpace(Series.Illustrator))
-            {
-                credits.Add($"illustrated by {Series.Illustrator}");
-            }
-
-            var left = string.Join(" · ", titles);
-            var right = string.Join(", ", credits);
-
-            return (left.Length, right.Length) switch
-            {
-                (0, 0) => string.Empty,
-                (0, _) => right,
-                (_, 0) => left,
-                _ => $"{left} — {right}",
-            };
-        }
-    }
-
-    /// <summary>
-    /// The mockup's "3 sitting unread. 3 to buy." — in the fixed terminology, and
-    /// honest when both numbers are zero.
-    /// </summary>
-    private string ProseLine
-    {
-        get
-        {
-            var counts = Series.Counts;
-
-            if (counts.Backlog == 0 && counts.ToBuy == 0)
-            {
-                return counts.NotOut > 0
-                    ? $"Caught up. {counts.NotOut} more to come."
-                    : "Caught up, and that is the whole series.";
-            }
-
-            var parts = new List<string>();
-            if (counts.Backlog > 0) parts.Add($"{counts.Backlog} sitting unread.");
-            if (counts.ToBuy > 0) parts.Add($"{counts.ToBuy} to buy.");
-
-            return string.Join(" ", parts);
-        }
-    }
-
-    /// <summary>"Started 12 Mar 2023 · last read 6 Jul 2026".</summary>
-    private string? ReadingLine
-    {
-        get
-        {
-            var parts = new List<string>();
-            if (Series.StartedAt is { } started) parts.Add($"Started {started.Full}");
-            if (Series.LastReadAt is { } lastRead) parts.Add($"last read {lastRead.Full}");
-
-            return parts.Count == 0 ? null : string.Join(" · ", parts);
+            return string.Join(" · ", titles);
         }
     }
 

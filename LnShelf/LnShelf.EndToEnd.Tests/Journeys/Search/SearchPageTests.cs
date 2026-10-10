@@ -17,12 +17,18 @@ public sealed class SearchPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await Assertions.Expect(Page.Locator(".notice--message"))
             .ToContainTextAsync($"Added {LightNovelTitle}");
 
+        // Just added: the row stops offering Add at once.
+        await Assertions.Expect(LightNovelRow().GetByRole(AriaRole.Button, new() { Name = "Add" }))
+            .ToHaveCountAsync(0);
+        await Assertions.Expect(LightNovelRow()).ToContainTextAsync("On shelf");
+
+        // Added in an earlier visit: the marker comes from the shelf, not from page state.
         await Page.ReloadAsync();
         await SearchAsync(FixtureSeriesMetadataSource.KnownQuery);
-        await LightNovelRow().GetByRole(AriaRole.Button, new() { Name = "Add" }).ClickAsync();
 
-        await Assertions.Expect(Page.Locator(".notice--message"))
-            .ToContainTextAsync($"{LightNovelTitle} was already on the shelf");
+        await Assertions.Expect(LightNovelRow()).ToContainTextAsync("On shelf");
+        await Assertions.Expect(LightNovelRow().GetByRole(AriaRole.Button, new() { Name = "Add" }))
+            .ToHaveCountAsync(0);
     }
 
     private async Task SearchAsync(string query)

@@ -1,68 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-- A static page outside the Blazor app, like signed-out.html: it has to be readable
-     without signing in, because the Google consent screen links to it. -->
+<!-- A static page outside the Blazor app, like welcome.html and signed-out.html: it has to be
+     readable without signing in, because the Google consent screen links to it. It runs under
+     the strict CSP, so there is no inline script; js/privacy.js only relabels the header link
+     when a session exists. The text is the record kept in docs/privacy-record.md: change both
+     together, and the date below. -->
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy · LN Shelf</title>
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <meta name="description" content="What LN Shelf stores about you, why, who else is involved, how long it is kept, and what you can do about it." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preload" href="fonts/geist-400-600-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/instrument-serif-400-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="css/fonts.css" />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/welcome.css" />
+    <link rel="stylesheet" href="css/privacy.css" />
 </head>
 
 <body>
-    <main class="boot privacy">
-        <h1>Privacy</h1>
+    <header class="site-header">
+        <div class="frame site-header__row">
+            <a class="brand" href="./">
+                <span class="brand__mark" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a1 1 0 0 1 1-1h4v16H5a1 1 0 0 1-1-1z"></path><path d="M9 4h4v16H9"></path><path d="M14 5.5l3.5-1 3 14.5-3.5 1z"></path></svg>
+                </span>
+                <span class="brand__name">LN Shelf</span>
+            </a>
+            <a class="secondary" data-session-link href="api/auth/login?returnUrl=%2F">Sign in</a>
+        </div>
+    </header>
 
-        <p>LN Shelf is a hobby project that keeps track of your light novel and manga collection.</p>
+    <main class="frame privacy">
+        <div class="privacy__layout">
+            <nav class="privacy__toc" aria-labelledby="toc-title">
+                <p class="eyebrow" id="toc-title">On this page</p>
+                <ol>
+                    <li><a href="#who">Who is responsible</a></li>
+                    <li><a href="#store">What we store and why</a></li>
+                    <li><a href="#basis">Legal basis</a></li>
+                    <li><a href="#others">Who else sees data</a></li>
+                    <li><a href="#transfers">Outside the EU</a></li>
+                    <li><a href="#keep">How long we keep it</a></li>
+                    <li><a href="#rights">Your rights</a></li>
+                    <li><a href="#cookies">Cookies</a></li>
+                    <li><a href="#sharing">Public shelves</a></li>
+                    <li><a href="#security">Security</a></li>
+                    <li><a href="#changes">Changes</a></li>
+                </ol>
+            </nav>
 
-        <h2>What is stored</h2>
-        <ul>
-            <li>Your Google account's email address and its account id, so you can sign in again.</li>
-            <li>The series and volumes you add or import, and what you record about them: read and
-                owned status, dates, prices, notes and covers you upload.</li>
-            <li>When you last signed in.</li>
-        </ul>
+            <article class="privacy__body">
+                <header class="privacy__intro">
+                    <span class="eyebrow">Last updated 10 October 2026</span>
+                    <h1 class="title-page">Privacy</h1>
+                    <p class="lead">LN Shelf is a small, self-hosted tracker for light novels, manga and web novels. This page explains, in plain language, what it stores about you, why, who else is involved and what you can do about it. There are no ads, no analytics and no tracking.</p>
+                </header>
 
-        <h2>What is not</h2>
-        <ul>
-            <li>No password: signing in goes through Google, and no Google token is kept.</li>
-            <li>No tracking, no analytics and no ads. Nothing is shared with or sold to anyone.</li>
-            <li>Other users cannot see anything of yours.</li>
-        </ul>
+                <section class="privacy__section" id="who" aria-labelledby="who-title">
+                    <h2 class="title-section" id="who-title">Who is responsible</h2>
+                    <p>LN Shelf is run by Thor Christiansen, a private person in Denmark, who is the data controller.</p>
+                    <p>Contact: <a class="text-link" href="mailto:iamdrnolife@gmail.com">iamdrnolife@gmail.com</a>. Write there with any question about your data, or to use any of the rights below.</p>
+                </section>
 
-        <p>Series details and covers come from public catalogues (AniList, MangaUpdates, Open
-            Library and Apple Books). Only titles and ISBNs are sent to them, never anything about
-            you.</p>
+                <section class="privacy__section" id="store" aria-labelledby="store-title">
+                    <h2 class="title-section" id="store-title">What we store and why</h2>
+                    <div class="privacy__table-wrap">
+                        <table class="privacy__table">
+                            <thead>
+                                <tr><th scope="col">What</th><th scope="col">Details</th><th scope="col">Why</th><th scope="col">How long</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Your account</th>
+                                    <td data-label="Details">The email address of your Google account, its account ID (the &ldquo;subject&rdquo;) and which provider it came from. When you created the account and when you last signed in.</td>
+                                    <td data-label="Why">So you can sign in and your shelf stays yours. The ID identifies you; the email is shown on your profile and refreshed at each sign-in.</td>
+                                    <td data-label="How long">Until you delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Your shelf</th>
+                                    <td data-label="Details">The series and volumes you add or import. What you record about them: tracking status, read status and dates, whether you own a volume and in what format, purchase price and date, your notes. Your display preferences.</td>
+                                    <td data-label="Why">This is the service you signed up for.</td>
+                                    <td data-label="How long">Until you delete it, or your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Imports</th>
+                                    <td data-label="Details">When you import a StoryGraph or Goodreads export, the file itself is not saved. We keep the rows we read from it (title, author, ISBN, volume number, read status and date, owned status), the file name and when you uploaded it.</td>
+                                    <td data-label="Why">To match the books to series and show you how each one was matched.</td>
+                                    <td data-label="How long">As long as your account exists.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Sync records</th>
+                                    <td data-label="Details">A record of each sync of your shelf: counts, a summary, and any disagreements between the catalogues.</td>
+                                    <td data-label="Why">To show you what changed.</td>
+                                    <td data-label="How long">As long as your account exists.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Uploaded covers</th>
+                                    <td data-label="Details">Covers you upload are re-encoded and stripped of all embedded metadata, such as camera details or location, before they are stored.</td>
+                                    <td data-label="Why">To show them on your shelf.</td>
+                                    <td data-label="How long">Until you replace or remove the cover, remove its series, or delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Your public link</th>
+                                    <td data-label="Details">Only if you make your shelf public: the random code in its link, and when it was made.</td>
+                                    <td data-label="Why">It is the link you asked for.</td>
+                                    <td data-label="How long">Until you make the shelf private, make a new link, or delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Technical logs</th>
+                                    <td data-label="Details">The web server logs each request: IP address, time, the page or API address requested, the response, the referring page and your browser&rsquo;s user agent. The application logs events such as sign-ups, errors and changes to your shelf, which can include your account ID, series titles and, in a few cases such as a refused sign-in, an email address.</td>
+                                    <td data-label="Why">To keep the service secure, find faults and stop abuse.</td>
+                                    <td data-label="How long">Rotated automatically by size, so only the most recent entries are kept, and cleared when the service is updated.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Rate-limit counters</th>
+                                    <td data-label="Details">Your IP address (when viewing a public shelf) or your account ID, held in memory only. Never written to disk.</td>
+                                    <td data-label="Why">To protect the server and the free catalogues it relies on from overload.</td>
+                                    <td data-label="How long">About a minute.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Backups</th>
+                                    <td data-label="Details">A copy of the database and the uploaded covers, so everything above is in them too.</td>
+                                    <td data-label="Why">To recover from a failure or a bad update.</td>
+                                    <td data-label="How long">Each backup is deleted again after a short, fixed period. See below.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p>We never get your Google password, your name or your picture, and we keep no Google tokens.</p>
+                    <p class="privacy__note">Please don&rsquo;t put sensitive personal information, such as health or beliefs, in your notes. They are private, but they are free text and we can&rsquo;t tell what is in them.</p>
+                </section>
 
-        <h2>Deleting your data</h2>
-        <p>This deletes your account and everything on your shelf, straight away and for good.</p>
-        <p><button type="button" id="delete-account">Delete my account and all my data</button></p>
-        <p id="delete-status" role="status"></p>
+                <section class="privacy__section" id="basis" aria-labelledby="basis-title">
+                    <h2 class="title-section" id="basis-title">Legal basis</h2>
+                    <ul>
+                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your shelf, imports, sync records, uploaded covers and your public link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Legitimate interests (Article 6(1)(f))</strong> for technical logs, rate limiting and backups: keeping a small public service secure, working and recoverable, and not overloading the free community catalogues it relies on. We keep these to what a web server normally needs, for a short time, and never use them for profiling or marketing. You can object to this; see your rights.</li>
+                    </ul>
+                    <p>You need a Google account with a verified email address to sign up. Nothing is decided about you automatically.</p>
+                </section>
 
-        <p><a href="./">Back to the shelf</a></p>
+                <section class="privacy__section" id="others" aria-labelledby="others-title">
+                    <h2 class="title-section" id="others-title">Who else sees data</h2>
+                    <p>We don&rsquo;t sell or share your data with anyone for their own purposes. These services are involved:</p>
+                    <ul class="privacy__parties">
+                        <li><strong>Google</strong> handles signing in. You sign in on Google&rsquo;s own page, so Google knows you signed in to LN Shelf, under its own privacy policy. We receive only your account ID, your email address and whether the address is verified.</li>
+                        <li><strong>Cloudflare</strong> carries the traffic between your browser and our server (a &ldquo;Cloudflare Tunnel&rdquo;) and provides the HTTPS connection. Because the encryption ends at Cloudflare, it can technically see the traffic passing through, including your IP address. Cloudflare acts as our processor under its data processing agreement.</li>
+                        <li><strong>Book catalogues</strong> (AniList, MangaUpdates, Open Library and Apple Books) supply series details, release dates and covers. Our server asks them about titles, catalogue IDs, ISBNs and the search text you type. Nothing that identifies you is sent: no email, no account ID, and the requests come from our server, not your browser.</li>
+                        <li><strong>Saxo, AniList and MangaUpdates links</strong> open those sites only when you click them. Nothing about you or your shelf is passed along, beyond the book title and volume in a Saxo search.</li>
+                    </ul>
+                    <p>Your browser loads nothing from other websites while you use LN Shelf: fonts and covers are served by our own server.</p>
+                </section>
+
+                <section class="privacy__section" id="transfers" aria-labelledby="transfers-title">
+                    <h2 class="title-section" id="transfers-title">Outside the EU</h2>
+                    <p>The server, database and covers are in Denmark. Google and Cloudflare are US companies. Transfers to them rely on the EU-US Data Privacy Framework, under which both are certified, and in Cloudflare&rsquo;s case also on the EU Standard Contractual Clauses.</p>
+                </section>
+
+                <section class="privacy__section" id="keep" aria-labelledby="keep-title">
+                    <h2 class="title-section" id="keep-title">How long we keep it</h2>
+                    <ul>
+                        <li><strong>Your account and everything on your shelf:</strong> until you delete your account. Deleting it removes everything at once and signs you out on every device.</li>
+                        <li><strong>Things you delete yourself</strong> (a series, a note, a cover) are gone straight away. That includes covers you uploaded to a series you remove.</li>
+                        <li><strong>Your public link:</strong> until you make your shelf private, make a new link, or delete your account.</li>
+                        <li><strong>Imports and sync records:</strong> as long as your account exists.</li>
+                        <li><strong>Technical logs:</strong> rotated automatically by size, so only the most recent entries are kept, and cleared when the service is updated.</li>
+                        <li><strong>Rate-limit data:</strong> about a minute, in memory only.</li>
+                        <li><strong>Backups:</strong> the database and the uploaded covers are backed up, and each backup is deleted again after a short, fixed period. So after you delete your account, your data can survive in a backup until that backup is rotated out. Backups are used only to recover from a failure, and if one is ever restored, deleted accounts are deleted again.</li>
+                    </ul>
+                </section>
+
+                <section class="privacy__section" id="rights" aria-labelledby="rights-title">
+                    <h2 class="title-section" id="rights-title">Your rights</h2>
+                    <p>You have the right to:</p>
+                    <ul>
+                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports and your sync records as one file. The covers you uploaded and any log entries about you are not in it: email us for those.</li>
+                        <li><strong>Correct</strong> it. You can edit everything on your shelf yourself. Your email address follows your Google account.</li>
+                        <li><strong>Delete</strong> it. <em>Delete account</em> on your profile deletes your account and all its data immediately.</li>
+                        <li><strong>Take it with you</strong> (data portability). The export is a standard JSON file.</li>
+                        <li><strong>Object</strong> to the processing we do on the basis of legitimate interests (logs, rate limiting).</li>
+                        <li><strong>Restrict</strong> processing while a question about your data is being resolved.</li>
+                    </ul>
+                    <p>For anything you can&rsquo;t do yourself in the app, email <a class="text-link" href="mailto:iamdrnolife@gmail.com">iamdrnolife@gmail.com</a>. We will answer within one month.</p>
+                    <p>You can also complain to the Danish Data Protection Agency (Datatilsynet), Carl Jacobsens Vej 35, 2500 Valby, Denmark, <a class="text-link" href="mailto:dt@datatilsynet.dk">dt@datatilsynet.dk</a>, <a class="text-link" href="https://www.datatilsynet.dk" rel="noopener noreferrer">www.datatilsynet.dk</a>.</p>
+                </section>
+
+                <section class="privacy__section" id="cookies" aria-labelledby="cookies-title">
+                    <h2 class="title-section" id="cookies-title">Cookies</h2>
+                    <p>LN Shelf uses only cookies that are strictly necessary for signing in, so it doesn&rsquo;t ask for consent:</p>
+                    <ul>
+                        <li><code>lnshelf.session</code> keeps you signed in. Scripts can&rsquo;t read it, and it ends when you sign out, when your browser ends the session, or after 30 days without use.</li>
+                        <li>During sign-in, two short-lived cookies (<code>.AspNetCore.Correlation&hellip;</code> and <code>.AspNetCore.OpenIdConnect.Nonce&hellip;</code>) protect the login against tampering. They are removed when sign-in finishes.</li>
+                    </ul>
+                    <p>No analytics, advertising or tracking cookies, and nothing stored in your browser&rsquo;s local storage.</p>
+                </section>
+
+                <section class="privacy__section" id="sharing" aria-labelledby="sharing-title">
+                    <h2 class="title-section" id="sharing-title">Public shelves</h2>
+                    <p>Your shelf is private unless you make it public on your profile. Then anyone with the link can see the titles of the series on it, their format, publication status and cover, whether you are reading, have finished or plan to start each one, and how many volumes you have read and how many are out.</p>
+                    <p>They never see your name or email, what you own or paid, your dates, your notes, the series you dropped, or covers you uploaded. Public shelf pages ask search engines not to index them.</p>
+                    <p>Anyone who has the link can pass it on. Making your shelf private, or making a new link, stops the old link from working immediately.</p>
+                </section>
+
+                <section class="privacy__section" id="security" aria-labelledby="security-title">
+                    <h2 class="title-section" id="security-title">Security</h2>
+                    <ul>
+                        <li>All public traffic uses HTTPS.</li>
+                        <li>Each user&rsquo;s data is separated in the database: every query is limited to the signed-in user.</li>
+                        <li>The session cookie is HttpOnly and protected against cross-site use, and the site uses a strict Content Security Policy.</li>
+                        <li>The database and file storage are not exposed to the internet; only the web front end is reachable, through the tunnel.</li>
+                        <li>Public links use long random codes, and public pages are rate limited.</li>
+                    </ul>
+                    <p>No system is perfectly secure. If a breach affects your data, we will tell Datatilsynet and, where required, you.</p>
+                </section>
+
+                <section class="privacy__section" id="changes" aria-labelledby="changes-title">
+                    <h2 class="title-section" id="changes-title">Changes</h2>
+                    <p>If this page changes, the date at the top changes too. Significant changes will be announced in the app&rsquo;s changelog.</p>
+                </section>
+            </article>
+        </div>
     </main>
 
-    <script>
-        document.getElementById('delete-account').addEventListener('click', async () => {
-            if (!window.confirm('Delete your account and everything on your shelf? This cannot be undone.')) {
-                return;
-            }
+    <footer class="site-footer">
+        <div class="frame site-footer__row">
+            <span>LN Shelf · a personal project</span>
+            <a href="mailto:iamdrnolife@gmail.com">Contact</a>
+            <a href="./">Back to the shelf</a>
+        </div>
+    </footer>
 
-            const status = document.getElementById('delete-status');
-            const response = await fetch('api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
-
-            if (response.status === 204) {
-                window.location.href = 'signed-out.html';
-            } else if (response.status === 401) {
-                status.textContent = 'Sign in first, then come back here to delete your account.';
-            } else {
-                status.textContent = 'Deleting failed (' + response.status + '). Nothing was deleted; try again later.';
-            }
-        });
-    </script>
+    <script src="js/privacy.js"></script>
 </body>
 
 </html>

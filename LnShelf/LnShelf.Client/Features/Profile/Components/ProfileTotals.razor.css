@@ -1,0 +1,15 @@
+/* One bordered block cut into cells by hairlines: the grid's gap shows the line colour. */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.totals ::deep .stat {
+  padding: var(--space-5);
+  background: var(--surf);
+}

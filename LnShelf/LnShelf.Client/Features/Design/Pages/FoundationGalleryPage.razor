@@ -1,0 +1,119 @@
+@page "/dev/foundation"
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@inject IWebAssemblyHostEnvironment HostEnvironment
+
+@* A design harness, not a feature — the sibling of /dev/tiles: every shared primitive in one
+   place, in every state, so the foundation can be checked by eye. It exists so a screen can
+   be built from the pieces without first having to find out how each one looks. The route
+   is development-only. *@
+
+@if (!HostEnvironment.IsDevelopment())
+{
+    <p class="notice">Not available.</p>
+}
+else
+{
+    <div class="page">
+        <div class="page__stack gallery">
+
+            <h1 class="title-page">Foundation</h1>
+            <p class="lead">Every shared primitive, as the screens will use it. Development only.</p>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Type</h2>
+                <p class="eyebrow">Eyebrow · Library · 6 series</p>
+                <h3 class="title-card">A series title on a card, long enough to wrap onto a second line</h3>
+                <p class="title-panel">A panel title in sans</p>
+                <p class="lead">The lead line: 3 on your shelf waiting. 2 out there you haven't bought.</p>
+                <p class="fine">Fine print: numbers under each cover are read · owned · out.</p>
+                <p>Body text with <a href="#">a plain link</a> and <a class="text-link" href="#">a prose link</a>.</p>
+            </section>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Figures</h2>
+                <div class="gallery__row">
+                    <StatFigure Value="64" Label="read" Size="StatSize.Hero" />
+                    <StatFigure Value="73" Label="owned" Size="StatSize.Hero" />
+                    <StatFigure Value="82" Label="out" Size="StatSize.Hero" Quiet="true" />
+                </div>
+                <div class="gallery__row">
+                    <StatFigure Value="17" Label="read" />
+                    <StatFigure Value="22" Label="out" Quiet="true"><span class="fine">+ 1 announced</span></StatFigure>
+                </div>
+                <div class="gallery__row">
+                    <StatFigure Value="77" Label="volumes read" Stacked="true" />
+                    <StatFigure Value="6" Label="series reading" Stacked="true" Size="StatSize.Small" />
+                </div>
+            </section>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Buttons</h2>
+                <div class="gallery__row">
+                    <button type="button" class="primary">Primary</button>
+                    <button type="button" class="primary button--large">Add series</button>
+                    <a class="primary" href="#">Buy Vol 21 on Saxo <Icon Name="IconName.ArrowUpRight" Size="13" /></a>
+                    <button type="button" class="secondary">Secondary</button>
+                    <button type="button" class="tertiary">Mark Vol 18 read</button>
+                    <button type="button" class="ghost">Ghost</button>
+                    <button type="button" class="destructive">Remove series…</button>
+                    <button type="button" class="primary" disabled>Disabled</button>
+                </div>
+            </section>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Pills, badges, dots</h2>
+                <div class="gallery__row">
+                    <Pill Tone="PillTone.Neutral">3 unread</Pill>
+                    <Pill Tone="PillTone.Outline">Coming later</Pill>
+                    <Pill Tone="PillTone.Buy">5 to buy</Pill>
+                    <Pill Tone="PillTone.Attention">New · Vol 16</Pill>
+                    <Pill Tone="PillTone.Ok">Up to date</Pill>
+                </div>
+                <div class="gallery__row">
+                    <FormatBadge Value="Format.LightNovel" />
+                    <FormatBadge Value="Format.Manga" />
+                    <FormatBadge Value="Format.WebNovel" />
+                    <span class="gallery__swatch"><StatusDot Value="PublicationStatus.Ongoing" /> Ongoing</span>
+                    <span class="gallery__swatch"><SignalDot Tone="SignalTone.Ok" /> Synced 3 h ago</span>
+                    <span class="gallery__swatch"><SignalDot Tone="SignalTone.Attention" /> 2 to review</span>
+                    <span class="gallery__swatch"><SignalDot Tone="SignalTone.Quiet" /> Not synced yet</span>
+                </div>
+            </section>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Controls</h2>
+                <div class="gallery__row">
+                    <SearchField AriaLabel="Filter" Placeholder="Filter by title" Value="@_filter" ValueChanged="value => _filter = value" />
+                    <FormatTabs Selected="_format" SelectedChanged="format => _format = format" />
+                    <SegmentedControl TValue="string" Options="ViewOptions" Value="@_view" ValueChanged="value => _view = value" AriaLabel="View" />
+                    <Dropdown Options="SortOptions" Value="@_sort" ValueChanged="value => _sort = value" AriaLabel="Sort" />
+                </div>
+                <div class="gallery__narrow">
+                    <Panel AriaLabel="A volume">
+                        <p class="title-panel">On a panel</p>
+                        <SegmentedControl TValue="string" Options="ReadingOptions" Value="@_reading" ValueChanged="value => _reading = value" AriaLabel="Reading status" Stretch="true" Inset="true" />
+                    </Panel>
+                </div>
+            </section>
+
+            <section class="gallery__section">
+                <h2 class="title-section">Panels</h2>
+                <Panel AriaLabel="A plain panel">
+                    <p class="title-panel">A plain panel</p>
+                    <ThreeSegmentBar Read="17" Owned="20" Published="22" Large="true" />
+                    <p class="fine">Started 17 Oct 2021 · last read 29 Sep 2026</p>
+                </Panel>
+                <Panel Tone="PanelTone.Warning" AriaLabel="Sources disagree">
+                    <div class="gallery__row">
+                        <SignalDot Tone="SignalTone.Attention" Large="true" />
+                        <div>
+                            <p class="title-panel">Sources disagree on Vol 23</p>
+                            <p class="notice">MangaUpdates says it is in print. Apple Books says 9 Mar 2027.</p>
+                        </div>
+                    </div>
+                </Panel>
+            </section>
+
+        </div>
+    </div>
+}

@@ -26,4 +26,12 @@ public interface ICoverStore
     /// Removes the object under a key. Deleting a key that holds nothing is not an error.
     /// </summary>
     Task DeleteAsync(string objectKey, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every key under <paramref name="prefix"/>, however deep.
+    /// </summary>
+    // Streamed, because a store can hold far more keys than anything wants in a list at
+    // once. Exists for the orphan sweep (Features/Covers/Commands); nothing on a request
+    // path lists the bucket.
+    IAsyncEnumerable<string> ListKeysAsync(string prefix, CancellationToken cancellationToken);
 }

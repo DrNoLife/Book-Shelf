@@ -21,6 +21,45 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
         CancellationToken cancellationToken = default) =>
         httpClient.GetFromJsonAsync<SeriesDetailResponse>($"api/series/{seriesId}", cancellationToken);
 
+    /// <summary>
+    /// What each source said about every disagreement on this series, laid out side by side.
+    /// </summary>
+    public Task<IReadOnlyList<SourceConflictResponse>?> GetConflictsAsync(
+        Guid seriesId,
+        CancellationToken cancellationToken = default) =>
+        httpClient.GetFromJsonAsync<IReadOnlyList<SourceConflictResponse>>(
+            $"api/series/{seriesId}/conflicts", cancellationToken);
+
+    /// <summary>Picks the source that decides one field. Answers with the refreshed series.</summary>
+    public Task<SeriesDetailResponse?> ChooseSourceAsync(
+        Guid seriesId,
+        SyncDiscrepancyField field,
+        int? volumeNumber,
+        MetadataSourceName source,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/series/{seriesId}/source-choice",
+            new ChooseSourceRequest { Field = field, VolumeNumber = volumeNumber, Source = source },
+            "Could not save that choice",
+            cancellationToken);
+
+    /// <summary>Hands a field back to the usual rules. Answers with the refreshed series.</summary>
+    public async Task<SeriesDetailResponse?> ResetSourceAsync(
+        Guid seriesId,
+        SyncDiscrepancyField field,
+        int? volumeNumber,
+        CancellationToken cancellationToken = default)
+    {
+        var query = volumeNumber is { } number
+            ? $"field={field}&volumeNumber={number}"
+            : $"field={field}";
+
+        using var response = await httpClient.DeleteAsync(
+            $"api/series/{seriesId}/source-choice?{query}", cancellationToken);
+
+        return await ReadDetailAsync(response, "Could not save that choice", cancellationToken);
+    }
+
     public Task<SeriesDetailResponse?> SetReadAsync(
         Guid volumeId,
         ReadStatus status,

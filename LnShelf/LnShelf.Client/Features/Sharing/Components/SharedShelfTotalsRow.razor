@@ -1,0 +1,21 @@
+@using LnShelf.Shared.Sharing
+
+@* The shared shelf's three totals, in the user page's totals strip: a bordered grid of
+   stacked figures. *@
+
+<section class="totals" aria-label="Totals">
+    <div class="totals__cell">
+        <StatFigure Value="@Totals.VolumesRead.ToString(CultureInfo.CurrentCulture)" Label="volumes read" Stacked="true" />
+    </div>
+    <div class="totals__cell">
+        <StatFigure Value="@Totals.SeriesReading.ToString(CultureInfo.CurrentCulture)" Label="series reading" Stacked="true" />
+    </div>
+    <div class="totals__cell">
+        <StatFigure Value="@Totals.SeriesCompleted.ToString(CultureInfo.CurrentCulture)" Label="series completed" Stacked="true" />
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public required SharedShelfTotals Totals { get; set; }
+}

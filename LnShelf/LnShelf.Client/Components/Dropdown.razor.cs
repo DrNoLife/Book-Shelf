@@ -32,6 +32,11 @@ public partial class Dropdown
     [Parameter]
     public bool Disabled { get; set; }
 
+    [Inject]
+    public required IJSRuntime JavaScript { get; set; }
+
+    private ElementReference _root;
+
     private bool IsOpen { get; set; }
 
     private string SelectedLabel =>
@@ -64,11 +69,20 @@ public partial class Dropdown
     /// Closes on click-away, using focusout rather than a document-level listener.
     /// </summary>
     // Blazor sees focusout before the new focus lands, so the check is deferred by a
-    // yield; without it, clicking an option would close the menu before its own click
-    // handler ran.
+    // yield. Even then the menu must not close just because focus moved: pressing an
+    // option moves focus from the button to that option, which is a focusout too, and
+    // closing on it removed the option before the click it was about to receive — the
+    // dropdown opened and chose nothing. So the menu closes only once focus is no longer
+    // anywhere inside it, the same test VolumePopover applies.
     private async Task OnFocusOutAsync()
     {
         await Task.Yield();
+
+        if (await JavaScript.InvokeAsync<bool>("lnshelf.hasFocusWithin", _root))
+        {
+            return;
+        }
+
         if (IsOpen)
         {
             IsOpen = false;

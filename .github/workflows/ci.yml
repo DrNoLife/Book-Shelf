@@ -23,12 +23,18 @@ jobs:
 
       - name: Build
         run: dotnet build LnShelf/LnShelf.slnx --no-restore -c Release
+        # ImageSharp 4 needs a Six Labors license key to compile (README.md, Deploy), so only
+        # the steps that compile get it, not the third-party actions or the app under test.
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
 
       - name: Test
         run: dotnet test LnShelf/LnShelf.slnx --no-build -c Release
 
       - name: Format check
         run: dotnet format LnShelf/LnShelf.slnx --verify-no-changes --no-restore
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
 
   # The browser journeys (LnShelf.EndToEnd.Tests). After build-test, so a broken build
   # fails once and cheaply instead of also spending a browser install. Needs Docker for
@@ -45,6 +51,8 @@ jobs:
 
       - name: Build
         run: dotnet build LnShelf/LnShelf.slnx -c Release
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
 
       - name: Publish the client bundle
         run: dotnet publish LnShelf/LnShelf.Client -c Release

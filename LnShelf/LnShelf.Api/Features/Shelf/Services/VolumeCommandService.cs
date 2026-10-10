@@ -125,6 +125,7 @@ public sealed class VolumeCommandService(
 
         var series = await dbContext.Series
             .Include(candidate => candidate.UserState)
+            .Include(candidate => candidate.SourceChoices)
             .Include(candidate => candidate.Volumes).ThenInclude(volume => volume.UserState)
             .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
 
@@ -326,6 +327,7 @@ public sealed class VolumeCommandService(
     private Task<Series?> LoadSeriesForVolumeAsync(Guid volumeId, CancellationToken cancellationToken) =>
         dbContext.Series
             .Include(series => series.UserState)
+            .Include(series => series.SourceChoices)
             .Include(series => series.Volumes).ThenInclude(volume => volume.UserState)
             .FirstOrDefaultAsync(
                 series => series.Volumes.Any(volume => volume.Id == volumeId), cancellationToken);

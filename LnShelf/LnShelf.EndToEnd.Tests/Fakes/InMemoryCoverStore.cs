@@ -34,5 +34,17 @@ public sealed class InMemoryCoverStore : ICoverStore
         return Task.CompletedTask;
     }
 
+    public async IAsyncEnumerable<string> ListKeysAsync(
+        string prefix,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach (var key in _covers.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)))
+        {
+            yield return key;
+        }
+
+        await Task.CompletedTask;
+    }
+
     public void Clear() => _covers.Clear();
 }

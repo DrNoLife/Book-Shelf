@@ -1,86 +1,40 @@
-/* The h1 exists for structure and for narrow viewports; the desktop shell names
-   the page in the sidebar instead. */
-.library__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-}
-
 .library {
+  --page-width: 1240px;
+  --page-gap: var(--space-9);
+}
+
+.shelf {
   display: flex;
   flex-direction: column;
+  gap: 18px;
 }
 
-.library__top {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px 26px 18px;
-  border-bottom: 1px solid var(--line);
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-}
-
-.library__body { padding: 22px 26px 26px; }
+/* The type and the colour are global (app.css); only the padding is this page's. */
+.notice { padding: 8px 0; }
 
 /* Auto-fill with a capped card width, left-aligned: a wide viewport gains columns
    rather than stretching six cards to fill it. The cap is what keeps cover
-   proportions constant, which is what pinning six columns was protecting. */
+   proportions constant. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(172px, 230px));
-  gap: 26px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 230px));
+  gap: 28px 22px;
   justify-content: start;
 }
 
 /* Compact narrows the cap and tightens the gutters. The card itself is untouched —
    it already scales, so density is a grid setting rather than a second card. */
 .grid--compact {
-  grid-template-columns: repeat(auto-fill, minmax(132px, 168px));
-  gap: 18px 12px;
-}
-
-/* The type and the colour are global (app.css); only the padding is this page's. */
-.notice { padding: 8px 0; }
-
-/* The one wry line per view lives in fine print, never in a control. */
-.library__footer {
-  margin-top: 26px;
-  font-size: 11px;
-  color: var(--faint);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 170px));
+  gap: 20px 14px;
 }
 
 @media (max-width: 860px) {
-  .library__title {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip-path: none;
-    padding: 18px 16px 0;
-    font-size: 30px;
-  }
-
-  .library__top { padding: 14px 16px 14px; }
-  .library__body { padding: 16px 16px 22px; }
-
-  /* Three at phone width, as the mock pins it — a minimum small enough to fit
-     three, with the cap removed so they share the width evenly. */
+  /* Three at phone width — a minimum small enough to fit three, with the cap removed
+     so they share the width evenly. */
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-    gap: 14px 13px;
+    gap: 18px 13px;
   }
 
   /* Compact has to be restated inside every context that sets the base geometry:
@@ -91,6 +45,6 @@
      fails if a context sets `.grid`'s geometry without restating `.grid--compact`. */
   .grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    gap: 10px 9px;
+    gap: 12px 9px;
   }
 }

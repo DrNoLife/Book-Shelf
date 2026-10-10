@@ -4,6 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class SeriesCommandService(
     LnShelfDbContext dbContext,
     AddSeriesPipeline addSeriesPipeline,
+    ICoverStore coverStore,
     TimeProvider timeProvider,
     ILogger<SeriesCommandService> logger) : ISeriesCommandService
 {
@@ -119,6 +120,7 @@ public sealed class SeriesCommandService(
     {
         var series = await dbContext.Series
             .Include(candidate => candidate.UserState)
+            .Include(candidate => candidate.SourceChoices)
             .Include(candidate => candidate.Volumes).ThenInclude(volume => volume.UserState)
             .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
 
@@ -140,13 +142,23 @@ public sealed class SeriesCommandService(
     public async Task<bool> DeleteAsync(Guid seriesId, CancellationToken cancellationToken)
     {
         var series = await dbContext.Series
-            .Include(candidate => candidate.Volumes)
+            .Include(candidate => candidate.Volumes).ThenInclude(volume => volume.UserState)
             .FirstOrDefaultAsync(candidate => candidate.Id == seriesId, cancellationToken);
 
         if (series is null)
         {
             return false;
         }
+
+        // Read before the delete, because the rows that name the covers go with the series.
+        // Only per-volume keys: a source's series art (anilist/…) is shared by every copy of
+        // the series, the same rule AccountDeletionService keeps.
+        var volumeCovers = series.Volumes
+            .SelectMany(volume => new[] { volume.UserState?.CoverOverrideObjectKey, volume.CoverObjectKey })
+            .OfType<string>()
+            .Where(key => CoverObjectKey.VolumeIdOf(key) is not null)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         // Counted before the delete, because afterwards there is nothing to count and
         // the log line is the only record that this shelf ever held them.
@@ -170,9 +182,13 @@ public sealed class SeriesCommandService(
         dbContext.Series.Remove(series);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Cover objects are deliberately left in MinIO: dropping the reference is the
-        // operation, and the synced bytes are a cache. Re-adding the series finds its art
-        // already local.
+        // A per-volume key carries the volume's id, and a re-added series gets new volume ids,
+        // so once the rows are gone nothing can name these objects again. For the covers the
+        // user uploaded that matters most (GDPR Art. 5(1)(e), 17): a kept object would be out
+        // of reach of the user and of account deletion alike. The series art stays, and a
+        // re-added copy finds it already local.
+        await DeleteVolumeCoversAsync(volumeCovers, cancellationToken);
+
         logger.LogInformation(
             "Deleted {TitleEnglish} ({SeriesId}) with {VolumeCount} volumes and all user state on them; "
             + "{LinkedBackCount} relation(s) cleared",
@@ -182,5 +198,26 @@ public sealed class SeriesCommandService(
             linkedBack.Count);
 
         return true;
+    }
+
+    /// <summary>Removes the per-volume covers the shelf no longer points at.</summary>
+    // Never fatal, for the reason VolumeCommandService gives: the delete is already saved,
+    // and an upload that could not be removed is picked up by the cover-orphan-sweep.
+    private async Task DeleteVolumeCoversAsync(IReadOnlyList<string> objectKeys, CancellationToken cancellationToken)
+    {
+        foreach (var objectKey in objectKeys)
+        {
+            try
+            {
+                await coverStore.DeleteAsync(objectKey, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Could not delete the cover {ObjectKey} of a deleted series; cover-orphan-sweep removes it if it is an upload",
+                    objectKey);
+            }
+        }
     }
 }

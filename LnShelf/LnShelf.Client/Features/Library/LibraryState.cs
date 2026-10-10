@@ -24,6 +24,16 @@ public sealed class LibraryState(HttpClient httpClient)
     public LibrarySort Sort { get; private set; } = LibrarySort.MostBehind;
 
     public LibraryResponse? Library { get; private set; }
+
+    /// <summary>
+    /// The whole format scope with no status filter — what "Continue reading" and
+    /// "Out now" draw from, so they do not empty out when a status chip narrows the grid.
+    /// </summary>
+    // A second fetch rather than client-side filtering: the status filters are the
+    // server's (LibraryCardFilters), and mirroring them here would be two definitions
+    // of "behind". The format scope is shared, so it is refetched only when that changes.
+    public LibraryResponse? Overview { get; private set; }
+
     public bool LoadFailed { get; private set; }
 
     public event Action? Changed;
@@ -104,8 +114,9 @@ public sealed class LibraryState(HttpClient httpClient)
         Changed?.Invoke();
     }
 
+    /// <summary>Every visit to the page starts here, so the overview is refreshed too.</summary>
     public Task LoadAsync(CancellationToken cancellationToken = default) =>
-        ReloadAsync(cancellationToken);
+        ReloadAsync(refreshOverview: true, cancellationToken);
 
     public async Task SelectFormatAsync(Format? format, CancellationToken cancellationToken = default)
     {
@@ -115,7 +126,7 @@ public sealed class LibraryState(HttpClient httpClient)
         }
 
         SelectedFormat = format;
-        await ReloadAsync(cancellationToken);
+        await ReloadAsync(refreshOverview: true, cancellationToken);
     }
 
     public async Task SelectFilterAsync(LibraryFilter filter, CancellationToken cancellationToken = default)
@@ -126,7 +137,7 @@ public sealed class LibraryState(HttpClient httpClient)
         }
 
         SelectedFilter = filter;
-        await ReloadAsync(cancellationToken);
+        await ReloadAsync(refreshOverview: false, cancellationToken);
     }
 
     /// <summary>The token of the reload in flight, cancelled when a newer one starts.</summary>
@@ -135,7 +146,7 @@ public sealed class LibraryState(HttpClient httpClient)
     // the All tab. Each reload now cancels the one before, so only the latest can land.
     private CancellationTokenSource? _reloadCancellation;
 
-    private async Task ReloadAsync(CancellationToken cancellationToken)
+    private async Task ReloadAsync(bool refreshOverview, CancellationToken cancellationToken)
     {
         if (_reloadCancellation is { } previous)
         {
@@ -155,15 +166,20 @@ public sealed class LibraryState(HttpClient httpClient)
 
         try
         {
-            var route = SelectedFormat is null
-                ? $"api/library?filter={SelectedFilter}"
-                : $"api/library?filter={SelectedFilter}&format={SelectedFormat}";
+            var gridRequest = FetchAsync(SelectedFilter, token);
 
-            var library = await httpClient.GetFromJsonAsync<LibraryResponse>(route, token);
+            // The grid's own fetch doubles as the overview when no status filter applies.
+            var overviewRequest = SelectedFilter == LibraryFilter.All
+                ? gridRequest
+                : refreshOverview || Overview is null ? FetchAsync(LibraryFilter.All, token) : null;
+
+            var library = await gridRequest;
+            var overview = overviewRequest is null ? Overview : await overviewRequest;
 
             // A response that finished just as it was superseded is still stale.
             token.ThrowIfCancellationRequested();
             Library = library;
+            Overview = overview;
             _visibleCards = null;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -179,5 +195,14 @@ public sealed class LibraryState(HttpClient httpClient)
         }
 
         Changed?.Invoke();
+    }
+
+    private Task<LibraryResponse?> FetchAsync(LibraryFilter filter, CancellationToken cancellationToken)
+    {
+        var route = SelectedFormat is null
+            ? $"api/library?filter={filter}"
+            : $"api/library?filter={filter}&format={SelectedFormat}";
+
+        return httpClient.GetFromJsonAsync<LibraryResponse>(route, cancellationToken);
     }
 }

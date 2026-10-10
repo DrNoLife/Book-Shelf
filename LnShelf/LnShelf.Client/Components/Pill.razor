@@ -1,0 +1,5 @@
+@* A short count or state, in a rounded capsule: "5 to buy", "3 unread", "4 to review",
+   "New · Vol 16", "Coming later". One meaning per tone; colour is never the only
+   channel, because the words are always in it. *@
+
+<span class="pill pill--@(Tone.ToString().ToLowerInvariant())">@ChildContent</span>

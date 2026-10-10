@@ -1,7 +1,7 @@
 .bar {
   display: flex;
-  height: 7px;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 3px;
   overflow: hidden;
   /* The track is the third segment's colour, so an empty bar reads as unowned. */
   background: var(--track);
@@ -9,11 +9,12 @@
 
 .bar--large { height: 10px; border-radius: 5px; }
 
-/* Done. */
-.bar__read { background: var(--acc); }
+/* Done. Progress is neutral on purpose: the accent means "act", and a full bar is
+   not a call to action. */
+.bar__read { background: var(--read); }
 
-/* In hand but not done — same hue, visibly receded. This is what keeps the
+/* In hand but not done — the same family, visibly receded. This is what keeps the
    three segments legible against each other. */
-.bar__owned { background: var(--acc-deep); }
+.bar__owned { background: var(--owned); }
 
 .bar__unowned { background: var(--track); }

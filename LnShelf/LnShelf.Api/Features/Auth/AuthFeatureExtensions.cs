@@ -25,6 +25,8 @@ public static class AuthFeatureExtensions
             services.AddSingleton<IValidateOptions<AuthOptions>, AuthOptionsValidator>();
             services.AddScoped<UserSignIn>();
             services.AddScoped<AccountDeletionService>();
+            services.AddScoped<ICurrentUserQueryService, CurrentUserQueryService>();
+            services.AddScoped<IAccountExportQueryService, AccountExportQueryService>();
 
             var auth = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
 
@@ -41,6 +43,14 @@ public static class AuthFeatureExtensions
                 forwarded.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                 forwarded.KnownIPNetworks.Clear();
                 forwarded.KnownProxies.Clear();
+
+                // Two hops, not the default one: behind the Cloudflare Tunnel X-Forwarded-For
+                // arrives as "visitor, cloudflared" (cloudflared adds the first, nginx the
+                // second), and with one hop every visitor would share cloudflared's address,
+                // so the shared shelf's per-address rate limit (Features/Sharing) would be one
+                // bucket for the whole internet. On the plain LAN port a client can spoof the
+                // extra entry; that only moves it to another rate-limit bucket.
+                forwarded.ForwardLimit = 2;
             });
 
             if (auth.DevelopmentBypass && environment.IsDevelopment())

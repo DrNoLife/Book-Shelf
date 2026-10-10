@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- LnShelf mark: three book spines on a shelf, in the design.md persimmon family. -->
+  <rect width="64" height="64" rx="14" fill="#131017"/>
+  <rect x="12" y="16" width="12" height="32" rx="2.5" fill="#ff5a36"/>
+  <rect x="26" y="10" width="12" height="38" rx="2.5" fill="#ff9d80"/>
+  <rect x="40" y="19" width="12" height="29" rx="2.5" fill="#83301c"/>
+  <rect x="8" y="51" width="48" height="4" rx="2" fill="#f4f0ea"/>
+</svg>

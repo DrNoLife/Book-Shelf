@@ -1,21 +1,14 @@
 @page "/series/{SeriesId:guid}"
 @using LnShelf.Client.Features.Series.Components
 
-<div class="series">
+<div class="page series">
+    <div class="page__stack">
 
-    <div class="series__top">
         <NavLink class="back" href="">
-            <Icon Name="IconName.CaretLeft" Size="13" />
-            <span>Back to library</span>
+            <Icon Name="IconName.CaretLeft" Size="14" />
+            <span>Library</span>
         </NavLink>
 
-        @if (!IsLoading && Series is not null)
-        {
-            <SeriesHero Series="Series" />
-        }
-    </div>
-
-    <div class="series__body">
         @if (SeriesState.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>
@@ -41,7 +34,24 @@
                 <p class="notice notice--warning">@preferenceMessage</p>
             }
 
+            <SeriesHero Series="Series" />
+
+            <SeriesProgress Series="Series" />
+
             <VolumeGrid Series="Series" />
+
+            @* Every disagreement the last sweep recorded for this series, side by side. The open
+               ones are amber; the ones the usual rules or the reader settled are quiet, but they
+               stay here because choosing a source is how a reader changes what a settled one
+               says (design.md, "Series"). *@
+            @foreach (var conflict in SeriesState.Conflicts)
+            {
+                <SourceConflictPanel @key="(conflict.Field, conflict.VolumeNumber)"
+                                     Conflict="conflict"
+                                     IsBusy="SeriesState.IsSaving"
+                                     Chosen="source => OnChooseSourceAsync(conflict, source)"
+                                     ResetRequested="() => OnResetSourceAsync(conflict)" />
+            }
 
             @* NOTES left, SYNC right, as the mockup lays out the foot of the page. *@
             <div class="series__foot">
@@ -49,27 +59,27 @@
 
                 <aside class="sync">
                     <p class="eyebrow">Sync</p>
-                    @foreach (var line in SyncLines)
-                    {
-                        <p class="sync__line">@line</p>
-                    }
+                    <p class="fine">@SyncLine</p>
                 </aside>
             </div>
 
             @* At the very foot, quiet, and saying what it costs before it is pressed —
                a destructive action should be findable, not prominent. *@
-            <div class="danger">
+            <section class="danger" aria-labelledby="danger-title">
+                <div>
+                    <h2 id="danger-title" class="title-panel">Remove from library</h2>
+                    <p class="danger__fine">@DeleteCost</p>
+                </div>
                 @* Words, no icon: the icon set has no trash glyph, and inventing one that
                    nobody has looked at is worse than a label that cannot be misread. *@
                 <button type="button"
-                        class="danger__button"
+                        class="destructive"
                         disabled="@SeriesState.IsSaving"
                         @onclick="OnDeleteAsync">
                     Remove from shelf
                 </button>
-                <p class="danger__fine">@DeleteCost</p>
-            </div>
+            </section>
         }
-    </div>
 
+    </div>
 </div>

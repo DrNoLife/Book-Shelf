@@ -32,13 +32,23 @@
         }
     </div>
 
-    <button type="button" class="primary" disabled="@IsBusy" @onclick="OnAddAsync">Add</button>
+    @if (IsOnShelf)
+    {
+        <span class="row__onshelf">On shelf</span>
+    }
+    else
+    {
+        <button type="button" class="primary" disabled="@IsBusy" @onclick="OnAddAsync">Add</button>
+    }
 </li>
 
 @code {
     [Parameter] public required SeriesSearchResultResponse Result { get; set; }
 
     [Parameter] public bool IsBusy { get; set; }
+
+    /// <summary>Already tracked: the row says so instead of offering Add again.</summary>
+    [Parameter] public bool IsOnShelf { get; set; }
 
     [Parameter] public EventCallback<SeriesSearchResultResponse> Added { get; set; }
 

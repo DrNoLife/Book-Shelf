@@ -7,9 +7,16 @@ namespace LnShelf.Client.Features.Series;
 // The HTTP lives in SeriesDetailClient and the menu-and-selection state in
 // VolumeSelectionState; what is left here is the series, the flags a page renders from,
 // and the one wrapper that keeps every write's ceremony identical.
-public sealed class SeriesState(SeriesDetailClient client)
+public sealed class SeriesState(SeriesDetailClient client, SourceConflictState sourceConflicts)
 {
     public SeriesDetailResponse? Series { get; private set; }
+
+    /// <summary>
+    /// What each source said about every disagreement on this series, settled or not. Loaded
+    /// with the series and again after every choice.
+    /// </summary>
+    public IReadOnlyList<SourceConflictResponse> Conflicts => sourceConflicts.Conflicts;
+
     public bool IsLoading { get; private set; }
     public bool LoadFailed { get; private set; }
 
@@ -41,6 +48,15 @@ public sealed class SeriesState(SeriesDetailClient client)
             // newer load owns the flags now, so none of them is touched on the way out.
             cancellationToken.ThrowIfCancellationRequested();
             Series = loaded;
+
+            if (loaded is null)
+            {
+                sourceConflicts.Clear();
+            }
+            else
+            {
+                await sourceConflicts.LoadAsync(loaded.SeriesId, cancellationToken);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -51,6 +67,7 @@ public sealed class SeriesState(SeriesDetailClient client)
             // Cleared, not kept: after a delete the route's series is gone, and a hero for
             // it drawn over "could not load" would be the stale copy this load replaced.
             Series = null;
+            sourceConflicts.Clear();
             LoadFailed = true;
         }
 
@@ -230,6 +247,31 @@ public sealed class SeriesState(SeriesDetailClient client)
                 Message = $"Cover set for volume {volume.Number}.";
             }
         });
+    }
+
+    /// <summary>Takes this source's word for the disagreement, and reloads the side-by-side view.</summary>
+    public Task ChooseSourceAsync(
+        SourceConflictResponse conflict,
+        MetadataSourceName source,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(conflict);
+
+        return Series is { } series
+            ? RunAsync(async () => ReplaceSeries(
+                await sourceConflicts.ChooseAsync(series.SeriesId, conflict, source, cancellationToken)))
+            : Task.CompletedTask;
+    }
+
+    /// <summary>Hands the disagreement back to the usual rules.</summary>
+    public Task ResetSourceAsync(SourceConflictResponse conflict, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(conflict);
+
+        return Series is { } series
+            ? RunAsync(async () => ReplaceSeries(
+                await sourceConflicts.ResetAsync(series.SeriesId, conflict, cancellationToken)))
+            : Task.CompletedTask;
     }
 
     /// <summary>

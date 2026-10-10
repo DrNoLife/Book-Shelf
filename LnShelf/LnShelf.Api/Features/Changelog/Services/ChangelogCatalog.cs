@@ -12,6 +12,43 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.17.0", new DateOnly(2026, 10, 10), "Your own shelf",
+        [
+            "Sign in with Google and get a shelf of your own: every user has separate series, volumes, " +
+                "imports, sync history and preferences, and sign-up is open. The login runs on the server " +
+                "and the session lives in a cookie, so nothing secret ever reaches the browser.",
+            "Share your shelf by link: set \"Who can see your shelf\" to Public by link and anyone with the " +
+                "link can see your series and how far you have read, without an account. Never what you own " +
+                "or paid, your notes or your dropped series. \"New link\" or Private kills the old link at once.",
+            "A new design: Geist type with serif figures, a calmer palette, and rebuilt Library and series pages. " +
+                "The library now has \"Continue reading\" and \"Out now, not on your shelf\" sections above the shelf, " +
+                "and the series page leads with your progress and flags where the sources disagree.",
+            "When sources disagree, the series page now shows what each one says side by side and lets you " +
+                "pick: \"Use Apple Books\" for a volume's date, or MangaUpdates' word on publication status. " +
+                "Your choice survives every sync and follows that source's updates; \"Reset to automatic\" " +
+                "hands it back to the usual rules.",
+            "A user page at Profile: your reading totals, the series you are reading with the next volume, " +
+                "volumes read per month, what you finished lately, and your account. You can delete your account " +
+                "and everything on your shelf there, after typing \"delete\" to confirm.",
+            "Signed-out visitors now land on a welcome page that explains the app, instead of going straight to " +
+                "Google. Following a link to a page you were on still brings you back to it after you sign in.",
+            "A rewritten privacy page, and you can download everything LN Shelf stores about you from " +
+                "Profile. Deleting a series now deletes the covers you uploaded to it too.",
+            "An optional Cloudflare Tunnel puts the app on HTTPS without opening a port on the home network.",
+            "Search now shows \"On shelf\" instead of Add for series you already track, including one you " +
+                "just added.",
+            "The tracking-status dropdown on the series page and the sort dropdown in the library work again: " +
+                "the menu used to close before your click landed.",
+            "The volume menu says \"Mark as owned\" or \"Mark as not owned\", the action rather than the " +
+                "current state.",
+            "The sidebar sync note is one short line (\"Synced 5 min ago\") with the details on hover, and " +
+                "says so when a sync is still running, did not finish, or has never run.",
+            "A new favicon: three book spines on a shelf.",
+            "Behind the scenes: an audit pass of fixes across the app and browser journeys that click " +
+                "through the real app against a real database.",
+            "Behind the scenes: a newer image library with its security fixes, and stricter browser " +
+                "security headers.",
+        ]),
         new("0.16.0", new DateOnly(2026, 9, 29), "What to buy, and what you've read",
         [
             "Upcoming is a real page now: everything that is out and not on your shelf, one line per series " +

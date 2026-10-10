@@ -1,6 +1,7 @@
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
+using LnShelf.Api.Features.Sharing;
 using LnShelf.Api.Features.Shelf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,6 +83,8 @@ public sealed class OptionsValidationTests
     // One byte over the cover endpoint's own request limit: a value above it could never
     // take effect, so it is refused rather than silently ignored.
     [InlineData("Covers:MaximumUploadBytes", "8388609", "MaximumUploadBytes")]
+    [InlineData("Sharing:RequestsPerMinute", "0", "RequestsPerMinute")]
+    [InlineData("Sharing:CoverRequestsPerMinute", "0", "CoverRequestsPerMinute")]
     public void AnOutOfRangeSetting_FailsAtStartup_NamingTheField(
         string key, string value, string expectedFieldName)
     {
@@ -130,8 +133,8 @@ public sealed class OptionsValidationTests
     /// check the host runs during <c>StartAsync</c>.
     /// </summary>
     // Every slice that owns validated options is registered here — Shelf, Metadata (which
-    // covers AniList, MangaUpdates, Open Library, Apple Books and Sync internally), Covers
-    // and Import — and nothing is resolved beyond the validator: whether the whole graph can
+    // covers AniList, MangaUpdates, Open Library, Apple Books and Sync internally), Covers,
+    // Import and Sharing — and nothing is resolved beyond the validator: whether the whole graph can
     // be constructed is CompositionRootTests' question, not this one's.
     private static void ValidateConfiguration(IConfiguration configuration)
     {
@@ -141,6 +144,7 @@ public sealed class OptionsValidationTests
         services.AddMetadata(configuration);
         services.AddCovers(configuration);
         services.AddImport(configuration);
+        services.AddSharing(configuration);
 
         using var provider = services.BuildServiceProvider();
 

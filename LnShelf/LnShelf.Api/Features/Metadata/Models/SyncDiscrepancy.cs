@@ -31,6 +31,14 @@ public sealed class SyncDiscrepancy
     /// <summary>Null when nothing was resolved and a person has to decide.</summary>
     public MetadataSourceName? ResolvedWith { get; set; }
 
+    /// <summary>
+    /// True when <see cref="ResolvedWith"/> is the user's pick rather than the precedence list's.
+    /// </summary>
+    // A fact about that run: whether precedence or a person picked the source. The read
+    // paths still re-derive "settled by choice" from the choice itself, so a reset is
+    // reflected at once without rewriting a stored row.
+    public bool ResolvedByChoice { get; set; }
+
     /// <summary>Set when the disagreement is about one specific volume.</summary>
     public int? VolumeNumber { get; set; }
 

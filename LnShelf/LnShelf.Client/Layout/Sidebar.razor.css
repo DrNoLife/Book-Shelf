@@ -1,11 +1,16 @@
+/* design.md, "Sidebar": --sidebar ground, a --line hairline on the right, 240px
+   (the column width is MainLayout's). Brand, the five places, the smart shelves, and at
+   the bottom the profile, the sync note and the quiet links. */
+
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  width: 224px;
-  padding: 18px 14px;
-  background: linear-gradient(180deg, var(--sidebar-top) 0%, var(--sidebar-bottom) 100%);
+  gap: 28px;
+  min-height: 0;
+  padding: 28px 20px;
+  background: var(--sidebar);
   border-right: 1px solid var(--line);
+  overflow-y: auto;
 }
 
 /* --- brand --- */
@@ -13,24 +18,24 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 0 6px;
+  gap: 10px;
+  padding: 0 var(--space-3);
 }
 
 .brand__mark {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   background: var(--acc);
   color: var(--on-acc);
 }
 
 .brand__name {
   font-family: var(--serif);
-  font-size: 17px;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-brand);
+  line-height: 1;
 }
 
 /* --- nav --- */
@@ -42,139 +47,138 @@
 }
 
 /* NavLink renders its own <a>, which scoped CSS cannot reach without ::deep
-   (.claude/rules/blazor.md). Both selectors are listed so the rendered link and
-   the plain rows are styled by one rule. */
-.nav__row,
-.nav ::deep .nav__row {
+   (.claude/rules/blazor.md) — so every selector for a row goes through it. */
+.sidebar ::deep .nav__row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 8px;
-  border-radius: 7px;
-  font-size: 12.5px;
-  font-weight: 500;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
   color: var(--muted);
+  font-size: var(--fs-body);
+  font-weight: 500;
   text-decoration: none;
-  /* Reserve the border on every row so activating one never reflows the nav. */
-  border: 1px solid transparent;
 }
 
-.nav__row:hover,
-.nav ::deep .nav__row:hover { background: var(--raise); color: var(--text); }
+.sidebar ::deep .nav__row:hover { background: var(--raise); color: var(--text); }
 
-.nav__row--active,
-.nav ::deep .nav__row--active {
-  color: var(--acc);
-  background: var(--acc-wash);
-  border-color: var(--line-2);
+/* The current page is the raised row in the full text colour — no accent: the accent is
+   for the call to action, and "you are here" is not one. */
+.sidebar ::deep .nav__row--active,
+.sidebar ::deep .nav__row--active:hover {
+  background: var(--raise);
+  color: var(--text);
 }
 
-.nav ::deep .nav__row--active:hover {
-  color: var(--acc);
-  background: var(--acc-wash);
-}
+/* The label takes the room, so a pill after it sits at the right edge. */
+.sidebar ::deep .nav__label { flex: 1 1 auto; }
 
-
-/* --- shelves --- */
+/* --- smart shelves --- */
 
 .shelves {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
-.shelves .eyebrow { padding: 0 8px 7px; }
+.shelves .eyebrow { padding: 0 var(--space-3) var(--space-2); }
 
 .shelf {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  padding: 5px 8px;
-  border-radius: 6px;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
   text-align: left;
-  font-size: 12.5px;
   color: var(--muted);
 }
 
 .shelf:hover { background: var(--raise); color: var(--text); }
 
-.shelf__count { color: var(--faint); font-size: 11.5px; }
+.shelf__count { color: var(--text); }
 
-.shelf--active { background: var(--acc-wash); color: var(--acc); }
-.shelf--active .shelf__count { color: var(--acc); }
+.shelf--active { background: var(--raise); color: var(--text); }
 
-/* The attention shelf is the only tinted one, and it keeps that softer tint even
-   when it is also the selected filter — which is its normal state, since Behind
-   is the default. Declared after --active, and at higher specificity for the
-   combined case, so the tint is not silently lost. */
-.shelf--attention,
-.shelf--attention.shelf--active { color: var(--acc-soft); }
+/* The attention shelf is the only tinted one: its count, not its row, so the tint reads
+   as a number worth a look rather than a second selected state. */
+.shelf--attention .shelf__count { color: var(--acc-soft); }
 
-.shelf--attention .shelf__count,
-.shelf--attention.shelf--active .shelf__count { color: var(--acc-soft); }
+/* --- bottom: profile, sync, quiet links --- */
 
-/* --- sync footer --- */
-
-.sync {
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin-top: auto;
-  padding: 12px 8px 0;
-  border-top: 1px solid var(--line);
 }
 
-.sync .eyebrow { padding-bottom: 6px; }
-
-.sync__line {
-  font-size: 11px;
-  line-height: 1.5;
+.sync {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
   color: var(--faint);
 }
 
-/* --- foot --- */
-
 .foot {
-  padding: 4px 8px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: 0 var(--space-3);
 }
 
 /* NavLink renders its own <a>, unreachable from scoped CSS without ::deep
    (.claude/rules/blazor.md) — same trap .nav__row already guards against. */
-.foot__link,
-.foot ::deep .foot__link {
-  display: block;
-  padding: 5px 0;
-  font-size: 11px;
+.sidebar ::deep .foot__link {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-small);
   color: var(--faint);
   text-decoration: none;
 }
 
-.foot__link:hover,
-.foot ::deep .foot__link:hover { color: var(--muted); }
+.sidebar ::deep .foot__link:hover { color: var(--text); }
+
+/* Sign out reads as one more quiet link, not as a control. */
+.foot__button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
 
 /* The sidebar used to be hidden outright here, which left a phone with no way to reach
    Search, Import or the changelog at all — the shelf was the whole app. It becomes the
    top strip instead: same rows, same routes, laid on their side.
 
    Two things stay behind, both because a 400px strip has no room to spare:
-   - the shelves, which are the status chips the library already prints under the
+   - the smart shelves, which are the status chips the library already prints under the
      toolbar (StatusChips carries every filter the shelf rows do, and two more);
-   - the sync note, five lines of fine print that would push the shelf itself off the
-     first screen. The series page prints its own sync panel either way.
-   Five routes no longer clear 400px, so the strip scrolls sideways on the narrowest
+   - the sync note, which would push the shelf itself off the first screen. The series
+     page prints its own sync panel either way.
+   The routes no longer clear 400px, so the strip scrolls sideways on the narrowest
    phones rather than dropping any of them. */
 @media (max-width: 860px) {
   .sidebar {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
-    width: auto;
-    padding: 6px 8px;
+    gap: var(--space-2);
+    padding: 6px var(--space-2);
     border-right: 0;
     border-bottom: 1px solid var(--line);
 
     /* The strip is the one thing on the page allowed to run wide — it scrolls itself
        rather than making the page scroll sideways. */
     overflow-x: auto;
+    overflow-y: hidden;
   }
 
   /* The mark alone: below 861px every page prints its own h1, so the wordmark would be
@@ -184,34 +188,24 @@
 
   .nav { flex-direction: row; gap: 2px; }
 
-  /* Taller and narrower than the column version: a thumb needs the height, and the three
-     rows plus the changelog link have to clear 400px between them without the strip
-     having to scroll. */
-  .nav__row,
-  .nav ::deep .nav__row {
-    padding: 9px 8px;
+  .sidebar ::deep .nav__row {
+    padding: 0 10px;
     white-space: nowrap;
   }
 
   .shelves,
   .sync { display: none; }
 
-  /* Pushed to the far end, the quiet corner it occupies on the desktop column. */
-  .foot { margin-left: auto; padding: 0; }
+  /* The profile row joins the strip; the quiet links sit after it at the far end. */
+  .bottom {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+    margin-left: auto;
+  }
 
-  .foot__link,
-  .foot ::deep .foot__link { padding: 9px 0; white-space: nowrap; }
+  .foot { flex-wrap: nowrap; padding: 0; }
+
+  .sidebar ::deep .foot__link,
+  .foot__button { white-space: nowrap; }
 }
-
-/* Sign out reads as one more quiet footer link, not as a control. */
-.foot__button {
-  width: 100%;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.foot__button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }

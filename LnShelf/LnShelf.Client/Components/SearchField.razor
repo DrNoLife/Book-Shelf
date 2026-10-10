@@ -1,0 +1,15 @@
+@* The filter / search input: a leading magnifier in --faint inside a --surf field. It is
+   the library's "Filter by title" and the search page's "Search by title" — same control,
+   different words. The root takes the caller's class for placement (a max width, a flex
+   basis); the input has its own parameters. *@
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="15" /></span>
+    <input class="field__input"
+           type="search"
+           id="@InputId"
+           placeholder="@Placeholder"
+           aria-label="@AriaLabel"
+           value="@Value"
+           @oninput="OnInputAsync" />
+</div>

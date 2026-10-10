@@ -9,8 +9,8 @@ namespace LnShelf.Api.Tests.Client;
 /// </summary>
 public sealed class PopoverPlacerTests
 {
-    private const double MenuWidth = 208;
-    private const double MenuHeight = 250;
+    private const double MenuWidth = 296;
+    private const double MenuHeight = 330;
 
     private static TileRect Tile(double left, double top, double width = 92, double height = 132) => new()
     {
@@ -72,15 +72,15 @@ public sealed class PopoverPlacerTests
         // component's nominal numbers rather than as a measurement. A blurb makes the menu
         // taller, and a tile that had room below it for the short menu may not have room
         // for this one — which is the whole reason the size is asked for per volume.
-        var tile = Tile(left: 400, top: 480);
+        var tile = Tile(left: 400, top: 450) with { ViewportHeight = 1000 };
 
         var plain = PopoverPlacer.For(tile, VolumePopover.Width, VolumePopover.Height);
         var described = PopoverPlacer.For(
             tile, VolumePopover.DescribedWidth, VolumePopover.DescribedHeight);
 
-        plain.FlippedVertically.ShouldBeFalse();     // 612 + 6 + 250 fits in 900
-        described.FlippedVertically.ShouldBeTrue();  // 612 + 6 + 372 does not
-        described.Top.ShouldBe(480 - VolumePopover.DescribedHeight - 6);
+        plain.FlippedVertically.ShouldBeFalse();     // 582 + 6 + 330 fits in 1000
+        described.FlippedVertically.ShouldBeTrue();  // 582 + 6 + 430 does not
+        described.Top.ShouldBe(450 - VolumePopover.DescribedHeight - 6);
     }
 
     [Fact]
@@ -88,6 +88,8 @@ public sealed class PopoverPlacerTests
     {
         var withBlurb = Volume(description: "A blurb the source actually supplied.");
         var without = Volume(description: null);
+        withBlurb = withBlurb with { IsOut = false };
+        without = without with { IsOut = false };
 
         VolumePopover.WidthFor(withBlurb).ShouldBe(VolumePopover.DescribedWidth);
         VolumePopover.HeightFor(withBlurb).ShouldBe(VolumePopover.DescribedHeight);
@@ -98,18 +100,21 @@ public sealed class PopoverPlacerTests
     [Fact]
     public void TheRowsOnlySomeVolumesHaveAreCountedIntoTheHeight()
     {
-        // An owned volume carries the edition buttons and one with an override carries
-        // "Remove cover". Both were missing from the nominal height, which is how the menu
-        // came to hang off the bottom of a phone screen with its last row below the fold.
-        var plain = Volume(description: null);
-        var owned = plain with { Owned = true };
+        // A released, unowned volume carries the Saxo link, a read volume its read date and
+        // one with an override "Remove cover". Rows missing from the nominal height are how
+        // a menu came to hang off the bottom of a phone screen with its last row below the fold.
+        var plain = Volume(description: null) with { IsOut = false };
+        var toBuy = plain with { IsOut = true };
+        var read = plain with { ReadAt = new DateOnly(2026, 1, 2) };
         var overridden = plain with { HasCoverOverride = true };
 
         VolumePopover.HeightFor(plain).ShouldBe(VolumePopover.Height);
-        VolumePopover.HeightFor(owned).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
+        VolumePopover.HeightFor(toBuy).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
+        VolumePopover.HeightFor(read).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
         VolumePopover.HeightFor(overridden).ShouldBeGreaterThan(VolumePopover.HeightFor(plain));
-        VolumePopover.HeightFor(owned with { HasCoverOverride = true })
-            .ShouldBeGreaterThan(VolumePopover.HeightFor(owned));
+
+        // An owned volume is not offered the link, so it is no taller than the plain one.
+        VolumePopover.HeightFor(toBuy with { Owned = true }).ShouldBe(VolumePopover.HeightFor(plain));
     }
 
     [Theory]
@@ -120,12 +125,12 @@ public sealed class PopoverPlacerTests
     public void TheTallestMenuStaysInsideAPhoneScreen(double left, double top)
     {
         // 400x850, and the widest, tallest menu the component can render: a blurb, the
-        // edition buttons and "Remove cover". The nominal numbers are what the placement
+        // read date, Saxo link and "Remove cover". The nominal numbers are what the placement
         // is computed from, so they are what has to fit — this is the assertion that was
         // missing when they said 372 and the menu rendered 403.
         var volume = Volume(description: "A blurb the source actually supplied.") with
         {
-            Owned = true,
+            ReadAt = new DateOnly(2026, 1, 2),
             HasCoverOverride = true,
         };
 
