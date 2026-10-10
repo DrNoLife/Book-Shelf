@@ -22,6 +22,21 @@ public partial class VolumeGridToolbar
 
     private bool HasSelection => Selection.SelectedVolumeIds.Count > 0;
 
+    private bool _isReadDatePanelOpen;
+
+    private int SelectedCount => Selection.SelectedVolumeIds.Count;
+
+    /// <summary>The selected volumes a read date can be set on: the ones that are read.</summary>
+    private IReadOnlyList<VolumeResponse> SelectedReadVolumes => Series.Volumes
+        .Where(volume => Selection.SelectedVolumeIds.Contains(volume.VolumeId)
+            && volume.ReadStatus is ReadStatus.Read)
+        .ToList();
+
+    // Follows the selection rather than being closed by hand: leaving select mode, or
+    // deselecting the last read volume, takes the panel with it.
+    private bool IsReadDatePanelShown =>
+        _isReadDatePanelOpen && Selection.IsSelectMode && SelectedReadVolumes.Count > 0;
+
     /// <summary>
     /// The two segments, with a title each saying whether choosing one sets an override
     /// or only follows the default.
@@ -85,6 +100,17 @@ public partial class VolumeGridToolbar
 
         await SeriesState.SetVolumeViewOverrideAsync(view);
     }
+
+    private void OnSelectToggled()
+    {
+        // The panel belongs to one selection; a fresh select mode starts without it.
+        _isReadDatePanelOpen = false;
+        Selection.ToggleSelectMode();
+    }
+
+    private void OnReadDatePanelToggled() => _isReadDatePanelOpen = !_isReadDatePanelOpen;
+
+    private void OnReadDatePanelClosed() => _isReadDatePanelOpen = false;
 
     private Task OnFollowGlobalAsync() => SeriesState.SetVolumeViewOverrideAsync(null);
 

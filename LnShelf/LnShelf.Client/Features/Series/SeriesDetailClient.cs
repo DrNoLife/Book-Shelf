@@ -70,6 +70,29 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
             "Could not save that",
             cancellationToken);
 
+    /// <summary>Sets when a read volume was read, or clears the date with null.</summary>
+    public Task<SeriesDetailResponse?> SetReadDateAsync(
+        Guid volumeId,
+        DateOnly? readAt,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/volumes/{volumeId}/read-date",
+            new SetVolumeReadDateRequest { ReadAt = readAt },
+            "Could not save that date",
+            cancellationToken);
+
+    /// <summary>Sets when several read volumes of one series were read, or clears their dates.</summary>
+    public Task<SeriesDetailResponse?> SetReadDatesAsync(
+        Guid seriesId,
+        IReadOnlyList<Guid> volumeIds,
+        DateOnly? readAt,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/series/{seriesId}/volumes/read-date",
+            new SetVolumeReadDatesRequest { VolumeIds = volumeIds, ReadAt = readAt },
+            "Could not save those dates",
+            cancellationToken);
+
     public Task<SeriesDetailResponse?> SetOwnedAsync(
         Guid volumeId,
         bool owned,

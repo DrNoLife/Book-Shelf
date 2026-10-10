@@ -1,0 +1,45 @@
+/* A full row under the toolbar's buttons. */
+.read-date-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-basis: 100%;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surf);
+}
+
+.read-date-panel__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 16px so a phone does not zoom the page when the input takes focus. */
+.read-date-panel__input {
+  /* app.css strips the native appearance from every input, and iOS Safari then gives an
+     empty date input no intrinsic width: a sliver with nothing to tap. The width and the
+     44px height keep it a usable target while it is empty. */
+  min-inline-size: 10em;
+  min-block-size: 44px;
+  padding: 0 var(--space-2);
+  font-size: 16px;
+  text-align: start;
+}
+
+/* iOS centres the value inside the stripped input; the label beside it reads from the start. */
+.read-date-panel__input::deep::-webkit-date-and-time-value {
+  text-align: start;
+}
+
+.read-date-panel__scope {
+  flex: 1 1 200px;
+}
+
+.read-date-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

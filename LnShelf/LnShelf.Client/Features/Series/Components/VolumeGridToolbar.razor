@@ -50,7 +50,7 @@
             aria-pressed="@Selection.IsSelectMode.ToAriaState()"
             disabled="@(View == VolumeView.List)"
             title="@SelectTitle"
-            @onclick="() => Selection.ToggleSelectMode()">
+            @onclick="OnSelectToggled">
         @(Selection.IsSelectMode ? "Done" : "Select")
     </button>
 
@@ -63,6 +63,14 @@
         <button type="button" class="secondary" disabled="@(!HasSelection || SeriesState.IsSaving)"
                 @onclick="MarkSelectedOwnedAsync">
             @MarkSelectedOwnedLabel
+        </button>
+
+        @* Only for volumes already read: a date on an unread volume would be a lie the
+           stats page believed. *@
+        <button type="button" class="secondary" aria-pressed="@IsReadDatePanelShown.ToAriaState()"
+                disabled="@(SelectedReadVolumes.Count == 0 || SeriesState.IsSaving)"
+                @onclick="OnReadDatePanelToggled">
+            Set read date…
         </button>
     }
     else
@@ -77,5 +85,12 @@
                 @onclick="MarkOwnedThroughAsync">
             Mark 1–@OwnedThrough owned
         </button>
+    }
+
+    @if (IsReadDatePanelShown)
+    {
+        <ReadDatePanel Volumes="SelectedReadVolumes"
+                       SkippedCount="SelectedCount - SelectedReadVolumes.Count"
+                       Closed="OnReadDatePanelClosed" />
     }
 </div>

@@ -34,6 +34,20 @@ public partial class VolumeDetails
     [Inject]
     public required SeriesState SeriesState { get; set; }
 
+    [Inject]
+    public required IJSRuntime JavaScript { get; set; }
+
+    /// <summary>What the date input holds right now, or null when it has not been touched.</summary>
+    private string? _draft;
+
+    private ElementReference _readDateInput;
+
+    private bool _isCommitting;
+
+    private string? _error;
+
+    private Guid _volumeId;
+
     /// <summary>Out and not owned — the "To buy" state, the one that offers the link.</summary>
     internal static bool IsBuyable(VolumeResponse volume)
     {
@@ -61,11 +75,112 @@ public partial class VolumeDetails
         ? Ownership.None
         : Volume.OwnedFormat is OwnedFormat.Digital ? Ownership.Digital : Ownership.Physical;
 
+    protected override void OnParametersSet()
+    {
+        // The sheet reuses this component when the reader moves to another volume; what was
+        // typed or refused for the last one does not carry over.
+        if (Volume.VolumeId != _volumeId)
+        {
+            _volumeId = Volume.VolumeId;
+            _draft = null;
+            _error = null;
+        }
+    }
+
     private async Task OnReadAsync(ReadStatus status)
     {
         await SeriesState.SetReadAsync(Volume, status);
         await Settled.InvokeAsync();
     }
+
+    // No read-date handler raises Settled: editing a date is a correction the reader wants
+    // to see land, like switching the edition of an owned volume, so the popover stays open.
+
+    // Only remembers what the input holds. Committing on every change would save half-typed
+    // dates and, on a desktop date input, yank focus away mid-edit.
+    private void OnReadDateInput(ChangeEventArgs args) => _draft = args.Value?.ToString();
+
+    private async Task OnReadDateKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await CommitReadDateAsync();
+        }
+    }
+
+    // Saves a complete, in-range date that differs from the stored one. An empty draft is
+    // never a save: emptying a segment must not erase the stored date, only "Clear date" does.
+    private async Task CommitReadDateAsync()
+    {
+        if (_isCommitting || _draft is null)
+        {
+            return;
+        }
+
+        var date = ReadDateInput.Parse(_draft);
+        _draft = null;
+
+        if (date is null)
+        {
+            // Left incomplete: the input shows nothing, so put the stored date back.
+            if (Volume.ReadAt is not null)
+            {
+                await ShowStoredReadDateAsync();
+            }
+
+            return;
+        }
+
+        if (date == Volume.ReadAt)
+        {
+            _error = null;
+            return;
+        }
+
+        // Checked here, next to the input, rather than left to the state: a refusal printed
+        // at the top of the page would sit behind the phone's sheet.
+        if (ReadDateInput.ProblemWith(date.Value) is { } problem)
+        {
+            _error = problem;
+            await ShowStoredReadDateAsync();
+            return;
+        }
+
+        _isCommitting = true;
+
+        try
+        {
+            if (await SeriesState.SetReadDateAsync(Volume, date))
+            {
+                _error = null;
+            }
+            else
+            {
+                _error = SeriesState.Message;
+                await ShowStoredReadDateAsync();
+            }
+        }
+        finally
+        {
+            _isCommitting = false;
+        }
+    }
+
+    private async Task OnReadDateClearedAsync()
+    {
+        _error = null;
+
+        if (!await SeriesState.SetReadDateAsync(Volume, readAt: null))
+        {
+            _error = SeriesState.Message;
+        }
+    }
+
+    // The rendered value attribute did not change, so Blazor would leave the DOM showing
+    // what the reader picked; write the stored date back by hand, which keeps focus too.
+    private async Task ShowStoredReadDateAsync() =>
+        await JavaScript.InvokeVoidAsync(
+            "lnshelf.setInputValue", _readDateInput, ReadDateInput.Format(Volume.ReadAt));
 
     private async Task OnOwnershipAsync(Ownership choice)
     {

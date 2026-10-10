@@ -122,6 +122,57 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
     }
 
     /// <summary>
+    /// Sets when a read volume was read, or clears the date with null. A date the shelf
+    /// would refuse is reported here, before any call, in words.
+    /// </summary>
+    /// <returns>Whether the date was saved.</returns>
+    public Task<bool> SetReadDateAsync(
+        VolumeResponse volume,
+        DateOnly? readAt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        if (readAt is { } date && ReadDateInput.ProblemWith(date) is { } problem)
+        {
+            ReportProblem(problem);
+            return Task.FromResult(false);
+        }
+
+        return RunAsync(async () =>
+            ReplaceSeries(await client.SetReadDateAsync(volume.VolumeId, readAt, cancellationToken)));
+    }
+
+    /// <summary>
+    /// Sets when these read volumes were read, in one call — the select mode's "Set read
+    /// date…". The caller passes only volumes that are read; the API refuses the rest.
+    /// </summary>
+    /// <returns>Whether the dates were saved — a failed save keeps the panel open.</returns>
+    public Task<bool> SetReadDatesAsync(
+        IReadOnlyList<VolumeResponse> volumes,
+        DateOnly? readAt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+
+        if (Series is not { } series || volumes.Count == 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        if (readAt is { } date && ReadDateInput.ProblemWith(date) is { } problem)
+        {
+            ReportProblem(problem);
+            return Task.FromResult(false);
+        }
+
+        var volumeIds = volumes.Select(volume => volume.VolumeId).ToList();
+
+        return RunAsync(async () => ReplaceSeries(
+            await client.SetReadDatesAsync(series.SeriesId, volumeIds, readAt, cancellationToken)));
+    }
+
+    /// <summary>
     /// Sets ownership outright, optionally with the edition. Passing a format on an
     /// owned volume is how the menu switches physical to digital without a second call.
     /// </summary>
