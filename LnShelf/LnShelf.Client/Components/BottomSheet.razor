@@ -1,13 +1,14 @@
 @* The phone's dialog: a sheet that rises from the bottom edge over a dimmed page. Modal —
    the scrim covers the page and the tab bar, and two focus guards wrap Tab inside the sheet —
-   and it always closes three ways: Done, Escape, or a tap on the scrim. The owner returns
+   and it always closes four ways: Done, Escape, a tap on the scrim, or a drag down. The drag is
+   pointer-only, so the handle stays aria-hidden; keyboard and screen readers use the rest. The owner returns
    focus to whatever opened it; the sheet cannot know what that was. *@
 
 <div class="sheet-layer">
     @* A real button so a tap anywhere outside the sheet closes it. Out of the tab order: the
        keyboard closes with Escape or Done, and a focus stop outside a modal dialog would
        break the trap the guards make. *@
-    <button type="button" class="sheet-scrim" aria-label="Close" tabindex="-1" @onclick="CloseAsync"></button>
+    <button type="button" class="sheet-scrim" @ref="_scrimElement" aria-label="Close" tabindex="-1" @onclick="CloseAsync"></button>
 
     <section class="sheet"
              role="dialog"

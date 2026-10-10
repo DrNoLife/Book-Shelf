@@ -29,6 +29,15 @@
   border-radius: 22px 22px 0 0;
   background: var(--surf);
   animation: sheet-rise 180ms ease-out;
+  /* A drag down that reaches the top of the content must not chain into the page behind. */
+  overscroll-behavior: contain;
+}
+
+/* While a finger or the mouse holds the sheet it follows it exactly: no easing, no text
+   selection, and the browser's own scroll stays out of the way. */
+.sheet--dragging {
+  user-select: none;
+  touch-action: none;
 }
 
 /* The grab handle: a cue that this is a sheet, not a page. Decorative; Done closes it. */
