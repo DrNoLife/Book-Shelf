@@ -201,3 +201,33 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   Overlord) runs against a throwaway database; nothing scripts it yet. (Unrelated to
   `LnShelf.EndToEnd.Tests`, which drives the UI against faked sources and never
   reaches the live APIs.)
+
+## 8. More shops, and price watching (owner + a friend's request, 2026-10-10) — future
+
+- **Faraos Cigarer next to Saxo.** Today "Vol 12 on Saxo" is a hand-built search URL
+  (`SaxoSearch.UrlFor`), with no API and no scraping. A second shop is the same kind of
+  link. Do it as a small seam (a list of shop link builders) rather than a second
+  hard-coded `SaxoSearch`, so a third shop is one new class. Possibly a per-user
+  preference for which shops to show.
+- **Watch a volume's price and say when it goes on sale.** Mark a volume (or "everything
+  I plan to buy", i.e. *To buy*) as watched. A background job checks the price at the
+  shops, and a drop shows up as a highlight in the app, plus an email/notification.
+  A friend asked for exactly this independently. Open questions before any code:
+  - **Where prices come from is the whole problem.** Neither shop has a public price
+    API that we know of, and Saxo's `robots.txt` disallows `*/productpage/*` (see §1).
+    Scraping a product page against that is not the polite-API-citizen line this
+    project keeps. Look for a sanctioned source first: affiliate/product feeds
+    (Saxo and others run affiliate programmes through networks like Partner-ads), a
+    price-comparison service with an API (PriceRunner, Pricespy), or the shop's own
+    search endpoint if its terms allow it. Spike it, like §1, before committing.
+  - **It needs ISBNs.** Matching a volume to a product reliably goes by ISBN; title
+    search is too loose for a price claim. Coverage of ISBNs on the shelf decides how
+    much this can watch.
+  - **Notifications.** This lands on the `IReleaseNotifier` seam (phase 5, §6), so it
+    waits for the first notifier. Email means an SMTP provider and per-user consent and
+    an unsubscribe, and is new personal data for the privacy page.
+  - **Stored state.** Watched volumes and the last seen price are new user data
+    (owned, filtered), and "on sale" must be computed from the last price against a
+    reference, never stored as a flag (CLAUDE.md, derived states).
+  - **Budget.** One lookup per watched volume per night, rate limited like the other
+    sources, across every user.
