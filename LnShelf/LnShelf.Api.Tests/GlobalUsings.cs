@@ -18,6 +18,8 @@ global using LnShelf.Api.Features.Metadata.Models;
 global using LnShelf.Api.Features.Metadata.Models.AniList;
 global using LnShelf.Api.Features.Metadata.Models.MangaUpdates;
 global using LnShelf.Api.Features.Metadata.Services;
+global using LnShelf.Api.Features.Monitoring.Abstractions;
+global using LnShelf.Api.Features.Monitoring.Models;
 global using LnShelf.Api.Features.Shelf.Data;
 global using LnShelf.Api.Features.Shelf.Mappers;
 global using LnShelf.Api.Features.Shelf.Models;

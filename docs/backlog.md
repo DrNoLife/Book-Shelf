@@ -194,6 +194,9 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   `FileSystemCoverStore` (a folder in a Docker volume), copied across by `cover-migrate`,
   and MinIO is gone from the code and the stack. The old `lnshelf_lnshelf-minio` volume
   stays on the server until 2026-10-24 as a fallback, then `docker volume rm` it.
+- **Outside watchdog [parked].** Uptime Kuma runs on the same host it watches, so a dead
+  host or a dead Kuma raises nothing. A free external check (healthchecks.io pinging Kuma's
+  own status, or watching the public `/api/health`) closes that gap.
 - **Off-site backup copy [parked, owner: later].** The nightly backup is local only.
   `ops/backup/lnshelf-backup.sh` marks where a `restic` copy goes once a target exists
   (Backblaze B2, a Hetzner Storage Box, or a disk elsewhere).

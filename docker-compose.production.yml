@@ -78,6 +78,10 @@ services:
       Sync__Enabled: "true"
       Sync__Hour: "4"
       TZ: "Europe/Copenhagen"
+      # Optional. Uptime Kuma's push URL for the nightly sync (ops/uptime-kuma); the sync
+      # beats up or down when it ends, and Kuma alerts on a down beat or a missing one.
+      # It carries the push token, so it lives in the .env.
+      Heartbeat__Monitors__NightlySync: "${HEARTBEAT_NIGHTLY_SYNC_URL:-}"
       # Optional. Open Library asks API users for a contact address in the User-Agent;
       # empty sends the anonymous one (LnShelfUserAgent).
       OpenLibrary__ContactEmail: "${OPENLIBRARY_CONTACT_EMAIL:-}"

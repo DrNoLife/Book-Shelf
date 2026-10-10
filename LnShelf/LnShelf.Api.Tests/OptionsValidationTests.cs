@@ -1,6 +1,7 @@
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
+using LnShelf.Api.Features.Monitoring;
 using LnShelf.Api.Features.Sharing;
 using LnShelf.Api.Features.Shelf;
 using Microsoft.Extensions.Configuration;
@@ -85,6 +86,7 @@ public sealed class OptionsValidationTests
     [InlineData("Covers:MaximumUploadBytes", "8388609", "MaximumUploadBytes")]
     [InlineData("Sharing:RequestsPerMinute", "0", "RequestsPerMinute")]
     [InlineData("Sharing:CoverRequestsPerMinute", "0", "CoverRequestsPerMinute")]
+    [InlineData("Heartbeat:Timeout", "00:05:00", "Timeout")]
     public void AnOutOfRangeSetting_FailsAtStartup_NamingTheField(
         string key, string value, string expectedFieldName)
     {
@@ -145,6 +147,7 @@ public sealed class OptionsValidationTests
         services.AddCovers(configuration);
         services.AddImport(configuration);
         services.AddSharing(configuration);
+        services.AddMonitoring(configuration);
 
         using var provider = services.BuildServiceProvider();
 

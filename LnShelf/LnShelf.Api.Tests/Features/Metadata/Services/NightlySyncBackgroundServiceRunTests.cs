@@ -24,6 +24,44 @@ public sealed class NightlySyncBackgroundServiceRunTests
     }
 
     [Fact]
+    public async Task RunOnceAsync_EveryRunCompletes_BeatsUpWithTheCount()
+    {
+        await using var host = new BackgroundSyncTestHost();
+        await host.AddUsersAsync(First, Second);
+        var heartbeat = Substitute.For<IHeartbeat>();
+
+        await CreateService(host, heartbeat).RunOnceAsync(CancellationToken.None);
+
+        await heartbeat.Received(1).BeatAsync(
+            HeartbeatMonitors.NightlySync, HeartbeatOutcome.Up, "2 shelves synced, 0 failed", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_OneUsersRunFails_BeatsDown()
+    {
+        await using var host = new BackgroundSyncTestHost(failingUserId: Second);
+        await host.AddUsersAsync(First, Second, Third);
+        var heartbeat = Substitute.For<IHeartbeat>();
+
+        await CreateService(host, heartbeat).RunOnceAsync(CancellationToken.None);
+
+        await heartbeat.Received(1).BeatAsync(
+            HeartbeatMonitors.NightlySync, HeartbeatOutcome.Down, "2 shelves synced, 1 failed", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_TheUserQueryFails_BeatsDown()
+    {
+        await using var host = new BackgroundSyncTestHost(databaseIsDown: true);
+        var heartbeat = Substitute.For<IHeartbeat>();
+
+        await CreateService(host, heartbeat).RunOnceAsync(CancellationToken.None);
+
+        await heartbeat.Received(1).BeatAsync(
+            HeartbeatMonitors.NightlySync, HeartbeatOutcome.Down, Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task RunOnceAsync_TheUserQueryFails_DoesNotThrow()
     {
         // The database blinking at 04:00: before, this escaped ExecuteAsync and .NET stopped
@@ -49,12 +87,13 @@ public sealed class NightlySyncBackgroundServiceRunTests
         host.RanFor.ShouldBe([Second]);
     }
 
-    private static NightlySyncBackgroundService CreateService(BackgroundSyncTestHost host) =>
+    private static NightlySyncBackgroundService CreateService(BackgroundSyncTestHost host, IHeartbeat? heartbeat = null) =>
         new(
             host.ScopeFactory,
             host.Gate,
             Options.Create(new SyncOptions { Enabled = true }),
             Options.Create(new OpenLibraryOptions()),
             TimeProvider.System,
+            heartbeat ?? Substitute.For<IHeartbeat>(),
             NullLogger<NightlySyncBackgroundService>.Instance);
 }

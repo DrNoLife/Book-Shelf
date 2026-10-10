@@ -3,6 +3,7 @@ using LnShelf.Api.Features.Auth;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
+using LnShelf.Api.Features.Monitoring;
 using LnShelf.Api.Features.Preferences;
 using LnShelf.Api.Features.Releases;
 using LnShelf.Api.Features.Sharing;
@@ -121,6 +122,7 @@ public sealed class CompositionRootTests
         services.AddSharing(configuration);
         services.AddReleases();
         services.AddStats();
+        services.AddMonitoring(configuration);
 
         // The real cookie and OpenID Connect registration, as production has it: the
         // environment only decides whether the development bypass is allowed.

@@ -10,6 +10,7 @@ public sealed class NightlySyncBackgroundService(
     IOptions<SyncOptions> options,
     IOptions<OpenLibraryOptions> lookupOptions,
     TimeProvider timeProvider,
+    IHeartbeat heartbeat,
     ILogger<NightlySyncBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -56,16 +57,27 @@ public sealed class NightlySyncBackgroundService(
     // user's series (feature-spec §7). The lookup allowance is the night's, shared by all.
     //
     // Public so the failure handling can be tested without waiting for 04:00.
+    //
+    // Ends with a heartbeat either way: up when every shelf's run completed, down when one
+    // failed outright or the night never got going. Uptime Kuma alerts on a down beat and on a
+    // missing one, which is the night the loop itself died.
     public async Task RunOnceAsync(CancellationToken stoppingToken)
     {
         try
         {
             var budget = new LookupBudget(lookupOptions.Value.MaximumLookupsPerNight);
+            int synced = 0, failed = 0;
 
             foreach (var userId in await UserIdsAsync(stoppingToken))
             {
-                await RunForUserAsync(userId, budget, stoppingToken);
+                if (await RunForUserAsync(userId, budget, stoppingToken)) { synced++; } else { failed++; }
             }
+
+            await heartbeat.BeatAsync(
+                HeartbeatMonitors.NightlySync,
+                failed is 0 ? HeartbeatOutcome.Up : HeartbeatOutcome.Down,
+                $"{synced} shelves synced, {failed} failed",
+                stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -77,6 +89,9 @@ public sealed class NightlySyncBackgroundService(
             // and .NET answers an escaped BackgroundService exception by stopping the whole
             // host. Tonight is lost either way; tomorrow's run is what this keeps.
             logger.LogError(exception, "The nightly sync failed before it could finish; trying again tomorrow");
+
+            await heartbeat.BeatAsync(
+                HeartbeatMonitors.NightlySync, HeartbeatOutcome.Down, "the night failed before it finished", stoppingToken);
         }
     }
 
@@ -93,7 +108,8 @@ public sealed class NightlySyncBackgroundService(
             .ToListAsync(stoppingToken);
     }
 
-    private async Task RunForUserAsync(Guid userId, LookupBudget budget, CancellationToken stoppingToken)
+    /// <returns>False only when the run failed outright; a skipped shelf is not a failure.</returns>
+    private async Task<bool> RunForUserAsync(Guid userId, LookupBudget budget, CancellationToken stoppingToken)
     {
         // Skipped rather than waited for: a "Sync now" already under way is doing tonight's
         // work for this shelf, and a second run straight after it would only repeat it.
@@ -101,7 +117,7 @@ public sealed class NightlySyncBackgroundService(
         if (lease is null)
         {
             logger.LogInformation("A sync for user {UserId} is already running; skipping tonight's", userId);
-            return;
+            return true;
         }
 
         // A scope per run: the sync service is scoped because the DbContext is.
@@ -112,6 +128,8 @@ public sealed class NightlySyncBackgroundService(
         try
         {
             await sync.RunAsync(budget, stoppingToken);
+
+            return true;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -123,6 +141,8 @@ public sealed class NightlySyncBackgroundService(
             // the run itself. Swallowed on purpose — one user's failure must not stop the
             // others' runs, and the loop has to survive to try again tomorrow.
             logger.LogError(exception, "The nightly sync run for user {UserId} failed outright", userId);
+
+            return false;
         }
     }
 

@@ -20,6 +20,15 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.21.0", new DateOnly(2026, 10, 10), "Someone is watching",
+            Features: [],
+            Improvements: [
+                "The nightly sync and the nightly backup now report in to a monitor when they finish. If either " +
+                    "fails, or does not run at all, or the site goes down, the owner gets a message instead of " +
+                    "finding out days later. Only counts are sent, never titles or names.",
+            ],
+            Fixes: []
+        ),
         new("0.20.1", new DateOnly(2026, 10, 10), "MinIO removed",
             Features: [],
             Improvements: [

@@ -309,6 +309,7 @@ Features/
   Changelog/        (app version + release notes, served to the client)
   Releases/         (upcoming view query; the IReleaseNotifier seam arrives with its notifier)
   Stats/            (the Stats page's read-only figures)
+  Monitoring/       (heartbeats to Uptime Kuma, behind IHeartbeat)
 ```
 
 Two exceptions to feature-slice-first, both above `Features/` because every slice
@@ -348,7 +349,8 @@ subfolder; if earlier work put them elsewhere, move them.
   the seam that reads facts), `IShelfImporter` (StoryGraph CSV today,
   Goodreads or MAL export later), `IReleaseNotifier` (ntfy/Discord/email —
   pick one for v1, seam stays), `IConsoleCommand` (one-shot maintenance jobs, so a
-  backfill never becomes a permanent API endpoint). Name the seam when you
+  backfill never becomes a permanent API endpoint), `IHeartbeat` (tells a monitor a
+  scheduled job ran; best effort, never fails the job). Name the seam when you
   introduce it.
 - **Derived states are computed in queries, never stored.** *To buy*, *Backlog*,
   *Behind* fall out of read/owned/released — storing them creates sync bugs.
