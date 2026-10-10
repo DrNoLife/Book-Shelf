@@ -24,6 +24,10 @@
                 <Icon Name="icon" Size="14" />
             }
             @option.Label
+            @if (option.Detail is { } detail)
+            {
+                <span class="toggle__detail">@detail</span>
+            }
         </button>
     }
 </div>

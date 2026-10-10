@@ -1,0 +1,91 @@
+@* One work: a header with up to three covers stacked, the base title in the serif, its
+   other scripts and how many series of each format it holds; then the main story and the
+   side stories as two labelled lists. A work of one series is just the card and its row. *@
+@inject ApiUrlBuilder ApiUrl
+
+<article class="work" aria-label="@Work.Title">
+    @if (Work.IsSingle)
+    {
+        <ul class="work__rows work__rows--single">
+            @foreach (var entry in Work.Entries)
+            {
+                <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
+                                IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+            }
+        </ul>
+    }
+    else
+    {
+        <header class="work__head">
+            <div class="work__stack" aria-hidden="true">
+                @foreach (var (entry, depth) in StackedEntries)
+                {
+                    <span class="work__cover work__cover--@depth">
+                        @if (entry.Result.CoverObjectKey is { } coverObjectKey)
+                        {
+                            <img class="work__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                        }
+                    </span>
+                }
+            </div>
+
+            <div class="work__identity">
+                <h2 class="work__title">@Work.Title</h2>
+                @if (Work.AlternativeTitles is { } alternativeTitles)
+                {
+                    <p class="work__alternative">@alternativeTitles</p>
+                }
+                <p class="work__summary">
+                    <span class="desktop-only">@SearchWorkText.Summary(Work)</span>
+                    <span class="phone-only">@SearchWorkText.ShortSummary(Work)</span>
+                </p>
+            </div>
+        </header>
+
+        @if (Work.MainStory.Count > 0)
+        {
+            <div class="work__group">
+                <div class="work__group-head">
+                    <p class="eyebrow">Main story</p>
+                    @if (Offer is { } offer)
+                    {
+                        <button type="button" class="ghost work__add-all" disabled="@IsBusy" @onclick="() => OnAddAllAsync(offer)">
+                            @if (BatchProgress is { } progress)
+                            {
+                                @progress
+                            }
+                            else
+                            {
+                                <span class="desktop-only">@offer.Label</span>
+                                <span class="phone-only">@offer.ShortLabel</span>
+                            }
+                        </button>
+                    }
+                </div>
+                <ul class="work__rows" aria-label="Main story">
+                    @foreach (var entry in Work.MainStory)
+                    {
+                        <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
+                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (Work.SideStories.Count > 0)
+        {
+            <div class="work__group">
+                <div class="work__group-head">
+                    <p class="eyebrow">Side stories</p>
+                </div>
+                <ul class="work__rows" aria-label="Side stories">
+                    @foreach (var entry in Work.SideStories)
+                    {
+                        <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
+                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+                    }
+                </ul>
+            </div>
+        }
+    }
+</article>

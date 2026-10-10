@@ -47,6 +47,14 @@
   color: var(--text);
 }
 
+/* A segment with a figure after its word lays the two in a row. */
+.toggle__button:has(.toggle__detail) {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.toggle__detail { color: var(--faint); }
+
 /* A finger needs the 44px target the design sets for coarse pointers. */
 @media (pointer: coarse) {
   .toggle__button { min-height: var(--control-large); }

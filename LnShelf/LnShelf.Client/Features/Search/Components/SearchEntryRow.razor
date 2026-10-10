@@ -1,0 +1,50 @@
+@* One series inside a work card. The row itself is the button that opens the preview; Add
+   beside it adds at once, with nothing read or owned. On a phone the volume count, year and
+   status fold into one line under the name, and Add is a round-cornered key with a plus. *@
+@inject ApiUrlBuilder ApiUrl
+
+<li class="entry @(IsSelected ? "entry--selected" : null)">
+    <button type="button"
+            class="entry__open"
+            aria-label="Preview @AccessibleName"
+            aria-current="@(IsSelected ? "true" : null)"
+            @onclick="OnSelectedAsync">
+        <span class="entry__cover">
+            @if (Entry.Result.CoverObjectKey is { } coverObjectKey)
+            {
+                <img class="entry__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+            }
+        </span>
+
+        <span class="entry__identity">
+            <span class="entry__name">@Label</span>
+            @if (Entry.Subtitle is { } subtitle)
+            {
+                <span class="entry__subtitle">@subtitle</span>
+            }
+            <span class="entry__facts-line">@FactsLine</span>
+        </span>
+
+        <span class="entry__volumes">@VolumeText</span>
+        <span class="entry__year">@Entry.Result.StartYear</span>
+        <span class="entry__status">
+            <StatusDot Value="Entry.Result.PublicationStatus" />
+            <span>@Entry.Result.PublicationStatus.Words</span>
+        </span>
+    </button>
+
+    @if (IsOnShelf)
+    {
+        <span class="entry__onshelf" title="On shelf">
+            <Icon Name="IconName.Check" Size="14" />
+            <span class="entry__onshelf-word">On shelf</span>
+        </span>
+    }
+    else
+    {
+        <button type="button" class="secondary entry__add" aria-label="Add @AccessibleName" disabled="@IsBusy" @onclick="OnAddedAsync">
+            <Icon Name="IconName.Plus" Size="14" />
+            <span class="entry__add-word">Add</span>
+        </button>
+    }
+</li>

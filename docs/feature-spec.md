@@ -502,7 +502,13 @@ series-detail spend line (§4.7); everything else it feeds waits for Stats.
 ```
 GET    /api/library?format=&filter=&sort=          one-round-trip card query
 GET    /api/series/{id}                            detail incl. volume grid
-POST   /api/series          { aniListId, format }  add tracked series
+POST   /api/series          { aniListId, format, initialReadCount?, initialOwnedCount? }
+                                                   add tracked series; the counts are the search
+                                                   preview's "Start with" (1..N read / owned, no
+                                                   dates; Reading when any is read). Ignored for a
+                                                   series already on the shelf
+GET    /api/series/tracked                         the shelf by external id → series id, for
+                                                   the search page's "On shelf" and "Open"
 POST   /api/series/manual   { title, format }      no external id (WN, §4.2)
 PUT    /api/series/{id}/state  { trackingStatus?, notes? }  partial: null = leave alone
 POST   /api/series/{id}/seen                       204; clears HasNewVolume

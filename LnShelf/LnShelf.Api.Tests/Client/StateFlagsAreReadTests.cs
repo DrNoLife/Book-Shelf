@@ -30,18 +30,24 @@ public sealed class StateFlagsAreReadTests
             Path.Combine("Features", "Search", "Pages", "SearchPage.razor"));
 
         markup.ShouldContain("@if (SearchState.IsSearching)");
-
-        // The controls still go inert for either call — a second Add while the first is
-        // in flight is the race this prevents.
-        markup.ShouldContain("disabled=\"@SearchState.IsBusy\"");
     }
 
-    [Fact]
-    public void SearchResultRow_TheAddButton_GoesInertWhileEitherCallIsInFlight()
+    /// <summary>
+    /// The add controls still go inert for either call — a second Add while the first is in
+    /// flight is the race this prevents. The page hands IsBusy down, so both flags reach the
+    /// row's Add and the preview's "Add to shelf" through one parameter.
+    /// </summary>
+    [Theory]
+    [InlineData("SearchEntryRow.razor")]
+    [InlineData("SearchPreview.razor")]
+    [InlineData("SearchWorkCard.razor")]
+    public void SearchAddButtons_GoInertWhileEitherCallIsInFlight(string markupFile)
     {
-        // The row is handed IsBusy, so both flags reach it through one parameter.
         ClientSource.ReadAllText(Path.Combine("Features", "Search", "Pages", "SearchPage.razor"))
             .ShouldContain("IsBusy=\"SearchState.IsBusy\"");
+
+        ClientSource.ReadAllText(Path.Combine("Features", "Search", "Components", markupFile))
+            .ShouldContain("disabled=\"@IsBusy\"");
     }
 
     [Fact]

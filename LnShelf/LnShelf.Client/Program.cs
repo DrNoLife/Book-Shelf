@@ -32,6 +32,7 @@ builder.Services.AddScoped(provider => new HttpClient(
 });
 
 builder.Services.AddScoped<ApiUrlBuilder>();
+builder.Services.AddSingleton<NavigationTrail>();
 
 // Each slice owns its own registration (CLAUDE.md), exactly as the Api's features do.
 builder.Services
@@ -47,4 +48,10 @@ builder.Services
     .AddProfile()
     .AddSharing();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Created before the first page renders, so the trail holds the page the app opened on and
+// sees every navigation after it; created lazily, it would miss whatever came first.
+host.Services.GetRequiredService<NavigationTrail>();
+
+await host.RunAsync();

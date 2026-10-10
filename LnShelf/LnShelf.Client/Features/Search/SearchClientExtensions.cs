@@ -9,6 +9,7 @@ public static class SearchClientExtensions
     {
         public IServiceCollection AddSearch()
         {
+            services.AddScoped<SeriesAddClient>();
             services.AddScoped<SeriesSearchState>();
 
             return services;

@@ -7,20 +7,17 @@ public sealed class TrackedSeriesQueryService(LnShelfDbContext dbContext) : ITra
 {
     public async Task<TrackedSeriesIdsResponse> GetTrackedIdsAsync(CancellationToken cancellationToken)
     {
-        var aniListIds = await dbContext.Series.AsNoTracking()
-            .Where(series => series.AniListId != null)
-            .Select(series => series.AniListId!.Value)
+        // A series with neither id cannot match a search result, so it is left out.
+        var series = await dbContext.Series.AsNoTracking()
+            .Where(candidate => candidate.AniListId != null || candidate.MangaUpdatesId != null)
+            .Select(candidate => new TrackedSeriesIds
+            {
+                SeriesId = candidate.Id,
+                AniListId = candidate.AniListId,
+                MangaUpdatesId = candidate.MangaUpdatesId,
+            })
             .ToListAsync(cancellationToken);
 
-        var mangaUpdatesIds = await dbContext.Series.AsNoTracking()
-            .Where(series => series.MangaUpdatesId != null)
-            .Select(series => series.MangaUpdatesId!.Value)
-            .ToListAsync(cancellationToken);
-
-        return new TrackedSeriesIdsResponse
-        {
-            AniListIds = aniListIds,
-            MangaUpdatesIds = mangaUpdatesIds,
-        };
+        return new TrackedSeriesIdsResponse { Series = series };
     }
 }

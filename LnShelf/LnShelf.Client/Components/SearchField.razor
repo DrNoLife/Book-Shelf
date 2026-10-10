@@ -4,7 +4,7 @@
    basis); the input has its own parameters. *@
 
 <div @attributes="AdditionalAttributes" class="@CssClass">
-    <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="15" /></span>
+    <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="@(Large ? 18 : 15)" /></span>
     <input class="field__input @(IsClearShown ? "field__input--clearable" : null)"
            type="search"
            id="@InputId"

@@ -29,13 +29,20 @@ public partial class SearchField
     [Parameter]
     public string? ClearLabel { get; set; }
 
+    /// <summary>
+    /// The search page's field: taller, with a larger type size and a rounder corner, because
+    /// on that page the field is the page. Off everywhere else.
+    /// </summary>
+    [Parameter]
+    public bool Large { get; set; }
+
     /// <summary>Anything else the root needs: a class for placement, a data attribute.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     private ElementReference _input;
 
-    private string CssClass => ClassNames.Join(AdditionalAttributes, "field");
+    private string CssClass => ClassNames.Join(AdditionalAttributes, "field", Large ? "field--large" : null);
 
     private bool IsClearShown => ClearLabel is not null && Value.Length > 0;
 

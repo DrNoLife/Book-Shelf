@@ -1,0 +1,161 @@
+/* design: the row is a 30x44 cover, the name over its subtitle, then three right-aligned
+   columns (volumes, year, status) and the Add key at a fixed width, so the columns line up
+   from row to row. */
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+/* The row the preview shows: lifted, with a hairline ring, the way the nav marks its page. */
+.entry--selected {
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.entry__open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  border-radius: var(--radius-md);
+}
+
+.entry:hover:not(.entry--selected) { background: var(--surf-low); }
+
+.entry__cover {
+  position: relative;
+  flex: 0 0 30px;
+  height: 44px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.entry__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.entry__identity {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.entry__name {
+  font-size: var(--fs-lead);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.entry__subtitle,
+.entry__facts-line {
+  font-size: var(--fs-caption);
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phones only; the columns carry these facts on a wider screen. */
+.entry__facts-line { display: none; }
+
+.entry__volumes {
+  flex: 0 0 64px;
+  text-align: right;
+  color: var(--muted);
+}
+
+.entry__year {
+  flex: 0 0 44px;
+  text-align: right;
+  color: var(--faint);
+}
+
+.entry__status {
+  flex: 0 0 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* The Add key and its replacement take the same width, so a row does not shift when one
+   becomes the other. */
+.entry__add {
+  flex: 0 0 96px;
+  padding: 0 var(--space-3);
+}
+
+.entry__onshelf {
+  flex: 0 0 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--control);
+  color: var(--ok);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+}
+
+/* Where the search page hides its side panel (its container query), no row is "the one
+   shown" until the sheet opens over it, so none is marked. */
+@container search-body (max-width: 867px) {
+  .entry--selected {
+    background: none;
+    box-shadow: none;
+  }
+}
+
+/* Phones: no columns. The facts fold under the name, Add shrinks to its plus and On shelf to
+   its check — both keep their words for a screen reader. */
+@media (max-width: 720px) {
+  .entry {
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1) 10px;
+  }
+
+
+  .entry__open {
+    gap: var(--space-3);
+    min-height: 52px;
+  }
+
+  .entry__cover { flex-basis: 28px; height: 42px; }
+
+  .entry__subtitle,
+  .entry__volumes,
+  .entry__year,
+  .entry__status { display: none; }
+
+  .entry__facts-line { display: block; font-size: var(--fs-small); }
+
+  .entry__add {
+    flex: 0 0 var(--control-large);
+    padding: 0;
+  }
+
+  .entry__onshelf { flex: 0 0 var(--control-large); min-height: var(--control-large); }
+
+  .entry__add-word,
+  .entry__onshelf-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

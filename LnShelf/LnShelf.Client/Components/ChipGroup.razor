@@ -18,6 +18,10 @@
                 @key="option.Value"
                 @onclick="() => OnChosenAsync(option.Value)">
             @option.Label
+            @if (option.Detail is { } detail)
+            {
+                <span class="chip__detail">· @detail</span>
+            }
         </button>
     }
 </div>

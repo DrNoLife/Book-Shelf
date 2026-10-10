@@ -1,0 +1,57 @@
+@* The selected series before it is added: cover, format, title and facts, then "Start with" —
+   how many volumes are already read and owned — and the one call to action. The same content
+   sits in the desktop's side panel and in the phone's bottom sheet. *@
+@inject ApiUrlBuilder ApiUrl
+
+<div class="preview">
+    <div class="preview__head">
+        <span class="preview__cover">
+            @if (Result.CoverObjectKey is { } coverObjectKey)
+            {
+                <img class="preview__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" />
+            }
+        </span>
+        <div class="preview__identity">
+            <FormatBadge Value="Result.Format" Spelled />
+            <h2 class="preview__title">@Result.TitleEnglish</h2>
+            <p class="preview__facts">@Facts</p>
+        </div>
+    </div>
+
+    @if (AlternativeTitles is { } alternativeTitles)
+    {
+        <p class="preview__alternative">@alternativeTitles</p>
+    }
+
+    @if (SeriesId is { } seriesId)
+    {
+        <a class="secondary button--large preview__action" href="series/@seriesId">On your shelf · Open →</a>
+    }
+    else
+    {
+        <div class="preview__start">
+            <p class="eyebrow">Start with</p>
+            <VolumeStepper Label="Volumes read"
+                           Value="_start.Read"
+                           DecreaseLabel="Fewer volumes read"
+                           IncreaseLabel="More volumes read"
+                           CanDecrease="_start.CanReadFewer"
+                           CanIncrease="_start.CanReadMore"
+                           Decreased="() => _start = _start.WithFewerRead()"
+                           Increased="() => _start = _start.WithMoreRead()" />
+            <VolumeStepper Label="Volumes owned"
+                           Value="_start.Owned"
+                           DecreaseLabel="Fewer volumes owned"
+                           IncreaseLabel="More volumes owned"
+                           CanDecrease="_start.CanOwnFewer"
+                           CanIncrease="_start.CanOwnMore"
+                           Decreased="() => _start = _start.WithFewerOwned()"
+                           Increased="() => _start = _start.WithMoreOwned()" />
+            <p class="preview__hint">@_start.Hint</p>
+        </div>
+
+        <button type="button" class="primary button--large preview__action" disabled="@IsBusy" @onclick="OnAddAsync">
+            Add to shelf
+        </button>
+    }
+</div>

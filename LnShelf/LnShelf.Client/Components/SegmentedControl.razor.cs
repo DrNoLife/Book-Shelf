@@ -5,8 +5,14 @@ namespace LnShelf.Client.Components;
 /// </summary>
 // A null Label means an icon-only segment, which is what decides whether the segment
 // gets the wider word treatment — the density toggle is icons, the two view toggles
-// are words.
-public sealed record SegmentedOption<TValue>(TValue Value, string? Label, string Title, IconName? Icon = null);
+// are words. Detail is a quiet figure after the label — the search page's "LN 8" — drawn
+// fainter than the word so the choice still reads first.
+public sealed record SegmentedOption<TValue>(
+    TValue Value,
+    string? Label,
+    string Title,
+    IconName? Icon = null,
+    string? Detail = null);
 
 public partial class SegmentedControl<TValue>
 {

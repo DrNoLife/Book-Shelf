@@ -8,16 +8,22 @@ public sealed class TrackedSeriesQueryServiceTests
     public async Task GetTrackedIdsAsync_SeriesFromBothSources_ReturnsEachExternalId()
     {
         await using var dbContext = CreateDbContext();
-        dbContext.Series.Add(CreateSeries("Tanya", aniListId: 101, mangaUpdatesId: null));
-        dbContext.Series.Add(CreateSeries("Slime", aniListId: null, mangaUpdatesId: 17992364412));
+        var tanya = CreateSeries("Tanya", aniListId: 101, mangaUpdatesId: null);
+        var slime = CreateSeries("Slime", aniListId: null, mangaUpdatesId: 17992364412);
+        dbContext.Series.Add(tanya);
+        dbContext.Series.Add(slime);
         dbContext.Series.Add(CreateSeries("Local", aniListId: null, mangaUpdatesId: null));
         await dbContext.SaveChangesAsync();
 
         var response = await new TrackedSeriesQueryService(dbContext)
             .GetTrackedIdsAsync(CancellationToken.None);
 
-        response.AniListIds.ShouldBe([101]);
-        response.MangaUpdatesIds.ShouldBe([17992364412]);
+        // The series with neither id is left out: no search result can match it.
+        response.Series.ShouldBe(
+        [
+            new TrackedSeriesIds { SeriesId = tanya.Id, AniListId = 101 },
+            new TrackedSeriesIds { SeriesId = slime.Id, MangaUpdatesId = 17992364412 },
+        ], ignoreOrder: true);
     }
 
     [Fact]
@@ -28,8 +34,7 @@ public sealed class TrackedSeriesQueryServiceTests
         var response = await new TrackedSeriesQueryService(dbContext)
             .GetTrackedIdsAsync(CancellationToken.None);
 
-        response.AniListIds.ShouldBeEmpty();
-        response.MangaUpdatesIds.ShouldBeEmpty();
+        response.Series.ShouldBeEmpty();
     }
 
     // Another user's shelf must not leak into this user's "On shelf" markers.
@@ -48,8 +53,7 @@ public sealed class TrackedSeriesQueryServiceTests
         var response = await new TrackedSeriesQueryService(dbContext)
             .GetTrackedIdsAsync(CancellationToken.None);
 
-        response.AniListIds.ShouldBeEmpty();
-        response.MangaUpdatesIds.ShouldBeEmpty();
+        response.Series.ShouldBeEmpty();
     }
 
     private static Series CreateSeries(string title, int? aniListId, long? mangaUpdatesId) => new()

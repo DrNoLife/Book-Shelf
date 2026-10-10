@@ -1,0 +1,12 @@
+@* One "Start with" row: the label, then − count +. A group named by its label, so a screen
+   reader hears "Volumes read, group" before the two buttons; the count is announced when it
+   changes. *@
+
+<div class="stepper" role="group" aria-label="@Label">
+    <span class="stepper__label">@Label</span>
+    <span class="stepper__controls">
+        <button type="button" class="stepper__button" aria-label="@DecreaseLabel" disabled="@(!CanDecrease)" @onclick="Decreased">−</button>
+        <span class="stepper__value" aria-live="polite">@Value</span>
+        <button type="button" class="stepper__button" aria-label="@IncreaseLabel" disabled="@(!CanIncrease)" @onclick="Increased">+</button>
+    </span>
+</div>

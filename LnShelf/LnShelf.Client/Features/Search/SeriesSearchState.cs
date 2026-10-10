@@ -1,18 +1,28 @@
-using System.Net;
-
 namespace LnShelf.Client.Features.Search;
 
 /// <summary>
-/// The add-series flow's state container: one search, one add call.
+/// The add-series flow's state container: one search, the format filter over it, the works
+/// it groups into, and the add calls.
 /// </summary>
 // Behind the Search & add page. The page stays presentational (blazor.md) —
 // everything non-visual lives here, which is why the provisional panel this
 // replaced could be deleted without touching a line of it.
-public sealed class SeriesSearchState(HttpClient httpClient)
+public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient addClient)
 {
+    private readonly TrackedSeriesIndex _tracked = new();
+
     public string Query { get; set; } = string.Empty;
 
     public IReadOnlyList<SeriesSearchResultResponse> Results { get; private set; } = [];
+
+    /// <summary>Null is "All".</summary>
+    public Format? FormatFilter { get; private set; }
+
+    /// <summary>The results the format filter lets through, grouped into works.</summary>
+    public IReadOnlyList<SearchWork> Works { get; private set; } = [];
+
+    /// <summary>How many results the format filter lets through.</summary>
+    public int VisibleResultCount { get; private set; }
 
     /// <summary>Which source answered the last search. The page names it.</summary>
     public MetadataSourceName Source { get; private set; } = MetadataSourceName.AniList;
@@ -35,25 +45,30 @@ public sealed class SeriesSearchState(HttpClient httpClient)
     /// <summary>True while either call is in flight — what a control is disabled on.</summary>
     public bool IsBusy => IsSearching || IsAdding;
 
+    /// <summary>"Adding 2 of 5…" while an add-all runs; null otherwise.</summary>
+    public string? BatchProgress { get; private set; }
+
     /// <summary>What just happened, in one line, for the page to print.</summary>
     public string? Message { get; private set; }
 
     public bool HasSearched { get; private set; }
 
-    // The user's own shelf, by external id. Kept apart from the results because the search
-    // response is cached across users; this is fetched per search so "already on the
-    // shelf" is true for a series added before this session as well as one added in it.
-    private readonly HashSet<int> _trackedAniListIds = [];
-    private readonly HashSet<long> _trackedMangaUpdatesIds = [];
-
     public event Action? Changed;
 
-    public bool IsOnShelf(SeriesSearchResultResponse result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
+    public bool IsOnShelf(SeriesSearchResultResponse result) => _tracked.SeriesIdOf(result) is not null;
 
-        return (result.AniListId is { } aniListId && _trackedAniListIds.Contains(aniListId))
-               || (result.MangaUpdatesId is { } mangaUpdatesId && _trackedMangaUpdatesIds.Contains(mangaUpdatesId));
+    /// <summary>The series page a tracked result opens. Null when it is not on the shelf.</summary>
+    public Guid? SeriesIdOf(SeriesSearchResultResponse result) => _tracked.SeriesIdOf(result);
+
+    /// <summary>How many results are of one format; null counts them all.</summary>
+    public int CountOf(Format? format) =>
+        format is null ? Results.Count : Results.Count(result => result.Format == format);
+
+    public void SetFormatFilter(Format? format)
+    {
+        FormatFilter = format;
+        RegroupResults();
+        Changed?.Invoke();
     }
 
     public async Task SearchAsync(CancellationToken cancellationToken = default)
@@ -61,7 +76,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         var query = Query.Trim();
         if (query.Length == 0)
         {
-            Results = [];
+            SetResults([]);
             HasSearched = false;
             Message = null;
             DegradedNote = null;
@@ -93,7 +108,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
 
             await LoadTrackedIdsAsync(cancellationToken);
 
-            Results = payload?.Results ?? [];
+            SetResults(payload?.Results ?? []);
             Source = payload?.Source ?? MetadataSourceName.AniList;
             DegradedNote = payload?.DegradedNote;
             HasSearched = true;
@@ -102,7 +117,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         {
             // No answer at all — the API itself is unreachable. Rendering the failure is
             // handling it; there is nothing else the browser can do about it.
-            Results = [];
+            SetResults([]);
             DegradedNote = null;
             HasSearched = true;
             Message = $"Search failed: {exception.Message}";
@@ -114,9 +129,11 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         }
     }
 
+    /// <param name="start">The preview's "Start with"; null adds the series untouched.</param>
     /// <returns>Null when the add failed; the page reads <see cref="Message"/> then.</returns>
     public async Task<AddSeriesResponse?> AddAsync(
         SeriesSearchResultResponse result,
+        StartingVolumes? start = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -127,55 +144,62 @@ public sealed class SeriesSearchState(HttpClient httpClient)
 
         try
         {
-            // Whichever id the row is carrying, and only that one: the API requires exactly
-            // one, because the two are different catalogues' names for the series.
-            var request = new AddSeriesRequest
-            {
-                AniListId = result.AniListId,
-                MangaUpdatesId = result.MangaUpdatesId,
-                Format = result.Format,
-            };
-
-            using var response = await httpClient.PostAsJsonAsync("api/series", request, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var problem = await response.ReadProblemAsync(cancellationToken);
-
-                Message = problem is null
-                    ? $"Could not add {result.TitleEnglish}: {(int)response.StatusCode} {response.StatusCode}."
-                    : $"Could not add {result.TitleEnglish}: {problem}";
-
-                return null;
-            }
-
-            var added = await response.Content.ReadFromJsonAsync<AddSeriesResponse>(cancellationToken);
-            if (added is null)
-            {
-                Message = $"Could not add {result.TitleEnglish}: the API returned no body.";
-                return null;
-            }
-
-            // The 200-vs-201 distinction is the whole point of the idempotent add,
-            // so the line says which one happened.
-            Message = added.AlreadyTracked || response.StatusCode is not HttpStatusCode.Created
-                ? $"{added.TitleEnglish} was already on the shelf ({added.VolumeCount} volumes) — nothing added."
-                : $"Added {added.TitleEnglish} ({added.Format}) with {added.VolumeCount} volumes.";
-
-            // Remember it locally so the row flips at once, without another round trip.
-            if (result.AniListId is { } addedAniListId) _trackedAniListIds.Add(addedAniListId);
-            if (result.MangaUpdatesId is { } addedMangaUpdatesId) _trackedMangaUpdatesIds.Add(addedMangaUpdatesId);
-
-            return added;
-        }
-        catch (HttpRequestException exception)
-        {
-            Message = $"Could not add {result.TitleEnglish}: {exception.Message}";
-            return null;
+            return await AddOneAsync(result, start, cancellationToken);
         }
         finally
         {
             IsAdding = false;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// "Add all 5 parts": adds every entry not yet on the shelf, one at a time and in order,
+    /// and stops at the first that fails.
+    /// </summary>
+    /// <returns>How many were added.</returns>
+    // One at a time rather than in parallel: each add costs the source a request and the API
+    // a rate-limit token, and stopping at the first failure only means something if the ones
+    // after it have not been sent yet.
+    public async Task<int> AddAllAsync(
+        IReadOnlyList<SearchWorkEntry> entries,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var pending = entries.Where(entry => !IsOnShelf(entry.Result)).ToList();
+        var added = 0;
+
+        IsAdding = true;
+        Message = null;
+
+        try
+        {
+            foreach (var entry in pending)
+            {
+                BatchProgress = $"Adding {added + 1} of {pending.Count}…";
+                Changed?.Invoke();
+
+                if (await AddOneAsync(entry.Result, start: null, cancellationToken) is null)
+                {
+                    Message = added == 0
+                        ? $"{Message} Nothing else was added."
+                        : $"{Message} Stopped there: {added} of {pending.Count} were added before it.";
+
+                    return added;
+                }
+
+                added++;
+            }
+
+            Message = $"Added all {added}.";
+
+            return added;
+        }
+        finally
+        {
+            IsAdding = false;
+            BatchProgress = null;
             Changed?.Invoke();
         }
     }
@@ -190,6 +214,41 @@ public sealed class SeriesSearchState(HttpClient httpClient)
         Changed?.Invoke();
     }
 
+    private async Task<AddSeriesResponse?> AddOneAsync(
+        SeriesSearchResultResponse result,
+        StartingVolumes? start,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await addClient.AddAsync(result, start, cancellationToken);
+        Message = outcome.Message;
+
+        // Remember it locally so the row flips at once, without another round trip.
+        if (outcome.Added is { } added)
+        {
+            _tracked.Remember(result, added.SeriesId);
+        }
+
+        return outcome.Added;
+    }
+
+    private void SetResults(IReadOnlyList<SeriesSearchResultResponse> results)
+    {
+        Results = results;
+        RegroupResults();
+    }
+
+    // Grouped once per change rather than on every render: the page re-renders on each
+    // stepper press, and the grouping parses every title.
+    private void RegroupResults()
+    {
+        IReadOnlyList<SeriesSearchResultResponse> visible = FormatFilter is { } format
+            ? [.. Results.Where(result => result.Format == format)]
+            : Results;
+
+        VisibleResultCount = visible.Count;
+        Works = SearchResultGrouper.Group(visible);
+    }
+
     private async Task LoadTrackedIdsAsync(CancellationToken cancellationToken)
     {
         // Losing the marker is not worth losing the search: on failure the rows simply
@@ -199,10 +258,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
             var tracked = await httpClient.GetFromJsonAsync<TrackedSeriesIdsResponse>(
                 "api/series/tracked", cancellationToken);
 
-            _trackedAniListIds.Clear();
-            _trackedMangaUpdatesIds.Clear();
-            _trackedAniListIds.UnionWith(tracked?.AniListIds ?? []);
-            _trackedMangaUpdatesIds.UnionWith(tracked?.MangaUpdatesIds ?? []);
+            _tracked.Load(tracked);
         }
         catch (HttpRequestException)
         {
@@ -212,7 +268,7 @@ public sealed class SeriesSearchState(HttpClient httpClient)
 
     private async Task FailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        Results = [];
+        SetResults([]);
         DegradedNote = null;
         HasSearched = true;
 

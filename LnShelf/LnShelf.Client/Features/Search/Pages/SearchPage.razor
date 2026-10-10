@@ -1,88 +1,124 @@
 @page "/search"
 @using LnShelf.Client.Features.Search.Components
 
-@* Search & add, as a real page. The provisional panel this replaces lived on the
-   library page and was deliberately unstyled; nothing of it survives. *@
-
-<h1 class="search__title">Search &amp; add</h1>
+@* Search & add: one large field, the format filter with a count per format, and the results
+   grouped into works. Selecting a row opens its preview — a sticky panel beside the results on
+   a wide screen, a bottom sheet on a phone — where "Start with" sets how far in the reader
+   already is. On a phone the header is the sticky search bar, with Cancel beside the field. *@
 
 <div class="search">
+    <header class="search__head">
+        <h1 class="search__title">Add a series</h1>
 
-    <div class="search__top">
-        <p class="eyebrow">Add a series</p>
+        <div class="search__bar">
+            @* A form so Enter (and a phone keyboard's Search key) runs the search. Searching on
+               every keystroke would spend the source's rate limit on half-typed words. *@
+            <form class="search__form" role="search" @onsubmit="OnSubmitAsync" @onsubmit:preventDefault>
+                <SearchField class="search__field"
+                             Large
+                             Value="@SearchState.Query"
+                             ValueChanged="OnQueryChangedAsync"
+                             Placeholder="Search by title…"
+                             AriaLabel="Search by title"
+                             ClearLabel="Clear search" />
+            </form>
+            <button type="button" class="ghost search__cancel phone-only" @onclick="Cancel">Cancel</button>
+        </div>
 
-        <form class="field" @onsubmit="OnSubmitAsync" @onsubmit:preventDefault>
-            <span class="field__icon"><Icon Name="IconName.MagnifyingGlass" Size="14" /></span>
-            <input class="field__input"
-                   type="search"
-                   placeholder="Search by title…"
-                   aria-label="Search by title"
-                   value="@SearchState.Query"
-                   @oninput="OnQueryInput" />
-            <button type="submit" class="primary" disabled="@SearchState.IsBusy">Search</button>
-        </form>
-
-        <p class="search__note">
-            The light novel and the manga of one title are separate series here, and they
-            arrive as separate results — the badge is what tells them apart.
-        </p>
-    </div>
+        <div class="search__filters">
+            <div class="desktop-only">
+                <SegmentedControl TValue="string"
+                                  Options="FormatOptions"
+                                  Value="@FormatKey"
+                                  ValueChanged="OnFormatChosen"
+                                  AriaLabel="Format" />
+            </div>
+            <ChipGroup TValue="string"
+                       class="phone-only search__chips"
+                       Options="FormatOptions"
+                       Value="@FormatKey"
+                       ValueChanged="OnFormatChosen"
+                       AriaLabel="Format" />
+            <p class="search__note desktop-only">@SourceNote</p>
+        </div>
+    </header>
 
     <div class="search__body">
-        @if (SearchState.Message is { } message)
-        {
-            <p class="notice notice--message">@message</p>
-        }
-
-        @* One line for the whole answer, not one per row: which source answered is a fact
-           about the search, and repeating it beside every result would be noise. *@
-        @if (SearchState.DegradedNote is { } degradedNote)
-        {
-            <p class="notice notice--quiet">@degradedNote</p>
-        }
-
-        @* Gated on the search alone. Adding a series also puts a request in flight, and
-           gating this on "busy" meant pressing Add replaced the whole result list with
-           "Searching…" until the POST came back. *@
-        @if (SearchState.IsSearching)
-        {
-            @* Source-neutral, because which source answers is no longer fixed: the search
-               falls back to a second catalogue, and the note above says so when it did. *@
-            <p class="notice">Searching…</p>
-        }
-        else if (SearchState.Results.Count > 0)
-        {
-            <ul class="results">
-                @foreach (var result in SearchState.Results)
-                {
-                    @* Keyed on source and id together: only one of the two ids is set, and
-                       which one depends on who answered. *@
-                    <SearchResultRow Result="result"
-                                     IsBusy="SearchState.IsBusy"
-                                     IsOnShelf="SearchState.IsOnShelf(result)"
-                                     Added="OnAddedAsync"
-                                     @key="(result.Source, result.AniListId, result.MangaUpdatesId)" />
-                }
-            </ul>
-        }
-        else if (SearchState.HasSearched)
-        {
-            @* Only an answer is an empty answer. A failed search also leaves no results,
-               and printing this under "Search failed" claimed a reply the source never
-               gave. With no results on screen, a message can only be that failure, which
-               is already printed above. *@
-            @if (SearchState.Message is null)
+        <section class="search__results" aria-label="Results" @ref="_resultsSection">
+            @if (SearchState.Message is { } message)
             {
-                <p class="notice">@SearchState.Source knows nothing by that name.</p>
+                <p class="notice notice--message">@message</p>
             }
-        }
-        else
+
+            @* One line for the whole answer, not one per row: which source answered is a fact
+               about the search, and repeating it beside every result would be noise. *@
+            @if (SearchState.DegradedNote is { } degradedNote)
+            {
+                <p class="notice notice--quiet">@degradedNote</p>
+            }
+
+            @* Gated on the search alone. Adding a series also puts a request in flight, and
+               gating this on "busy" meant pressing Add replaced the whole result list with
+               "Searching…" until the POST came back. *@
+            @if (SearchState.IsSearching)
+            {
+                <p class="notice">Searching…</p>
+            }
+            else if (SearchState.Works.Count > 0)
+            {
+                <p class="search__count">@ResultCountLine</p>
+
+                @foreach (var work in SearchState.Works)
+                {
+                    <SearchWorkCard @key="work"
+                                    Work="work"
+                                    FormatFilter="SearchState.FormatFilter"
+                                    SelectedResult="SelectedEntry?.Result"
+                                    IsOnShelf="SearchState.IsOnShelf"
+                                    IsBusy="SearchState.IsBusy"
+                                    BatchProgress="@(ReferenceEquals(work, _batchWork) ? SearchState.BatchProgress : null)"
+                                    Selected="OnSelectedAsync"
+                                    Added="OnQuickAddAsync"
+                                    AddAllRequested="entries => OnAddAllAsync(work, entries)" />
+                }
+
+                <p class="fine">Not what you meant? Try the Japanese or romanized title.</p>
+                <p class="fine phone-only search__tip">Tap a row for details · + adds it straight away</p>
+            }
+            else if (SearchState.HasSearched && SearchState.Message is null)
+            {
+                @* Only an answer is an empty answer: a failed search also leaves no results,
+                   and its failure is already printed above. *@
+                <p class="notice">@EmptyLine</p>
+                <p class="fine">Not what you meant? Try the Japanese or romanized title.</p>
+            }
+            else if (!SearchState.HasSearched)
+            {
+                @* The one wry line per view, in fine print. *@
+                <p class="notice notice--quiet">
+                    Nothing searched yet. Type a title — the shelf will not judge the taste.
+                </p>
+            }
+        </section>
+
+        @if (SelectedEntry is { } selected)
         {
-            @* The one wry line per view, in fine print. *@
-            <p class="notice notice--quiet">
-                Nothing searched yet. Type a title — the shelf will not judge the taste.
-            </p>
+            <aside class="search__preview" aria-label="Preview" @ref="_previewPanel">
+                <SearchPreview Result="selected.Result"
+                               SeriesId="SearchState.SeriesIdOf(selected.Result)"
+                               IsBusy="SearchState.IsBusy"
+                               AddRequested="OnPreviewAddAsync" />
+            </aside>
         }
     </div>
-
 </div>
+
+@if (_isSheetOpen && SelectedEntry is { } sheetEntry)
+{
+    <BottomSheet AriaLabel="Series details" Closed="CloseSheetAsync">
+        <SearchPreview Result="sheetEntry.Result"
+                       SeriesId="SearchState.SeriesIdOf(sheetEntry.Result)"
+                       IsBusy="SearchState.IsBusy"
+                       AddRequested="OnPreviewAddAsync" />
+    </BottomSheet>
+}

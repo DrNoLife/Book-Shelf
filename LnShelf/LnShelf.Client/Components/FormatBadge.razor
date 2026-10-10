@@ -2,12 +2,27 @@
    tell them apart, never a colour. It has to read both on a cover and on the page, so it
    is a dark pill with a hairline ring rather than a fill. *@
 
-<span class="badge" title="@Title">@Label</span>
+<span class="badge" title="@Title">@(Spelled ? SpelledLabel : Label)</span>
 
 @code {
     /// <summary>The series format this badge names.</summary>
     [Parameter]
     public required Format Value { get; set; }
+
+    /// <summary>
+    /// The format in full capitals — "LIGHT NOVEL" — where there is room for it and nothing
+    /// beside it says which format this is: the search preview. Same look, longer word.
+    /// </summary>
+    [Parameter]
+    public bool Spelled { get; set; }
+
+    private string SpelledLabel => Value switch
+    {
+        Format.LightNovel => "LIGHT NOVEL",
+        Format.Manga => "MANGA",
+        Format.WebNovel => "WEB NOVEL",
+        _ => throw new ArgumentOutOfRangeException(nameof(Value), Value, "Unknown format."),
+    };
 
     private string Label => Value switch
     {

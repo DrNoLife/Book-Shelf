@@ -1,0 +1,69 @@
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.preview__head {
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* A book, not a tile: the spine side squarer and shaded, as the mockup draws it. */
+.preview__cover {
+  position: relative;
+  flex: 0 0 96px;
+  height: 144px;
+  border-radius: 4px 7px 7px 4px;
+  overflow: hidden;
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.preview__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.preview__title {
+  font-size: 24px;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.preview__facts,
+.preview__alternative {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.preview__start {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.preview__hint {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.preview__action { width: 100%; }
+
+@media (max-width: 720px) {
+  .preview__head { gap: 14px; }
+  .preview__cover { flex-basis: 72px; height: 108px; }
+  .preview__title { font-size: 22px; }
+}

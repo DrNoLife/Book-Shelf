@@ -36,6 +36,15 @@
 
 .chip:disabled { opacity: 0.45; cursor: default; }
 
+/* The figure after a chip's word, in the chip's own colour so it reads on the light fill too. */
+.chip:has(.chip__detail) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chip__detail { opacity: 0.75; }
+
 /* Wrapped, inside a panel or a sheet: every choice in view, no scrolling. A mouse gets the
    segmented control's 34px, so a panel of choices stays compact on a desktop; a finger keeps
    the 44px target — the same split SegmentedControl makes, the other way round. */

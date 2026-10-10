@@ -1,0 +1,42 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stepper__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A square outlined key, the segmented control's height, with the sign in body text. */
+.stepper__button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--fs-lead);
+}
+
+.stepper__button:hover:not(:disabled) { border-color: var(--line-3); background: var(--raise); }
+.stepper__button:disabled { opacity: 0.45; cursor: default; }
+
+.stepper__value {
+  min-width: 32px;
+  text-align: center;
+  font-size: var(--fs-lead);
+}
+
+/* A thumb gets the 44px target. */
+@media (max-width: 720px), (pointer: coarse) {
+  .stepper__button {
+    width: var(--control-large);
+    height: var(--control-large);
+    border-radius: var(--radius-lg);
+  }
+}

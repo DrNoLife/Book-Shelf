@@ -239,6 +239,21 @@ window.lnshelf = {
         return window.matchMedia('(max-width: 720px)').matches;
     },
 
+    // Whether the stylesheet is showing an element at all. The search page's preview panel is
+    // hidden by a container query whenever it would otherwise drop under the results, and a
+    // row then opens its preview as a sheet instead: the layout decides, the code only asks.
+    isDisplayed: function (element) {
+        return !!element && element.getClientRects().length > 0;
+    },
+
+    // Focus back on the control marked aria-current inside a container: the search row whose
+    // preview sheet just closed, so a keyboard carries on from where it opened the sheet.
+    focusCurrent: function (container) {
+        if (!container) return;
+        const current = container.querySelector('[aria-current="true"]');
+        if (current) current.focus();
+    },
+
     // Puts a value back into an input Blazor will not rewrite: a refused date leaves the
     // rendered value attribute unchanged, so the DOM keeps what the reader picked. Setting it
     // here, rather than rebuilding the element, keeps focus where it is.
