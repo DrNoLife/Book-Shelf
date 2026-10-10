@@ -20,6 +20,23 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.23.0", new DateOnly(2026, 10, 10), "Fixed on the phone",
+            Features: [
+                "You can now change when you read a volume: open it and pick the date under \"Read on\", or select " +
+                    "several read volumes on the series page and use \"Set read date…\" to give them all the same date.",
+                "Sheets on the phone close with a swipe down on the handle, just like they look like they should.",
+            ],
+            Improvements: [
+                "Searching and filtering the shelf is calmer: one search field and a Filters button that shows how many " +
+                    "filters are on, the filters in a sheet on the phone or a panel on the desktop, the active ones as " +
+                    "chips you can remove, and the colour key folded away until you want it.",
+            ],
+            Fixes: [
+                "Pages no longer scroll sideways on a phone.",
+                "Typing in a field, like a note, no longer makes the phone zoom in.",
+                "The Stats page, and every other page, scrolls all the way to the bottom above the tab bar.",
+            ]
+        ),
         new("0.22.0", new DateOnly(2026, 10, 10), "Released by GitHub",
             Features: [],
             Improvements: [

@@ -6,6 +6,35 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Owner's phone feedback (0.23.0, 2026-10-10)
+
+Built by a four-track workflow (one worktree branch per area, an independent reviewer per
+branch, a fix pass), merged and verified by the lead: 1679 unit tests, 65 browser journeys,
+and 390 x 844 screenshots.
+
+- **Phone layout.** Real overflow sources fixed (the Up next carousel's labels escaping, the
+  Upcoming page at 360px) plus a clip on a non-scrolling content box as a safety net; the
+  tab-bar reserve moved to the scrolling column so every page (Stats included) reaches its
+  bottom; every input, textarea and select renders at 16px on phones so iOS stops zooming.
+  New phone journeys assert the scroll column itself never scrolls sideways (they failed on
+  the old CSS).
+- **Shelf filters redesigned.** One row: search + "Filters" (with the active count); status,
+  format, sort, view and density in a BottomSheet on phones and a popover on desktop; active
+  filters as removable chips with Clear all; the colour key collapsed behind "Key" and
+  remembered per browser.
+- **Swipe to close.** BottomSheet follows a downward drag from the handle/header (or the
+  body at scroll top) and closes past ~30% or on a flick, through the same close path as
+  Done; reduced motion respected; touch and mouse journeys.
+- **Read dates editable.** `VolumeReadDateCommandService`: set or clear one read volume's
+  date, or a bulk date for several (all-or-nothing: refused if any is not read); never in the
+  future, not before 1900. "Read on" date input in VolumeDetails (saves on commit, refusals
+  shown beside it) and "Set read date…" in the grid's selection toolbar.
+
+The workflow's worktree agents could not read the ImageSharp key at first, so some tracks
+only verified in their fix pass; the lead re-ran everything on the merged branch.
+
+---
+
 ## Public, and released by GitHub (0.22.0, 2026-10-10)
 
 The history rewrite went out as a fresh repository (the old one deleted, the new one
