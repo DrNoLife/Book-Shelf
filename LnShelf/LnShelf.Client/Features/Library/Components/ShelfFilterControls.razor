@@ -1,0 +1,57 @@
+@* Everything that narrows, orders or redraws the shelf, in one place: the inside of the
+   filter panel, identical in the phone's bottom sheet and the desktop's popover. Each choice
+   applies the moment it is made — the grid behind is already showing the result — so there
+   is no Apply button to forget. Every control here is laid out in full: a nested dropdown
+   inside a sheet that scrolls would be a menu inside a menu. *@
+
+<div class="controls">
+
+    <div class="controls__section">
+        <span class="eyebrow">Status</span>
+        <StatusChips Selected="Status" SelectedChanged="StatusChanged" />
+    </div>
+
+    <div class="controls__section">
+        <span class="eyebrow">Format</span>
+        <FormatTabs Selected="Format" SelectedChanged="FormatChanged" Stretch="true" Inset="true" />
+    </div>
+
+    <div class="controls__section">
+        <span class="eyebrow">Sort</span>
+        <ChipGroup TValue="LibrarySort"
+                   Options="SortOptions"
+                   Value="Sort"
+                   ValueChanged="SortChanged"
+                   AriaLabel="Sort the shelf"
+                   Wrap="true" />
+    </div>
+
+    <div class="controls__section">
+        <span class="eyebrow">View</span>
+        <div class="controls__row">
+            @* Two views of the same set. Words rather than icons: "rows" and "covers" are
+               not shapes anyone recognises. *@
+            <SegmentedControl TValue="LibraryView"
+                              Options="ViewOptions"
+                              Value="View"
+                              ValueChanged="ViewChanged"
+                              AriaLabel="Library view"
+                              Stretch="true"
+                              Inset="true" />
+
+            @* Two channels, not colour alone: the pressed segment carries the fill and the
+               icon differs between the two densities. Disabled rather than hidden in the
+               rows view: a control that vanishes reads as a bug, one that says why it is
+               inert does not. *@
+            <SegmentedControl TValue="GridDensity"
+                              Options="DensityOptions"
+                              Value="Density"
+                              ValueChanged="DensityChanged"
+                              AriaLabel="Grid density"
+                              Inset="true"
+                              Disabled="IsDensityDisabled"
+                              DisabledTitle="density applies to the covers view" />
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,49 @@
+@* The shelf's one "more" control: a Filters button that says how many filters are hiding
+   series, and the panel it opens — a bottom sheet on a phone, a popover under the button
+   anywhere wider (asked at the moment of opening, as the volume grid asks). The panel's
+   contents arrive as ChildContent, so the two shapes cannot drift apart. *@
+
+<div class="filters" @ref="_root" @onfocusout="OnFocusOutAsync">
+    <button type="button"
+            class="secondary"
+            aria-expanded="@IsOpen.ToAriaState()"
+            aria-controls="@(IsOpen && !_isSheet ? PopoverId : null)"
+            aria-label="@ButtonLabel"
+            @ref="_button"
+            @onclick="ToggleAsync"
+            @onkeydown="OnKeyDownAsync">
+        <Icon Name="IconName.SlidersHorizontal" Size="15" />
+        Filters
+        @* A count, not a dot: "2" says how much is hidden, and the words are in the label. *@
+        @if (ActiveCount > 0)
+        {
+            <span class="filters__count" aria-hidden="true">@ActiveCount</span>
+        }
+    </button>
+
+    @if (IsOpen)
+    {
+        @if (_isSheet)
+        {
+            <BottomSheet AriaLabel="Filter and sort the shelf" Closed="CloseAndReturnFocusAsync">
+                <h2 class="title-panel filters__title">Filter and sort</h2>
+                @ChildContent
+            </BottomSheet>
+        }
+        else
+        {
+            @* Focusable itself (tabindex -1) so a click on the panel's own background keeps
+               focus inside it; otherwise focus would fall to the page and close the panel
+               under the pointer. *@
+            <section id="@PopoverId"
+                     class="filters__popover"
+                     role="dialog"
+                     aria-label="Filter and sort the shelf"
+                     tabindex="-1"
+                     @ref="_popover"
+                     @onkeydown="OnKeyDownAsync">
+                @ChildContent
+            </section>
+        }
+    }
+</div>

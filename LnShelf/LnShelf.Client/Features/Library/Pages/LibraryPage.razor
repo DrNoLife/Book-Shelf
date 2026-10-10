@@ -55,27 +55,22 @@
                 }
             </div>
 
-            @* The status filter as chips on a phone; the segmented control in the toolbar
-               is the same filter on a wider screen. *@
-            <div class="phone-only shelf__chips">
-                <ShelfChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
-            </div>
-
+            @* One toolbar at every width: the bar, the panel it opens (a sheet on a phone),
+               the active-filter chips, the count and the colour key. *@
             <LibraryToolbar TextFilter="@LibraryState.TextFilter"
                             TextFilterChanged="OnTextFilterChanged"
+                            Status="LibraryState.SelectedFilter"
+                            StatusChanged="OnFilterSelectedAsync"
+                            Format="LibraryState.SelectedFormat"
+                            FormatChanged="OnFormatSelectedAsync"
                             Sort="LibraryState.Sort"
                             SortChanged="OnSortChangedAsync"
                             Density="Preferences.GridDensity"
                             DensityChanged="OnDensityChangedAsync"
                             View="Preferences.LibraryView"
-                            ViewChanged="OnViewChangedAsync">
-                <div class="desktop-only">
-                    <StatusChips Selected="LibraryState.SelectedFilter" SelectedChanged="OnFilterSelectedAsync" />
-                </div>
-                <FormatTabs Selected="LibraryState.SelectedFormat" SelectedChanged="OnFormatSelectedAsync" />
-            </LibraryToolbar>
-
-            <GridLegend />
+                            ViewChanged="OnViewChangedAsync"
+                            ClearAllRequested="OnClearFiltersAsync"
+                            CountText="@ToolbarCount" />
 
             @* A preference that failed to save says so where the control that failed lives
                — silently reverting on the next load is the bug. *@
@@ -98,6 +93,12 @@
                     @if (!string.IsNullOrWhiteSpace(LibraryState.TextFilter))
                     {
                         @($"Nothing here matches “{LibraryState.TextFilter}”.")
+                    }
+                    else if (IsFiltered)
+                    {
+                        @* The filters now live in a panel, so the empty shelf must not claim
+                           nothing is hidden when a chip above says otherwise. *@
+                        @("No series fit these filters. Remove one above to see more.")
                     }
                     else
                     {

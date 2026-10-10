@@ -1,12 +1,15 @@
-@* The status filter, as the shared segmented control. Terminology is fixed — To buy /
-   Backlog / Behind / Up to date are never paraphrased. "All" is its own segment, which
-   replaces the old dismiss mark on the active chip. *@
+@* The status filter inside the shelf's filter panel: every state in view at once, wrapped
+   rather than scrolled — the panel is the one place they all live, at every width. Grouped
+   as the reader thinks of them: everything, then the derived states (Behind, Reading,
+   Backlog, Up to date), then the ones the reader sets. The words come from ShelfFilterText,
+   so the chip under the search bar names a filter exactly as this group does. *@
 
-<SegmentedControl TValue="LibraryFilter"
-                  Options="Options"
-                  Value="Selected"
-                  ValueChanged="SelectedChanged"
-                  AriaLabel="Status filter" />
+<ChipGroup TValue="LibraryFilter"
+           Options="Options"
+           Value="Selected"
+           ValueChanged="SelectedChanged"
+           AriaLabel="Status filter"
+           Wrap="true" />
 
 @code {
     [Parameter] public required LibraryFilter Selected { get; set; }
@@ -15,13 +18,16 @@
 
     private static readonly IReadOnlyList<SegmentedOption<LibraryFilter>> Options =
     [
-        new(LibraryFilter.All, "All", "Everything on the shelf"),
-        new(LibraryFilter.Behind, "Behind", "Something to buy or something to read"),
-        new(LibraryFilter.Reading, "Reading", "Series you are reading"),
-        new(LibraryFilter.Backlog, "Backlog", "Owned and unread"),
-        new(LibraryFilter.UpToDate, "Up to date", "Nothing to buy and nothing to read"),
-        new(LibraryFilter.Completed, "Completed", "Series you finished"),
-        new(LibraryFilter.PlanToStart, "Plan to start", "Series you plan to start"),
-        new(LibraryFilter.Dropped, "Dropped", "Series you dropped"),
+        Option(LibraryFilter.All, "Everything on the shelf"),
+        Option(LibraryFilter.Behind, "Something to buy or something to read"),
+        Option(LibraryFilter.Reading, "Series you are reading"),
+        Option(LibraryFilter.Backlog, "Owned and unread"),
+        Option(LibraryFilter.UpToDate, "Nothing to buy and nothing to read"),
+        Option(LibraryFilter.Completed, "Series you finished"),
+        Option(LibraryFilter.PlanToStart, "Series you plan to start"),
+        Option(LibraryFilter.Dropped, "Series you dropped"),
     ];
+
+    private static SegmentedOption<LibraryFilter> Option(LibraryFilter filter, string title) =>
+        new(filter, ShelfFilterText.StatusLabel(filter), title);
 }

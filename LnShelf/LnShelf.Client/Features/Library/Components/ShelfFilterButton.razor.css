@@ -1,0 +1,56 @@
+/* The anchor the popover hangs from. */
+.filters {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+/* The count: the chosen chip's light fill, small and round. Neutral, never the accent —
+   a filter being on is information, not the thing to do next. */
+.filters__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--text);
+  color: var(--bg);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* A step more space under the sheet's title than between its sections, so the title reads
+   as the sheet's and not as the first section's. */
+.filters__title { margin: 0 0 var(--space-1); }
+
+/* The desktop popover: a floating panel — the panel's surface and radius with the menu's
+   interactive hairline and shadow — hung under the button's right edge, so it opens over
+   the shelf rather than off the side of a narrow window. */
+.filters__popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 40;
+  width: min(400px, calc(100vw - 2 * var(--page-gutter)));
+  padding: var(--space-5);
+  background: var(--surf);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 28px var(--shadow-lift);
+  animation: filters-drop 140ms ease-out;
+}
+
+/* The panel itself takes focus only so a click on its background keeps it open; the ring
+   belongs on the controls inside. */
+.filters__popover:focus { outline: none; }
+
+@keyframes filters-drop {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filters__popover { animation: none; }
+}

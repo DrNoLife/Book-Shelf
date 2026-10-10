@@ -1,95 +1,64 @@
-@using LnShelf.Shared.Preferences
+@* The shelf's controls, kept to one calm bar: the title filter and a Filters button, then
+   one quiet line of what is hiding series, how many are showing and the colour key. Status,
+   format, sort, view and density live in the panel the button opens; the sidebar's smart
+   shelves remain the one-click status switch on a desktop. Owner feedback 2026-10-10: the
+   old toolbar laid every control out at once and overflowed a phone. *@
 
-@* The shelf's working furniture: narrow it, reorder it, tighten it. The filters arrive as
-   ChildContent so the page decides which ones sit beside the search field. Adding a
-   series lives in the page header now. *@
+<div class="toolbar">
 
-<div class="bar">
+    <div class="toolbar__bar">
+        <SearchField class="toolbar__search"
+                     AriaLabel="Filter the shelf by title"
+                     Placeholder="Filter by title"
+                     ClearLabel="Clear the title filter"
+                     Value="@TextFilter"
+                     ValueChanged="TextFilterChanged" />
 
-    <SearchField class="bar__field"
-                 AriaLabel="Filter the shelf by title"
-                 Placeholder="Filter by title"
-                 Value="@TextFilter"
-                 ValueChanged="TextFilterChanged" />
+        <ShelfFilterButton ActiveCount="ActiveFilterCount">
+            <ShelfFilterControls Status="Status"
+                                 StatusChanged="StatusChanged"
+                                 Format="Format"
+                                 FormatChanged="FormatChanged"
+                                 Sort="Sort"
+                                 SortChanged="SortChanged"
+                                 View="View"
+                                 ViewChanged="ViewChanged"
+                                 Density="Density"
+                                 DensityChanged="DensityChanged" />
+        </ShelfFilterButton>
+    </div>
 
-    <div class="bar__filters">@ChildContent</div>
+    <div class="toolbar__summary">
+        <ActiveFilterChips Status="Status"
+                           Format="Format"
+                           HasTextFilter="@(!string.IsNullOrWhiteSpace(TextFilter))"
+                           StatusCleared="() => StatusChanged.InvokeAsync(LibraryFilter.All)"
+                           FormatCleared="() => FormatChanged.InvokeAsync(null)"
+                           ClearAllRequested="ClearAllRequested" />
 
-    <div class="bar__group">
-        <Dropdown Options="SortOptions"
-                  Value="@Sort.ToString()"
-                  ValueChanged="OnSortChangedAsync"
-                  AriaLabel="Sort the shelf" />
+        <div class="toolbar__aside">
+            @* Polite, so a screen reader hears the new count after a filter lands without
+               being interrupted mid-keystroke. *@
+            <span class="toolbar__count" aria-live="polite">@CountText</span>
 
-        @* Two views of the same set. Words rather than icons: "rows" and "covers" are
-           not shapes anyone recognises. *@
-        <SegmentedControl TValue="LibraryView"
-                          Options="ViewOptions"
-                          Value="View"
-                          ValueChanged="OnViewChangedAsync"
-                          AriaLabel="Library view" />
+            <button type="button"
+                    class="toolbar__key"
+                    aria-expanded="@IsKeyOpen.ToAriaState()"
+                    aria-controls="shelf-key"
+                    @onclick="ToggleKeyAsync">
+                Key
+                <span class="toolbar__caret @(IsKeyOpen ? "toolbar__caret--open" : null)">
+                    <Icon Name="IconName.CaretRight" Size="11" />
+                </span>
+            </button>
+        </div>
+    </div>
 
-        @* Two channels, not colour alone: the pressed segment carries the fill and the
-           icon differs between the two densities. Disabled rather than hidden in the
-           rows view: a control that vanishes reads as a bug, one that says why it is
-           inert does not. *@
-        <SegmentedControl TValue="GridDensity"
-                          Options="DensityOptions"
-                          Value="Density"
-                          ValueChanged="OnDensityChangedAsync"
-                          AriaLabel="Grid density"
-                          Disabled="IsDensityDisabled"
-                          DisabledTitle="density applies to the covers view" />
+    @* Always in the document so the button's aria-controls points at something; hidden
+       until asked for. The key is how the bars and dots stop being colour-only, so it is
+       one tap away rather than gone. *@
+    <div id="shelf-key" class="toolbar__key-panel" hidden="@(!IsKeyOpen)">
+        <GridLegend />
     </div>
 
 </div>
-
-@code {
-    [Parameter] public RenderFragment? ChildContent { get; set; }
-
-    [Parameter] public string TextFilter { get; set; } = string.Empty;
-
-    [Parameter] public EventCallback<string> TextFilterChanged { get; set; }
-
-    [Parameter] public LibrarySort Sort { get; set; }
-
-    [Parameter] public EventCallback<LibrarySort> SortChanged { get; set; }
-
-    [Parameter] public GridDensity Density { get; set; }
-
-    [Parameter] public EventCallback<GridDensity> DensityChanged { get; set; }
-
-    [Parameter] public LibraryView View { get; set; }
-
-    [Parameter] public EventCallback<LibraryView> ViewChanged { get; set; }
-
-    /// <summary>Density is a grid setting, and the rows view has no grid.</summary>
-    private bool IsDensityDisabled => View == LibraryView.Rows;
-
-    private static readonly IReadOnlyList<SegmentedOption<LibraryView>> ViewOptions =
-    [
-        new(LibraryView.Rows, "Rows", "Rows — one line per series"),
-        new(LibraryView.Covers, "Covers", "Covers — the cover grid"),
-    ];
-
-    private static readonly IReadOnlyList<SegmentedOption<GridDensity>> DensityOptions =
-    [
-        new(GridDensity.Comfortable, null, "Comfortable", IconName.SquaresFour),
-        new(GridDensity.Compact, null, "Compact", IconName.GridNine),
-    ];
-
-    /// <summary>Labels say what the order is, not what the enum is called.</summary>
-    private static readonly IReadOnlyList<DropdownOption> SortOptions =
-    [
-        new(nameof(LibrarySort.MostBehind), "Most behind"),
-        new(nameof(LibrarySort.Alphabetical), "A–Z"),
-        new(nameof(LibrarySort.RecentlyUpdated), "Recently synced"),
-        new(nameof(LibrarySort.LastRead), "Last read"),
-    ];
-
-    private Task OnSortChangedAsync(string value) =>
-        SortChanged.InvokeAsync(Enum.Parse<LibrarySort>(value));
-
-    private Task OnDensityChangedAsync(GridDensity density) => DensityChanged.InvokeAsync(density);
-
-    private Task OnViewChangedAsync(LibraryView view) => ViewChanged.InvokeAsync(view);
-}

@@ -1,48 +1,103 @@
-.bar {
+/* One row on a desktop — the bar on the left, the summary line beside it — and two on a
+   phone, where the summary drops under the bar. Everything wraps inside its own box, so
+   nothing here can push the page sideways. */
+.toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-5);
 }
 
-/* Placement only; SearchField draws itself. It is a child component's own element, so
-   the class reaches it through ::deep. */
-.bar ::deep .bar__field {
-  flex: 1 1 240px;
-  max-width: 320px;
-}
-
-.bar__filters {
+.toolbar__bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* Sort and the view toggles sit at the far end of the row. */
-.bar__group {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
+  flex: 0 1 480px;
+  min-width: 0;
 }
 
-@media (max-width: 620px) {
-  .bar ::deep .bar__field { max-width: none; flex-basis: 100%; }
-  .bar__group { margin-left: 0; }
+/* Placement only; SearchField draws itself. It is a child component's own element, so the
+   class reaches it through ::deep. */
+.toolbar ::deep .toolbar__search { flex: 1 1 auto; }
+
+/* Two columns, so the chips wrap inside their own and the count and key hold the first
+   line's far end: two chips and "Clear all" on a phone wrap to a second line of chips
+   rather than pushing the count down onto a line of its own. */
+.toolbar__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  flex: 1 1 320px;
+  min-width: 0;
 }
 
-/* Eight status segments are wider than a phone; they scroll inside their own container
-   rather than pushing the page sideways. */
-.bar__filters ::deep .toggle {
-  max-width: 100%;
-  overflow-x: auto;
+/* Column 2 by name: with no filter on there are no chips, and it must not slide left. */
+.toolbar__aside {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-/* Phones: the group steps aside so its three controls join the bar's own wrapping, which
-   packs the format tabs, sort, view and density into two rows instead of four. */
+.toolbar__count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  font-size: var(--fs-caption);
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* A disclosure, not a control that changes the shelf: words in --muted, no box. */
+.toolbar__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.toolbar__key:hover { color: var(--text); }
+
+.toolbar__caret {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  transition: transform 120ms ease;
+}
+
+/* Right while closed, down while open: the disclosure triangle's own grammar. */
+.toolbar__caret--open { transform: rotate(90deg); }
+
+/* No display rule here: the hidden attribute is what closes it. */
+.toolbar__key-panel {
+  flex-basis: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surf-low);
+}
+
+/* The same 36px the chips grow to, so the first line stays one line tall. */
+@media (pointer: coarse) {
+  .toolbar__key,
+  .toolbar__count { min-height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar__caret { transition: none; }
+}
+
+/* Phones: the bar takes the width and the summary line sits under it. */
 @media (max-width: 720px) {
-  .bar { gap: var(--space-2); }
-  .bar__group { display: contents; }
+  .toolbar { gap: var(--space-3); }
+
+  .toolbar__bar,
+  .toolbar__summary { flex-basis: 100%; }
 }
