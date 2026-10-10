@@ -65,6 +65,8 @@
     padding-inline: var(--page-gutter);
     scroll-padding-inline: var(--page-gutter);
     overflow-x: auto;
+    /* Contains the cards' .visually-hidden labels, so they cannot widen the page column. */
+    position: relative;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
   }

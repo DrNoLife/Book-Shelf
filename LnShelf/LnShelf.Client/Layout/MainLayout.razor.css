@@ -25,15 +25,19 @@
   position: relative;
   min-width: 0;
   overflow-y: auto;
-  /* Defence in depth: the column never scrolls sideways (each overflow is fixed where it
-     starts; this keeps one that slips through from shifting the page). */
-  overflow-x: clip;
   background: var(--bg);
+  /* A long unbroken title wraps instead of pushing the column wide. break-word rather than
+     anywhere: it does not shrink the min-content width of flex and grid items. */
+  overflow-wrap: break-word;
 }
 
-/* A long unbroken title wraps instead of pushing the column wide. break-word rather than
-   anywhere: it does not shrink the min-content width of flex and grid items. */
-.main { overflow-wrap: break-word; }
+/* Defence in depth: the page never scrolls sideways (each overflow is fixed where it starts;
+   this keeps one that slips through from shifting the page). On this wrapper and not on .main:
+   .main has overflow-y: auto, which turns a clip on the other axis into hidden, and a hidden
+   scroll container can still be scrolled by focus or scrollIntoView. clip on a box that is not
+   itself a scroller really cannot move, and creates no scroll container, so sticky bars and
+   the carousels' own scrolling are untouched. */
+.main__content { overflow-x: clip; }
 
 /* Focus arrives here only from the skip link, programmatically; a ring around the whole
    content column would be noise. */
