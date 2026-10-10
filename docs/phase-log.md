@@ -6,6 +6,28 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Search & add redesigned (0.24.0, 2026-10-10)
+
+Built from the owner's canvas (Search.dc / MSearch.dc) by a one-implementer workflow with an
+independent review (approved; only low findings, three fixed by the lead).
+
+- **Works.** `SearchResultGrouper` (client, pure, heavily tested) joins results on an exact
+  normalised base title of at least three characters, splits "Main story" (the base title,
+  numbered parts, seasons, "Book N", "Dai N-bu") from "Side stories" (by year), and leaves
+  unrelated titles alone (Re:ZERO vs Re:Monster). A stem nobody shares falls back to all-main.
+- **Start with.** `AddSeriesRequest.InitialReadCount/InitialOwnedCount`; `SeriesStartingState`
+  validates before any source call, raises owned to read, marks 1..N read/owned with no dates,
+  and sets Reading or Plan to start. Applied only on a fresh add, so an already-tracked series,
+  an adoption or a lost race never touches existing user state. The per-volume logic is shared
+  with "Mark 1–N" through `BulkVolumeStateWriter`.
+- **UI.** Large search, format filter with counts, work cards, Add all N parts (sequential,
+  stops on error), preview panel on wide screens and BottomSheet elsewhere, sticky phone bar
+  with Cancel (`NavigationTrail`). `GET api/series/tracked` now also returns series ids so
+  "On your shelf · Open" works for older series. Search still runs on Enter: the per-user
+  external-call budget (20/min) is shared with adding.
+
+---
+
 ## Owner's phone feedback (0.23.0, 2026-10-10)
 
 Built by a four-track workflow (one worktree branch per area, an independent reviewer per

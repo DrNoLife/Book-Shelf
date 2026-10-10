@@ -20,6 +20,20 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.24.0", new DateOnly(2026, 10, 10), "A better way to add",
+            Features: [
+                "Search & add is redesigned: results are grouped by work, so a series' parts and side stories sit " +
+                    "together under one heading, with each format's count on the filter and \"Add all\" for the parts " +
+                    "you do not have yet.",
+                "Pick a result to see it in a preview (a side panel on the desktop, a sheet on the phone) and say how " +
+                    "far you already are before adding it: volumes read and owned are filled in for you, and it goes " +
+                    "straight onto Reading. Leave both at 0 and it goes on Plan to start.",
+            ],
+            Improvements: [
+                "On the phone the search bar stays at the top with a Cancel that takes you back to where you came from.",
+            ],
+            Fixes: []
+        ),
         new("0.23.0", new DateOnly(2026, 10, 10), "Fixed on the phone",
             Features: [
                 "You can now change when you read a volume: open it and pick the date under \"Read on\", or select " +
