@@ -2,7 +2,7 @@ namespace LnShelf.Api.Features.Changelog.Controllers;
 
 /// <summary>
 /// The one endpoint open without signing in: is the API up, can it reach its database,
-/// and which version is it. deploy.ps1 polls it after a deploy.
+/// and which version is it. The deploy (ops/deploy/lnshelf-deploy) polls it after starting a release.
 /// </summary>
 // Here rather than in a slice of its own because the version is the Changelog slice's
 // fact. It says nothing about the shelf, so it is safe to leave open.

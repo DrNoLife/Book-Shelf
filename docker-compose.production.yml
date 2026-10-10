@@ -1,7 +1,8 @@
 # LnShelf production stack (feature-spec §9). Three services, one published port.
 #
-#   deploy.ps1 builds both images locally, ships them, and runs
-#   `docker compose up -d --no-build` on the server against this file.
+#   The release workflow builds and publishes the images; ops/deploy/lnshelf-deploy runs
+#   `docker compose up -d --no-build` on the server against this file, fetched for the
+#   released commit, with the image digests set (README.md, Deploying).
 #
 # The server also runs Hearth, which already owns host ports 8090, 5432, 9000,
 # 9001 and 6379. Nothing here is published except the client on 8091 — postgres
@@ -96,8 +97,8 @@ services:
       Auth__ClientSecret: "${AUTH_CLIENT_SECRET:?Set AUTH_CLIENT_SECRET in the .env next to docker-compose.yml}"
       Auth__InitialOwnerEmail: "${AUTH_INITIAL_OWNER_EMAIL:-}"
     # No healthcheck: the aspnet runtime image ships no curl or wget, and adding
-    # one to the image to satisfy compose is not worth it. deploy.ps1 polls
-    # /api/library through the client instead, which proves more anyway.
+    # one to the image to satisfy compose is not worth it. lnshelf-deploy polls
+    # /api/health through the client instead, which proves more anyway.
 
   # The only public face: nginx serves the WASM bundle and proxies /api/* to the
   # API, so the browser sees one origin and the API needs no CORS (§2).

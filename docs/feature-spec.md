@@ -597,7 +597,7 @@ bundle holds no token at all:
   Covers are served `private` and per-volume covers only to their owner.
 - **Closed by default.** A fallback authorization policy requires a signed-in
   owner on every endpoint. The only anonymous ones are `GET /api/auth/login`,
-  `GET /api/health` (version and database reachability, which deploy.ps1
+  `GET /api/health` (version and database reachability, which the deploy
   polls) and the two shared-shelf reads `GET /api/shared/{token}` and its
   covers (§4.8). An API call without a session gets a 401 ProblemDetails, never a
   redirect.

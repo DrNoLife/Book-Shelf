@@ -6,6 +6,29 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Public, and released by GitHub (0.22.0, 2026-10-10)
+
+The history rewrite went out as a fresh repository (the old one deleted, the new one
+renamed to `Book-Shelf`) and the repository is public: rulesets on `main` (no force push or
+deletion for anyone; CI required, owner bypass) and on `v*` tags (owner only), the
+`production` environment (v* tags only, owner approval), read-only `GITHUB_TOKEN`, an action
+allowlist, approval for every outside contributor's workflow run, secret scanning with push
+protection, private vulnerability reporting. The import tests now carry their own anonymised
+StoryGraph fixture (reviews and ratings blank, dates moved back 1000 days).
+
+On the server: the tunnel runs as its own project (no `cap_drop`/`no-new-privileges`: the
+cloudflared binary's file capabilities make exec fail with them), the deploy sshd and gate are
+installed (`ops/sshd/install.sh`) and refuse everything but `deploy`/`status`, Uptime Kuma
+watches health, the nightly sync and the backup, alerting to Discord. Cloudflare Zero Trust
+was onboarded (Free) for the `deploy-ssh` Access application, service auth only. The GHCR
+packages had to be made public by hand; new packages start private.
+
+**0.22.0 is the first release built, scanned, attested and deployed by the workflow**, approved
+by the owner: verify → CI → scan → publish → deploy through the tunnel, the gate's GitHub
+checks, a pre-deploy dump, pull by digest, health on 0.22.0. `deploy.ps1` is deleted.
+
+---
+
 ## Monitoring, CI/CD by tag, and getting ready to go public (0.21.0 and 0.21.1, 2026-10-10)
 
 **Heartbeats (0.21.0).** New `Features/Monitoring` slice with the `IHeartbeat` seam.

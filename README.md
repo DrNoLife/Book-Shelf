@@ -148,9 +148,8 @@ going back one image is always safe.
 3. **The deploy sshd, key and gate:** [`ops/sshd/README.md`](ops/sshd/README.md).
 4. **Monitoring:** [`ops/uptime-kuma/README.md`](ops/uptime-kuma/README.md).
 
-Until that is in place, `deploy.ps1` still works the old way: it builds both images locally,
-ships them over SSH, and runs them through a `docker-compose.local.yml` that swaps the GHCR
-digests for the local tags. It goes once the first tag deploy is green.
+0.22.0 was the first release deployed this way (2026-10-10); the old `deploy.ps1`, which built
+on a laptop and shipped tarballs over SSH, is gone.
 
 ### Rolling back
 
@@ -179,10 +178,10 @@ Cover handling uses ImageSharp 4, which refuses to compile without a Six Labors 
 key (a free community license, applied for at sixlabors.com). The key is read from the
 `SixLaborsLicenseKey` environment variable, set once as a user environment variable on
 the machine that builds, and is never committed (`sixlabors.lic` is git-ignored as a
-safety net). `deploy.ps1` stops early if it is missing and hands it to `docker build` as
-a BuildKit secret, so it does not end up in an image layer. Any other build needs it too,
-including `docker compose -f docker-compose.production.yml build` and CI, where it has to
-be a secret exposed to the build and test jobs as the `SixLaborsLicenseKey` variable.
+safety net). The release workflow hands it to `docker build` as a BuildKit secret, so it
+does not end up in an image layer; it is the repository secret `SIXLABORS_LICENSE_KEY`, and a
+Dependabot secret of the same name. A local `docker compose -f docker-compose.production.yml
+build` needs the variable set too.
 
 ### Login
 
