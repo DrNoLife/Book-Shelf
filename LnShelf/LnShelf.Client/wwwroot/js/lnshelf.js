@@ -1,8 +1,180 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
 // C#: read a rendered layout, move focus between sibling elements, hand a
-// dropped file to a file input, copy a link to the clipboard, and ask whether the
-// phone layout is showing.
+// dropped file to a file input, copy a link to the clipboard, ask whether the
+// phone layout is showing, and follow a finger dragging a bottom sheet down.
 window.lnshelf = {
+    // One entry per bottom sheet that listens for drags, so disposing it can remove exactly
+    // the listeners it added.
+    sheetDragDisposers: new WeakMap(),
+
+    // Drag a bottom sheet down to close it. Pointer events cover mouse and touch alike; the
+    // sheet follows the pointer with a transform (no layout work) and the scrim fades with it.
+    // A drag starts only when the sheet is scrolled to its top and the pointer moves down, so
+    // scrolling the content is never taken over. Letting go past a third of the sheet's
+    // height, or with a quick downward flick, calls CloseFromDragAsync on the .NET owner,
+    // which closes through the same path as Done, Escape and the scrim.
+    registerSheetDrag: function (sheet, scrim, dotNetReference) {
+        if (!sheet || window.lnshelf.sheetDragDisposers.has(sheet)) return;
+
+        const dragThreshold = 6;       // px of downward travel before a press becomes a drag
+        const closeFraction = 0.3;     // of the sheet's height
+        const flickVelocity = 0.5;     // px per ms
+        const flickMinimumDistance = 30;
+        const flickWindow = 100;       // ms; older movement does not make a flick
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        let pointerId = null;
+        let startY = 0;
+        let offset = 0;
+        let dragging = false;
+        let lastY = 0;
+        let lastTime = 0;
+        let velocity = 0;
+        let closing = false;
+
+        const apply = distance => {
+            offset = Math.max(0, distance);   // never above its resting place
+            sheet.style.transform = offset === 0 ? '' : 'translateY(' + offset + 'px)';
+            if (scrim) scrim.style.opacity = offset === 0 ? '' : String(Math.max(0, 1 - offset / sheet.offsetHeight));
+        };
+
+        const reset = () => {
+            pointerId = null;
+            dragging = false;
+            sheet.classList.remove('sheet--dragging');
+        };
+
+        const snapBack = () => {
+            if (!reducedMotion.matches && offset > 0) {
+                const clear = () => {
+                    sheet.style.transition = '';
+                    if (scrim) scrim.style.transition = '';
+                };
+                sheet.style.transition = 'transform 200ms ease-out';
+                if (scrim) scrim.style.transition = 'opacity 200ms ease-out';
+                sheet.addEventListener('transitionend', clear, { once: true });
+            }
+            apply(0);
+        };
+
+        const stopClick = event => {
+            event.stopPropagation();
+            event.preventDefault();
+        };
+
+        const onPointerDown = event => {
+            if (closing) return;
+
+            // A second finger, or any pointer other than the one being followed, cancels
+            // the drag rather than being mistaken for it.
+            if (pointerId !== null) {
+                if (dragging) snapBack();
+                reset();
+                return;
+            }
+
+            if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+            if (sheet.scrollTop > 0) return;
+            if (event.target.closest && event.target.closest('input, textarea, select')) return;
+
+            pointerId = event.pointerId;
+            startY = lastY = event.clientY;
+            lastTime = event.timeStamp;
+            velocity = 0;
+        };
+
+        const onPointerMove = event => {
+            if (event.pointerId !== pointerId) return;
+
+            const distance = event.clientY - startY;
+            if (!dragging) {
+                if (distance < dragThreshold) {
+                    // Upward, or content scrolled meanwhile: this gesture belongs to the content.
+                    if (distance < -dragThreshold || sheet.scrollTop > 0) reset();
+                    return;
+                }
+                dragging = true;
+                sheet.classList.add('sheet--dragging');
+            }
+
+            const elapsed = event.timeStamp - lastTime;
+            if (elapsed > 0) velocity = (event.clientY - lastY) / elapsed;
+            lastY = event.clientY;
+            lastTime = event.timeStamp;
+            apply(distance - dragThreshold);
+        };
+
+        const onPointerUp = event => {
+            if (event.pointerId !== pointerId) return;
+
+            // A finger that paused sends no pointermove, so the last speed may be stale: only a
+            // movement within the final 100 ms counts as a flick.
+            if (event.timeStamp - lastTime > flickWindow) velocity = 0;
+
+            const wasDragging = dragging;
+            reset();
+            if (!wasDragging) return;
+
+            // The release of a drag must not also count as a tap on whatever was under it.
+            window.addEventListener('click', stopClick, { capture: true, once: true });
+            setTimeout(() => window.removeEventListener('click', stopClick, true), 0);
+
+            const farEnough = offset > sheet.offsetHeight * closeFraction;
+            const flicked = velocity > flickVelocity && offset > flickMinimumDistance;
+            if (farEnough || flicked) {
+                closing = true;
+                dotNetReference.invokeMethodAsync('CloseFromDragAsync');
+            } else {
+                snapBack();
+            }
+        };
+
+        const onPointerCancel = event => {
+            if (event.pointerId !== pointerId) return;
+            if (dragging) snapBack();
+            reset();
+        };
+
+        // The browser decides at the first touchmove whether the gesture is a native pan, and
+        // later moves cannot be cancelled. So a downward move from a sheet resting at its top
+        // is cancelled from the very first one, before the drag has formally started: a
+        // downward move cannot scroll content that is already at the top, and upward moves
+        // are left alone so the content still scrolls.
+        let touchStartY = 0;
+        const onTouchStart = event => {
+            if (event.touches.length === 1) touchStartY = event.touches[0].clientY;
+        };
+        const onTouchMove = event => {
+            if (!event.cancelable || event.touches.length !== 1) return;
+            const movedDown = event.touches[0].clientY > touchStartY;
+            if (dragging || (pointerId !== null && sheet.scrollTop <= 0 && movedDown)) event.preventDefault();
+        };
+
+        sheet.addEventListener('pointerdown', onPointerDown);
+        sheet.addEventListener('touchstart', onTouchStart, { passive: true });
+        sheet.addEventListener('touchmove', onTouchMove, { passive: false });
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerCancel);
+
+        window.lnshelf.sheetDragDisposers.set(sheet, () => {
+            sheet.removeEventListener('pointerdown', onPointerDown);
+            sheet.removeEventListener('touchstart', onTouchStart);
+            sheet.removeEventListener('touchmove', onTouchMove);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerCancel);
+        });
+    },
+
+    unregisterSheetDrag: function (sheet) {
+        if (!sheet) return;
+        const dispose = window.lnshelf.sheetDragDisposers.get(sheet);
+        if (!dispose) return;
+        dispose();
+        window.lnshelf.sheetDragDisposers.delete(sheet);
+    },
+
     // The volume grid is auto-fill, so its column count is a layout fact rather than
     // a constant. Counting the tiles that share the first row's offsetTop is the
     // cheapest honest way to ask the browser what it actually did.
