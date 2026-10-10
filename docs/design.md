@@ -356,10 +356,17 @@ them: **Continue reading** (cards: 96×138 cover, eyebrow "LN · VOL 18 OF 22", 
 serif title at 21px, "3 unread volumes on your shelf", a tertiary "Mark Vol 18
 read" and a secondary "Open"); **Out now, not on your shelf** (a bordered list:
 format badge, title, "Vol 21–22", a "Vol 21 on Saxo ↗" outlined link, and "All
-upcoming →" in the head); **Shelf** — the toolbar (search field, status
-segmented control, format segmented control, view and density toggles, sort
-dropdown), the legend, the card grid (`auto-fill, minmax(190px, 1fr)`, gap
-`28px 22px`) and the footer line "Numbers under each cover: read · owned · out."
+upcoming →" in the head); **Shelf** — the toolbar (owner feedback 2026-10-10: one
+calm bar instead of every control laid out): the search field with its clear mark and
+a secondary "Filters" button carrying the count of filters hiding series; one quiet
+line under it of removable chips for the status and format filters ("Clear all" once
+there are two things to clear), the count ("9 of 24 shown") and a "Key" disclosure
+that opens the legend (closed by default, remembered per browser). The button opens
+the filter panel — status chips, the format segmented control, sort chips, Rows |
+Covers and density — as a bottom sheet on a phone and a popover under the button
+elsewhere; every choice applies at once. Then the card grid (`auto-fill,
+minmax(190px, 1fr)`, gap `28px 22px`) and the footer line "Numbers under each cover:
+read · owned · out."
 
 A series card: the cover (2:3, radius 8) with the format badge top-left and the
 "New · Vol N" pill top-right; a 6px `ThreeSegmentBar`; the numbers row

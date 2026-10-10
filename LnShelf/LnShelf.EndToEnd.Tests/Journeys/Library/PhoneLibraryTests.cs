@@ -2,7 +2,8 @@ namespace LnShelf.EndToEnd.Tests.Journeys.Library;
 
 /// <summary>
 /// The library on a phone (390 × 844): the "Up next" carousel's one-click "I finished Vol N",
-/// its receipt, and the Undo on it — the write and its reversal both reaching the API.
+/// its receipt, and the Undo on it — the write and its reversal both reaching the API; and the
+/// shelf's filters, which open as a bottom sheet here.
 /// </summary>
 public sealed class PhoneLibraryTests(EndToEndFixture fixture) : JourneyTest(fixture)
 {
@@ -46,10 +47,62 @@ public sealed class PhoneLibraryTests(EndToEndFixture fixture) : JourneyTest(fix
         await Assertions.Expect(tabs.GetByRole(AriaRole.Link, new() { Name = "Search and add" })).ToBeVisibleAsync();
         await Assertions.Expect(Page.Locator("aside.sidebar")).ToBeHiddenAsync();
 
-        // Nothing on the page may push it sideways at phone width.
-        var overflow = await Page.EvaluateAsync<bool>(
-            "() => document.querySelector('main').scrollWidth > document.querySelector('main').clientWidth");
-        overflow.ShouldBeFalse();
+        await MainShouldNotScrollSidewaysAsync();
+    }
+
+    [Fact]
+    public async Task Filters_OnAPhone_OpenAsABottomSheet_AndTheChosenStatusShowsAsAChip()
+    {
+        await Page.GotoAsync("/");
+        await Assertions.Expect(Page.Locator(".card").First).ToBeVisibleAsync();
+
+        var filtersButton = Page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Filters and sort") });
+        await filtersButton.ClickAsync();
+
+        var sheet = Page.GetByRole(AriaRole.Dialog, new() { Name = "Filter and sort the shelf" });
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await Assertions.Expect(sheet.Locator("xpath=..")).ToHaveClassAsync(new Regex("sheet-layer"));
+
+        await sheet.GetByRole(AriaRole.Group, new() { Name = "Status filter" })
+            .GetByRole(AriaRole.Button, new() { Name = "Reading", Exact = true })
+            .ClickAsync();
+        await sheet.GetByRole(AriaRole.Group, new() { Name = "Format" })
+            .GetByRole(AriaRole.Button, new() { Name = "Manga", Exact = true })
+            .ClickAsync();
+        await sheet.GetByRole(AriaRole.Button, new() { Name = "Done" }).ClickAsync();
+
+        await Assertions.Expect(sheet).ToHaveCountAsync(0);
+        await Assertions.Expect(filtersButton).ToBeFocusedAsync();
+
+        var chips = Page.GetByRole(AriaRole.List, new() { Name = "Active filters" });
+        await Assertions.Expect(chips.GetByRole(AriaRole.Button, new() { Name = "Remove the Reading filter" })).ToBeVisibleAsync();
+        await Assertions.Expect(chips.GetByRole(AriaRole.Button, new() { Name = "Remove the Manga filter" })).ToBeVisibleAsync();
+        await Assertions.Expect(chips.GetByRole(AriaRole.Button, new() { Name = "Clear all" })).ToBeVisibleAsync();
+
+        // Two chips, "Clear all", the count and the key: all of it wraps inside the shelf's
+        // own width rather than pushing the page sideways.
+        var shelfOverflows = await Page.EvaluateAsync<bool>(
+            "() => { const shelf = document.querySelector('section.shelf'); return shelf.scrollWidth > shelf.clientWidth; }");
+        shelfOverflows.ShouldBeFalse();
+        await MainShouldNotScrollSidewaysAsync();
+    }
+
+    /// <summary>
+    /// Nothing on the page may push it sideways, at this viewport or at the narrowest phone
+    /// we design for. Measured once the "Up next" carousel has rendered: a sideways-scrolled
+    /// carousel is what once widened the page, and before it exists there is nothing to catch.
+    /// </summary>
+    private async Task MainShouldNotScrollSidewaysAsync()
+    {
+        await Assertions.Expect(Page.Locator("article.next").First).ToBeVisibleAsync();
+
+        foreach (var width in (int[])[390, 360])
+        {
+            await Page.SetViewportSizeAsync(width, 844);
+            var overflow = await Page.EvaluateAsync<int>(
+                "() => { const main = document.querySelector('main'); return main.scrollWidth - main.clientWidth; }");
+            overflow.ShouldBe(0, $"main scrolls {overflow}px sideways at {width}px wide");
+        }
     }
 
     private ILocator FinishButtonFor(string title, string volumeNumber) =>

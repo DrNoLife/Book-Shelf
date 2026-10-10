@@ -1,0 +1,20 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* An eyebrow over its control, the rhythm of the series page's "Volumes as" field. */
+.controls__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The stretched view control takes the width (its own 100%, shrunk by the flex row); the
+   density toggle keeps its two icon segments. */
+.controls__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

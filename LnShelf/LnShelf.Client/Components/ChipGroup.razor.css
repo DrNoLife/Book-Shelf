@@ -35,3 +35,18 @@
 }
 
 .chip:disabled { opacity: 0.45; cursor: default; }
+
+/* Wrapped, inside a panel or a sheet: every choice in view, no scrolling. A mouse gets the
+   segmented control's 34px, so a panel of choices stays compact on a desktop; a finger keeps
+   the 44px target — the same split SegmentedControl makes, the other way round. */
+.chips--wrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+@media (pointer: fine) {
+  .chips--wrap .chip {
+    min-height: var(--control-segment);
+    padding: 0 var(--space-3);
+  }
+}

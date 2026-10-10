@@ -41,6 +41,29 @@ public partial class LibraryPage : IDisposable
         }
     }
 
+    /// <summary>
+    /// The toolbar's short count: "9 of 24 shown" while something is hidden, "24 series" when
+    /// nothing is; nothing until the shelf has loaded.
+    /// </summary>
+    private string? ToolbarCount
+    {
+        get
+        {
+            if (Library is null)
+            {
+                return null;
+            }
+
+            var shown = Cards.Count;
+            var total = Library.Totals.SeriesCount;
+            return shown == total ? $"{total} series" : $"{shown} of {total} shown";
+        }
+    }
+
+    /// <summary>A status or format filter is hiding series.</summary>
+    private bool IsFiltered =>
+        LibraryState.SelectedFilter != LibraryFilter.All || LibraryState.SelectedFormat is not null;
+
     /// <summary>The footer names the order it is actually in, not the default one.</summary>
     private string SortLabel => LibraryState.Sort switch
     {
@@ -112,6 +135,8 @@ public partial class LibraryPage : IDisposable
     private Task OnFilterSelectedAsync(LibraryFilter filter) => LibraryState.SelectFilterAsync(filter);
 
     private void OnTextFilterChanged(string text) => LibraryState.SetTextFilter(text);
+
+    private Task OnClearFiltersAsync() => LibraryState.ClearFiltersAsync();
 
     private async Task OnSortChangedAsync(LibrarySort sort)
     {

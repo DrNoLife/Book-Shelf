@@ -2,6 +2,11 @@
    than vanishing at the gutter, then pads the gutter back so the first card lines up with the
    text above it. */
 .carousel {
+  /* The containing block for the cards' .visually-hidden button labels. Without it they
+     resolve against .main, outside this scroller, so its clipping never applies: a label on
+     the last card kept its unscrolled position ~2500px to the right and .main scrolled
+     sideways to reach it. */
+  position: relative;
   display: flex;
   gap: var(--space-3);
   margin-inline: calc(-1 * var(--page-gutter));

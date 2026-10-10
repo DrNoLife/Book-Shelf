@@ -140,6 +140,30 @@ public sealed class LibraryState(HttpClient httpClient)
         await ReloadAsync(refreshOverview: false, cancellationToken);
     }
 
+    /// <summary>
+    /// "Clear all": every status and format filter off and the title filter emptied, in one
+    /// reload rather than one per filter.
+    /// </summary>
+    public async Task ClearFiltersAsync(CancellationToken cancellationToken = default)
+    {
+        var isFormatChanging = SelectedFormat is not null;
+        var isReloadNeeded = isFormatChanging || SelectedFilter != LibraryFilter.All;
+
+        SelectedFilter = LibraryFilter.All;
+        SelectedFormat = null;
+        TextFilter = string.Empty;
+        _visibleCards = null;
+
+        if (isReloadNeeded)
+        {
+            await ReloadAsync(refreshOverview: isFormatChanging, cancellationToken);
+        }
+        else
+        {
+            Changed?.Invoke();
+        }
+    }
+
     /// <summary>The token of the reload in flight, cancelled when a newer one starts.</summary>
     // Clicking Manga then All in quick succession starts two fetches, and nothing made
     // them land in order: the Manga response arriving second left Manga's cards under

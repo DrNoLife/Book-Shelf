@@ -9,12 +9,6 @@
   gap: 18px;
 }
 
-/* The chip row runs out through the page gutter, like the carousel, so a chip scrolls off
-   the screen edge rather than being cut at the gutter. */
-.shelf__chips { margin-inline: calc(-1 * var(--page-gutter)); }
-
-.shelf__chips ::deep .chips { padding-inline: var(--page-gutter); }
-
 /* The type and the colour are global (app.css); only the padding is this page's. */
 .notice { padding: 8px 0; }
 

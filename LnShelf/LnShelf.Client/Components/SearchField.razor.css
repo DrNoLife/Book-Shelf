@@ -31,3 +31,36 @@
 
 .field__input:hover,
 .field__input:focus { border-color: var(--line-2); }
+
+/* Room for the clear mark, only while it is there. */
+.field__input--clearable { padding-right: 40px; }
+
+/* The clear mark: quiet, inside the right edge, nearly the field's height so a thumb finds
+   it without a second try. */
+.field__clear {
+  position: absolute;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--faint);
+}
+
+.field__clear:hover { color: var(--text); }
+
+/* A finger gets the 44px the buttons and segmented controls already grow to, so the field
+   lines up with a button beside it on a touch screen. */
+@media (pointer: coarse) {
+  /* 16px, off the type scale on purpose: iOS Safari zooms the page into any focused input
+     set smaller and leaves it zoomed after blur. maximum-scale=1 would stop that too, but it
+     also takes pinch zoom away from everyone. */
+  .field__input {
+    min-height: var(--control-large);
+    font-size: 16px;
+  }
+
+  .field__clear { width: 40px; height: 40px; }
+}

@@ -1,7 +1,8 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
 // C#: read a rendered layout, move focus between sibling elements, hand a
 // dropped file to a file input, copy a link to the clipboard, ask whether the
-// phone layout is showing, and follow a finger dragging a bottom sheet down.
+// phone layout is showing, remember a per-browser display flag, and follow a finger dragging a
+// bottom sheet down.
 window.lnshelf = {
     // One entry per bottom sheet that listens for drags, so disposing it can remove exactly
     // the listeners it added.
@@ -317,6 +318,18 @@ window.lnshelf = {
     // series' read history, ownership and prices with no way back.
     confirm: function (message) {
         return window.confirm(message);
+    },
+
+    // A display choice that belongs to this browser rather than to the account — whether
+    // the shelf's colour key is open. localStorage, which C# cannot reach; wrapped because a
+    // browser in a strict privacy mode throws on it, and a key that will not stay open is
+    // no reason to break the page.
+    readFlag: function (name) {
+        try { return window.localStorage.getItem(name) === 'true'; } catch { return false; }
+    },
+
+    writeFlag: function (name, value) {
+        try { window.localStorage.setItem(name, value ? 'true' : 'false'); } catch { /* not remembered */ }
     },
 
     // The shared-shelf link's "Copy link". The clipboard needs a secure context (the

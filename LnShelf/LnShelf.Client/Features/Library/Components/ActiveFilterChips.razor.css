@@ -1,0 +1,48 @@
+.active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A removable chip: the ChipGroup's outline at caption size, the close mark in --faint.
+   Small, because it reports rather than asks; a finger still gets a 36px target. */
+.active__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.active__mark { display: grid; place-items: center; color: var(--faint); }
+
+.active__chip:hover { border-color: var(--line-3); }
+
+.active__chip:hover .active__mark { color: var(--text); }
+
+/* Words, not a button shape: it sits beside the chips and should not outweigh them. */
+.active__clear {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.active__clear:hover { color: var(--text); }
+
+@media (pointer: coarse) {
+  .active__chip,
+  .active__clear { min-height: 36px; }
+}
