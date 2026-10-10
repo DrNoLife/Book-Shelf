@@ -142,12 +142,14 @@
 
   .entry__facts-line { display: block; font-size: var(--fs-small); }
 
+  /* Round keys on the phone, as the mobile design draws them: a thumb target, not a word. */
   .entry__add {
     flex: 0 0 var(--control-large);
     padding: 0;
+    border-radius: 50%;
   }
 
-  .entry__onshelf { flex: 0 0 var(--control-large); min-height: var(--control-large); }
+  .entry__onshelf { flex: 0 0 var(--control-large); min-height: var(--control-large); border-radius: 50%; }
 
   .entry__add-word,
   .entry__onshelf-word {

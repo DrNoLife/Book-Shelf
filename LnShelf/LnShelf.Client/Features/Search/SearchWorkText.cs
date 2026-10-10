@@ -38,9 +38,15 @@ public static class SearchWorkText
     {
         ArgumentNullException.ThrowIfNull(work);
 
-        var parts = CountedFormats(work).Select(counted => $"{counted.Count} {ShortNoun(counted.Format)}").ToList();
+        var counted = CountedFormats(work).ToList();
 
-        return parts.Count == 0 ? string.Empty : $"{string.Join(" · ", parts)} series";
+        // One format fits in full ("4 light novel series"); only the mixed line needs shortening.
+        if (counted.Count <= 1)
+        {
+            return Summary(work);
+        }
+
+        return $"{string.Join(" · ", counted.Select(format => $"{format.Count} {ShortNoun(format.Format)}"))} series";
     }
 
     private static IEnumerable<(Format Format, int Count)> CountedFormats(SearchWork work) =>

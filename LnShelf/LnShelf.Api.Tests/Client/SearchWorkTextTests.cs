@@ -20,7 +20,8 @@ public sealed class SearchWorkTextTests
         var work = Work(Format.WebNovel);
 
         SearchWorkText.Summary(work).ShouldBe("1 web novel series");
-        SearchWorkText.ShortSummary(work).ShouldBe("1 WN series");
+        // One format has room for the long form on a phone too, as the mobile design shows it.
+        SearchWorkText.ShortSummary(work).ShouldBe("1 web novel series");
     }
 
     private static SearchWork Work(params Format[] formats) => new()

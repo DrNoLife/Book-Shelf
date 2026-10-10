@@ -47,7 +47,7 @@
         <section class="search__results" aria-label="Results" @ref="_resultsSection">
             @if (SearchState.Message is { } message)
             {
-                <p class="notice notice--message">@message</p>
+                <p class="notice notice--message" role="status">@message</p>
             }
 
             @* One line for the whole answer, not one per row: which source answered is a fact
