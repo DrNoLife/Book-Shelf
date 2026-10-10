@@ -37,6 +37,11 @@ public sealed class EndToEndFixture : IAsyncLifetime
         _factory.StartServer();
 
         _playwright = await Playwright.CreateAsync();
+
+        // Playwright's 5 s default is tight for a shared CI runner booting the WASM bundle and
+        // the first API calls of a run; journeys failed there on "card not visible yet" while
+        // passing locally. Generous waits cost nothing when the page is fast.
+        Assertions.SetDefaultExpectTimeout(15_000);
         _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
             Headless = Environment.GetEnvironmentVariable(HeadedVariable) != "true",

@@ -55,3 +55,8 @@ updates:
     groups:
       compose-minor-and-patch:
         update-types: [minor, patch]
+    # A Postgres major version cannot start on the old one's data directory: it is a
+    # pg_dump/pg_upgrade migration planned by hand, never a merged pull request.
+    ignore:
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
