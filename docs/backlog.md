@@ -27,7 +27,7 @@ What is left of this item, as its own smaller entries:
 
 - **Google Books** is still unmeasured and still blocked on one 5-minute check —
   create an API key and capture a response's `Cache-Control` header. That single
-  header decides whether it is a legitimate cover source for a MinIO-caching app.
+  header decides whether it is a legitimate cover source for an app that caches covers locally.
 - **Dark Horse** (Berserk's 42 volumes) is an owner's decision: their `robots.txt`
   names and blocks `anthropic-ai` and the site carries an `ai-train ai-input`
   opt-out. Nothing technical stops a single-user nightly fetcher; the publisher has
@@ -190,13 +190,13 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   anything else Postgres does — those are covered by configuration review only.
 - Central Package Management (`Directory.Packages.props`) not adopted; four
   projects still carry their own `PackageReference` versions.
-- **MinIO's image is no longer publicly pullable [flagged, 2026-09-29].** Both
-  `minio/minio` (Docker Hub) and `quay.io/minio/minio` refuse the pinned
-  `RELEASE.2025-09-07T16-13-09Z` tag — MinIO stopped publishing community images.
-  Dev machines and the server run on cached copies; a fresh machine or a pruned
-  cache cannot start the stack. Options: `docker save` the cached image next to the
-  deploy tarballs, build MinIO from source, or move `ICoverStore` to another
-  S3-compatible store (the seam makes that one new implementation). Owner's call.
+- **MinIO's image is no longer publicly pullable [done, 0.20.0/0.20.1].** Covers moved to
+  `FileSystemCoverStore` (a folder in a Docker volume), copied across by `cover-migrate`,
+  and MinIO is gone from the code and the stack. The old `lnshelf_lnshelf-minio` volume
+  stays on the server until 2026-10-24 as a fallback, then `docker volume rm` it.
+- **Off-site backup copy [parked, owner: later].** The nightly backup is local only.
+  `ops/backup/lnshelf-backup.sh` marks where a `restic` copy goes once a target exists
+  (Backblaze B2, a Hetzner Storage Box, or a disk elsewhere).
 - The e2e check against the four canary series (Slime, 86, Torture Princess,
   Overlord) runs against a throwaway database; nothing scripts it yet. (Unrelated to
   `LnShelf.EndToEnd.Tests`, which drives the UI against faked sources and never

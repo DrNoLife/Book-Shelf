@@ -1,6 +1,5 @@
 using LnShelf.Api.Commands;
 using LnShelf.Api.Features.Covers.Commands;
-using Minio;
 
 namespace LnShelf.Api.Features.Covers;
 
@@ -31,8 +30,6 @@ public static class CoversFeatureExtensions
             services.AddSingleton<ICoverStore, FileSystemCoverStore>();
             services.AddHostedService<CoverStoreStartupProbe>();
 
-            services.AddMinioMigrationSource(configuration);
-
             // Stateless; the options it reads are the only thing it holds.
             services.AddSingleton<CoverNormalizer>();
 
@@ -60,43 +57,5 @@ public static class CoversFeatureExtensions
 
             return services;
         }
-
-        /// <summary>
-        /// The retired MinIO store as cover-migrate's source, only where one is configured.
-        /// </summary>
-        // Keyed, so an ICoverStore asked for anywhere else is always the folder. Registered
-        // only when Covers:Minio:Endpoint is set, which keeps a machine without MinIO (dev,
-        // tests, and production once migrated) from needing its settings to start, and keeps
-        // the console runner, which resolves every command, from resolving a store that is not
-        // there.
-        private void AddMinioMigrationSource(IConfiguration configuration)
-        {
-            if (string.IsNullOrWhiteSpace(configuration[$"{MinioCoverStoreOptions.SectionName}:Endpoint"]))
-            {
-                return;
-            }
-
-            services.AddOptions<MinioCoverStoreOptions>()
-                .Bind(configuration.GetSection(MinioCoverStoreOptions.SectionName))
-                .ValidateDataAnnotations();
-
-            services.AddSingleton<IMinioClient>(provider =>
-            {
-                var minio = provider.GetRequiredService<IOptions<MinioCoverStoreOptions>>().Value;
-
-                return new MinioClient()
-                    .WithEndpoint(minio.Endpoint)
-                    .WithCredentials(minio.AccessKey, minio.SecretKey)
-                    .WithSSL(minio.UseSsl)
-                    .Build();
-            });
-
-            services.AddKeyedSingleton<ICoverStore, MinioCoverStore>(MinioServiceKey);
-            services.AddSingleton<CoverMigrator>();
-            services.AddScoped<IConsoleCommand, CoverMigrateCommand>();
-        }
     }
-
-    /// <summary>The service key the retired MinIO store is registered under.</summary>
-    public const string MinioServiceKey = "minio";
 }

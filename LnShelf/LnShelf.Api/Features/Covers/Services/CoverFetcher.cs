@@ -83,7 +83,7 @@ public sealed class CoverFetcher(
         {
             // Deliberately broad, and the one place in the codebase that is. A cover is
             // decoration: the shelf renders a placeholder without it, and failing an
-            // import of 76 books — or a whole nightly sync — because MinIO or a CDN
+            // import of 76 books — or a whole nightly sync — because the store or a CDN
             // hiccuped on one image would be the wrong trade. Everything else bubbles.
             logger.LogWarning(exception, "Could not cache the cover for {What}", what);
             return null;

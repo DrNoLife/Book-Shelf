@@ -524,7 +524,7 @@ public sealed class SeriesCommandServiceTests
         await using var dbContext = CreateDbContext();
         var coverStore = Substitute.For<ICoverStore>();
         coverStore.DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("MinIO is down")));
+            .Returns(Task.FromException(new InvalidOperationException("The cover store is down")));
         var service = CreateService(dbContext, CreateMetadataSource(), coverStore: coverStore);
         var seriesId = (await service.AddAsync(CreateRequest(), CancellationToken.None)).ShouldNotBeNull().SeriesId;
 

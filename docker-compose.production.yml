@@ -1,11 +1,11 @@
-# LnShelf production stack (feature-spec §9). Four services, one published port.
+# LnShelf production stack (feature-spec §9). Three services, one published port.
 #
 #   deploy.ps1 builds both images locally, ships them, and runs
 #   `docker compose up -d --no-build` on the server against this file.
 #
 # The server also runs Hearth, which already owns host ports 8090, 5432, 9000,
-# 9001 and 6379. Nothing here is published except the client on 8091 — postgres,
-# minio and the API talk to each other over the compose network only, which is
+# 9001 and 6379. Nothing here is published except the client on 8091 — postgres
+# and the API talk to each other over the compose network only, which is
 # also what §2 asks for on its own merits.
 name: lnshelf
 
@@ -40,26 +40,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # Cover storage behind ICoverStore. The bucket is created by MinioCoverStore on
-  # first use, so a cold start needs no provisioning step.
-  # Pinned (not :latest): this bucket holds cached covers and the user's cover
-  # overrides — an unannounced breaking MinIO release must never land silently.
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    restart: unless-stopped
-    logging: *default-logging
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: lnshelf
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in the .env next to docker-compose.yml}
-    volumes:
-      - lnshelf-minio:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   # Pinned image tag: deploy.ps1 builds and ships this tag, then runs
   # `up -d --no-build` to consume it. The build block is only for a local
   # `docker compose -f docker-compose.production.yml build` — the server has no
@@ -86,21 +66,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
       ConnectionStrings__Db: "Host=postgres;Port=5432;Database=lnshelf;Username=lnshelf;Password=${POSTGRES_PASSWORD}"
       # Covers live in the lnshelf-covers volume at /data/covers, the store's default
-      # (FileSystemCoverStoreOptions). Covers__Minio__* is the retired MinIO store,
-      # present for this one release so cover-migrate can copy out of it; it goes in
-      # the next.
-      Covers__Minio__Endpoint: "minio:9000"
-      Covers__Minio__UseSsl: "false"
-      Covers__Minio__AccessKey: "lnshelf"
-      Covers__Minio__SecretKey: "${MINIO_ROOT_PASSWORD}"
-      Covers__Minio__Bucket: "lnshelf-covers"
+      # (FileSystemCoverStoreOptions), so nothing needs setting here.
       # The nightly sweep is the reason this is deployed at all, so unlike
       # development it is on. Hour is local time, hence TZ — the container would
       # otherwise be UTC and sync at 06:00 local in summer.
@@ -162,5 +133,4 @@ secrets:
 
 volumes:
   lnshelf-pgdata:
-  lnshelf-minio:
   lnshelf-covers:

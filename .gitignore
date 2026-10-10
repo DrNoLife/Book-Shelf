@@ -42,7 +42,7 @@ docker-compose.override.yml
 
 # ---- Local container data ----
 # Compose uses named volumes (feature-spec §9); this covers ad-hoc bind mounts
-# for Postgres, MinIO, or a local-disk ICoverStore implementation.
+# for Postgres, and the development cover folder (Covers:FileSystem:RootPath).
 .data/
 
 # ---- Personal data dropped in the repo during import work ----

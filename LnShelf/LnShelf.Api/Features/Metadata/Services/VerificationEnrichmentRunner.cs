@@ -1,7 +1,7 @@
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// Builds an enrichment pipeline whose cover writes go somewhere other than MinIO.
+/// Builds an enrichment pipeline whose cover writes go somewhere other than the cover store.
 /// </summary>
 // A delegate rather than an interface, and registered in MetadataFeatureExtensions where
 // the rest of the wiring lives: the only thing that ever varies is the cover cache, and the

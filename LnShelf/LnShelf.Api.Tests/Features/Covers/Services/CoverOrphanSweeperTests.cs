@@ -68,7 +68,7 @@ public sealed class CoverOrphanSweeperTests
         var other = Upload(Guid.CreateVersion7());
         var coverStore = StoreHolding(stuck, other);
         coverStore.DeleteAsync(stuck, Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("MinIO is down")));
+            .Returns(Task.FromException(new InvalidOperationException("The cover store is down")));
 
         var report = await Sweeper($"sweep-{Guid.CreateVersion7()}", coverStore)
             .RunAsync(dryRun: false, CancellationToken.None);

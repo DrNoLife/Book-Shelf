@@ -9,7 +9,7 @@ enterprise build. Resist gold-plating.
 **Stack:** .NET 10 / C# 14 · feature folders · Blazor WASM client (static
 bundle served by nginx, which proxies `/api/*` to the API container — separate
 deployables, one public origin, no CORS) · ASP.NET Core with controllers ·
-EF Core · Postgres · MinIO behind an `ICoverStore` seam · `HybridCache` (L1
+EF Core · Postgres · covers as files behind an `ICoverStore` seam · `HybridCache` (L1
 only) · AniList GraphQL + MangaUpdates REST as external metadata sources.
 Full architecture in `docs/feature-spec.md`.
 
@@ -303,7 +303,7 @@ Features/
     Controllers/
     Data/           (EF entity configurations for this slice)
   Metadata/         (AniList + MangaUpdates clients, sync job)
-  Covers/           (MinIO-backed cover cache + user overrides, behind ICoverStore)
+  Covers/           (cover cache + user overrides as files, behind ICoverStore)
   Preferences/      (the single user-preferences row)
   Import/           (StoryGraph CSV pipeline, match queue)
   Changelog/        (app version + release notes, served to the client)

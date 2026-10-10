@@ -24,7 +24,7 @@ OpenID Connect provider) and gets a shelf of their own; nobody can see anyone el
 - **Nightly sync**: volume counts and publication status from MangaUpdates; per-volume
   release dates, covers, subtitles and blurbs from Apple Books and Open Library (by ISBN).
   Disagreements between sources are recorded for review rather than silently resolved.
-- **Covers** are cached locally, so the shelf renders without the source CDNs. Any cover
+- **Covers** are cached on the server's own disk, so the shelf renders without the source CDNs. Any cover
   can be replaced by dropping an image on it, and your own cover always wins over synced
   art.
 - **Import** from a StoryGraph or Goodreads CSV export, with a review queue for the
@@ -35,12 +35,12 @@ OpenID Connect provider) and gets a shelf of their own; nobody can see anyone el
 
 .NET 10 and C# 14 throughout: an ASP.NET Core API with EF Core on Postgres, and a Blazor
 WebAssembly client. In production nginx serves the client bundle and proxies `/api/*` to
-the API, so the browser sees one origin. Covers are stored in S3-compatible storage
-(MinIO) behind a small `ICoverStore` seam.
+the API, so the browser sees one origin. Covers are files in a Docker volume, behind a small
+`ICoverStore` seam.
 
 ```
 browser ──► nginx (Blazor WASM bundle, /api/* proxy) ──► API ──► Postgres
-                                                          ├──► MinIO (covers)
+                                                          ├──► covers volume (files)
                                                           └──► AniList, MangaUpdates,
                                                                Open Library, Apple Books
 ```
@@ -53,7 +53,7 @@ design in [`docs/design.md`](docs/design.md).
 Prerequisites: the .NET 10 SDK and Docker.
 
 ```bash
-docker compose up -d                                   # Postgres on :5433, MinIO on :9000
+docker compose up -d                                   # Postgres on :5433
 dotnet tool restore
 dotnet run --project LnShelf/LnShelf.Api               # API, applies migrations on start
 dotnet run --project LnShelf/LnShelf.Client            # WASM dev server on :5081
@@ -63,11 +63,8 @@ In development you are signed in automatically (`Auth:DevelopmentBypass` in
 `appsettings.Development.json`, refused outside Development). To get something to look at
 straight away, start the API with
 `Shelf__SeedDevelopmentFixture=true`: it then seeds a 24-series fixture library into an
-empty database. The nightly sync is off unless `Sync__Enabled=true`.
-
-> The pinned MinIO image (`minio/minio:RELEASE.2025-09-07T16-13-09Z`) is no longer
-> published by MinIO, so `docker compose up` only works where it is already cached.
-> Any S3-compatible store works behind `ICoverStore`; see `docs/backlog.md`.
+empty database. The nightly sync is off unless `Sync__Enabled=true`. Covers go to
+`LnShelf/LnShelf.Api/.data/covers` (git-ignored).
 
 ## Tests
 
@@ -143,7 +140,6 @@ everything that is not marked optional:
 
 ```dotenv
 POSTGRES_PASSWORD=change-me
-MINIO_ROOT_PASSWORD=change-me-too
 AUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
 AUTH_CLIENT_SECRET=your-client-secret
 # Optional: the address that takes over a library created before there were users.
@@ -176,10 +172,22 @@ setting.
 
 #### Backups
 
-Nothing in this repository takes backups; the host does. The privacy page assumes this
-policy, so keep to it or change the page: a nightly `pg_dump` of the `lnshelf` database plus a
-copy of the `override/` prefix in the cover bucket, 14 daily copies, the oldest deleted. If a
-backup is ever restored, delete again every account that was deleted after it was taken.
+[`ops/backup/lnshelf-backup.sh`](ops/backup/lnshelf-backup.sh) runs from the server
+account's crontab at 03:00, an hour before the nightly sync. It writes a custom-format
+`pg_dump` (checked with `pg_restore --list` before it counts) and a tar of the covers volume to
+`backups/nightly/`, keeps the newest 14 of each, and pings `BACKUP_HEARTBEAT_URL` from the
+server's `.env` when it succeeds, so a missed night shows up in Uptime Kuma. The privacy page
+promises exactly this, so keep to it or change the page. Copies off the server are not set up
+yet (`docs/backlog.md`).
+
+```bash
+# once, on the server, from the deployed ops/ folder
+crontab -e   # 0 3 * * * /home/neko/docker/lnshelf/ops/backup/lnshelf-backup.sh >> /home/neko/docker/lnshelf/backups/backup.log 2>&1
+ops/backup/restore-test.sh   # restores the newest backup into a throwaway Postgres and checks it
+```
+
+Run the restore test after any change to the backup, and now and then besides. If a backup is
+ever restored, delete again every account that was deleted after it was taken.
 
 On top of that, `deploy.ps1` takes a `pg_dump` (custom format) into `backups/` on the server
 before every deploy, because migrations apply on boot and cannot be undone; the last five are
@@ -197,7 +205,7 @@ docker compose up -d --no-build
 #### Uploaded covers left behind
 
 Deleting a series, a cover or an account removes the uploaded cover files. Series deleted
-before that was true left theirs in MinIO. One-off cleanup, safe to re-run (add `--dry-run` to
+before that was true left theirs behind. One-off cleanup, safe to re-run (add `--dry-run` to
 only count):
 
 ```bash
@@ -223,7 +231,7 @@ are most likely to change:
 | `Limits__MaximumSeriesPerUser`, `Limits__MaximumCoverOverridesPerUser` | `500`, `300` | Per-user storage limits |
 | `Limits__ExternalRequestsPerMinute`, `Limits__SyncRunsPerHour` | `20`, `2` | Per-user rate limits on calls that reach the metadata sources |
 | `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
-| `Covers__Endpoint`, `Covers__AccessKey`, `Covers__SecretKey`, `Covers__Bucket` | `localhost:9000`, empty, empty, `lnshelf-covers` | Cover storage (S3/MinIO) |
+| `Covers__FileSystem__RootPath` | `/data/covers` | The cover folder (the API image mounts its volume there) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |
 | `OpenLibrary__ContactEmail` | empty | Contact address sent to Open Library |
 | `Shelf__SeedDevelopmentFixture` | `false` | Seed the fixture library on an empty database |

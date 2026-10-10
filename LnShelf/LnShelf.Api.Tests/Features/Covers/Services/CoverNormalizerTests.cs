@@ -16,8 +16,8 @@ namespace LnShelf.Api.Tests.Features.Covers.Services;
 //
 // Images are generated in-memory with the same library the subject uses rather than kept as
 // binary fixtures — the inputs here are shapes and sizes, and a checked-in .png would say
-// less about the case than two numbers do. MinioCoverStore is deliberately untested: it needs
-// MinIO and has no decision in it that this project would learn anything from faking.
+// less about the case than two numbers do. The store the normalised bytes go to is tested on
+// its own (FileSystemCoverStoreTests).
 public sealed class CoverNormalizerTests
 {
     [Fact]

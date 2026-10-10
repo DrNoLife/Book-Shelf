@@ -5,7 +5,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 /// stores nothing.
 /// </summary>
 // Private to the verification command and never registered in the container. The real
-// cache writes to MinIO, and a verification run that filled the object store with
+// cache writes to the cover store, and a verification run that filled it with
 // throwaway art would be changing the very thing it is supposed to be observing.
 //
 // It answers with a key no store holds, which is enough: VolumeFactWriter only sets

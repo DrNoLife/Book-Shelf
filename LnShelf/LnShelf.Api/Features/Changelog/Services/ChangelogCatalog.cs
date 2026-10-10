@@ -20,6 +20,14 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.20.1", new DateOnly(2026, 10, 10), "MinIO removed",
+            Features: [],
+            Improvements: [
+                "With every cover moved to the server's own disk, the old storage service is gone from the app " +
+                    "and from the server: one less container, one less password, one less thing to update.",
+            ],
+            Fixes: []
+        ),
         new("0.20.0", new DateOnly(2026, 10, 10), "Covers on the server's own disk",
             Features: [],
             Improvements: [

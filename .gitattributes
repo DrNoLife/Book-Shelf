@@ -1,0 +1,5 @@
+# Scripts that run on the Linux server keep LF on every checkout, Windows included: a CRLF
+# shebang line fails with "bad interpreter" and a CRLF in a variable breaks the deploy gate's
+# exact-match parsing.
+*.sh       text eol=lf
+ops/**     text eol=lf

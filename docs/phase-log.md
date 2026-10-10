@@ -6,6 +6,59 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Covers in a folder, nightly backups, MinIO gone (0.20.0 and 0.20.1, 2026-10-10)
+
+**Why.** A production-readiness review found no backups at all (the README and the privacy
+page promised them; nothing took them), and a cover store whose image MinIO no longer
+publishes, so the server could not be rebuilt. Both are fixed and deployed.
+
+**Backups (`ops/backup/`).** `lnshelf-backup.sh` runs from neko's crontab at 03:00: a
+custom-format `pg_dump` checked with `pg_restore --list` before it is renamed into place,
+and a plain tar of the covers volume, 14 of each kept, under `backups/nightly/` (mode 700).
+It shares a `flock` with deploys, refuses to start under 2 GB free, and pings
+`BACKUP_HEARTBEAT_URL` from `.env` on success. `restore-test.sh` restores the newest dump
+into a network-less throwaway Postgres, requires rows in `app_user`, `series` and `volume`,
+and unpacks the covers. **Proven on the server:** 92 KB dump, 158 covers, restore test
+passed (2 users, 10 series, 163 volumes). Docker on that host is the snap, so both scripts
+put `/snap/bin` on `PATH`; cron found nothing without it. Off-site copies are parked
+(backlog).
+
+**Postgres password rotated.** The production password was the one in early git history.
+Generated on the server with `openssl rand`, applied over stdin, written to `.env`; never
+printed. Health and the logs (no authentication failures) confirmed it.
+
+**`FileSystemCoverStore` (0.20.0).** A new implementation behind the unchanged
+`ICoverStore`. Writes go to `<root>/.tmp/<guid>`, are flushed to disk, then `File.Move`d
+into place (atomic on one filesystem); reads never check first, so a concurrent delete is a
+plain miss; `PathFor` refuses empty, dot and dot-dot segments and anything resolving outside
+`root + separator` (so `covers2` never passes for `covers`); content types come from the
+bytes (`CoverImageSignature`) and a save whose bytes disagree with its declared type is
+refused. `CoverStoreRoot` resolves the folder once; `CoverStoreStartupProbe` writes and
+deletes a file at boot so a root-owned volume stops the start instead of the first upload.
+`CoverStoreOptions` split into `CoverImageOptions` (image rules, still `Covers:*`) and
+`FileSystemCoverStoreOptions` (`Covers:FileSystem:RootPath`, default `/data/covers`, which
+`Dockerfile.api` creates and hands to `$APP_UID` so the named volume inherits it).
+`CoverStoreContractTests` states the `ICoverStore` contract once (round trip, misses,
+idempotent delete, overwrite, S3-style prefixes including mid-segment and empty, concurrent
+writers, cancellation); `FileSystemCoverStoreTests` inherits it on a temp folder and adds
+the filesystem cases.
+
+**Migration.** MinIO was registered keyed for one release, as the source for
+`cover-migrate` (skip identical, copy, read back, compare). Run on the server before the new
+release took traffic: dry run 158, real run 158 copied, second run 158 skipped; all 101 keys
+the database references exist on disk. Then `up -d`; the API logged
+`Covers are stored under /data/covers`.
+
+**0.20.1** removed `MinioCoverStore`, its options, the migration command and the `Minio`
+package, and the `minio` service from both compose files. The old volume stays on the server
+until 2026-10-24.
+
+**Next.** Heartbeats and Uptime Kuma (0.21.0), then CI image publishing and the tag-driven
+deploy through the Cloudflare Tunnel, then the history rewrite and going public (plan:
+production-grade, 2026-10-10).
+
+---
+
 ## Audit, browser journeys and eight fixes (2026-10-09, unreleased)
 
 **A read-only audit first.** Eight areas (import, search, sync, shelf, client, data,

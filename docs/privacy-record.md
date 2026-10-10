@@ -15,13 +15,13 @@ Controller: Thor Christiansen, a private person in Denmark. Supervisory authorit
 | Shelf: series, volumes, tracking and read/owned state, dates, prices, notes, preferences | `series`, `volume`, `*_user_state`, `user_preferences` | the service | 6(1)(b) | until the user deletes it or the account |
 | Import: batch (file name, time), groups, rows | `import_*` | matching an export to series | 6(1)(b) | account lifetime; the file itself is never stored |
 | Sync runs and discrepancies | `sync_run`, `sync_discrepancy*` | showing what a sync changed | 6(1)(b) | account lifetime |
-| Uploaded covers (EXIF stripped, re-encoded) | MinIO `override/volume/...` | showing the user's own covers | 6(1)(b) | until replaced, removed, the series or account is deleted |
+| Uploaded covers (EXIF stripped, re-encoded) | covers volume, `override/volume/...` | showing the user's own covers | 6(1)(b) | until replaced, removed, the series or account is deleted |
 | Public link token | `shelf_share` | the link the user chose to create | 6(1)(b) | until made private, regenerated or the account is deleted |
 | Session cookie, login cookies | browser | staying signed in; login protection | 6(1)(b), strictly necessary | session, at most 30 days idle |
 | API console logs (user ids, titles, some emails) | Docker json-file | running, debugging, abuse | 6(1)(f) | rotated: 3 x 10 MB per service |
 | nginx access log (IP, user agent, URL) | Docker json-file | security, faults, abuse | 6(1)(f) | rotated: 3 x 10 MB |
 | Rate-limit partitions (IP, user id) | process memory | protecting the server and the free APIs | 6(1)(f) | about a minute |
-| Backups | host | restoring after failure | 6(1)(f) | 14 daily copies (README, Backups) |
+| Backups (database dump, covers archive) | host, `backups/` (mode 700) | restoring after failure | 6(1)(f) | 14 nightly copies, plus the last 5 pre-deploy dumps (README, Backups) |
 
 Special categories (Art. 9) are not collected on purpose; the free-text notes could hold
 anything, and the page asks users to keep sensitive information out of them. No automated
@@ -35,7 +35,7 @@ decisions (Art. 22).
 | Cloudflare (Tunnel, TLS) | processor | all traffic, decrypted at its edge | US, DPF and Standard Contractual Clauses in its DPA |
 | AniList, MangaUpdates, Open Library, Apple Books | none (server-side requests) | titles, catalogue ids, ISBNs, search text; never a user id or email | not personal data |
 
-Hosting (API, Postgres, MinIO) is the owner's server in Denmark.
+Hosting (API, Postgres, the covers volume, backups) is the owner's server in Denmark.
 
 ## Rights, and where each is served
 
@@ -46,7 +46,7 @@ by email to the controller. Answer within one month.
 
 ## Breach routine
 
-1. Contain it: rotate the affected secret (Google client secret, database or MinIO password,
+1. Contain it: rotate the affected secret (Google client secret, database password,
    tunnel token), take the stack down if the database or the session keys are exposed.
 2. Write down what happened, when it was found, what data and whose, and what was done.
 3. If it is likely to put people at risk, tell Datatilsynet within 72 hours of finding out
@@ -62,8 +62,8 @@ by email to the controller. Answer within one month.
   cookie that the page would then have to name.
 - Check that the server's `docker-compose.override.yml` and `daemon.json` do not override the
   log limits in `docker-compose.production.yml`.
-- Put the backup policy in place (README, Backups) and find and delete the ad-hoc backups made
-  on 2026-10-09/10 once they are outside the window.
+- The backup policy is in place since 2026-10-10 (README, Backups). Find and delete the ad-hoc
+  backups made on 2026-10-09/10 once they are outside the 14-day window.
 - Run `cover-orphan-sweep` once after deploying, to remove uploads left by earlier series deletes.
 - Check Datatilsynet's address on the page before relying on it.
 

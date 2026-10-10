@@ -48,10 +48,10 @@ Four containers, one compose file:
                        │  sync BackgroundService │──► notification webhook
                        └───────┬──────────┬──────┘
                                │          │
-                     ┌─────────▼──┐   ┌───▼─────────┐
-                     │  postgres  │   │  minio      │
-                     │  (pgdata)  │   │  (covers)   │
-                     └────────────┘   └─────────────┘
+                     ┌─────────▼──┐   ┌───▼──────────────┐
+                     │  postgres  │   │  covers volume   │
+                     │  (pgdata)  │   │  (/data/covers)  │
+                     └────────────┘   └──────────────────┘
 ```
 
 - **Client and API are separate deployables.** The client is a pure static
@@ -61,9 +61,10 @@ Four containers, one compose file:
   API share one origin — no CORS configuration, no preflight overhead, one
   TLS termination point. The API is *also* reachable directly on the Docker
   network (sync monitoring, curl during dev), just not published to the host.
-- Postgres and MinIO are internal-network only; named volumes for both.
+- Postgres is internal-network only; Postgres data and covers are named volumes.
 - Dev mode runs the API via `dotnet run` and the client via the dev server
-  as usual; compose provides only Postgres + MinIO locally.
+  as usual; compose provides only Postgres locally, and covers go to a
+  git-ignored folder.
 
 ## 3. Stack decisions
 
@@ -73,20 +74,22 @@ Four containers, one compose file:
 | Frontend | Blazor WASM, standalone (not Hosted template) | published assets served by nginx |
 | API | ASP.NET Core, controllers | |
 | Database | PostgreSQL + EF Core | migrations from the Api project |
-| Object storage | MinIO via S3 API | covers and any future binary assets |
-| Storage abstraction | **[decision]** `ICoverStore` seam; MinIO is the first implementation | keeps local-disk or another S3 target as pure config/impl swap. (FluentStorage is an acceptable implementation detail behind the seam if it earns its keep; the seam is the requirement, the library isn't.) |
+| Object storage | files in a Docker volume (`FileSystemCoverStore`) | covers and any future binary assets |
+| Storage abstraction | **[decision]** `ICoverStore` seam | MinIO was the first implementation and was replaced by a folder without a caller changing (2026-10-10); another S3 target would be a new implementation |
 | Caching | `HybridCache` | see §8 — L1 (in-process `MemoryCache`) only; no distributed L2, single instance means it would be ceremony |
 | Background work | one `BackgroundService` (nightly sync) | no Hangfire (CLAUDE.md) |
 | Auth | **[decision, 2026-10-09/10]** OpenID Connect in the API (Google by default) behind a cookie session; open sign-up, one shelf per user | see §7 — never a token in the client bundle |
 | Observability | structured logs + the sync summary; nothing more in v1 | |
 
-**A note on MinIO [decision, flagged]:** for one user and a few thousand
-small images, a bind-mounted folder would objectively suffice — MinIO is one
-more container to run. It's included because (a) the S3 API keeps cover
-storage identical between dev and any future hosting move, (b) it isolates
-binary data from the API container lifecycle, and (c) the `ICoverStore` seam
-means removing it later is an afternoon, not a rewrite. Cheap insurance,
-mild overhead — but it *is* overhead, veto if it offends.
+**Covers in a folder [decision, 2026-10-10]:** MinIO held covers until its
+community edition stopped publishing images (2025) and its repository was
+archived, which left a server that could not be rebuilt from scratch. For one
+server and covers of 50-150 KB, a folder was always enough, as this note said
+when MinIO went in. `FileSystemCoverStore` writes through a staging folder and
+an atomic rename, guards every key against leaving the folder, and takes the
+content type from the bytes; a startup probe refuses to boot if the folder is
+not writable. `cover-migrate` (0.20.0, removed in 0.20.1) copied every object
+across, verified. The seam is why this was one new class and no edits.
 
 ## 4. Feature slices
 
@@ -192,7 +195,7 @@ The series/volume tracking domain.
 ### 4.3 Covers
 
 - On first reference, the cover is fetched from the metadata source and
-  stored in MinIO via `ICoverStore`; the client only ever hits
+  stored on the server's disk via `ICoverStore`; the client only ever hits
   `/api/covers/{id}` — never external CDNs (design.md rule).
 - **Cover override:** any cover is a drop target. Uploaded image → stored as
   override object; overrides always win and are never replaced by sync.
@@ -638,7 +641,7 @@ Caching exists to protect and speed up the *external* edges:
 | AniList/MangaUpdates series detail during import | ~1 h | review queue re-renders candidates constantly |
 | Open Library edition by ISBN | ~24 h | an edition record that has existed for years is not about to change, and one run can ask for the same ISBN twice — discovery verifies a candidate that enrichment then reads again |
 | `/api/sync/latest` | until next run | sidebar hits it on every navigation (designed, not yet implemented — the endpoint exists but reads straight from Postgres, uncached) |
-| Cover existence/headers | ~24 h | avoids MinIO stat calls on grid render (bytes themselves are client-cached via ETag/Cache-Control) (designed, not yet implemented) |
+| Cover existence/headers | ~24 h | avoids a file check per cover on grid render (bytes themselves are client-cached via ETag/Cache-Control) (designed, not yet implemented) |
 
 Invalidation is by key on the obvious writes (sync completion evicts
 `sync/latest`; override upload evicts that cover's entry) once those two rows
@@ -654,20 +657,21 @@ services:
   tunnel:   # optional (profile "tunnel"): Cloudflare Tunnel, public hostname → http://client:80
     depends_on: [api]
   api:
-    environment: [ConnectionStrings__Db, Covers__*, Sync__Hour,
+    environment: [ConnectionStrings__Db, Sync__Hour,
                   Auth__ClientId, Auth__ClientSecret, Auth__InitialOwnerEmail]   # §7; secrets from the server's .env
-    depends_on: [postgres, minio]
+    volumes: [covers:/data/covers]
+    depends_on: [postgres]
   postgres:
     volumes: [pgdata:/var/lib/postgresql/data]
-  minio:
-    volumes: [minio:/data]
-volumes: { pgdata: {}, minio: {} }
+volumes: { pgdata: {}, covers: {} }
 ```
 
 Images built via multi-stage Dockerfiles (`sdk` → `aspnet` for the API;
-`sdk` publish → `nginx:alpine` for the client). Postgres backup is a
-one-line `pg_dump` cron on the host; MinIO covers are re-fetchable (only
-overrides are precious — include the bucket in the backup).
+`sdk` publish → `nginx:alpine` for the client). Backups are
+`ops/backup/lnshelf-backup.sh` from the host's crontab: a verified `pg_dump`
+and a tar of the covers volume every night, 14 kept, with a restore test
+beside it (README, Backups). Synced covers could be fetched again; uploaded
+overrides could not, which is why the whole volume is archived.
 
 ## 10. Phase mapping
 
