@@ -125,4 +125,29 @@ public sealed class CoverObjectKeyTests
     [InlineData("https://cdn.anilist.co/media/85470.svg", ".jpg")]
     public void ExtensionFor_ASourceUrl_IsAnAllowedExtension(string sourceUrl, string expected) =>
         CoverObjectKey.ExtensionFor(new Uri(sourceUrl)).ShouldBe(expected);
+
+    // Account deletion and the orphan sweep both decide whose an avatar is from its key alone.
+    [Fact]
+    public void ForAvatar_RoundTrips_ToItsUserAndAVersion()
+    {
+        var userId = Guid.CreateVersion7();
+        var uploadId = Guid.CreateVersion7();
+
+        var key = CoverObjectKey.ForAvatar(userId, uploadId);
+
+        key.ShouldBe($"avatar/{userId}/{uploadId:N}.webp");
+        CoverObjectKey.IsWellFormed(key).ShouldBeTrue();
+        CoverObjectKey.AvatarUserIdOf(key).ShouldBe(userId);
+        CoverObjectKey.AvatarVersionOf(key).ShouldBe(uploadId.ToString("N"));
+        CoverObjectKey.VolumeIdOf(key).ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("override/volume/0198a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b/0198a1b2c3d47e5f8a9b0c1d2e3f4a5b.webp")]
+    [InlineData("avatar/not-a-guid/0198a1b2c3d47e5f8a9b0c1d2e3f4a5b.webp")]
+    [InlineData("avatar/0198a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b/stray.webp")]
+    [InlineData("avatar/0198a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")]
+    [InlineData("anilist/85470.jpg")]
+    public void AvatarUserIdOf_AnyOtherKey_IsNull(string objectKey) =>
+        CoverObjectKey.AvatarUserIdOf(objectKey).ShouldBeNull();
 }

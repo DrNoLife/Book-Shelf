@@ -51,7 +51,7 @@ public static class CoversFeatureExtensions
             services.AddScoped<ICoverCache, AniListCoverCache>();
             services.AddScoped<IVolumeCoverCache, VolumeCoverCache>();
 
-            // The one-shot that deletes uploads whose volume is gone from every shelf.
+            // The one-shot that deletes uploads whose volume is gone from every shelf, and stray avatars.
             services.AddScoped<CoverOrphanSweeper>();
             services.AddScoped<IConsoleCommand, CoverOrphanSweepCommand>();
 

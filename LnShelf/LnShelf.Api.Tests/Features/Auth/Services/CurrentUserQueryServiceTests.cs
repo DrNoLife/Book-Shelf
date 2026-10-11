@@ -24,6 +24,28 @@ public sealed class CurrentUserQueryServiceTests
         user.DisplayName.ShouldBe("Thor Christiansen");
     }
 
+    // The upload wins over the provider's copy, and the version is the picture's own id, so
+    // it changes whenever the picture does.
+    [Theory]
+    [InlineData(null, null, null, false)]
+    [InlineData("avatar/u/0198a1b2c3d47e5f8a9b0c1d2e3f4a5b.webp", null, "0198a1b2c3d47e5f8a9b0c1d2e3f4a5b", false)]
+    [InlineData("avatar/u/0198a1b2c3d47e5f8a9b0c1d2e3f4a5b.webp", "avatar/u/1198a1b2c3d47e5f8a9b0c1d2e3f4a5b.webp", "1198a1b2c3d47e5f8a9b0c1d2e3f4a5b", true)]
+    public async Task GetAsync_TheAvatar_IsTheUploadElseTheProviderCopy(
+        string? providerKey, string? overrideKey, string? expectedVersion, bool expectedUploaded)
+    {
+        await using var dbContext = Context($"current-user-{Guid.CreateVersion7()}", TestUsers.Owner);
+        var user = User(TestUsers.Owner, "owner@example.com");
+        user.ProviderAvatarObjectKey = providerKey;
+        user.AvatarOverrideObjectKey = overrideKey;
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+
+        var response = await new CurrentUserQueryService(dbContext, TestUsers.Current).GetAsync(CancellationToken.None);
+
+        response.ShouldNotBeNull().AvatarVersion.ShouldBe(expectedVersion);
+        response.HasUploadedAvatar.ShouldBe(expectedUploaded);
+    }
+
     [Fact]
     public async Task GetAsync_TheUsersRowIsGone_ReturnsNull()
     {

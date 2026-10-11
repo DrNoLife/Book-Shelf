@@ -94,6 +94,30 @@ public sealed class UserSignInTests
         principal.ShouldBeNull();
     }
 
+    // The picture is handed on to be copied; the name that comes with the same scope is not
+    // read, and the user row has nowhere to put one.
+    [Theory]
+    [InlineData("https://lh3.googleusercontent.com/a/picture")]
+    [InlineData(null)]
+    public async Task SignInAsync_ThePictureClaim_IsHandedToTheAvatarCopy(string? pictureUrl)
+    {
+        await using var dbContext = CreateDbContext();
+        var avatarCommand = Substitute.For<IAvatarCommandService>();
+
+        var identity = Identity("sub-1", "new@example.com");
+        ((ClaimsIdentity)identity.Identity!).AddClaim(new Claim("name", "Thor Christiansen"));
+        if (pictureUrl is not null)
+        {
+            ((ClaimsIdentity)identity.Identity!).AddClaim(new Claim("picture", pictureUrl));
+        }
+
+        var principal = await SignIn(dbContext, avatarCommand: avatarCommand).SignInAsync(identity, CancellationToken.None);
+
+        principal.ShouldNotBeNull();
+        var user = await dbContext.Users.SingleAsync();
+        await avatarCommand.Received(1).RefreshProviderCopyAsync(user, pictureUrl, Arg.Any<CancellationToken>());
+    }
+
     private static ClaimsPrincipal Identity(string subject, string email, bool verified = true) =>
         new(new ClaimsIdentity(
             [
@@ -112,10 +136,14 @@ public sealed class UserSignInTests
         Email = string.Empty,
     };
 
-    private static UserSignIn SignIn(LnShelfDbContext dbContext, string[]? allowedEmails = null) =>
+    private static UserSignIn SignIn(
+        LnShelfDbContext dbContext,
+        string[]? allowedEmails = null,
+        IAvatarCommandService? avatarCommand = null) =>
         new(
             dbContext,
             Options.Create(new AuthOptions { InitialOwnerEmail = OwnerEmail, AllowedEmails = allowedEmails ?? [] }),
+            avatarCommand ?? Substitute.For<IAvatarCommandService>(),
             TimeProvider.System,
             NullLogger<UserSignIn>.Instance);
 

@@ -22,7 +22,7 @@
   line-height: 1;
 }
 
-/* The profile disc: the same initial-on-a-disc as the profile header, at touch size. */
+/* The profile disc: the same picture-or-initial disc as the profile header, at touch size. */
 .avatar {
   flex: none;
   display: grid;
@@ -36,6 +36,7 @@
   font-family: var(--serif);
   font-size: var(--fs-large);
   line-height: 1;
+  overflow: hidden;
 }
 
 .avatar:hover { border-color: var(--line-3); color: var(--text-strong); }

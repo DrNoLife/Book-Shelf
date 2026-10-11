@@ -43,6 +43,39 @@ public static class CoverObjectKey
     public static string ForVolumeSync(Guid volumeId, string sourceName, string extension) =>
         $"volume/{Slug(sourceName)}/{volumeId}{extension}";
 
+    /// <summary>Where every avatar lives: a provider picture's copy or an uploaded one.</summary>
+    public const string AvatarPrefix = "avatar/";
+
+    /// <summary>
+    /// One user's avatar, from one fetch or upload. Always webp: avatars are only ever stored
+    /// through the normalizer.
+    /// </summary>
+    /// <param name="uploadId">Fresh per picture; the caller deletes the key it replaces.</param>
+    // A new key per picture for the reason ForVolumeOverride gives, and the file name doubles
+    // as the avatar's version: the client puts it in the URL so a changed picture shows at once.
+    // The user id is in the key so account deletion and the orphan sweep can tell whose it is.
+    public static string ForAvatar(Guid userId, Guid uploadId) =>
+        $"{AvatarPrefix}{userId}/{uploadId:N}{CoverNormalizer.Extension}";
+
+    /// <summary>The user an avatar key belongs to, or null for any other key.</summary>
+    public static Guid? AvatarUserIdOf(string objectKey)
+    {
+        ArgumentNullException.ThrowIfNull(objectKey);
+
+        return objectKey.Split('/') is ["avatar", var userId, var file]
+               && Guid.TryParse(userId, out var parsed)
+               && Guid.TryParseExact(Path.GetFileNameWithoutExtension(file), "N", out _)
+            ? parsed
+            : null;
+    }
+
+    /// <summary>
+    /// The version a client puts in the avatar URL: the picture's own upload id, which changes
+    /// whenever the picture does. Null when there is no picture.
+    /// </summary>
+    public static string? AvatarVersionOf(string? objectKey) =>
+        objectKey is null ? null : Path.GetFileNameWithoutExtension(objectKey);
+
     /// <summary>
     /// The volume a per-volume key belongs to (an override or a volume's synced art), or
     /// null for a key shared by every copy of a series (a source's series art).

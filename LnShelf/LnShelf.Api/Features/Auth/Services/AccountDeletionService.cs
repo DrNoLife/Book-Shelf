@@ -2,7 +2,7 @@ namespace LnShelf.Api.Features.Auth.Services;
 
 /// <summary>
 /// Deletes the current user and everything they own: series, volumes, user state, imports,
-/// sync runs, preferences, and the covers that are theirs alone (feature-spec §7).
+/// sync runs, preferences, the covers that are theirs alone and their avatar (feature-spec §7).
 /// </summary>
 // The rows go by cascade from the user row, in one SaveChanges. The cover files are deleted
 // after that, best effort: a file left behind is unreachable (the covers endpoint checks the
@@ -28,8 +28,20 @@ public sealed class AccountDeletionService(
             .SelectMany(cover => new[] { cover.CoverObjectKey, cover.Override })
             .OfType<string>()
             .Where(key => CoverObjectKey.VolumeIdOf(key) is not null)
-            .Distinct(StringComparer.Ordinal)
             .ToList();
+
+        // The avatar is the user's alone, whether copied from the provider or uploaded.
+        var avatars = await dbContext.Users
+            .Where(user => user.Id == userId)
+            .Select(user => new { user.ProviderAvatarObjectKey, user.AvatarOverrideObjectKey })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (avatars is not null)
+        {
+            keys.AddRange(new[] { avatars.ProviderAvatarObjectKey, avatars.AvatarOverrideObjectKey }.OfType<string>());
+        }
+
+        keys = keys.Distinct(StringComparer.Ordinal).ToList();
 
         await dbContext.Users.Where(user => user.Id == userId).ExecuteDeleteAsync(cancellationToken);
 
@@ -45,6 +57,6 @@ public sealed class AccountDeletionService(
             }
         }
 
-        logger.LogInformation("Deleted user {UserId} and {CoverCount} of their covers", userId, keys.Count);
+        logger.LogInformation("Deleted user {UserId} and {ObjectCount} of their covers and avatars", userId, keys.Count);
     }
 }

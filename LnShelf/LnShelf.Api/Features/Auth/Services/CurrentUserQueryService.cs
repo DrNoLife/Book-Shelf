@@ -13,7 +13,13 @@ public sealed class CurrentUserQueryService(LnShelfDbContext dbContext, ICurrent
         var user = await dbContext.Users
             .AsNoTracking()
             .Where(candidate => candidate.Id == userId)
-            .Select(candidate => new { candidate.Email, candidate.CreatedAt })
+            .Select(candidate => new
+            {
+                candidate.Email,
+                candidate.CreatedAt,
+                candidate.AvatarOverrideObjectKey,
+                candidate.ProviderAvatarObjectKey,
+            })
             .SingleOrDefaultAsync(cancellationToken);
 
         return user is null
@@ -23,6 +29,10 @@ public sealed class CurrentUserQueryService(LnShelfDbContext dbContext, ICurrent
                 DisplayName = DisplayNameMapper.FromEmail(user.Email),
                 Email = user.Email,
                 CreatedAt = user.CreatedAt,
+
+                // The upload wins over the provider's copy, as GET api/auth/me/avatar serves it.
+                AvatarVersion = CoverObjectKey.AvatarVersionOf(user.AvatarOverrideObjectKey ?? user.ProviderAvatarObjectKey),
+                HasUploadedAvatar = user.AvatarOverrideObjectKey is not null,
             };
     }
 }

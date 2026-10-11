@@ -16,6 +16,7 @@ Controller: Thor Christiansen, a private person in Denmark. Supervisory authorit
 | Import: batch (file name, time), groups, rows | `import_*` | matching an export to series | 6(1)(b) | account lifetime; the file itself is never stored |
 | Sync runs and discrepancies | `sync_run`, `sync_discrepancy*` | showing what a sync changed | 6(1)(b) | account lifetime |
 | Uploaded covers (EXIF stripped, re-encoded) | covers volume, `override/volume/...` | showing the user's own covers | 6(1)(b) | until replaced, removed, the series or account is deleted |
+| Avatar: a copy of the provider's profile picture and its source URL; or a picture the user uploaded (EXIF stripped, re-encoded) | `app_user` (`ProviderPictureUrl`, `ProviderAvatarObjectKey`, `AvatarOverrideObjectKey`), covers volume `avatar/...` | showing the user's avatar without the browser loading anything from Google | 6(1)(b) | the copy until the provider's picture changes or the account is deleted; an upload until replaced, removed or the account is deleted |
 | Public link token | `shelf_share` | the link the user chose to create | 6(1)(b) | until made private, regenerated or the account is deleted |
 | Session cookie, login cookies | browser | staying signed in; login protection | 6(1)(b), strictly necessary | session, at most 30 days idle |
 | API console logs (user ids, titles, some emails) | Docker json-file | running, debugging, abuse | 6(1)(f) | rotated: 3 x 10 MB per service |
@@ -31,7 +32,7 @@ decisions (Art. 22).
 
 | Who | Role | Gets | Transfer |
 |---|---|---|---|
-| Google | independent controller (identity provider) | that the user signed in to LN Shelf | US, EU-US Data Privacy Framework |
+| Google | independent controller (identity provider) | that the user signed in to LN Shelf; the server's own request for the profile picture (server address only, no user id) | US, EU-US Data Privacy Framework |
 | Cloudflare (Tunnel, TLS) | processor | all traffic, decrypted at its edge | US, DPF and Standard Contractual Clauses in its DPA |
 | AniList, MangaUpdates, Open Library, Apple Books | none (server-side requests) | titles, catalogue ids, ISBNs, search text; never a user id or email | not personal data |
 
@@ -39,8 +40,9 @@ Hosting (API, Postgres, the covers volume, backups) is the owner's server in Den
 
 ## Rights, and where each is served
 
-Access and portability: `GET /api/auth/account/export` (the profile's "Export my data"), plus
-email for logs and uploaded cover images. Erasure: `DELETE /api/auth/account`, immediate, ends every session. Rectification:
+Access and portability: `GET /api/auth/account/export` (the profile's "Export my data"; the
+avatar appears as its source URL and object keys), plus email for logs, uploaded cover images and
+the avatar image. Erasure: `DELETE /api/auth/account`, immediate, ends every session. Rectification:
 the user edits their own shelf; the email follows the Google account. Restriction and objection:
 by email to the controller. Answer within one month.
 
@@ -75,5 +77,10 @@ by email to the controller. Answer within one month.
   Do not port-forward it.
 - Log retention is by size, not by time, which is why the page promises rotation by size and
   no number of days.
-- The export holds no image files: uploaded covers are listed by key only, and a request for
-  the images themselves, or for log entries, is answered by email.
+- The export holds no image files: uploaded covers and the avatar are listed by key only, and a
+  request for the images themselves, or for log entries, is answered by email.
+- Sign-in asks for the `profile` scope to get the picture, so Google also sends the account's
+  name. It is read nowhere and stored nowhere; only the picture claim is used.
+- `cover-orphan-sweep` could delete an avatar written in the few milliseconds before its user
+  row is saved. Accepted: the sweep is run by hand, and the copy is fetched again at the next
+  sign-in (an upload is one click to repeat).

@@ -56,7 +56,7 @@
 
             <article class="privacy__body">
                 <header class="privacy__intro">
-                    <span class="eyebrow">Last updated 10 October 2026</span>
+                    <span class="eyebrow">Last updated 11 October 2026</span>
                     <h1 class="title-page">Privacy</h1>
                     <p class="lead">LN Shelf is a small, self-hosted tracker for light novels, manga and web novels. This page explains, in plain language, what it stores about you, why, who else is involved and what you can do about it. There are no ads, no analytics and no tracking.</p>
                 </header>
@@ -80,6 +80,12 @@
                                     <td data-label="Details">The email address of your Google account, its account ID (the &ldquo;subject&rdquo;) and which provider it came from. When you created the account and when you last signed in.</td>
                                     <td data-label="Why">So you can sign in and your shelf stays yours. The ID identifies you; the email is shown on your profile and refreshed at each sign-in.</td>
                                     <td data-label="How long">Until you delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Your picture</th>
+                                    <td data-label="Details">A copy of your Google account&rsquo;s profile picture, made when you sign in, and the address it was copied from. Or, instead, a picture you upload, re-encoded and stripped of all embedded metadata, such as camera details or location.</td>
+                                    <td data-label="Why">To show as your avatar. It is a copy so that your browser never loads it from Google.</td>
+                                    <td data-label="How long">The Google copy until your Google picture changes or you delete your account. An uploaded picture until you replace it, go back to the Google picture, or delete your account.</td>
                                 </tr>
                                 <tr>
                                     <th scope="row">Your shelf</th>
@@ -125,21 +131,21 @@
                                 </tr>
                                 <tr>
                                     <th scope="row">Backups</th>
-                                    <td data-label="Details">A copy of the database and the uploaded covers, so everything above is in them too.</td>
+                                    <td data-label="Details">A copy of the database and the stored images (covers and pictures), so everything above is in them too.</td>
                                     <td data-label="Why">To recover from a failure or a bad update.</td>
                                     <td data-label="How long">Each backup is deleted again after a short, fixed period. See below.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <p>We never get your Google password, your name or your picture, and we keep no Google tokens.</p>
+                    <p>We never get your Google password, and we keep no Google tokens. Signing in also tells us the name on your Google account; we don&rsquo;t keep it.</p>
                     <p class="privacy__note">Please don&rsquo;t put sensitive personal information, such as health or beliefs, in your notes. They are private, but they are free text and we can&rsquo;t tell what is in them.</p>
                 </section>
 
                 <section class="privacy__section" id="basis" aria-labelledby="basis-title">
                     <h2 class="title-section" id="basis-title">Legal basis</h2>
                     <ul>
-                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your shelf, imports, sync records, uploaded covers and your public link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers and your public link: we need this data to provide the service you asked for.</li>
                         <li><strong>Legitimate interests (Article 6(1)(f))</strong> for technical logs, rate limiting and backups: keeping a small public service secure, working and recoverable, and not overloading the free community catalogues it relies on. We keep these to what a web server normally needs, for a short time, and never use them for profiling or marketing. You can object to this; see your rights.</li>
                     </ul>
                     <p>You need a Google account with a verified email address to sign up. Nothing is decided about you automatically.</p>
@@ -149,12 +155,12 @@
                     <h2 class="title-section" id="others-title">Who else sees data</h2>
                     <p>We don&rsquo;t sell or share your data with anyone for their own purposes. These services are involved:</p>
                     <ul class="privacy__parties">
-                        <li><strong>Google</strong> handles signing in. You sign in on Google&rsquo;s own page, so Google knows you signed in to LN Shelf, under its own privacy policy. We receive only your account ID, your email address and whether the address is verified.</li>
+                        <li><strong>Google</strong> handles signing in. You sign in on Google&rsquo;s own page, so Google knows you signed in to LN Shelf, under its own privacy policy. We receive your account ID, your email address, whether the address is verified, your name and your profile picture. The name is not kept. The picture is copied to our server, by our server, and shown from there.</li>
                         <li><strong>Cloudflare</strong> carries the traffic between your browser and our server (a &ldquo;Cloudflare Tunnel&rdquo;) and provides the HTTPS connection. Because the encryption ends at Cloudflare, it can technically see the traffic passing through, including your IP address. Cloudflare acts as our processor under its data processing agreement.</li>
                         <li><strong>Book catalogues</strong> (AniList, MangaUpdates, Open Library and Apple Books) supply series details, release dates and covers. Our server asks them about titles, catalogue IDs, ISBNs and the search text you type. Nothing that identifies you is sent: no email, no account ID, and the requests come from our server, not your browser.</li>
                         <li><strong>Saxo, AniList and MangaUpdates links</strong> open those sites only when you click them. Nothing about you or your shelf is passed along, beyond the book title and volume in a Saxo search.</li>
                     </ul>
-                    <p>Your browser loads nothing from other websites while you use LN Shelf: fonts and covers are served by our own server.</p>
+                    <p>Your browser loads nothing from other websites while you use LN Shelf: fonts, covers and your picture are served by our own server.</p>
                 </section>
 
                 <section class="privacy__section" id="transfers" aria-labelledby="transfers-title">
@@ -166,12 +172,13 @@
                     <h2 class="title-section" id="keep-title">How long we keep it</h2>
                     <ul>
                         <li><strong>Your account and everything on your shelf:</strong> until you delete your account. Deleting it removes everything at once and signs you out on every device.</li>
-                        <li><strong>Things you delete yourself</strong> (a series, a note, a cover) are gone straight away. That includes covers you uploaded to a series you remove.</li>
+                        <li><strong>Things you delete yourself</strong> (a series, a note, a cover, an uploaded picture) are gone straight away. That includes covers you uploaded to a series you remove.</li>
+                        <li><strong>Your picture:</strong> the copy of your Google picture until that picture changes or you delete your account; a picture you upload until you replace it, go back to the Google picture, or delete your account.</li>
                         <li><strong>Your public link:</strong> until you make your shelf private, make a new link, or delete your account.</li>
                         <li><strong>Imports and sync records:</strong> as long as your account exists.</li>
                         <li><strong>Technical logs:</strong> rotated automatically by size, so only the most recent entries are kept, and cleared when the service is updated.</li>
                         <li><strong>Rate-limit data:</strong> about a minute, in memory only.</li>
-                        <li><strong>Backups:</strong> the database and the uploaded covers are backed up, and each backup is deleted again after a short, fixed period. So after you delete your account, your data can survive in a backup until that backup is rotated out. Backups are used only to recover from a failure, and if one is ever restored, deleted accounts are deleted again.</li>
+                        <li><strong>Backups:</strong> the database and the stored images are backed up, and each backup is deleted again after a short, fixed period. So after you delete your account, your data can survive in a backup until that backup is rotated out. Backups are used only to recover from a failure, and if one is ever restored, deleted accounts are deleted again.</li>
                     </ul>
                 </section>
 
@@ -179,7 +186,7 @@
                     <h2 class="title-section" id="rights-title">Your rights</h2>
                     <p>You have the right to:</p>
                     <ul>
-                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports and your sync records as one file. The covers you uploaded and any log entries about you are not in it: email us for those.</li>
+                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports and your sync records as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
                         <li><strong>Correct</strong> it. You can edit everything on your shelf yourself. Your email address follows your Google account.</li>
                         <li><strong>Delete</strong> it. <em>Delete account</em> on your profile deletes your account and all its data immediately.</li>
                         <li><strong>Take it with you</strong> (data portability). The export is a standard JSON file.</li>
@@ -203,7 +210,7 @@
                 <section class="privacy__section" id="sharing" aria-labelledby="sharing-title">
                     <h2 class="title-section" id="sharing-title">Public shelves</h2>
                     <p>Your shelf is private unless you make it public on your profile. Then anyone with the link can see the titles of the series on it, their format, publication status and cover, whether you are reading, have finished or plan to start each one, and how many volumes you have read and how many are out.</p>
-                    <p>They never see your name or email, what you own or paid, your dates, your notes, the series you dropped, or covers you uploaded. Public shelf pages ask search engines not to index them.</p>
+                    <p>They never see your name, email or picture, what you own or paid, your dates, your notes, the series you dropped, or covers you uploaded. Public shelf pages ask search engines not to index them.</p>
                     <p>Anyone who has the link can pass it on. Making your shelf private, or making a new link, stops the old link from working immediately.</p>
                 </section>
 

@@ -15,6 +15,11 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.Subject).HasMaxLength(200).IsRequired();
         builder.Property(user => user.Email).HasMaxLength(320).IsRequired();
 
+        // The keys share CoverObjectKey.IsWellFormed's 300.
+        builder.Property(user => user.ProviderPictureUrl).HasMaxLength(User.MaximumPictureUrlLength);
+        builder.Property(user => user.ProviderAvatarObjectKey).HasMaxLength(300);
+        builder.Property(user => user.AvatarOverrideObjectKey).HasMaxLength(300);
+
         // Sign-in looks every user up by these two, and one identity is one user.
         builder.HasIndex(user => new { user.Issuer, user.Subject }).IsUnique();
     }

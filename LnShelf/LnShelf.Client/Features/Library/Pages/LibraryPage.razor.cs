@@ -13,11 +13,9 @@ public partial class LibraryPage : IDisposable
     [Inject]
     public required FinishVolumeState Finishing { get; set; }
 
-    /// <summary>Only for the phone header's avatar letter.</summary>
+    /// <summary>Only for the phone header's avatar.</summary>
     [Inject]
     public required ProfileState Profile { get; set; }
-
-    private string? AvatarInitial => Profile.User is { } user ? ProfileInitial.For(user.DisplayName) : null;
 
     private LibraryResponse? Library => LibraryState.Library;
 
@@ -114,7 +112,7 @@ public partial class LibraryPage : IDisposable
 
         await LibraryState.LoadAsync();
 
-        // After the shelf, never before it: the avatar letter is decoration, the shelf is not.
+        // After the shelf, never before it: the avatar is decoration, the shelf is not.
         await Profile.LoadUserAsync();
     }
 

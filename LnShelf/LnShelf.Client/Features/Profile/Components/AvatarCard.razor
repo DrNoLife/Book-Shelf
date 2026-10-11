@@ -1,0 +1,34 @@
+@using LnShelf.Shared.Auth
+
+@* The avatar's two controls, for the profile's right column: upload a picture of your own, or
+   go back to the Google picture. The picture itself shows in the header above, so the card
+   holds no preview. Picking a file uses the same hidden input and file picker as a volume's
+   "Set cover…", which works the same by tap and by click. *@
+
+<Panel aria-labelledby="picture-title">
+    <h2 class="title-panel" id="picture-title">Picture</h2>
+
+    <p class="fine">@HelpText</p>
+
+    <div class="picture__actions">
+        <button type="button" class="secondary" disabled="@_busy" @onclick="OpenPickerAsync">
+            @(_uploading ? "Uploading…" : "Change picture")
+        </button>
+        @if (User.HasUploadedAvatar)
+        {
+            <button type="button" class="ghost" disabled="@_busy" @onclick="UseGooglePictureAsync">Use Google picture</button>
+        }
+
+        <InputFile class="picture__input"
+                   @ref="_input"
+                   OnChange="OnFilePickedAsync"
+                   accept="image/*"
+                   tabindex="-1"
+                   aria-hidden="true" />
+    </div>
+
+    @if (_message is not null)
+    {
+        <p class="notice notice--warning" role="alert">@_message</p>
+    }
+</Panel>

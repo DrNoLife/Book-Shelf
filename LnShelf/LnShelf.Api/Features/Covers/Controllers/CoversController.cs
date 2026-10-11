@@ -17,6 +17,14 @@ public sealed class CoversController(ICoverStore coverStore, LnShelfDbContext db
             return BadRequest();
         }
 
+        // Avatars are served only to their own user, by GET api/auth/me/avatar. This route has
+        // no owner check for them, so it serves nothing under their prefix at all. Ignoring case
+        // because a store on a case-insensitive disk would read "Avatar/" as the same folder.
+        if (objectKey.StartsWith(CoverObjectKey.AvatarPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
+
         // A volume's cover is its owner's: under the owner filter another user's volume does
         // not exist, so its cover is a 404 like anything else of theirs. Series art keyed by a
         // source id is shared catalogue art and needs no check.

@@ -4,7 +4,7 @@
 
 @* The user page (design.md, Profile): who you are, what you have read, and the account.
    The left column is the reading record; the right column is for the cards that act on the
-   account. The shelf-sharing card sits above the account card. No readers/followers card: there
+   account. The shelf-sharing card sits above the picture card, and that above the account card. No readers/followers card: there
    are no followers in the product. On a phone the same page is one column under a centred
    header, and ends with the settings list. *@
 
@@ -41,6 +41,7 @@
 
                 <div class="profile__aside">
                     <ShelfSharingCard />
+                    <AvatarCard User="user" />
                     <AccountCard User="user" />
                 </div>
             </div>

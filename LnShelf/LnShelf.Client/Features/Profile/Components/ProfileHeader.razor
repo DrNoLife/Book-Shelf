@@ -1,11 +1,11 @@
 @using LnShelf.Shared.Auth
 @using LnShelf.Client.Features.Profile
 
-@* The avatar is an initial on a plain disc: there is no picture and no handle to show, since
-   the sign-in holds only the email (see CurrentUserResponse). *@
+@* The avatar is the user's picture on the disc (their Google picture, or one they uploaded),
+   or the initial when there is none. There is no handle to show (see CurrentUserResponse). *@
 
 <header class="header">
-    <div class="header__avatar title-page" aria-hidden="true">@Initial</div>
+    <div class="header__avatar title-page" aria-hidden="true"><ProfileAvatar User="User" /></div>
 
     <div class="header__text">
         <h1 class="title-page">@User.DisplayName</h1>
@@ -18,8 +18,6 @@
 
     /// <summary>The earliest read date on the shelf, when any read volume carries one.</summary>
     [Parameter] public DateOnly? FirstReadAt { get; set; }
-
-    private string Initial => ProfileInitial.For(User.DisplayName);
 
     // "Reading since" is the honest line when the shelf has dates; without any, the account's
     // age is the only date there is.

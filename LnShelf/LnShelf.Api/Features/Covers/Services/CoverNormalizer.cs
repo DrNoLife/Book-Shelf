@@ -20,8 +20,20 @@ public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger
     /// The normalized bytes, or null when the input is not a decodable image or would decode
     /// into more pixels than <see cref="CoverImageOptions.MaximumDecodedPixels"/> allows.
     /// </returns>
-    public async Task<byte[]?> NormalizeAsync(ReadOnlyMemory<byte> source, CancellationToken cancellationToken)
+    public Task<byte[]?> NormalizeAsync(ReadOnlyMemory<byte> source, CancellationToken cancellationToken) =>
+        NormalizeAsync(source, options.Value.MaximumCoverEdge, cancellationToken);
+
+    /// <summary>The same pipeline, capped at <paramref name="maximumEdge"/> instead of the cover cap.</summary>
+    // For avatars (AvatarOptions.MaximumEdge): a different size of the same kind of object, so
+    // it goes through the same header check, narrowed decoders and metadata stripping rather
+    // than a second copy of them.
+    public async Task<byte[]?> NormalizeAsync(
+        ReadOnlyMemory<byte> source,
+        int maximumEdge,
+        CancellationToken cancellationToken)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumEdge);
+
         try
         {
             using var stream = new MemoryStream(source.ToArray(), writable: false);
@@ -45,9 +57,9 @@ public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger
 
             // Loading through ImageSharp is also the validation: an upload that is not
             // an image fails here rather than being stored and served as one.
-            using var image = await Image.LoadAsync(DecoderOptionsFor(info), stream, cancellationToken);
+            using var image = await Image.LoadAsync(DecoderOptionsFor(info, maximumEdge), stream, cancellationToken);
 
-            var normalized = await EncodeAsync(image, cancellationToken);
+            var normalized = await EncodeAsync(image, maximumEdge, cancellationToken);
 
             logger.LogInformation(
                 "Normalized a cover: {SourceBytes} bytes in, {NormalizedBytes} bytes out at {Width}x{Height}",
@@ -74,9 +86,8 @@ public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger
     // target in both directions, so setting it unconditionally would blow a small thumbnail
     // up to the cap. When it is set, the JPEG decoder skips most of the full-size allocation
     // by decoding at a reduced scale; the resize in EncodeAsync stays as the guarantee.
-    private DecoderOptions DecoderOptionsFor(ImageInfo info)
+    private static DecoderOptions DecoderOptionsFor(ImageInfo info, int maximum)
     {
-        var maximum = options.Value.MaximumCoverEdge;
         if (info.Width <= maximum && info.Height <= maximum)
         {
             return CoverImageDecoding.Options;
@@ -90,9 +101,8 @@ public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger
         };
     }
 
-    private async Task<byte[]> EncodeAsync(Image image, CancellationToken cancellationToken)
+    private async Task<byte[]> EncodeAsync(Image image, int maximum, CancellationToken cancellationToken)
     {
-        var maximum = options.Value.MaximumCoverEdge;
         if (image.Width > maximum || image.Height > maximum)
         {
             image.Mutate(context => context.Resize(new ResizeOptions

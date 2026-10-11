@@ -406,15 +406,19 @@ date, the hero's status, the progress panel's "out". Last, the
 
 ### Profile (`/profile`)
 
-A back link; the header (112px avatar with the initial, the name at 52 from the
+A back link; the header (112px avatar: the Google picture or an uploaded one,
+cropped to the disc, the initial when there is none; the name at 52 from the
 signed-in identity, "Reading since …", a lock icon and the visibility word, Copy
 profile link); a totals strip (a bordered grid of `Stacked` `StatFigure`s:
 volumes read, on the shelf, series reading, series finished); **Reading now**
 (covers with "Vol 18 next"); **month by month** (twelve light bars on a `--surf`
 card, a month letter under each); **Recently finished**; and a right column of
 cards — **Who can see your shelf** (a two-way segmented control: Private ·
-Public by link, with one line of help under it) and **Account** (signed in with
-Google, the email, Export my data, Sign out, Delete account…).
+Public by link, with one line of help under it), **Picture** (one line on which
+picture shows, a `.secondary` "Change picture" and, over an uploaded one, a
+`.ghost` "Use Google picture") and **Account** (signed in with Google, the email,
+Export my data, Sign out, Delete account…). The phone library's round profile
+shortcut shows the same picture.
 
 ### Add a series (`/search`, `/search/import`)
 

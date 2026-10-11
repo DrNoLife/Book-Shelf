@@ -608,6 +608,15 @@ bundle holds no token at all:
 - **The library from before users** belongs to a placeholder user the
   migration created; `Auth:InitialOwnerEmail` adopts it in place on first
   sign-in.
+- **Avatar** **[added 2026-10-11]**. Sign-in also asks for the `profile` scope and
+  reads the `picture` claim (the name that comes with it is not kept). A local
+  copy is kept in the cover store under `avatar/{userId}/{id}.webp`, fetched
+  again only when the URL changes or the copy is gone; best effort, a short
+  timeout, never failing the sign-in (`IProviderAvatarFetcher`,
+  `AvatarCommandService`). The user can upload their own picture over it.
+  `GET/PUT/DELETE /api/auth/me/avatar` serve and change the current user's only;
+  `/api/covers` refuses `avatar/` keys. Account deletion deletes both pictures,
+  and `cover-orphan-sweep` removes avatar objects no `app_user` row names.
 - **Limits per user** (`Limits:*`): series, uploaded covers, and rate limits
   on endpoints that reach the metadata sources and on whole-shelf sync.
 - **Privacy:** a static `privacy.html` says what is stored, and

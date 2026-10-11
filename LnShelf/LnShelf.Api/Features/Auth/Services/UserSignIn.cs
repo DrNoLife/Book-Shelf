@@ -13,6 +13,7 @@ namespace LnShelf.Api.Features.Auth.Services;
 public sealed class UserSignIn(
     LnShelfDbContext dbContext,
     IOptions<AuthOptions> options,
+    IAvatarCommandService avatarCommand,
     TimeProvider timeProvider,
     ILogger<UserSignIn> logger)
 {
@@ -49,6 +50,11 @@ public sealed class UserSignIn(
         user.Email = email;
         user.LastSeenAt = now;
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // The picture is the one thing taken from the "profile" scope. The name arrives with it
+        // and is not read, so it is never stored. Best effort, after the user is saved: a
+        // picture that fails to arrive costs the avatar, never the sign-in.
+        await avatarCommand.RefreshProviderCopyAsync(user, identity.FindFirst("picture")?.Value, cancellationToken);
 
         return Principal(user.Id, email);
     }

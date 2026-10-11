@@ -1,0 +1,9 @@
+/* Fills the round disc it is placed in; cropped to the circle rather than squashed, because an
+   uploaded picture need not be square. */
+.avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}

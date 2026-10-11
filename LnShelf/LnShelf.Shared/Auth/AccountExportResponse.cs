@@ -46,6 +46,15 @@ public sealed record AccountExportAccount
 
     /// <summary>The last sign-in.</summary>
     public required DateTimeOffset LastSeenAt { get; init; }
+
+    /// <summary>Where the provider's picture was copied from, when it sent one.</summary>
+    public string? ProviderPictureUrl { get; init; }
+
+    /// <summary>The stored copy of the provider's picture, by key; the image itself is not in the export.</summary>
+    public string? ProviderAvatarObjectKey { get; init; }
+
+    /// <summary>The picture the user uploaded as their avatar, by key, as uploaded covers are listed.</summary>
+    public string? AvatarOverrideObjectKey { get; init; }
 }
 
 /// <summary>The public-shelf link, when there is one.</summary>

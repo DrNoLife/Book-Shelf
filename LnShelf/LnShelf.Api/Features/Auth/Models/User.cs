@@ -21,6 +21,11 @@ public sealed class User
     /// <summary>The issuer of the two rows above, which no provider ever issues.</summary>
     public const string LocalIssuer = "lnshelf";
 
+    /// <summary>The longest provider picture URL kept; a longer one is not copied.</summary>
+    // 2048 is the practical ceiling browsers and CDNs hold a URL to; Google's picture URLs are
+    // a few hundred characters.
+    public const int MaximumPictureUrlLength = 2048;
+
     public Guid Id { get; set; }
 
     public string Issuer { get; set; } = string.Empty;
@@ -32,4 +37,18 @@ public sealed class User
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset LastSeenAt { get; set; }
+
+    /// <summary>
+    /// The provider's picture URL at the last sign-in that carried one; what the local copy
+    /// was fetched from. Compared at each sign-in so an unchanged picture is not fetched again.
+    /// </summary>
+    public string? ProviderPictureUrl { get; set; }
+
+    /// <summary>The local copy of the provider's picture, in the cover store.</summary>
+    // A copy rather than the URL, for the reason covers are cached: the client never loads
+    // anything from a third party, and the avatar must show without Google being reachable.
+    public string? ProviderAvatarObjectKey { get; set; }
+
+    /// <summary>A picture the user uploaded. Wins over the provider's copy while it exists.</summary>
+    public string? AvatarOverrideObjectKey { get; set; }
 }

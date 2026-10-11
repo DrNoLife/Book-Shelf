@@ -40,6 +40,35 @@ public sealed class ProfileState(HttpClient httpClient)
     }
 
     /// <summary>
+    /// Uploads a picture as the avatar. Multipart, as a cover upload is; the API normalises it
+    /// and answers with the user, whose new AvatarVersion swaps the picture everywhere.
+    /// Throws <see cref="HttpRequestException"/> with a sentence to show when it is refused.
+    /// </summary>
+    public async Task SetAvatarAsync(Stream content, string fileName, CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        using var streamContent = new StreamContent(content);
+        form.Add(streamContent, "file", fileName);
+
+        using var response = await httpClient.PutAsync("api/auth/me/avatar", form, cancellationToken);
+
+        if (response.StatusCode is HttpStatusCode.BadRequest)
+        {
+            throw new HttpRequestException("That file is not an image the shelf can read.");
+        }
+
+        await ReadUserAsync(response, "Could not change your picture", cancellationToken);
+    }
+
+    /// <summary>Removes the uploaded picture, so the Google picture shows again.</summary>
+    public async Task RemoveAvatarAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync("api/auth/me/avatar", cancellationToken);
+
+        await ReadUserAsync(response, "Could not go back to your Google picture", cancellationToken);
+    }
+
+    /// <summary>
     /// Only who is signed in, for the library's avatar on a phone. Skipped when the user is
     /// already known; a failure leaves the avatar on its fallback rather than reporting.
     /// </summary>
@@ -93,5 +122,16 @@ public sealed class ProfileState(HttpClient httpClient)
         {
             Changed?.Invoke();
         }
+    }
+
+    private async Task ReadUserAsync(HttpResponseMessage response, string refusal, CancellationToken cancellationToken)
+    {
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"{refusal} ({(int)response.StatusCode}). Try again later.");
+        }
+
+        User = await response.Content.ReadFromJsonAsync<CurrentUserResponse>(cancellationToken) ?? User;
+        Changed?.Invoke();
     }
 }

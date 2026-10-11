@@ -1,0 +1,41 @@
+@using LnShelf.Shared.Auth
+
+@* What sits inside an avatar disc: the user's picture when they have one, else the initial, else
+   (the user not known yet) the person icon. The disc itself, its size and its border, belong to
+   the place that draws it (ProfileHeader, UpNextHeader); this fills it edge to edge.
+
+   The picture comes from the API's own avatar route, never from Google: a copy is kept on the
+   server, as covers are. alt is empty because every disc sits beside the name or inside a
+   labelled link, so the picture repeats what is already said. A picture that fails to load
+   falls back to the initial. *@
+
+@if (ImageUrl is { } imageUrl)
+{
+    <img class="avatar-image" src="@imageUrl" alt="" @onerror="OnImageFailed" />
+}
+else if (User is { } user)
+{
+    <span aria-hidden="true">@ProfileInitial.For(user.DisplayName)</span>
+}
+else
+{
+    <Icon Name="IconName.User" Size="IconSize" />
+}
+
+@code {
+    [Inject] public required ApiUrlBuilder ApiUrl { get; set; }
+
+    /// <summary>Null while the user is not known, which draws the person icon.</summary>
+    [Parameter] public CurrentUserResponse? User { get; set; }
+
+    /// <summary>The person icon's size, for the discs that can show it.</summary>
+    [Parameter] public int IconSize { get; set; } = 20;
+
+    // The version that failed, not a flag: a new picture (a new version) gets its own try.
+    private string? _failedVersion;
+
+    private string? ImageUrl =>
+        User?.AvatarVersion is { } version && version != _failedVersion ? ApiUrl.Avatar(version) : null;
+
+    private void OnImageFailed() => _failedVersion = User?.AvatarVersion;
+}

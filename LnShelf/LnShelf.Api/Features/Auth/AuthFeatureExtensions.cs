@@ -17,6 +17,29 @@ public static class AuthFeatureExtensions
 
     extension(IServiceCollection services)
     {
+        /// <summary>The avatar: the provider picture's local copy and the user's own upload.</summary>
+        private void AddAvatars(IConfiguration configuration)
+        {
+            services.AddOptions<AvatarOptions>()
+                .Bind(configuration.GetSection(AvatarOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddScoped<IAvatarQueryService, AvatarQueryService>();
+            services.AddScoped<IAvatarCommandService, AvatarCommandService>();
+
+            // A client of its own, through the factory: the picture comes from the provider's
+            // CDN, not from a metadata API, and sign-in waits on it, so its timeout is short
+            // and its body capped well under a cover's (AvatarOptions).
+            services.AddHttpClient<IProviderAvatarFetcher, ProviderAvatarFetcher>((provider, httpClient) =>
+            {
+                var avatars = provider.GetRequiredService<IOptions<AvatarOptions>>().Value;
+                httpClient.Timeout = avatars.FetchTimeout;
+                httpClient.MaxResponseContentBufferSize = avatars.MaximumFetchBytes;
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
+            });
+        }
+
         public IServiceCollection AddAuth(IConfiguration configuration, IHostEnvironment environment)
         {
             services.AddOptions<AuthOptions>()
@@ -27,6 +50,7 @@ public static class AuthFeatureExtensions
             services.AddScoped<AccountDeletionService>();
             services.AddScoped<ICurrentUserQueryService, CurrentUserQueryService>();
             services.AddScoped<IAccountExportQueryService, AccountExportQueryService>();
+            services.AddAvatars(configuration);
 
             var auth = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
 
@@ -115,9 +139,13 @@ public static class AuthFeatureExtensions
                     openIdConnect.CallbackPath = CallbackPath;
                     openIdConnect.SignedOutCallbackPath = "/api/auth/signout-callback";
 
+                    // "profile" for the picture claim, which becomes the avatar (AvatarCommandService).
+                    // It brings the name too, which is deliberately not kept: UserSignIn reads the
+                    // picture and nothing else from it, and the privacy page promises as much.
                     openIdConnect.Scope.Clear();
                     openIdConnect.Scope.Add("openid");
                     openIdConnect.Scope.Add("email");
+                    openIdConnect.Scope.Add("profile");
 
                     // The tokens are only needed to learn who signed in; nothing calls the
                     // provider's APIs afterwards, so none are kept in the cookie.

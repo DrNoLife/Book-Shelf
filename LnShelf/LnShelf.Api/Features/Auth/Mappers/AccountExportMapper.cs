@@ -14,6 +14,9 @@ public static class AccountExportMapper
         Email = user.Email,
         CreatedAt = user.CreatedAt,
         LastSeenAt = user.LastSeenAt,
+        ProviderPictureUrl = user.ProviderPictureUrl,
+        ProviderAvatarObjectKey = user.ProviderAvatarObjectKey,
+        AvatarOverrideObjectKey = user.AvatarOverrideObjectKey,
     };
 
     public static AccountExportSharing ToSharing(ShelfShare? share) => new()

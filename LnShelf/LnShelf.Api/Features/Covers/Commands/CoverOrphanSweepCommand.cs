@@ -10,7 +10,7 @@ public sealed class CoverOrphanSweepCommand(CoverOrphanSweeper sweeper) : IConso
     public string Name => "cover-orphan-sweep";
 
     public string Description =>
-        "Deletes uploaded covers whose volume no longer exists. --dry-run only counts them. Safe to re-run.";
+        "Deletes uploaded covers whose volume no longer exists, and avatars no account points at. --dry-run only counts them. Safe to re-run.";
 
     // Whether a cover is orphaned depends on every shelf, so the runner picks no user: the
     // sweeper acts as each user in turn, in a scope of its own.
