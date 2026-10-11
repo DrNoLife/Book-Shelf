@@ -1,0 +1,73 @@
+/* The by-hand add: one quiet line at the foot of the results, opening into a small form in
+   the same bordered panel the preview uses. */
+
+.manual {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.manual__open {
+  padding-inline: 0;
+  font-size: var(--fs-small);
+}
+
+.manual__form {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+
+.manual__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.manual__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.manual__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.manual__field--grow {
+  flex: 1 1 220px;
+}
+
+.manual__field--grow .manual__input { width: 100%; }
+
+.manual__optional {
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--faint);
+}
+
+/* 16px so iOS does not zoom the page on focus; 44px so it is a usable target. */
+.manual__input {
+  width: 100%;
+  min-block-size: 44px;
+  padding: 0 var(--space-3);
+  font-size: 16px;
+}
+
+.manual__input--number {
+  width: 7em;
+}
+
+.manual__input:focus-visible {
+  outline: 2px solid var(--acc-soft);
+  outline-offset: 2px;
+}

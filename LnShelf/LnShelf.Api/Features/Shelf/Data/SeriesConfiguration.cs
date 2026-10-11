@@ -34,6 +34,9 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         builder.Property(series => series.Illustrator).HasMaxLength(200);
         builder.Property(series => series.CoverObjectKey).HasMaxLength(300);
 
+        builder.Property(series => series.VolumeCountBasis).HasConversion<string>().HasMaxLength(32);
+        builder.Property(series => series.VolumeCountEvidence).HasMaxLength(Series.VolumeCountEvidenceMaximumLength);
+
         // The one string here with no cap, on purpose: every other one is an identity
         // field where a length is a real constraint, and a synopsis is prose whose length
         // is the source's business. Uncapped means Postgres `text`, which costs nothing

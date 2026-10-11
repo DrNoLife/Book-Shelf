@@ -23,6 +23,19 @@ public sealed class NightlySyncBackgroundServiceRunTests
         host.RanFor.ShouldBe([First, Second, Third]);
     }
 
+    // After each user's run, failed or not, and as that user: a run that fell over halfway
+    // saved the series before it, and their news is still news.
+    [Fact]
+    public async Task RunOnceAsync_EveryUser_GetsANotificationPassAfterTheirRun()
+    {
+        await using var host = new BackgroundSyncTestHost(failingUserId: Second);
+        await host.AddUsersAsync(First, Second, Third);
+
+        await CreateService(host).RunOnceAsync(CancellationToken.None);
+
+        host.NotifiedFor.ShouldBe([First, Second, Third]);
+    }
+
     [Fact]
     public async Task RunOnceAsync_EveryRunCompletes_BeatsUpWithTheCount()
     {

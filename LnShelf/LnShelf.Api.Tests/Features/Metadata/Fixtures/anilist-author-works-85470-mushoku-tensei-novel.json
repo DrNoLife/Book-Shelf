@@ -1,0 +1,803 @@
+{
+  "data": {
+    "Media": {
+      "id": 85470,
+      "staff": {
+        "edges": [
+          {
+            "role": "Story ",
+            "node": {
+              "name": {
+                "full": "Rifujin na Magonote"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 85564,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx85564-egXRASF0x9B9.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Story ",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 142989,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Shitsui no Majutsushi-hen",
+                        "native": "無職転生 ～異世界行ったら本気だす～ 失意の魔術師編"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx142989-jYDNHLwdER70.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 104724,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Roxy Gets Serious",
+                        "romaji": "Mushoku Tensei: Roxy datte Honki desu",
+                        "native": "無職転生 ~ロキシーだって本気です~"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx104724-xu0uAAE02Yta.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 146378,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation ~Eris Sharpens Her Fangs~",
+                        "romaji": "Mushoku Tensei: Eris wa Honki de Kiba wo Togu",
+                        "native": "無職転生～エリスは本気で牙を砥ぐ～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146378-AoXmPs5AJ8z3.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Story",
+                    "node": {
+                      "id": 165131,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Redundant Reincarnation",
+                        "romaji": "Mushoku Tensei: Dasoku-hen",
+                        "native": "無職転生 ～蛇足編～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx165131-R4pedWdbZiAW.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 122576,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Orc Eiyuu Monogatari: Sontaku Retsuden",
+                        "native": "オーク英雄物語 忖度列伝"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx122576-Kj9sREiAWSrN.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Story",
+                    "node": {
+                      "id": 182671,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation – A Journey of Two Lifetimes",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Special Book",
+                        "native": "無職転生 ～異世界行ったら本気だす～ スペシャルブック"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx182671-U0JvZdhaxNX5.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Story",
+                    "node": {
+                      "id": 119987,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Orc Eroica: Conjecture Chronicles",
+                        "romaji": "Orc Eiyuu Monogatari: Sontaku Retsuden",
+                        "native": "オーク英雄物語 忖度列伝"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx119987-okCzARyBL17C.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 104856,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: 4-koma ni Natte mo Honki Dasu",
+                        "native": "無職転生 ～4コマになっても本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx104856-MMca2KGzpBMG.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 145336,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Roxy",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:ロキシー"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx145336-fsBcGq5OsgsC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Creator",
+                    "node": {
+                      "id": 146716,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Eris",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:エリス"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146716-ZGw6cQVYAY7z.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Original Story",
+                    "node": {
+                      "id": 146717,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Sylphy",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:シルフィ"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146717-3rj8vttZNZ5H.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Story",
+                    "node": {
+                      "id": 183686,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation – Recollections",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu, Recollection",
+                        "native": "無職転生 ～異世界行ったら本気だす～ リコレクション"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx183686-DFAe4ff5NjEP.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "role": "Illustration",
+            "node": {
+              "name": {
+                "full": "Sirotaka"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 85564,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx85564-egXRASF0x9B9.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 142989,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Shitsui no Majutsushi-hen",
+                        "native": "無職転生 ～異世界行ったら本気だす～ 失意の魔術師編"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx142989-jYDNHLwdER70.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 104724,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Roxy Gets Serious",
+                        "romaji": "Mushoku Tensei: Roxy datte Honki desu",
+                        "native": "無職転生 ~ロキシーだって本気です~"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx104724-xu0uAAE02Yta.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 146378,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation ~Eris Sharpens Her Fangs~",
+                        "romaji": "Mushoku Tensei: Eris wa Honki de Kiba wo Togu",
+                        "native": "無職転生～エリスは本気で牙を砥ぐ～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146378-AoXmPs5AJ8z3.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 165131,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Redundant Reincarnation",
+                        "romaji": "Mushoku Tensei: Dasoku-hen",
+                        "native": "無職転生 ～蛇足編～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx165131-R4pedWdbZiAW.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 182671,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation – A Journey of Two Lifetimes",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Special Book",
+                        "native": "無職転生 ～異世界行ったら本気だす～ スペシャルブック"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx182671-U0JvZdhaxNX5.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 104856,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: 4-koma ni Natte mo Honki Dasu",
+                        "native": "無職転生 ～4コマになっても本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx104856-MMca2KGzpBMG.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 145336,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Roxy",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:ロキシー"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx145336-fsBcGq5OsgsC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 146716,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Eris",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:エリス"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146716-ZGw6cQVYAY7z.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Character Design",
+                    "node": {
+                      "id": 146717,
+                      "format": "MANGA",
+                      "title": {
+                        "english": null,
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu - Anthology side: Sylphy",
+                        "native": "無職転生～異世界行ったら本気だす～アンソロジー　side:シルフィ"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx146717-3rj8vttZNZ5H.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 183686,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation – Recollections",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu, Recollection",
+                        "native": "無職転生 ～異世界行ったら本気だす～ リコレクション"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx183686-DFAe4ff5NjEP.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 216935,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": null,
+                        "romaji": "Boukyaku no Curse Knight",
+                        "native": "忘却のカースナイト"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx216935-ngwy5QGCKZkj.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Illustration",
+                    "node": {
+                      "id": 97111,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": null,
+                        "romaji": "Gyakuten Shoukan: Urasettei made Shiritsukushita Isekai ni Gakkou Goto Shoukan Sarete",
+                        "native": "逆転召喚 ～裏設定まで知り尽くした異世界に学校ごと召喚されて～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx97111-vAMJvztyoLLA.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Art",
+                    "node": {
+                      "id": 95761,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": null,
+                        "romaji": "Netoge Haiakuma no Negai Kanaemasu.",
+                        "native": "ネトゲ廃悪魔の願い叶えます。"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/b95761-oevSCuZoGEMQ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Art",
+                    "node": {
+                      "id": 95987,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": null,
+                        "romaji": "Ore no Ibukuro wa Kanojo ni Nigirareteiru.",
+                        "native": "俺の胃袋は彼女に握られている。"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/b95987-Zexu1vsfcqqz.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vol 1)",
+            "node": {
+              "name": {
+                "full": "Kevin Frane"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Translator (English: vol 1)",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English, vols 11-)",
+                    "node": {
+                      "id": 55861,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Arpeggio of Blue Steel",
+                        "romaji": "Aoki Hagane no Arpeggio",
+                        "native": "蒼き鋼のアルペジオ"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx55861-VWfRRp0t8Pw8.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 1, 3, 5, 7, 9, 11, 13, 15, 17, 19)",
+            "node": {
+              "name": {
+                "full": "Paul Cuneo"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Translator (English: vols 1, 3, 5, 7, 9, 11, 13, 15, 17, 19)",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 2, 4, 6-8, 10, 12, 14, 16, 18, 19, 23)",
+            "node": {
+              "name": {
+                "full": "Alyssa Orton-Niioka"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Translator (English: vols 2, 4, 6-8, 10, 12, 14, 16, 18, 19, 23)",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 117675,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "The Coppersmith's Bride",
+                        "romaji": "Cuprum no Hanayome",
+                        "native": "クプルムの花嫁"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx117675-PLrG5CGO4Xs0.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English: vols 1, 2, 4- )",
+                    "node": {
+                      "id": 104504,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Trapped in a Dating Sim: The World of Otome Games Is Tough for Mobs",
+                        "romaji": "Otomege Sekai wa Mob ni Kibishii Sekai desu",
+                        "native": "乙女ゲー世界はモブに厳しい世界です"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx104504-eXm3LbytV5F8.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 110504,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Bibliophile Princess",
+                        "romaji": "Mushikaburi-hime",
+                        "native": "虫かぶり姫"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx110504-kOLrv7wZjK5O.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 96557,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Seventh",
+                        "romaji": "7th",
+                        "native": "セブンス"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx96557-rthh7HEqQ44b.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 110505,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Bibliophile Princess",
+                        "romaji": "Mushikaburi-hime",
+                        "native": "虫かぶり姫"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx110505-mnXlxEkfVkIR.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 154693,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Trapped in a Dating Sim: Otome Games Are Tough For Us, Too!",
+                        "romaji": "Ano Otomege wa Oretachi ni Kibishii Sekai desu",
+                        "native": "あの乙女ゲーは俺たちに厳しい世界です"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx154693-qTJamQihqwQ0.png"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 138088,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Return from Death: I Kicked the Bucket and Now I'm Back at Square One With a Boyfriend Who Doesn't Remember Me",
+                        "romaji": "Shi ni Modori no Mahou Gakkou Seikatsu wo, Moto Koibito to Prologue kara (※Tadashi Koukando wa Zero)",
+                        "native": "死に戻りの魔法学校生活を、元恋人とプロローグから（※ただし好感度はゼロ）"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx138088-Z5t3Jbq2HaHY.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 155172,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Don’t Hold Back, Lord Hades",
+                        "romaji": "Gamanshinaide, Hades-sama. Reikoku na Meiou no Junai wa Soko Shirenai Hodo Fukakute, Omoi",
+                        "native": "我慢しないで、ハデス様。 ～冷酷な冥王の純愛は底知れないほど深くて、重い～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx155172-Uwi30ub9IZMM.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 109546,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Sarazanmai",
+                        "romaji": "Sarazanmai",
+                        "native": "さらざんまい"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx109546-d3I9i4bVCR9d.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 154827,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "The Condemned Villainess Goes Back in Time and Aims to Become the Ultimate Villain",
+                        "romaji": "Danzaisareta Akuyaku Reijou wa, Gyakkoushite Kanpeki na Akujo wo Mezasu",
+                        "native": "断罪された悪役令嬢は、逆行して完璧な悪女を目指す"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx154827-aSuVpPp4ssKn.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 132735,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Fluffy Café in Another World",
+                        "romaji": "Isekai Mofumofu Cafe",
+                        "native": "異世界もふもふカフェ"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx132735-NJs4UBQFNzDh.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 145190,
+                      "format": "MANGA",
+                      "title": {
+                        "english": "Sorcerous Stabber Orphen: The Youthful Journey",
+                        "romaji": "Majutsushi Orphen Haguretabi Pre-hen",
+                        "native": "魔術士オーフェンはぐれ旅 プレ編"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx145190-9B8Qd3OgW1YD.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "role": "Translator (English: vols 21, 24-26)",
+            "node": {
+              "name": {
+                "full": "Sylvia Gallagher"
+              },
+              "staffMedia": {
+                "edges": [
+                  {
+                    "staffRole": "Translator (English: vols 21, 24-26)",
+                    "node": {
+                      "id": 85470,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Mushoku Tensei: Jobless Reincarnation",
+                        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                        "native": "無職転生 ～異世界行ったら本気だす～"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx85470-jt6BF9tDWB2X.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "staffRole": "Translator (English)",
+                    "node": {
+                      "id": 111156,
+                      "format": "NOVEL",
+                      "title": {
+                        "english": "Death's Daughter and the Ebony Blade",
+                        "romaji": "Shinigami ni Sodaterareta Shoujo wa Shikkoku no Ken wo Mune ni Idaku",
+                        "native": "死神に育てられた少女は漆黒の剣を胸に抱く"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx111156-YFBKUWdd8Mqd.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

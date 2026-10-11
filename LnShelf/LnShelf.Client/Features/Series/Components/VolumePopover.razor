@@ -23,6 +23,10 @@
     {
         <p class="fine">@ConflictText.ChoiceMarker(dateChoice)</p>
     }
+    else if (Volume.DateSourceLine is { } dateSource)
+    {
+        <p class="fine">@dateSource</p>
+    }
 
     @* The volume's own blurb, where a source supplied one. Clamped, not scrolled: the
        panel's height is what decides its placement, so an unbounded region here would put

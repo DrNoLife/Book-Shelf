@@ -1,0 +1,50 @@
+@* Upcoming's "Subscribe in calendar" (the mockup's, design.md): a button that opens a small
+   panel with the calendar link, or, while the calendar is off, the one step that turns it
+   on. Turning it off or making a new link stays on the Profile card, where the setting
+   lives. *@
+
+<div class="calendar-subscribe">
+    <div class="subscribe">
+        <button type="button"
+                class="secondary"
+                aria-expanded="@IsOpen.ToAriaState()"
+                aria-controls="calendar-subscribe-panel"
+                @onclick="ToggleAsync">
+            <Icon Name="IconName.CalendarBlank" Size="14" />
+            <span>Subscribe in calendar</span>
+        </button>
+    </div>
+
+    @if (IsOpen)
+    {
+        <Panel class="subscribe__panel" id="calendar-subscribe-panel" aria-labelledby="calendar-subscribe-title">
+            <h2 class="title-panel" id="calendar-subscribe-title">Release dates in your calendar</h2>
+
+            @if (State.Feed is not { } feed)
+            {
+                <p class="fine">@(State.Message ?? "Loading…")</p>
+            }
+            else if (feed is { IsOn: true, Token: { } token })
+            {
+                <p class="fine">Every dated volume of the series you track, updated after each nightly sync.</p>
+                <CalendarLinkActions Token="@token" FieldId="calendar-subscribe-link" />
+                <p class="fine">Turn it off or make a new link on <NavLink href="profile">your profile</NavLink>.</p>
+            }
+            else
+            {
+                <p class="fine">
+                    The calendar is off. Turning it on makes a private link that Google Calendar,
+                    Apple Calendar or Outlook can subscribe to. Anyone with the link can see the dates.
+                </p>
+                <div>
+                    <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="TurnOnAsync">Turn on the calendar</button>
+                </div>
+            }
+
+            @if (State.Message is { } message && State.Feed is not null)
+            {
+                <p class="notice notice--warning" role="alert">@message</p>
+            }
+        </Panel>
+    }
+</div>

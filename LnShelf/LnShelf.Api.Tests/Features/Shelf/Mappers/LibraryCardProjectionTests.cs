@@ -611,6 +611,19 @@ public sealed class LibraryCardProjectionTests
         ToCard(series).CoverObjectKey.ShouldBeNull();
     }
 
+    [Fact]
+    public void ToCard_ASeriesWithAnAuthorAndGenres_CarriesBothForTheShelfFilters()
+    {
+        var series = CreateSeriesWithOneVolume(null, owned: false, releaseDaysFromToday: null);
+        series.Author = "Carlo Zen";
+        series.Genres = ["Action", "Fantasy"];
+
+        var card = ToCard(series);
+
+        card.Author.ShouldBe("Carlo Zen");
+        card.Genres.ShouldBe(["Action", "Fantasy"]);
+    }
+
     private static Series CreateSeriesWithCovers(
         params (int Number, string? VolumeCover, string? Override)[] volumes)
     {

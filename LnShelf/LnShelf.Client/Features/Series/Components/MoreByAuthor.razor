@@ -1,0 +1,51 @@
+@* "More by {author}": the author's other works on AniList, as small cover tiles that scroll
+   sideways. Asked for after the page has drawn and never in its way — nothing renders while
+   it loads, and a series AniList does not know, or credits no author on, shows no section at
+   all. A work already on the shelf links to it; any other is one Add away, the search's own
+   add with nothing read or owned. *@
+@inject ApiUrlBuilder ApiUrl
+
+@if (_works is { Works.Count: > 0 } works)
+{
+    <section class="more" aria-labelledby="more-title">
+        <div class="section-head">
+            <h2 id="more-title" class="title-section">More by @works.Author</h2>
+        </div>
+
+        @if (_message is { } message)
+        {
+            <p class="notice notice--message" role="status">@message</p>
+        }
+
+        <ul class="more__list">
+            @foreach (var work in works.Works)
+            {
+                <li class="more__item" @key="work.AniListId">
+                    <span class="more__cover" aria-hidden="true">
+                        @if (work.CoverObjectKey is { } coverObjectKey)
+                        {
+                            <img class="more__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                        }
+                    </span>
+                    <FormatBadge Value="work.Format" />
+                    <span class="more__title" title="@work.TitleEnglish">@work.TitleEnglish</span>
+
+                    @if (work.ShelfSeriesId is { } shelfSeriesId)
+                    {
+                        <a class="ghost more__action" href="@($"series/{shelfSeriesId}")">On your shelf →</a>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="secondary more__action"
+                                disabled="@_isAdding"
+                                aria-label="@($"Add {work.TitleEnglish} to the shelf")"
+                                @onclick="() => AddAsync(work)">
+                            Add
+                        </button>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}

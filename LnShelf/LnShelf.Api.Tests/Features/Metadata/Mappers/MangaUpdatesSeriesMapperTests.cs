@@ -333,6 +333,75 @@ public sealed class MangaUpdatesSeriesMapperTests
             .PublicationStatus.ShouldBe(PublicationStatus.Ongoing);
     }
 
+    [Theory]
+    // Yen On's note wins over the status line, and is quoted with the publisher's name.
+    [InlineData(MangaUpdatesFixtures.FremdTorturchenSeries, VolumeCountBasis.EnglishPublisherNote, "Yen On: 9 Volumes + 1 Extra - Complete")]
+    [InlineData(MangaUpdatesFixtures.YoujoSenkiSeries, VolumeCountBasis.EnglishPublisherNote, "Yen On: 14 Volumes; Ongoing")]
+    public void ToSeriesInfo_TheCapturedSeries_CarriesWhereItsCountWasRead(
+        string fixture,
+        VolumeCountBasis expectedBasis,
+        string expectedEvidence)
+    {
+        var info = MangaUpdatesSeriesMapper.ToSeriesInfo(MangaUpdatesFixtures.LoadSeries(fixture));
+
+        info.CountBasis.ShouldBe(expectedBasis);
+        info.CountEvidence.ShouldBe(expectedEvidence);
+    }
+
+    [Fact]
+    public void ToSeriesInfo_OnlyAStatusLine_QuotesIt()
+    {
+        var info = MangaUpdatesSeriesMapper.ToSeriesInfo(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Status = "17 Volumes (Hiatus)",
+        });
+
+        info.VolumeCount.ShouldBe(17);
+        info.CountBasis.ShouldBe(VolumeCountBasis.MangaUpdatesStatus);
+        info.CountEvidence.ShouldBe("17 Volumes (Hiatus)");
+    }
+
+    [Fact]
+    public void ToSeriesInfo_NoCount_CarriesNoProvenance()
+    {
+        var info = MangaUpdatesSeriesMapper.ToSeriesInfo(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Status = "Ongoing",
+        });
+
+        info.VolumeCount.ShouldBeNull();
+        info.CountBasis.ShouldBeNull();
+        info.CountEvidence.ShouldBeNull();
+    }
+
+    // The column is 300 wide and a note is free text of any length.
+    [Fact]
+    public void ToSeriesInfo_AnOverlongNote_IsCutToTheColumn()
+    {
+        var info = MangaUpdatesSeriesMapper.ToSeriesInfo(new MangaUpdatesSeriesRecord
+        {
+            SeriesId = 1,
+            Title = "Whatever (Novel)",
+            Type = "Novel",
+            Publishers = [new MangaUpdatesPublisher
+            {
+                PublisherName = "Yen On",
+                Type = "English",
+                Notes = "14 Volumes; Ongoing. " + new string('x', 400),
+            }],
+        });
+
+        info.VolumeCount.ShouldBe(14);
+        info.CountEvidence.ShouldNotBeNull().Length.ShouldBe(Series.VolumeCountEvidenceMaximumLength);
+        info.CountEvidence.ShouldStartWith("Yen On: 14 Volumes; Ongoing.");
+    }
+
     /// <summary>MangaUpdates' medium words in the shelf's own vocabulary.</summary>
     [Theory]
     [InlineData("Novel", Format.LightNovel)]

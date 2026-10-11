@@ -314,9 +314,12 @@ Features/
   Preferences/      (the single user-preferences row)
   Import/           (StoryGraph CSV pipeline, match queue)
   Changelog/        (app version + release notes, served to the client)
-  Releases/         (upcoming view query; the IReleaseNotifier seam arrives with its notifier)
+  Releases/         (upcoming view query, per-series mute, the IReleaseNotifier seam)
   Stats/            (the Stats page's read-only figures)
   Monitoring/       (heartbeats to Uptime Kuma, behind IHeartbeat)
+  Notifications/    (Web Push devices and the notifier behind IReleaseNotifier)
+  Activity/         ("Since your last visit", read from the shelf_event log)
+  Calendar/         (the per-user .ics release feed, by secret token)
 ```
 
 Two exceptions to feature-slice-first, both above `Features/` because every slice
@@ -362,7 +365,9 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Derived states are computed in queries, never stored.** *To buy*, *Backlog*,
   *Behind* fall out of read/owned/released — storing them creates sync bugs.
   The one sanctioned exception: `HasNewVolume`, which is last-visit
-  acknowledgment (an event, not a derivation). Any further stored flag needs
+  acknowledgment (an event, not a derivation). The `shelf_event` activity log is
+  stored on the same ground: what changed between two syncs is an event, and the
+  volume rows only hold the state after it. Any further stored flag needs
   a written justification of the same kind.
 - **The sync job is a `BackgroundService`**, not Hangfire — one nightly loop
   does not justify a job framework. If job count ever grows real, that's a
@@ -370,17 +375,18 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Many users, separate shelves.** Login is OpenID Connect run by the API
   (`Features/Auth`, Google by default) with the session in a cookie on the
   shared origin — never a token in the client bundle, which is public by
-  nature. Each user owns their own copies of everything: the four roots
-  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`) implement `IOwned`,
+  nature. Each user owns their own copies of everything: the five roots
+  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`) implement `IOwned`,
   `LnShelfDbContext` stamps `OwnerId` on save and filters every query by the
   current user (`ICurrentUser`). **Never filter by owner by hand and never
   call `IgnoreQueryFilters` in request code**; background work and console
   commands call `ICurrentUser.ActAs(userId)` in their own scope instead. A new
   root entity implements `IOwned` and gets a filter in `ApplyOwnerFilters`.
   Every endpoint requires a user unless it says `[AllowAnonymous]`.
-  The read-only shared shelf is the one request path that resolves an owner from
-  `shelf_share` and reads through `ICurrentUser.ActAs` in a child scope;
-  `shelf_share` and `app_user` are the only unfiltered tables, each with its
+  The read-only shared shelf and the release calendar feed are the two request
+  paths that resolve an owner from a token (`shelf_share`, `calendar_feed`) and
+  read through `ICurrentUser.ActAs` in a child scope; `shelf_share`,
+  `calendar_feed` and `app_user` are the only unfiltered tables, each with its
   reason in feature-spec §7.
   Details: `docs/feature-spec.md` §7.
 
@@ -425,6 +431,7 @@ dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [
 dotnet run --project LnShelf/LnShelf.Api -- subtitle-backfill
 dotnet run --project LnShelf/LnShelf.Api -- volume-merge --series "<title>" --from 10 --into 7.5 [--format LightNovel] [--dry-run]
 dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # all shelves; no --user needed
+dotnet run --project LnShelf/LnShelf.Api -- vapid-keys                         # a Web Push key pair for the .env
 ```
 
 `dotnet ef` is a local tool — `dotnet tool restore` first.

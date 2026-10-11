@@ -55,6 +55,12 @@ public static class SyncStatusText
         }
 
         /// <summary>
+        /// " · 2 failed", or nothing: the half of <see cref="Attention"/> that is not a link. The
+        /// "to review" half is printed as a link to the review list where there is room for one.
+        /// </summary>
+        public string? FailureClause => run.Failures > 0 ? $" · {run.Failures} failed" : null;
+
+        /// <summary>
         /// The dot beside the note: amber when something is waiting or the run died, quiet while
         /// it is still going, green otherwise.
         /// </summary>

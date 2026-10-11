@@ -1,0 +1,9 @@
+.mute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.mute__toggle { align-self: flex-start; }

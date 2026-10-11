@@ -20,6 +20,38 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.29.0", new DateOnly(2026, 10, 11), "Your shelf tells you",
+            Features: [
+                "Notifications: turn them on for each device under Profile, Notifications. After each nightly sync " +
+                    "or \"Sync now\" you get one message when volumes on your shelf come out or get a release date. " +
+                    "Tapping it opens the series, or your library when several series have news. \"Send a test\" checks that it works, and you can mute a single " +
+                    "series from the Sync corner at the foot of its page.",
+                "On an iPhone or iPad, add LN Shelf to your Home Screen first, then turn notifications on from the " +
+                    "app opened there. LN Shelf can now be installed on any phone this way, and opens full-screen " +
+                    "with its own icon.",
+                "\"Since your last visit\": the library opens with a short note of what changed on your shelf while " +
+                    "you were away, such as volumes that came out or got a new release date. \"Got it\" clears it.",
+                "A release calendar: turn it on from your profile, or tap \"Subscribe in calendar\" on Upcoming, and " +
+                    "Google Calendar, Apple Calendar or Outlook show every dated volume of the series you track. The " +
+                    "link is private, and \"New link\" or \"Off\" stops the old one working.",
+                "A series that is not linked to a release source yet can now be linked from its page: search " +
+                    "MangaUpdates, check the result and press Link. A new \"To review\" page lists everything the " +
+                    "last sync could not settle on its own.",
+                "Add a series by hand from Search & add (\"Can't find it? Add it by hand\"), for web novels or " +
+                    "anything the search cannot find. Add or remove its volumes yourself; it is never synced.",
+                "The shelf's filter box now matches authors as well as titles, and a new Genre group in the filter " +
+                    "panel narrows the shelf to the genres you choose. On a series page, the author and the genre " +
+                    "tags take you to your shelf filtered that way.",
+                "\"More by {author}\" on a series page shows the author's other works, most popular first, each with " +
+                    "an Add button or \"On your shelf\".",
+            ],
+            Improvements: [
+                "\"How is this counted?\" under the volume grid says where a series' volume count comes from, and a " +
+                    "volume's details say where its release date came from.",
+                "Signing out turns notifications off on that browser.",
+            ],
+            Fixes: []
+        ),
         new("0.28.0", new DateOnly(2026, 10, 11), "Your shelf, your way",
             Features: [
                 "Pick several statuses at once in the shelf's filters, say Behind and Reading together, and filter " +

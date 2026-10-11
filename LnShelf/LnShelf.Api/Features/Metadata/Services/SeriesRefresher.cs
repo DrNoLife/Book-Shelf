@@ -25,7 +25,11 @@ public sealed class SeriesRefresher(
     /// Release-source ids already spoken for, so two series cannot link to one record.
     /// Added to as links are made.
     /// </param>
-    public async Task RefreshAsync(
+    /// <returns>
+    /// What this refresh changed that a reader would call news (ShelfEventDiff). Not yet
+    /// added to anything: the caller owns the save, so it owns these too.
+    /// </returns>
+    public async Task<IReadOnlyList<ShelfEvent>> RefreshAsync(
         Series series,
         SyncRun run,
         HashSet<long> linkedExternalIds,
@@ -41,6 +45,9 @@ public sealed class SeriesRefresher(
         // runs the moment it is added, and its whole backlist arriving then is not news —
         // see ReleaseCountWriter.
         var refreshedBefore = series.LastSyncedAt is not null;
+
+        // Taken before anything is written, for the same reason; null on a first refresh.
+        var snapshot = ShelfEventDiff.Capture(series, timeProvider.LocalTimeZone);
 
         var info = series.MangaUpdatesId is { } externalId
             ? await releaseSource.GetSeriesAsync(externalId, cancellationToken)
@@ -62,9 +69,15 @@ public sealed class SeriesRefresher(
         // has nothing to do with whether the release source recognised it.
         await HealDescriptionAsync(series, cancellationToken);
 
+        // Before the early return below: enrichment can date a volume of a series whose
+        // release-source record came back empty, and that date passing is still news.
+        var events = snapshot is null
+            ? []
+            : ShelfEventDiff.Compare(snapshot, series, timeProvider.Today(), timeProvider.GetUtcNow());
+
         if (info is null)
         {
-            return;
+            return events;
         }
 
         // After the enrichment, so it reads the dates as this run left them.
@@ -74,6 +87,8 @@ public sealed class SeriesRefresher(
         // no other SeriesUserState or VolumeUserState field is ever written here, because
         // sync does not own user state (CLAUDE.md).
         series.LastSyncedAt = timeProvider.GetUtcNow();
+
+        return events;
     }
 
     private async Task EnrichVolumesAsync(

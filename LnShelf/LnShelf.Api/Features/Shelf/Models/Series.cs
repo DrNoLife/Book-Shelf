@@ -99,6 +99,25 @@ public sealed class Series : IOwned
     // discrepancy row would mean parsing a log.
     public int? ReleaseSourceVolumeCount { get; set; }
 
+    /// <summary>The width of <see cref="VolumeCountEvidence"/>, shared by its configuration and its writers.</summary>
+    public const int VolumeCountEvidenceMaximumLength = 300;
+
+    /// <summary>
+    /// Where the published-volume count was read from. Null for a count decided before this
+    /// was recorded.
+    /// </summary>
+    // Provenance for ReleaseSourceVolumeCount, written beside it and nowhere else: the same
+    // class of fact as Volume.ReleaseDateSource. It cannot be recomputed later, because
+    // MangaUpdates' notes change and the parser only ever saw the record of that night.
+    public VolumeCountBasis? VolumeCountBasis { get; set; }
+
+    /// <summary>
+    /// The text the count was read from, verbatim and truncated to
+    /// <see cref="VolumeCountEvidenceMaximumLength"/>: "Yen Press: 14 Volumes (Ongoing)", or
+    /// the status line. Null when the basis has no text to quote.
+    /// </summary>
+    public string? VolumeCountEvidence { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
 

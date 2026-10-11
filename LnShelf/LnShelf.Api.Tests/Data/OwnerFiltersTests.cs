@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Calendar.Models;
+using LnShelf.Api.Features.Notifications.Models;
 using LnShelf.Api.Features.Sharing.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,7 @@ public sealed class OwnerFiltersTests
     {
         [typeof(User)] = "It is what the owner filters are about.",
         [typeof(ShelfShare)] = "How an anonymous request learns whom to act for (Features/Sharing).",
+        [typeof(CalendarFeed)] = "How a calendar app's anonymous fetch learns whom to read for (Features/Calendar).",
         [typeof(DataProtectionKey)] = "The session cookie's signing keys: the app's, not a user's.",
         [typeof(VolumeUserState)] = "Reached only through its volume, which is filtered through its series.",
         [typeof(ImportRow)] = "Reached only through its import group, which is filtered through its batch.",
@@ -58,18 +61,86 @@ public sealed class OwnerFiltersTests
         foreignKey.DeleteBehavior.ShouldBe(DeleteBehavior.Cascade);
     }
 
-    // A choice is the user's data about one series and means nothing without it.
-    [Fact]
-    public void SourceChoice_ForeignKeyToSeries_CascadesOnDelete()
+    // Each of these is deleted with its principal by the database, so account deletion
+    // (ExecuteDelete on the user) and an older image that does not know the table still work.
+    public static TheoryData<Type, Type> CascadingForeignKeys => new()
+    {
+        { typeof(SourceChoice), typeof(Series) },
+        { typeof(ShelfEvent), typeof(Series) },
+        { typeof(CalendarFeed), typeof(User) },
+        { typeof(PushSubscription), typeof(User) },
+    };
+
+    [Theory]
+    [MemberData(nameof(CascadingForeignKeys))]
+    public void ForeignKeyToPrincipal_CascadesOnDelete(Type dependent, Type principal)
     {
         using var dbContext = Context();
 
-        var foreignKey = dbContext.Model.FindEntityType(typeof(SourceChoice)).ShouldNotBeNull()
+        var foreignKey = dbContext.Model.FindEntityType(dependent).ShouldNotBeNull()
             .GetForeignKeys().ShouldHaveSingleItem();
 
-        foreignKey.PrincipalEntityType.ClrType.ShouldBe(typeof(Series));
+        foreignKey.PrincipalEntityType.ClrType.ShouldBe(principal);
         foreignKey.DeleteBehavior.ShouldBe(DeleteBehavior.Cascade);
     }
+
+    // The activity log is a child filtered through its series, like Volume: one user's sync
+    // events never reach another user's "Since your last visit" or notification pass.
+    [Fact]
+    public async Task ShelfEvents_TwoUsersWithEvents_ReadsOnlyTheCurrentUsersOwn()
+    {
+        var database = $"owner-filters-{Guid.CreateVersion7()}";
+        var ownerSeriesId = await SeedSeriesWithEventAsync(database, TestUsers.Owner);
+        await SeedSeriesWithEventAsync(database, TestUsers.SomeoneElse);
+
+        await using var dbContext = Context(database, TestUsers.Owner);
+        var events = await dbContext.ShelfEvents.ToListAsync();
+
+        events.ShouldHaveSingleItem().SeriesId.ShouldBe(ownerSeriesId);
+    }
+
+    [Fact]
+    public async Task PushSubscriptions_TwoUsersOnOneEndpoint_ReadsOnlyTheCurrentUsersOwn()
+    {
+        var database = $"owner-filters-{Guid.CreateVersion7()}";
+        foreach (var userId in new[] { TestUsers.Owner, TestUsers.SomeoneElse })
+        {
+            await using var seedContext = Context(database, userId);
+            seedContext.PushSubscriptions.Add(new PushSubscription
+            {
+                Id = Guid.CreateVersion7(),
+                Endpoint = "https://fcm.googleapis.com/fcm/send/shared-browser",
+                P256dh = "key",
+                Auth = "secret",
+            });
+            await seedContext.SaveChangesAsync();
+        }
+
+        await using var dbContext = Context(database, TestUsers.Owner);
+        var subscriptions = await dbContext.PushSubscriptions.ToListAsync();
+
+        subscriptions.ShouldHaveSingleItem().OwnerId.ShouldBe(TestUsers.Owner);
+    }
+
+    private static async Task<Guid> SeedSeriesWithEventAsync(string database, Guid userId)
+    {
+        await using var dbContext = Context(database, userId);
+        var seriesId = Guid.CreateVersion7();
+        dbContext.Series.Add(new Series { Id = seriesId, TitleEnglish = "Overlord" });
+        dbContext.ShelfEvents.Add(new ShelfEvent
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesId = seriesId,
+            Kind = ShelfEventKind.VolumeReleased,
+            VolumeNumber = 17,
+            OccurredAt = DateTimeOffset.UnixEpoch,
+        });
+        await dbContext.SaveChangesAsync();
+        return seriesId;
+    }
+
+    private static LnShelfDbContext Context(string database, Guid userId) =>
+        new(new DbContextOptionsBuilder<LnShelfDbContext>().UseInMemoryDatabase(database).Options, TestUsers.As(userId));
 
     private static LnShelfDbContext Context() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()

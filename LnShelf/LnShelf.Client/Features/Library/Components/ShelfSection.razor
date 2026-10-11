@@ -2,7 +2,7 @@
    library sections the reader can reorder (LibrarySection), so it carries its own state
    subscriptions rather than relying on the page to re-render it. *@
 
-<section class="shelf" aria-labelledby="shelf-title">
+<section class="shelf" aria-labelledby="shelf-title" @ref="_section">
     <div class="section-head">
         <h2 id="shelf-title" class="title-section shelf__title">Shelf</h2>
         @if (Library is not null)
@@ -22,6 +22,10 @@
                     SaveDefaultRequested="OnSaveDefaultAsync"
                     Format="LibraryState.SelectedFormat"
                     FormatChanged="OnFormatSelectedAsync"
+                    Genres="LibraryState.AvailableGenres"
+                    SelectedGenres="LibraryState.SelectedGenres"
+                    GenreToggled="LibraryState.ToggleGenre"
+                    GenreRemoved="LibraryState.RemoveGenre"
                     Sort="LibraryState.Sort"
                     SortChanged="OnSortChangedAsync"
                     Density="Preferences.GridDensity"

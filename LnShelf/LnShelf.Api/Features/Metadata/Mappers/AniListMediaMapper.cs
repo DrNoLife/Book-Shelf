@@ -82,7 +82,7 @@ public static class AniListMediaMapper
     /// manga, so it maps to Manga rather than being dropped. WebNovel has no
     /// AniList equivalent at all — it is manual-only (feature-spec §4.2).
     /// </summary>
-    private static Format? ToFormat(string? aniListFormat) => aniListFormat switch
+    internal static Format? ToFormat(string? aniListFormat) => aniListFormat switch
     {
         "NOVEL" => Format.LightNovel,
         "MANGA" or "ONE_SHOT" => Format.Manga,

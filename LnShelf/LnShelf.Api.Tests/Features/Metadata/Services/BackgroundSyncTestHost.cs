@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using LnShelf.Api.Features.Notifications.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,8 +8,9 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
 /// Just enough of the container for the two background sync runners: a scoped current user,
-/// a scoped context over one in-memory database, and a sync service that records whom it ran
-/// for and fails for whoever it is told to.
+/// a scoped context over one in-memory database, a sync service that records whom it ran
+/// for and fails for whoever it is told to, and a notification pass that records whom it ran
+/// for (and can be told to throw, which the real one never does).
 /// </summary>
 internal sealed class BackgroundSyncTestHost : IAsyncDisposable
 {
@@ -40,8 +42,26 @@ internal sealed class BackgroundSyncTestHost : IAsyncDisposable
             return sync;
         });
 
+        services.AddScoped(provider =>
+        {
+            var currentUser = provider.GetRequiredService<ICurrentUser>();
+            var dispatcher = Substitute.For<IReleaseNotificationDispatcher>();
+
+            dispatcher.DispatchAsync(Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    NotifiedFor.Enqueue(currentUser.Id);
+                    return Task.CompletedTask;
+                });
+
+            return dispatcher;
+        });
+
         _provider = services.BuildServiceProvider();
     }
+
+    /// <summary>The users a notification pass ran for, in order.</summary>
+    public ConcurrentQueue<Guid> NotifiedFor { get; } = new();
 
     /// <summary>The users a run happened for, in order — including the one that failed.</summary>
     public ConcurrentQueue<Guid> RanFor { get; } = new();

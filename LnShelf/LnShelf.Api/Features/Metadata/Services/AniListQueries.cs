@@ -1,8 +1,8 @@
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// The two GraphQL documents the shelf sends. Kept as literals rather than
-/// generated from a schema: two queries do not justify a codegen step.
+/// The GraphQL documents the shelf sends. Kept as literals rather than
+/// generated from a schema: three queries do not justify a codegen step.
 /// </summary>
 internal static class AniListQueries
 {
@@ -73,6 +73,45 @@ internal static class AniListQueries
               edges {
                 role
                 node { name { full } }
+              }
+            }
+          }
+        }
+        """;
+
+    /// <summary>
+    /// "More by {author}": one series' top staff, each with the works they are credited on.
+    /// </summary>
+    // One request rather than two. The staff id is not stored anywhere, so the alternative is
+    // a lookup for the id and then a Staff(id) query — two of the thirty requests a minute
+    // AniList allows, where nesting staffMedia under the staff edges spends one. Six edges
+    // in relevance order is the search query's reasoning: author and illustrator come first,
+    // and the tail is translators whose credits are fetched and then thrown away.
+    //
+    // type: MANGA is AniList's book side (novels, manga, one-shots); the mapper keeps only the
+    // author's own credits and only the formats the shelf tracks.
+    public const string AuthorWorks =
+        """
+        query AuthorWorks($id: Int!, $perPage: Int!) {
+          Media(id: $id, type: MANGA) {
+            id
+            staff(perPage: 6, sort: RELEVANCE) {
+              edges {
+                role
+                node {
+                  name { full }
+                  staffMedia(sort: [POPULARITY_DESC], type: MANGA, perPage: $perPage) {
+                    edges {
+                      staffRole
+                      node {
+                        id
+                        format
+                        title { english romaji native }
+                        coverImage { large }
+                      }
+                    }
+                  }
+                }
               }
             }
           }

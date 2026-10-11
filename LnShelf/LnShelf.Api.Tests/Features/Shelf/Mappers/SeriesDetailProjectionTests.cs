@@ -175,6 +175,29 @@ public sealed class SeriesDetailProjectionTests
         SeriesDetailProjection.ToDetail(series, Today).Notes.ShouldBeNull();
     }
 
+    [Fact]
+    public void ToDetail_ASyncedSeries_CarriesTheCountsProvenanceMuteAndDateSources()
+    {
+        var checkedAt = new DateTimeOffset(2026, 7, 28, 3, 0, 0, TimeSpan.Zero);
+        var series = CreateSeries((1, -10, true, ReadStatus.Read, null));
+        series.VolumeCountBasis = VolumeCountBasis.EnglishPublisherNote;
+        series.VolumeCountEvidence = "Yen Press: 14 Volumes (Ongoing)";
+        series.LastSyncedAt = checkedAt;
+        series.UserState!.NotificationsMuted = true;
+        series.Volumes.Single().ReleaseDateSource = MetadataSourceName.OpenLibrary;
+
+        var detail = SeriesDetailProjection.ToDetail(series, Today);
+
+        detail.CountProvenance.ShouldBe(new CountProvenanceResponse
+        {
+            Basis = VolumeCountBasis.EnglishPublisherNote,
+            Evidence = "Yen Press: 14 Volumes (Ongoing)",
+            CheckedAt = checkedAt,
+        });
+        detail.NotificationsMuted.ShouldBeTrue();
+        detail.Volumes.Single().ReleaseDateSource.ShouldBe(MetadataSourceName.OpenLibrary);
+    }
+
     private static Series CreateSeries(
         params (int Number, int? ReleaseDaysFromToday, bool Owned, ReadStatus Read, decimal? Price)[] volumes)
     {

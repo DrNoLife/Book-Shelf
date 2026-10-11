@@ -232,6 +232,10 @@ OPENLIBRARY_CONTACT_EMAIL=
 # Optional: Uptime Kuma push URLs (README, Monitoring).
 # HEARTBEAT_NIGHTLY_SYNC_URL=http://<server>:3001/api/push/<token>
 # BACKUP_HEARTBEAT_URL=http://<server>:3001/api/push/<token>
+# Optional: Web Push for release notifications (README, Notifications). All three or none.
+# WEBPUSH_PUBLIC_KEY=
+# WEBPUSH_PRIVATE_KEY=
+# WEBPUSH_SUBJECT=mailto:you@example.com
 ```
 
 The app's Privacy page (`/privacy.html`) says what is stored and why. Each user can download a
@@ -276,6 +280,21 @@ down beat, a missing beat or a failed health check sends a message to Discord. B
 counts only. Kuma shares the host, so it cannot report the host itself going down; an outside
 watchdog is in the backlog.
 
+#### Notifications
+
+After each nightly sync and each "Sync now", readers who turned notifications on for a device
+get one push: the volumes that came out and the release dates that changed. They need Web Push
+keys in the `.env`, made once:
+
+```bash
+docker compose -f docker-compose.production.yml exec api dotnet LnShelf.Api.dll vapid-keys
+```
+
+Put the three printed lines in the `.env`, set `WEBPUSH_SUBJECT` to a real address (Apple
+refuses pushes without one) and redeploy. Leave all three empty to switch notifications off.
+A new key pair turns notifications off on every device until each turns them on again. On an
+iPhone or iPad, the app has to be added to the Home Screen first.
+
 #### Uploaded covers left behind
 
 Deleting a series, a cover or an account removes the uploaded cover files. Series deleted
@@ -304,10 +323,12 @@ are most likely to change:
 | `Auth__InitialOwnerEmail` | empty | Who adopts the library from before users existed |
 | `Limits__MaximumSeriesPerUser`, `Limits__MaximumCoverOverridesPerUser` | `500`, `300` | Per-user storage limits |
 | `Limits__ExternalRequestsPerMinute`, `Limits__SyncRunsPerHour` | `20`, `2` | Per-user rate limits on calls that reach the metadata sources |
+| `Limits__AuthorWorksRequestsPerMinute` | `60` | Per-user rate limit on a series page's "More by {author}" row |
 | `Heartbeat__Monitors__NightlySync` | empty (no beat) | Uptime Kuma push URL the nightly sync reports to |
 | `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
 | `Covers__FileSystem__RootPath` | `/data/covers` | The cover folder (the API image mounts its volume there) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |
+| `WebPush__PublicKey`, `WebPush__PrivateKey`, `WebPush__Subject` | empty (off) | Release notifications by Web Push (`vapid-keys` makes the pair) |
 | `OpenLibrary__ContactEmail` | empty | Contact address sent to Open Library |
 | `Shelf__SeedDevelopmentFixture` | `false` | Seed the fixture library on an empty database |
 

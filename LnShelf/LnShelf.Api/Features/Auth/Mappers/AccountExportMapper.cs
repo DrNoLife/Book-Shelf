@@ -26,7 +26,10 @@ public static class AccountExportMapper
         TokenCreatedAt = share?.CreatedAt,
     };
 
-    public static AccountExportSeries ToSeries(Series series) => new()
+    /// <param name="events">This series' own activity log.</param>
+    // The events come in beside the series rather than through a navigation on it: Series has
+    // none for them, so nothing that loads a series can drag 120 days of log along by accident.
+    public static AccountExportSeries ToSeries(Series series, IEnumerable<ShelfEvent> events) => new()
     {
         Id = series.Id,
         Format = series.Format,
@@ -43,6 +46,8 @@ public static class AccountExportMapper
         Description = series.Description,
         AniListId = series.AniListId,
         MangaUpdatesId = series.MangaUpdatesId,
+        VolumeCountBasis = series.VolumeCountBasis,
+        VolumeCountEvidence = series.VolumeCountEvidence,
 
         // A series nothing has been recorded on has no state row, and reads as PlanToStart
         // everywhere else (SeriesUserState.Untouched), so the export says the same.
@@ -55,6 +60,27 @@ public static class AccountExportMapper
         VolumeViewOverride = series.UserState?.VolumeViewOverride,
 
         Volumes = series.Volumes.OrderBy(volume => volume.Number).Select(ToVolume).ToList(),
+        Events = events.OrderBy(shelfEvent => shelfEvent.OccurredAt).Select(ToEvent).ToList(),
+    };
+
+    public static AccountExportCalendar ToCalendar(CalendarFeed? feed) => new()
+    {
+        IsOn = feed is not null,
+        Token = feed?.Token,
+        TokenCreatedAt = feed?.CreatedAt,
+    };
+
+    // Cut down to the push service's host, and without the two encryption keys: the full URL
+    // and the keys are what it takes to push to the device, which a download must not carry.
+    public static AccountExportPushDevice ToPushDevice(PushSubscription subscription) => new()
+    {
+        PushServiceHost = Uri.TryCreate(subscription.Endpoint, UriKind.Absolute, out var endpoint)
+            ? endpoint.Host
+            : string.Empty,
+        DeviceLabel = subscription.DeviceLabel,
+        CreatedAt = subscription.CreatedAt,
+        LastSuccessAt = subscription.LastSuccessAt,
+        FailureCount = subscription.FailureCount,
     };
 
     public static AccountExportImportBatch ToImportBatch(ImportBatch batch) => new()
@@ -104,6 +130,16 @@ public static class AccountExportMapper
         PurchasePrice = volume.UserState?.PurchasePrice,
         PurchasedAt = volume.UserState?.PurchasedAt,
         CoverOverrideObjectKey = volume.UserState?.CoverOverrideObjectKey,
+    };
+
+    private static AccountExportShelfEvent ToEvent(ShelfEvent shelfEvent) => new()
+    {
+        Kind = shelfEvent.Kind,
+        VolumeNumber = shelfEvent.VolumeNumber,
+        PreviousDate = shelfEvent.PreviousDate,
+        NewDate = shelfEvent.NewDate,
+        OccurredAt = shelfEvent.OccurredAt,
+        NotifiedAt = shelfEvent.NotifiedAt,
     };
 
     private static AccountExportImportGroup ToImportGroup(ImportGroup group) => new()

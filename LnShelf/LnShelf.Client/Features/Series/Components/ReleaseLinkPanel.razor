@@ -1,0 +1,91 @@
+@* "Not linked to a release source yet", made answerable: the sync could not decide which
+   MangaUpdates record this series is, so the reader finds it. Amber like every open question
+   on the page. The search runs only when asked — every search is a request to somebody
+   else's free API — and is prefilled with what the server searched for. Each candidate links
+   out to MangaUpdates so the reader can check it before saying "this one". *@
+
+<Panel Tone="PanelTone.Warning" AriaLabel="@Conflict.Heading">
+
+    <div class="release-link__lead">
+        <SignalDot Tone="SignalTone.Attention" Large="true" />
+        <div class="release-link__text">
+            <h2 class="title-panel">@Conflict.Heading</h2>
+            <p class="release-link__sentence">
+                The sync couldn't tell which MangaUpdates series this is, so its volume count and
+                status aren't checked. Find it below and link it.
+            </p>
+        </div>
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="release-link__actions">
+            <button type="button" class="secondary" disabled="@IsBusy" @onclick="SearchAsync">
+                @(_isSearching ? "Searching…" : "Find it on MangaUpdates")
+            </button>
+        </div>
+    }
+    else
+    {
+        <form class="release-link__search" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+            <SearchField class="release-link__field"
+                         Value="@_query"
+                         ValueChanged="OnQueryChanged"
+                         AriaLabel="Search MangaUpdates by title"
+                         Placeholder="Search MangaUpdates by title" />
+            <button type="submit" class="secondary" disabled="@IsBusy">
+                @(_isSearching ? "Searching…" : "Search")
+            </button>
+        </form>
+
+        @if (_result.Candidates.Count == 0)
+        {
+            <p class="fine">Nothing on MangaUpdates for “@_result.Query”. Try the original or romaji title.</p>
+        }
+        else
+        {
+            <ul class="release-link__list" aria-label="MangaUpdates results">
+                @foreach (var candidate in _result.Candidates)
+                {
+                    <li class="release-link__row" @key="candidate.MangaUpdatesId">
+                        <div class="release-link__candidate">
+                            <span class="release-link__title">@candidate.Title</span>
+                            <span class="fine">
+                                @candidate.Detail
+                                @if (candidate.HeldBy is { } heldBy)
+                                {
+                                    <span>@(candidate.Detail.Length > 0 ? " · " : null)@heldBy</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="release-link__row-actions">
+                            <a class="ghost"
+                               href="@ReleaseLinkText.SourcePageUrl(candidate.MangaUpdatesId)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               aria-label="@($"Check {candidate.Title} on MangaUpdates")">
+                                Check <Icon Name="IconName.ArrowUpRight" Size="12" />
+                            </a>
+                            @if (candidate.LinkedSeriesId is null)
+                            {
+                                <button type="button"
+                                        class="secondary"
+                                        disabled="@IsBusy"
+                                        aria-label="@($"Link to {candidate.Title}")"
+                                        @onclick="() => LinkAsync(candidate)">
+                                    Link
+                                </button>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    }
+
+    @if (_message is { } message)
+    {
+        <p class="notice notice--warning" role="alert">@message</p>
+    }
+
+</Panel>

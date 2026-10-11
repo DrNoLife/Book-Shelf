@@ -1,0 +1,31 @@
+@* "Since your last visit": what the sync noticed while the reader was away, one line per
+   series. Calm on purpose: no accent, no icon, and nothing at all when there is no news.
+   Muted series are listed too — mute is about pushes, not about what the shelf knows. *@
+
+@if (ActivityState.Activity is { Series.Count: > 0 } activity)
+{
+    <Panel aria-labelledby="since-last-visit-title">
+        <div class="since">
+            <div class="section-head">
+                <h2 id="since-last-visit-title" class="title-panel">Since your last visit</h2>
+                <button type="button" class="ghost" disabled="@ActivityState.IsDismissing" @onclick="DismissAsync">Got it</button>
+            </div>
+
+            <ul class="since__list">
+                @foreach (var series in activity.Series)
+                {
+                    <li class="since__row" @key="series.SeriesId">
+                        <FormatBadge Value="series.Format" />
+                        <a href="@($"/series/{series.SeriesId}")">@series.SeriesTitle</a>
+                        <span class="since__news">@string.Join(" · ", ActivityText.Lines(series))</span>
+                    </li>
+                }
+            </ul>
+
+            @if (ActivityState.Message is { } message)
+            {
+                <p class="fine" role="status">@message</p>
+            }
+        </div>
+    </Panel>
+}

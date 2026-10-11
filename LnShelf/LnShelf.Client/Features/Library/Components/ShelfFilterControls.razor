@@ -31,6 +31,21 @@
         <FormatTabs Selected="Format" SelectedChanged="FormatChanged" Stretch="true" Inset="true" />
     </div>
 
+    @* Any of the chosen genres, like the status chips; every genre on the shelf is laid out,
+       wrapped, so none is behind a scroll. Absent on a shelf whose sources named none. *@
+    @if (Genres.Count > 0)
+    {
+        <div class="controls__section">
+            <span class="eyebrow">Genre</span>
+            <ChipGroup TValue="string"
+                       Options="GenreOptions"
+                       SelectedValues="SelectedGenres"
+                       ValueToggled="GenreToggled"
+                       AriaLabel="Genre filter"
+                       Wrap="true" />
+        </div>
+    }
+
     <div class="controls__section">
         <span class="eyebrow">Sort</span>
         <ChipGroup TValue="LibrarySort"

@@ -119,6 +119,44 @@ public sealed class UnlinkedSeriesMatchTests
         existing.TitleEnglish.ShouldBe("Fremd Torturchen");
     }
 
+    [Fact]
+    public void Adopt_ASeriesKeptByHand_DropsTheManualCountBasis()
+    {
+        var existing = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            TitleEnglish = "Fremd Torturchen",
+            Format = Format.LightNovel,
+            VolumeCountBasis = VolumeCountBasis.Manual,
+            VolumeCountEvidence = "Added by hand",
+        };
+
+        UnlinkedSeriesMatch.Adopt(existing, BuiltFromAniList("Fremd Torturchen"));
+
+        existing.AniListId.ShouldBe(85470);
+        existing.VolumeCountBasis.ShouldBeNull();
+        existing.VolumeCountEvidence.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Adopt_ASeriesWithASourcedCountBasis_KeepsIt()
+    {
+        var existing = new Series
+        {
+            Id = Guid.CreateVersion7(),
+            MangaUpdatesId = MangaUpdatesId,
+            TitleEnglish = "Fremd Torturchen",
+            Format = Format.LightNovel,
+            VolumeCountBasis = VolumeCountBasis.EnglishPublisherNote,
+            VolumeCountEvidence = "Yen Press: 14 Volumes (Ongoing)",
+        };
+
+        UnlinkedSeriesMatch.Adopt(existing, BuiltFromAniList("Fremd Torturchen"));
+
+        existing.VolumeCountBasis.ShouldBe(VolumeCountBasis.EnglishPublisherNote);
+        existing.VolumeCountEvidence.ShouldBe("Yen Press: 14 Volumes (Ongoing)");
+    }
+
     private static Series BuiltFromAniList(string titleEnglish, string? titleRomaji = null) => new()
     {
         Id = Guid.CreateVersion7(),

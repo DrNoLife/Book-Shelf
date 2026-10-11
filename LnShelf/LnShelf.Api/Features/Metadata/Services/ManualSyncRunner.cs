@@ -86,6 +86,10 @@ public sealed class ManualSyncRunner(
             // already isolates per-series failures; this is a failure of the run itself.
             logger.LogError(exception, "The manual sync run for user {UserId} failed outright", userId);
         }
+
+        // The same notification pass the nightly run ends with, so "Sync now" pushes what it
+        // found. Best effort; it never throws except for shutdown.
+        await scope.ServiceProvider.GetRequiredService<IReleaseNotificationDispatcher>().DispatchAsync(stoppingToken);
     }
 
     private sealed record ManualSyncRequest(Guid UserId, IDisposable Lease);

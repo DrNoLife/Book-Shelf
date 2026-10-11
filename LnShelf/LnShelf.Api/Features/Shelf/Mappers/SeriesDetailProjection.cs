@@ -44,8 +44,15 @@ public static class SeriesDetailProjection
             StartedAt = series.UserState?.StartedAt,
             LastReadAt = series.UserState?.LastReadAt,
             HasNewVolume = series.UserState?.HasNewVolume ?? false,
+            NotificationsMuted = series.UserState?.NotificationsMuted ?? false,
             VolumeViewOverride = series.UserState?.VolumeViewOverride,
             Counts = ToCounts(volumes),
+            CountProvenance = new CountProvenanceResponse
+            {
+                Basis = series.VolumeCountBasis,
+                Evidence = series.VolumeCountEvidence,
+                CheckedAt = series.LastSyncedAt,
+            },
             Spend = ToSpend(volumes),
             Relation = null,
             Volumes = volumes,
@@ -79,6 +86,7 @@ public static class SeriesDetailProjection
             VolumeId = volume.Id,
             Number = volume.Number,
             ReleaseDate = volume.ReleaseDate,
+            ReleaseDateSource = volume.ReleaseDateSource,
 
             // The three-state column collapses to two on the wire. An empty Title means
             // "a source named this volume and it has no subtitle" (Volume.Title), which is

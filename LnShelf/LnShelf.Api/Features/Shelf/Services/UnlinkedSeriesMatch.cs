@@ -97,6 +97,15 @@ public static class UnlinkedSeriesMatch
 
         existing.AniListId ??= built.AniListId;
         existing.MangaUpdatesId ??= built.MangaUpdatesId;
+
+        // A series kept by hand stops being so once a source is linked: the sync owns its
+        // count from here on, and "Manual" would wrongly say the reader typed it. Cleared
+        // rather than guessed; the next count the sync writes fills it in.
+        if (existing.VolumeCountBasis == VolumeCountBasis.Manual)
+        {
+            existing.VolumeCountBasis = null;
+            existing.VolumeCountEvidence = null;
+        }
     }
 
     private static bool IsUnlinkedFor(Series existing, Series built) =>

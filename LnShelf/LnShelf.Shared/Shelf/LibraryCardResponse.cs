@@ -14,6 +14,12 @@ public sealed record LibraryCardResponse
     public required TrackingStatus TrackingStatus { get; init; }
     public required bool HasNewVolume { get; init; }
 
+    /// <summary>The story author, so the shelf's text filter can match it. Null when no source names one.</summary>
+    public string? Author { get; init; }
+
+    /// <summary>The series' genres, for the library's genre filter.</summary>
+    public IReadOnlyList<string> Genres { get; init; } = [];
+
     /// <summary>
     /// Key for <c>/api/covers/{objectKey}</c>. Null renders the placeholder; the
     /// client never builds a URL to an external CDN (design.md).

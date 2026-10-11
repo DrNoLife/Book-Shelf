@@ -21,7 +21,15 @@ public sealed record AccountExportResponse
 
     public required AccountExportSharing Sharing { get; init; }
 
+    public required AccountExportCalendar Calendar { get; init; }
+
+    /// <summary>The devices notifications are turned on for.</summary>
+    public required IReadOnlyList<AccountExportPushDevice> NotificationDevices { get; init; }
+
     public required PreferencesResponse Preferences { get; init; }
+
+    /// <summary>When "Since your last visit" was last dismissed. Null if never.</summary>
+    public DateTimeOffset? ActivitySeenAt { get; init; }
 
     public required IReadOnlyList<AccountExportSeries> Series { get; init; }
 
@@ -67,6 +75,31 @@ public sealed record AccountExportSharing
     public DateTimeOffset? TokenCreatedAt { get; init; }
 }
 
+/// <summary>The release calendar link, when there is one.</summary>
+public sealed record AccountExportCalendar
+{
+    public required bool IsOn { get; init; }
+
+    public string? Token { get; init; }
+
+    public DateTimeOffset? TokenCreatedAt { get; init; }
+}
+
+/// <summary>
+/// One device with notifications on. The push service is named by host only, and the
+/// browser's encryption keys are left out: they are secrets, and say nothing about the person.
+/// </summary>
+public sealed record AccountExportPushDevice
+{
+    /// <summary>The push service, e.g. "fcm.googleapis.com".</summary>
+    public required string PushServiceHost { get; init; }
+
+    public string? DeviceLabel { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset? LastSuccessAt { get; init; }
+    public required int FailureCount { get; init; }
+}
+
 /// <summary>One series on the shelf, with the user's state on it.</summary>
 public sealed record AccountExportSeries
 {
@@ -85,6 +118,8 @@ public sealed record AccountExportSeries
     public string? Description { get; init; }
     public int? AniListId { get; init; }
     public long? MangaUpdatesId { get; init; }
+    public VolumeCountBasis? VolumeCountBasis { get; init; }
+    public string? VolumeCountEvidence { get; init; }
 
     public required TrackingStatus TrackingStatus { get; init; }
     public DateOnly? StartedAt { get; init; }
@@ -95,6 +130,20 @@ public sealed record AccountExportSeries
     public VolumeView? VolumeViewOverride { get; init; }
 
     public required IReadOnlyList<AccountExportVolume> Volumes { get; init; }
+
+    /// <summary>What syncs noticed about this series: the activity log, oldest first.</summary>
+    public required IReadOnlyList<AccountExportShelfEvent> Events { get; init; }
+}
+
+/// <summary>One entry of the activity log.</summary>
+public sealed record AccountExportShelfEvent
+{
+    public required ShelfEventKind Kind { get; init; }
+    public required decimal VolumeNumber { get; init; }
+    public DateOnly? PreviousDate { get; init; }
+    public DateOnly? NewDate { get; init; }
+    public required DateTimeOffset OccurredAt { get; init; }
+    public DateTimeOffset? NotifiedAt { get; init; }
 }
 
 /// <summary>One volume, with the user's read and ownership state.</summary>

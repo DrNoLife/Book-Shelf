@@ -16,8 +16,6 @@ internal static class ImportShelfWriterHarness
     /// <summary>The date every built row carries unless the test says otherwise.</summary>
     public static readonly DateOnly DefaultReadAt = new(2022, 3, 12);
 
-    public static readonly DateTimeOffset AppliedAt = new(2026, 7, 29, 12, 0, 0, TimeSpan.Zero);
-
     public static LnShelfDbContext CreateDbContext() =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
             .UseInMemoryDatabase($"import-{Guid.CreateVersion7()}")

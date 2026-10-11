@@ -1,0 +1,39 @@
+/* The shelf link's look (ShelfSharingCard): a label over a read-only field, then a row of
+   actions. */
+
+.link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.link__label {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* The search field's look (40px, --bg on a --surf panel, radius 10), as a read-only input. */
+.link__field {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-caption);
+  text-overflow: ellipsis;
+}
+
+.link__field:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

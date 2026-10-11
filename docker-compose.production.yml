@@ -96,6 +96,12 @@ services:
       Auth__ClientId: "${AUTH_CLIENT_ID:?Set AUTH_CLIENT_ID in the .env next to docker-compose.yml}"
       Auth__ClientSecret: "${AUTH_CLIENT_SECRET:?Set AUTH_CLIENT_SECRET in the .env next to docker-compose.yml}"
       Auth__InitialOwnerEmail: "${AUTH_INITIAL_OWNER_EMAIL:-}"
+      # Optional. Web Push (release notifications on readers' devices). Set all three or none;
+      # none switches notifications off. `vapid-keys` prints a fresh pair (README.md). A new
+      # pair turns notifications off on every device until each turns them on again.
+      WebPush__PublicKey: "${WEBPUSH_PUBLIC_KEY:-}"
+      WebPush__PrivateKey: "${WEBPUSH_PRIVATE_KEY:-}"
+      WebPush__Subject: "${WEBPUSH_SUBJECT:-}"
     # No healthcheck: the aspnet runtime image ships no curl or wget, and adding
     # one to the image to satisfy compose is not worth it. lnshelf-deploy polls
     # /api/health through the client instead, which proves more anyway.

@@ -1,4 +1,5 @@
 using System.Net;
+using LnShelf.Client.Features.Notifications;
 using LnShelf.Shared.Auth;
 using LnShelf.Shared.Stats;
 
@@ -9,7 +10,7 @@ namespace LnShelf.Client.Features.Profile;
 /// </summary>
 // Three fetches that do not depend on each other, started together. The stats are the Stats
 // page's own endpoint, so the totals here are the totals there.
-public sealed class ProfileState(HttpClient httpClient)
+public sealed class ProfileState(HttpClient httpClient, NotificationsState notifications)
 {
     public CurrentUserResponse? User { get; private set; }
 
@@ -25,6 +26,10 @@ public sealed class ProfileState(HttpClient httpClient)
     /// <summary>Ends the session. Throws <see cref="HttpRequestException"/> when the API cannot be reached.</summary>
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {
+        // First, while the session can still delete this device's subscription: a browser
+        // somebody signed out of should not keep receiving their notifications. Best effort.
+        await notifications.ForgetThisDeviceAsync(cancellationToken);
+
         using var response = await httpClient.PostAsync("api/auth/logout", content: null, cancellationToken);
         response.EnsureSuccessStatusCode();
     }

@@ -35,6 +35,20 @@ public sealed class LibraryState(
     /// </summary>
     public string TextFilter { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// The genre chips that are on; a series shows when it has any of them. Applied in the
+    /// browser like the text filter, and like it not remembered: a genre is something looked
+    /// for, not a way the shelf is kept.
+    /// </summary>
+    public IReadOnlyList<string> SelectedGenres { get; private set; } = [];
+
+    /// <summary>
+    /// Every genre across the format scope, whatever the status filter hides, plus any chosen
+    /// one no card carries any more — so a chip that is on can always be turned off.
+    /// </summary>
+    public IReadOnlyList<string> AvailableGenres =>
+        ShelfCardFilter.GenreChoices(Overview?.Cards ?? Library?.Cards ?? [], SelectedGenres);
+
     public LibrarySort Sort { get; private set; } = LibrarySort.MostBehind;
 
     public LibraryResponse? Library { get; private set; }
@@ -78,7 +92,13 @@ public sealed class LibraryState(
         if (!string.IsNullOrWhiteSpace(TextFilter))
         {
             var needle = TextFilter.Trim();
-            cards = cards.Where(card => Matches(card, needle));
+            cards = cards.Where(card => ShelfCardFilter.MatchesText(card, needle));
+        }
+
+        if (SelectedGenres.Count > 0)
+        {
+            var genres = SelectedGenres;
+            cards = cards.Where(card => ShelfCardFilter.HasAnyGenre(card, genres));
         }
 
         // MostBehind is the server's own ordering, so it is left alone rather than
@@ -95,13 +115,51 @@ public sealed class LibraryState(
         ];
     }
 
+    /// <summary>A genre chip in the filter panel.</summary>
+    public void ToggleGenre(string genre) =>
+        SetGenres(ShelfCardFilter.Toggle(SelectedGenres, genre));
+
+    /// <summary>A genre's removable chip under the search bar.</summary>
+    public void RemoveGenre(string genre) =>
+        SetGenres([.. SelectedGenres.Where(chosen => !string.Equals(chosen, genre, StringComparison.OrdinalIgnoreCase))]);
+
     /// <summary>
-    /// Matches the romaji title too, so typing "Yakumo" finds a series whose English
-    /// title is something else entirely.
+    /// Arriving from a link into the shelf (LibraryLinks): that genre, or that text, and
+    /// nothing else of either kind. The status and format filters are left as the reader has
+    /// them — the chips under the bar say so if they hide anything.
     /// </summary>
-    private static bool Matches(LibraryCardResponse card, string needle) =>
-        card.TitleEnglish.Contains(needle, StringComparison.OrdinalIgnoreCase)
-        || (card.TitleRomaji?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false);
+    public void ApplyLink(string? genre, string? text)
+    {
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            SelectedGenres = [genre.Trim()];
+            TextFilter = string.Empty;
+        }
+        else if (!string.IsNullOrWhiteSpace(text))
+        {
+            SelectedGenres = [];
+            TextFilter = text.Trim();
+        }
+        else
+        {
+            return;
+        }
+
+        _visibleCards = null;
+        Changed?.Invoke();
+    }
+
+    private void SetGenres(IReadOnlyList<string> genres)
+    {
+        if (genres.SequenceEqual(SelectedGenres, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SelectedGenres = genres;
+        _visibleCards = null;
+        Changed?.Invoke();
+    }
 
     public void SetTextFilter(string? text)
     {
@@ -206,6 +264,7 @@ public sealed class LibraryState(
         SelectedFilters = DefaultFilters;
         SelectedFormat = null;
         TextFilter = string.Empty;
+        SelectedGenres = [];
         _hasRestoredFilters = true;
         _visibleCards = null;
         await filterMemory.ForgetAsync();

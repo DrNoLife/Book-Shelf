@@ -101,6 +101,11 @@ public static class SourceConflictMapper
 
     private static string ExplainAutomatic(SyncDiscrepancy discrepancy, MetadataSourceName? displayedSource)
     {
+        if (discrepancy.Field is SyncDiscrepancyField.SeriesLink)
+        {
+            return $"You linked this series to {displayedSource?.DisplayName ?? "a release source"}.";
+        }
+
         if (discrepancy.Field is not SyncDiscrepancyField.VolumeCount)
         {
             return "Settled by the usual precedence between sources.";

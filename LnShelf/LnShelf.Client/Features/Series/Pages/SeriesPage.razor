@@ -1,5 +1,6 @@
 @page "/series/{SeriesId:guid}"
 @using LnShelf.Client.Features.Series.Components
+@using LnShelf.Client.Features.Notifications.Components
 
 <div class="page series">
     <div class="page__stack">
@@ -62,14 +63,38 @@
                ones are amber; the ones the usual rules or the reader settled are quiet, but they
                stay here because choosing a source is how a reader changes what a settled one
                says (design.md, "Series"). *@
+            @if (_linkOutcome is { } linkOutcome)
+            {
+                <p class="notice" role="status">@linkOutcome</p>
+            }
+
             @foreach (var conflict in SeriesState.Conflicts)
             {
-                <SourceConflictPanel @key="(conflict.Field, conflict.VolumeNumber)"
-                                     Conflict="conflict"
-                                     IsBusy="SeriesState.IsSaving"
-                                     Chosen="source => OnChooseSourceAsync(conflict, source)"
-                                     ResetRequested="() => OnResetSourceAsync(conflict)" />
+                @* The link question is answered by finding the record, not by picking a value, so
+                   it gets its own panel; once linked there is nothing left to show for it. *@
+                @if (conflict.Field is SyncDiscrepancyField.SeriesLink)
+                {
+                    @if (conflict.NeedsReview)
+                    {
+                        <ReleaseLinkPanel @key="(conflict.Field, conflict.VolumeNumber)"
+                                          Conflict="conflict"
+                                          SeriesId="Series.SeriesId"
+                                          IsPageBusy="SeriesState.IsSaving"
+                                          Linked="OnLinkedAsync" />
+                    }
+                }
+                else
+                {
+                    <SourceConflictPanel @key="(conflict.Field, conflict.VolumeNumber)"
+                                         Conflict="conflict"
+                                         IsBusy="SeriesState.IsSaving"
+                                         Chosen="source => OnChooseSourceAsync(conflict, source)"
+                                         ResetRequested="() => OnResetSourceAsync(conflict)" />
+                }
             }
+
+            @* Asks AniList after the page has drawn; renders nothing until it has something. *@
+            <MoreByAuthor Series="Series" />
 
             @* NOTES left, SYNC right, as the mockup lays out the foot of the page. *@
             <div class="series__foot">
@@ -78,6 +103,7 @@
                 <aside class="sync">
                     <p class="eyebrow">Sync</p>
                     <p class="fine">@SyncLine</p>
+                    <SeriesNotificationsToggle Series="Series" />
                 </aside>
             </div>
 

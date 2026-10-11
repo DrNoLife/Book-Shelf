@@ -1,5 +1,6 @@
 @* The hero: cover left, identity, status control and links right. The numbers live in
    the progress panel beneath it (SeriesProgress). *@
+@using LnShelf.Client.Features.Library
 @inject ApiUrlBuilder ApiUrl
 
 <header class="hero">
@@ -22,9 +23,12 @@
 
         <div class="hero__meta">
             <FormatBadge Value="Series.Format" />
-            @if (CreditsLine is { } credits)
+            @* The author is a way into the shelf: everything else on it by the same person. *@
+            @if (HasCredits)
             {
-                <span>@credits</span>
+                @* One line on purpose: ", illustrated by" must sit against the link, not a space after it. *@
+                <span>@if (AuthorName is { } author)
+                    {<a class="hero__credit-link" href="@LibraryLinks.ForText(author)" title="@($"Filter your shelf by {author}")">@author</a>}@CreditsAfterAuthor</span>
             }
             @if (YearLine is { } year)
             {
@@ -53,7 +57,7 @@
             <div class="tags desktop-only">
                 @foreach (var genre in Series.Genres)
                 {
-                    <span class="tag" @key="genre">@genre</span>
+                    <a class="tag" href="@LibraryLinks.ForGenre(genre)" title="@($"Your shelf, filtered to {genre}")" @key="genre">@genre</a>
                 }
             </div>
         }

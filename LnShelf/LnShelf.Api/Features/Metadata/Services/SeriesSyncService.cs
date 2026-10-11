@@ -141,8 +141,13 @@ public sealed class SeriesSyncService(
     {
         try
         {
-            await refresher.RefreshAsync(series, run, linkedExternalIds, budget, cancellationToken);
+            await PickUpLinkMadeSinceLoadingAsync(series, linkedExternalIds, cancellationToken);
+            var events = await refresher.RefreshAsync(series, run, linkedExternalIds, budget, cancellationToken);
             run.SeriesRefreshed++;
+
+            // Tracked rather than saved on their own, so they live and die with this series'
+            // save: a refresh that is discarded below takes its news with it.
+            await AddEventsAsync(series, events, cancellationToken);
 
             // The run's counters ride along, so the sidebar's figures never get ahead of
             // what is actually saved.
@@ -172,6 +177,85 @@ public sealed class SeriesSyncService(
                 "Sync failed for {TitleEnglish} (AniList {AniListId}); continuing",
                 series.TitleEnglish,
                 series.AniListId);
+        }
+    }
+
+    /// <summary>
+    /// Adds what the refresh found to the activity log, minus anything already logged.
+    /// </summary>
+    // The diff compares with the last sync, and a series whose release-source record comes
+    // back empty does not get a new LastSyncedAt — so a volume whose date passed would be
+    // "released" again on every run until the record returns. The log is what knows it was
+    // already said; one indexed query, and only for the rare series that has news.
+    private async Task AddEventsAsync(Series series, IReadOnlyList<ShelfEvent> events, CancellationToken cancellationToken)
+    {
+        if (events.Count == 0)
+        {
+            return;
+        }
+
+        var logged = (await dbContext.ShelfEvents
+                .Where(shelfEvent => shelfEvent.SeriesId == series.Id)
+                .Where(shelfEvent => shelfEvent.Kind != ShelfEventKind.ReleaseDateChanged)
+                .Select(shelfEvent => new { shelfEvent.Kind, shelfEvent.VolumeNumber })
+                .ToListAsync(cancellationToken))
+            .Select(shelfEvent => (shelfEvent.Kind, shelfEvent.VolumeNumber))
+            .ToHashSet();
+
+        foreach (var shelfEvent in events)
+        {
+            // A date change is read from the stored date, so it cannot repeat spuriously, and
+            // a date moving back to one it held before (A, B, A) is real news. Only "came out"
+            // and "announced" happen once per volume and can be re-seen while LastSyncedAt
+            // stands still.
+            if (shelfEvent.Kind is ShelfEventKind.ReleaseDateChanged
+                || logged.Add((shelfEvent.Kind, shelfEvent.VolumeNumber)))
+            {
+                dbContext.ShelfEvents.Add(shelfEvent);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Takes a release link saved since the sweep loaded this series, so the sweep neither
+    /// asks the matcher again nor overwrites the link.
+    /// </summary>
+    // A link made by hand while a sweep is running is saved without a refresh (the gate is
+    // busy), but the sweep loaded this series before it. Left alone, the sweep would match an
+    // unlinked series again (a fresh "not linked" question, or its own match saved over the
+    // person's choice), or refresh a re-pointed one against the old record and save a new
+    // LastSyncedAt over the null the link wrote — so the next refresh, against the new record,
+    // would announce every volume above the old count. LastSyncedAt is adopted with the link
+    // for that reason: null after a hand link, which makes this refresh a first one.
+    //
+    // One small read per series, every series: a re-pointed series is as exposed as an
+    // unlinked one.
+    private async Task PickUpLinkMadeSinceLoadingAsync(
+        Series series,
+        HashSet<long> linkedExternalIds,
+        CancellationToken cancellationToken)
+    {
+        var saved = await dbContext.Series
+            .Where(candidate => candidate.Id == series.Id)
+            .Select(candidate => new { candidate.MangaUpdatesId, candidate.LastSyncedAt })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (saved is null || saved.MangaUpdatesId == series.MangaUpdatesId)
+        {
+            return;
+        }
+
+        if (series.MangaUpdatesId is { } loadedLink)
+        {
+            linkedExternalIds.Remove(loadedLink);
+        }
+
+        series.MangaUpdatesId = saved.MangaUpdatesId;
+        series.LastSyncedAt = saved.LastSyncedAt;
+
+        if (saved.MangaUpdatesId is { } savedLink)
+        {
+            linkedExternalIds.Add(savedLink);
         }
     }
 

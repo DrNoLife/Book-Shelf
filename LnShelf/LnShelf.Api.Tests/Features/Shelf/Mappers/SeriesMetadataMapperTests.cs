@@ -12,15 +12,13 @@ namespace LnShelf.Api.Tests.Features.Shelf.Mappers;
 // shapes: one romaji field, or a bag of unlabelled ones.
 public sealed class SeriesMetadataMapperTests
 {
-    private static readonly DateTimeOffset SyncedAt = new(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
-
     [Fact]
     public void ToTrackedSeries_AMangaUpdatesRecord_StoresItsLatinAssociatedTitles()
     {
         var metadata = MangaUpdatesSeriesMapper.ToSeriesMetadata(
             MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.FremdTorturchenSeries));
 
-        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, SyncedAt, coverObjectKey: null);
+        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey: null);
 
         // Three real entries become two: the kanji one a US storefront cannot match is
         // dropped, and "Isekai Goumon-hime" is the same title as "Isekai Goumon Hime" once
@@ -37,7 +35,6 @@ public sealed class SeriesMetadataMapperTests
     {
         var series = SeriesMetadataMapper.ToTrackedSeries(
             AniListMetadata("Mushoku Tensei: Jobless Reincarnation", "Mushoku Tensei", "無職転生"),
-            SyncedAt,
             coverObjectKey: null);
 
         // Romaji is worth a store request; the native title is Japanese script the US
@@ -49,7 +46,7 @@ public sealed class SeriesMetadataMapperTests
     public void ToTrackedSeries_AnAniListRecordWhoseRomajiIsItsEnglishTitle_StoresNoAlternative()
     {
         var series = SeriesMetadataMapper.ToTrackedSeries(
-            AniListMetadata("Overlord", "Overlord", "オーバーロード"), SyncedAt, coverObjectKey: null);
+            AniListMetadata("Overlord", "Overlord", "オーバーロード"), coverObjectKey: null);
 
         // Plenty of series have the same string in both fields. Storing it would spend a store
         // request re-asking the question the first attempt already answered.
@@ -71,7 +68,6 @@ public sealed class SeriesMetadataMapperTests
         SeriesMetadataMapper.ApplyMetadata(
             series,
             AniListMetadata("Mushoku Tensei: Jobless Reincarnation", "Mushoku Tensei", "無職転生"),
-            SyncedAt,
             coverObjectKey: null);
 
         // Overwritten rather than filled if empty, exactly as Genres is: the source owns this

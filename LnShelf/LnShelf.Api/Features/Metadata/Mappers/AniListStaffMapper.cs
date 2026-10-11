@@ -16,6 +16,14 @@ public static class AniListStaffMapper
     public static string? FindAuthor(AniListStaffConnection? staff) =>
         FindName(staff, AuthorRolePrefixes);
 
+    /// <summary>
+    /// Whether a role string credits the person as the author — the same test
+    /// <see cref="FindAuthor"/> applies, for callers that need the edge rather than the name.
+    /// </summary>
+    public static bool IsAuthorRole(string? role) =>
+        role?.Trim() is { Length: > 0 } trimmed
+        && AuthorRolePrefixes.Any(prefix => trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
     public static string? FindIllustrator(AniListStaffConnection? staff)
     {
         var illustrator = FindName(staff, IllustratorRolePrefixes);

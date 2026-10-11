@@ -47,6 +47,14 @@ public sealed class SyncStatusTextTests
     public void Attention_OnlyFailures_StillShowsThem() =>
         CreateRun(finishedMinutesAgo: 1, failures: 2).Attention.ShouldBe("2 failed");
 
+    // The sidebar prints "to review" as a link of its own, so only the failures are text.
+    [Theory]
+    [InlineData(0, null)]
+    [InlineData(2, " · 2 failed")]
+    public void FailureClause_LeavesTheReviewCountToTheLink(int failures, string? expected) =>
+        CreateRun(finishedMinutesAgo: 1, failures: failures, discrepancies: [CreateDiscrepancy(resolvedWith: null)])
+            .FailureClause.ShouldBe(expected);
+
     [Fact]
     public void Tone_CleanFinishedRun_IsOk() =>
         CreateRun(finishedMinutesAgo: 1).Tone(Now).ShouldBe(SignalTone.Ok);

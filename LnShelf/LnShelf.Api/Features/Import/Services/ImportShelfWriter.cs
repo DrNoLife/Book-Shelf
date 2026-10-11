@@ -21,13 +21,12 @@ public sealed class ImportShelfWriter(
         int aniListId,
         IReadOnlyList<ImportGroup> groups,
         ImportWriteCounters counters,
-        DateTimeOffset appliedAt,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(groups);
         ArgumentNullException.ThrowIfNull(counters);
 
-        var series = await FindOrCreateSeriesAsync(aniListId, counters, appliedAt, cancellationToken);
+        var series = await FindOrCreateSeriesAsync(aniListId, counters, cancellationToken);
         var desiredStates = DesiredVolumeStateMerger.Merge(groups);
 
         foreach (var desired in desiredStates.Values.OrderBy(state => state.VolumeNumber))
@@ -48,7 +47,6 @@ public sealed class ImportShelfWriter(
     private async Task<Series> FindOrCreateSeriesAsync(
         int aniListId,
         ImportWriteCounters counters,
-        DateTimeOffset appliedAt,
         CancellationToken cancellationToken)
     {
         // Keyed on AniList id, which is what makes a re-import additive: the second
@@ -76,7 +74,7 @@ public sealed class ImportShelfWriter(
         var coverObjectKey = await coverCache.EnsureCachedAsync(
             aniListId, metadata.CoverImageUrl, cancellationToken);
 
-        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, appliedAt, coverObjectKey);
+        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey);
 
         // A series added from MangaUpdates while AniList was down is on the shelf with no
         // AniList id; the lookup above cannot see it, and creating would split its state.

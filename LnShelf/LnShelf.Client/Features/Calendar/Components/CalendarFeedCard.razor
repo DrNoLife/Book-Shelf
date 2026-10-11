@@ -1,0 +1,57 @@
+@* "Release calendar" (feature-spec §4.9), for the user page's right column: off by default,
+   on gives a private link a calendar app subscribes to. Laid out like "Who can see your
+   shelf", because it is the same kind of setting: a link that is the whole access control. *@
+
+<Panel class="calendar" aria-labelledby="calendar-title">
+    <h2 class="title-panel" id="calendar-title">Release calendar</h2>
+
+    @if (State.Feed is not { } feed)
+    {
+        <p class="fine">@(State.Message ?? "Loading…")</p>
+    }
+    else
+    {
+        <SegmentedControl TValue="bool"
+                          Options="OnOffOptions"
+                          Value="feed.IsOn"
+                          ValueChanged="OnIsOnChangedAsync"
+                          AriaLabel="Release calendar"
+                          Disabled="State.IsBusy"
+                          Stretch="true"
+                          Inset="true" />
+
+        <p class="fine">@HelpText(feed.IsOn)</p>
+
+        @if (feed is { IsOn: true, Token: { } token })
+        {
+            @if (IsConfirmingNewLink)
+            {
+                <div class="confirm" role="group" aria-label="Make a new calendar link">
+                    <p class="fine">Calendars subscribed to the old link stop updating.</p>
+                    <div class="actions">
+                        <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="OnNewLinkConfirmedAsync">Make a new link</button>
+                        <button type="button" class="ghost" @onclick="OnNewLinkCancelled">Cancel</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <CalendarLinkActions Token="@token" FieldId="calendar-card-link">
+                    <button type="button" class="ghost" disabled="@State.IsBusy" @onclick="OnNewLinkRequested">New link</button>
+                </CalendarLinkActions>
+            }
+        }
+
+        <dl class="scope">
+            <dt class="eyebrow">In the calendar</dt>
+            <dd class="fine">Every dated volume of the series you track, from two months back. Dropped series stay out.</dd>
+            <dt class="eyebrow">Never in it</dt>
+            <dd class="fine">What you own or paid, your notes, or who you are.</dd>
+        </dl>
+
+        @if (State.Message is { } message)
+        {
+            <p class="notice notice--warning" role="alert">@message</p>
+        }
+    }
+</Panel>

@@ -39,6 +39,21 @@ public partial class LibraryToolbar
     [Parameter]
     public EventCallback<Format?> FormatChanged { get; set; }
 
+    /// <summary>Every genre the shelf's series carry, for the panel's genre chips.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Genres { get; set; } = [];
+
+    /// <summary>The genre chips that are on.</summary>
+    [Parameter]
+    public IReadOnlyList<string> SelectedGenres { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<string> GenreToggled { get; set; }
+
+    /// <summary>One genre taken off from its chip under the bar.</summary>
+    [Parameter]
+    public EventCallback<string> GenreRemoved { get; set; }
+
     [Parameter]
     public LibrarySort Sort { get; set; }
 
@@ -73,9 +88,9 @@ public partial class LibraryToolbar
     /// <summary>The filters that hide series — the number on the Filters button.</summary>
     // Sort, view and density reorder or redraw; they hide nothing, so they do not count. The
     // title filter is not counted either: its text is in plain sight in the field.
-    // Each status filter counts on its own, as each has its own chip under the bar.
+    // Each status filter and each genre counts on its own, as each has its own chip under the bar.
     private int ActiveFilterCount =>
-        Status.Count(status => status != LibraryFilter.All) + (Format is not null ? 1 : 0);
+        Status.Count(status => status != LibraryFilter.All) + (Format is not null ? 1 : 0) + SelectedGenres.Count;
 
     protected override async Task OnInitializedAsync() =>
         IsKeyOpen = await JavaScript.InvokeAsync<bool>("lnshelf.readFlag", KeyOpenFlag);

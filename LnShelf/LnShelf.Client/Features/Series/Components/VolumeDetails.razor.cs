@@ -216,4 +216,26 @@ public partial class VolumeDetails
         await SeriesState.RemoveCoverAsync(Volume);
         await Settled.InvokeAsync();
     }
+
+    private bool IsRemovable =>
+        SeriesState.Series is { } series && ManualSeries.IsRemovable(series, Volume);
+
+    /// <summary>
+    /// Removes the volume once the reader confirms. The panel closes by itself: the volume it
+    /// shows is no longer in the series.
+    /// </summary>
+    private async Task OnRemoveVolumeAsync()
+    {
+        var confirmed = await JavaScript.InvokeAsync<bool>(
+            "lnshelf.confirm",
+            $"Remove Vol {Volume.Number.ToVolumeText()}?\n\nIts read and owned state goes with it.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await SeriesState.RemoveVolumeAsync(Volume);
+        await Settled.InvokeAsync();
+    }
 }

@@ -48,7 +48,8 @@ public sealed class SeriesCommandServiceTests
         series.MangaUpdatesId.ShouldBeNull();
         series.PublicationStatus.ShouldBe(PublicationStatus.Completed);
         series.Author.ShouldBe("Rifujin na Magonote");
-        series.LastSyncedAt.ShouldNotBeNull();
+        // Only a refresh stamps it; the add-time refresh is stubbed out here.
+        series.LastSyncedAt.ShouldBeNull();
 
         // The cover is fetched when the series is added, not on first render: the
         // shelf has to work with the AniList CDN down.
@@ -377,7 +378,8 @@ public sealed class SeriesCommandServiceTests
 
         series.Description.ShouldNotBeNull().ShouldContain("Torturchen");
         series.CoverObjectKey.ShouldBe(MangaUpdatesCoverObjectKey);
-        series.LastSyncedAt.ShouldNotBeNull();
+        // Only a refresh stamps it; the add-time refresh is stubbed out here.
+        series.LastSyncedAt.ShouldBeNull();
 
         // Volumes 1..9, all of them in print: that is what a release source's count means,
         // and it is a stronger claim than AniList's volume list supports.
@@ -1020,12 +1022,10 @@ public sealed class SeriesCommandServiceTests
                         new AddTimeReleaseLink(
                             releaseSourceMatcher ?? NoReleaseLink(),
                             dbContext,
-                            NullLogger<AddTimeReleaseLink>.Instance),
-                        TimeProvider.System),
+                            NullLogger<AddTimeReleaseLink>.Instance)),
                     new MangaUpdatesAddSeriesFlow(
                         mangaUpdatesSource ?? Substitute.For<IMangaUpdatesSeriesQueryService>(),
                         CreateSeriesCoverCache(),
-                        TimeProvider.System,
                         NullLogger<MangaUpdatesAddSeriesFlow>.Instance),
                 ],
                 isbnBackfill ?? NoStagedIsbns(),
@@ -1050,7 +1050,7 @@ public sealed class SeriesCommandServiceTests
     }
 
     /// <summary>Staging holds nothing for this series — the usual case for a new one.</summary>
-    private static IIsbnBackfill NoStagedIsbns()
+    internal static IIsbnBackfill NoStagedIsbns()
     {
         var backfill = Substitute.For<IIsbnBackfill>();
         backfill.RunForSeriesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())

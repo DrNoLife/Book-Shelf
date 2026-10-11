@@ -6,6 +6,41 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Round 3: the shelf tells you (0.29.0, 2026-10-11)
+
+Built by a workflow: one foundation stage (schema, migration `Round3NotificationsCalendarActivity`,
+contracts, export) and five tracks, each reviewed independently and fixed, then integrated.
+
+- **Notifications (A).** `ShelfEventDiff` compares a snapshot taken at the start of
+  `SeriesRefresher.RefreshAsync` with the result ("out" = `IsReleased || ReleaseDate <= day`), and
+  the events are saved with their series (discarded with it on failure). After each user's run a
+  best-effort dispatch sends one Web Push digest per user (`IReleaseNotifier` →
+  `WebPushReleaseNotifier`, `Lib.Net.Http.WebPush`), marks what it looked at, and prunes events
+  older than 120 days. Subscribe endpoints accept known push hosts only (SSRF guard). Per-series
+  mute on the series page. `vapid-keys` console command.
+- **Since your last visit (B).** `GET api/activity` (with `Through`) and `POST api/activity/seen`
+  acknowledge only what was shown; the library panel refreshes after a sync.
+- **Installable app and calendar (C).** Manifest and icons; `/api/calendar/{token}.ics` from the
+  unfiltered `calendar_feed` table; the central exception handler logs `{token}` routes by their
+  template, so the token never reaches the app's log.
+- **Release links and count provenance (D).** Link an unlinked series to MangaUpdates by hand,
+  `/review`, `VolumeCountBasis`/`VolumeCountEvidence` beside the count, date source on volumes.
+- **Manual series and discovery (E).** `POST api/series/manual` plus local volume add/remove;
+  author and genre filters on the shelf; "More by {author}" from AniList (cached 24 h, shared).
+- **Integration.** Re-linking a series to a *different* MangaUpdates record clears
+  `LastSyncedAt`, so the next refresh is a first one and the new record's volumes are not news.
+  A hand-link test now also asserts no `shelf_event` rows.
+
+**[flagged] "Original Story" credits in More by author.** Built to include them (manga
+adaptations of the author's novels); the architect's amendment said author prefixes only.
+Owner decides; the change is small (`AniListAuthorWorksMapper.IsWritingCredit`).
+
+**Before release, by hand:** VAPID keys in the server `.env` (README, Notifications); on a
+real iPhone, Google sign-in inside the Home Screen app and the Enable tap; `nginx -t` and the
+manifest's content type in the image; subscribe from Google Calendar once live.
+
+---
+
 ## Search & add redesigned (0.24.1, 2026-10-10; the 0.24.0 tag failed CI on formatting and never shipped)
 
 Built from the owner's canvas (Search.dc / MSearch.dc) by a one-implementer workflow with an

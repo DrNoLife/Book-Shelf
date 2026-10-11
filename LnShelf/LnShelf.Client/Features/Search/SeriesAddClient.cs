@@ -3,7 +3,7 @@ using System.Net;
 namespace LnShelf.Client.Features.Search;
 
 /// <summary>
-/// POST api/series for one search result, answered with the one line the page prints about it.
+/// POST api/series (or api/series/manual), answered with the one line the page prints about it.
 /// </summary>
 // Apart from SeriesSearchState so the state container keeps the orchestration — the row add,
 // the add-all loop, the busy flags — and this keeps the wire: the request shape, the
@@ -11,41 +11,70 @@ namespace LnShelf.Client.Features.Search;
 public sealed class SeriesAddClient(HttpClient httpClient)
 {
     /// <param name="start">The preview's "Start with"; null adds the series untouched.</param>
-    public async Task<SeriesAddOutcome> AddAsync(
+    public Task<SeriesAddOutcome> AddAsync(
         SeriesSearchResultResponse result,
         StartingVolumes? start,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(result);
 
+        // Whichever id the row is carrying, and only that one: the API requires exactly
+        // one, because the two are different catalogues' names for the series.
+        var request = new AddSeriesRequest
+        {
+            AniListId = result.AniListId,
+            MangaUpdatesId = result.MangaUpdatesId,
+            Format = result.Format,
+            InitialReadCount = start?.Read,
+            InitialOwnedCount = start?.Owned,
+        };
+
+        return AddAsync(request, result.TitleEnglish, cancellationToken);
+    }
+
+    /// <summary>
+    /// Adds by id from anywhere that is not a search row — the series page's "More by" tiles.
+    /// </summary>
+    /// <param name="title">What the outcome line calls the series if the add fails.</param>
+    public Task<SeriesAddOutcome> AddAsync(
+        AddSeriesRequest request,
+        string title,
+        CancellationToken cancellationToken) =>
+        PostAsync("api/series", request, title, cancellationToken);
+
+    /// <summary>"Can't find it? Add it by hand": a series no catalogue knows.</summary>
+    public Task<SeriesAddOutcome> AddManualAsync(
+        AddManualSeriesRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return PostAsync("api/series/manual", request, request.TitleEnglish, cancellationToken);
+    }
+
+    private async Task<SeriesAddOutcome> PostAsync<TRequest>(
+        string route,
+        TRequest request,
+        string title,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            // Whichever id the row is carrying, and only that one: the API requires exactly
-            // one, because the two are different catalogues' names for the series.
-            var request = new AddSeriesRequest
-            {
-                AniListId = result.AniListId,
-                MangaUpdatesId = result.MangaUpdatesId,
-                Format = result.Format,
-                InitialReadCount = start?.Read,
-                InitialOwnedCount = start?.Owned,
-            };
-
-            using var response = await httpClient.PostAsJsonAsync("api/series", request, cancellationToken);
+            using var response = await httpClient.PostAsJsonAsync(route, request, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
                 var problem = await response.ReadProblemAsync(cancellationToken);
 
                 return Failed(problem is null
-                    ? $"Could not add {result.TitleEnglish}: {(int)response.StatusCode} {response.StatusCode}."
-                    : $"Could not add {result.TitleEnglish}: {problem}");
+                    ? $"Could not add {title}: {(int)response.StatusCode} {response.StatusCode}."
+                    : $"Could not add {title}: {problem}");
             }
 
             var added = await response.Content.ReadFromJsonAsync<AddSeriesResponse>(cancellationToken);
             if (added is null)
             {
-                return Failed($"Could not add {result.TitleEnglish}: the API returned no body.");
+                return Failed($"Could not add {title}: the API returned no body.");
             }
 
             // The 200-vs-201 distinction is the whole point of the idempotent add,
@@ -58,7 +87,7 @@ public sealed class SeriesAddClient(HttpClient httpClient)
         }
         catch (HttpRequestException exception)
         {
-            return Failed($"Could not add {result.TitleEnglish}: {exception.Message}");
+            return Failed($"Could not add {title}: {exception.Message}");
         }
     }
 

@@ -52,6 +52,48 @@ public static partial class MangaUpdatesVolumeCountParser
     }
 
     /// <summary>
+    /// The English edition's count as <see cref="ParseEnglishEditions"/> reads it, or else the
+    /// status line's as <see cref="Parse"/> reads it — together with which text won.
+    /// </summary>
+    /// <param name="englishPublishers">Each English publisher's name and note.</param>
+    /// <param name="status">The record's status field.</param>
+    /// <returns>Null when neither the notes nor the status state a count worth trusting.</returns>
+    // The same rule as ParseEnglishEditions then Parse, reading the same patterns, so the number
+    // cannot differ from the one the shelf has always used. It keeps the winning note instead of
+    // only its number: the highest count wins there, and the first note stating it is the one
+    // quoted when two publishers state the same.
+    public static VolumeCountReading? ReadCount(
+        IEnumerable<(string? Publisher, string? Notes)> englishPublishers,
+        string? status)
+    {
+        ArgumentNullException.ThrowIfNull(englishPublishers);
+
+        var winningNote = englishPublishers
+            .Where(publisher => !string.IsNullOrWhiteSpace(publisher.Notes))
+            .Select(publisher => (publisher.Publisher, Notes: publisher.Notes!.Trim(),
+                Count: FirstMatch(EnglishEditionVolumesPattern(), publisher.Notes!)))
+            .Where(publisher => publisher.Count is not null)
+            .OrderByDescending(publisher => publisher.Count)
+            .FirstOrDefault();
+
+        if (winningNote.Count is { } noteCount)
+        {
+            var evidence = string.IsNullOrWhiteSpace(winningNote.Publisher)
+                ? winningNote.Notes
+                : $"{winningNote.Publisher.Trim()}: {winningNote.Notes}";
+
+            return new VolumeCountReading(noteCount, VolumeCountBasis.EnglishPublisherNote, evidence);
+        }
+
+        // Parse reads the whole text, where "\s*" crosses a line break ("12\nVolumes") that
+        // CountedLine's per-line view cannot see. The count still stands; the whole status is
+        // then the evidence, rather than dropping a count the shelf has always used.
+        return Parse(status) is { } statusCount
+            ? new VolumeCountReading(statusCount, VolumeCountBasis.MangaUpdatesStatus, CountedLine(status) ?? status!.Trim())
+            : null;
+    }
+
+    /// <summary>
     /// How many bonus volumes the English edition counts beside its main ones: the 1 in
     /// "9 Volumes + 1 Extra", the 3 in "11+3 Volumes".
     /// </summary>

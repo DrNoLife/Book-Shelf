@@ -1,4 +1,5 @@
 @page "/"
+@using LnShelf.Client.Features.Activity.Components
 @using LnShelf.Client.Features.Library.Components
 
 <div class="page library">
@@ -20,6 +21,10 @@
                 <UpNextHeader Waiting="Library.Totals.Backlog" User="Profile.User" />
             </div>
         }
+
+        @* What the sync noticed while the reader was away, above everything they ordered.
+           It renders nothing when there is no news. *@
+        <SinceLastVisit />
 
         @* The header always leads; the three sections under it follow the reader's order
            (Profile → Library), at every width alike. *@

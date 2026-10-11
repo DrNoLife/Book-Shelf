@@ -61,6 +61,20 @@ public sealed record ReleaseSeriesInfo
     public int? VolumeCount { get; init; }
 
     /// <summary>
+    /// Which text <see cref="VolumeCount"/> was read from. Null when there is no count, or when
+    /// the source cannot say.
+    /// </summary>
+    // Optional, so a release source that knows nothing of provenance still compiles and simply
+    // records the basis as unknown.
+    public VolumeCountBasis? CountBasis { get; init; }
+
+    /// <summary>
+    /// The text <see cref="VolumeCount"/> was read from, verbatim and already cut to
+    /// <see cref="Series.VolumeCountEvidenceMaximumLength"/>.
+    /// </summary>
+    public string? CountEvidence { get; init; }
+
+    /// <summary>
     /// Bonus volumes the English edition counts beside <see cref="VolumeCount"/> — the 1 in
     /// "9 Volumes + 1 Extra". Zero when the source states none.
     /// </summary>

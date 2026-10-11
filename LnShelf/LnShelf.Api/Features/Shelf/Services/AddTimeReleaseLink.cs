@@ -47,11 +47,13 @@ public sealed class AddTimeReleaseLink(
                 series.TitleEnglish,
                 series.Volumes.Count);
 
+            KeepAniListCount(series);
             return;
         }
 
         if (!match.IsLinked)
         {
+            KeepAniListCount(series);
             return;
         }
 
@@ -59,6 +61,7 @@ public sealed class AddTimeReleaseLink(
 
         if (match.MatchedSeries?.VolumeCount is not { } volumeCount)
         {
+            KeepAniListCount(series);
             return;
         }
 
@@ -76,5 +79,17 @@ public sealed class AddTimeReleaseLink(
         {
             series.Volumes.Add(SeriesMetadataMapper.ToVolume(new VolumeMetadata { Number = number }));
         }
+    }
+
+    /// <summary>
+    /// Records that the volumes stand on AniList's count, because the release source gave none.
+    /// </summary>
+    // Only on the paths where MangaUpdates said nothing about the count. When it did, the
+    // refresh that follows the add writes the count and its provenance together
+    // (ReleaseCountWriter), which is the one place a release-source basis is written.
+    private static void KeepAniListCount(Series series)
+    {
+        series.VolumeCountBasis = VolumeCountBasis.AniList;
+        series.VolumeCountEvidence = null;
     }
 }

@@ -1,0 +1,98 @@
+@using LnShelf.Shared.Notifications
+
+@* "Notifications", for the user page's right column (feature-spec §4.5): turn release
+   notifications on for this device, see the others, send a test. On or off is per device and
+   nothing more; muting a series is on its page. Not drawn at all when the server has no Web
+   Push keys: a control that can never work is left out, not faked (design.md, Not built). *@
+
+@if (State.Settings is { Available: true } settings)
+{
+    <Panel class="notifications" aria-labelledby="notifications-title">
+        <h2 class="title-panel" id="notifications-title">Notifications</h2>
+
+        <p class="fine">
+            One message after each sync, when a volume comes out or gets a date. Mute a series
+            from its page.
+        </p>
+
+        @if (State.Browser is { } browser)
+        {
+            var thisDevice = State.ThisDevice;
+            var obstacle = thisDevice is null ? NotificationsText.Obstacle(browser) : null;
+
+            @if (obstacle is not null)
+            {
+                <p class="fine">@obstacle</p>
+            }
+
+            <div class="actions">
+                @if (thisDevice is not null)
+                {
+                    <button type="button" class="ghost" disabled="@State.IsBusy" @onclick="() => State.RemoveAsync(thisDevice)">
+                        Turn off on this device
+                    </button>
+                }
+                else if (obstacle is null)
+                {
+                    <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="OnEnableAsync">
+                        Turn on for this device
+                    </button>
+                }
+
+                @if (settings.Devices.Count > 0)
+                {
+                    <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="() => State.SendTestAsync()">
+                        Send a test
+                    </button>
+                }
+            </div>
+        }
+
+        @if (settings.Devices.Count > 0)
+        {
+            <div class="devices">
+                <span class="eyebrow" id="notification-devices-title">On for</span>
+                <ul class="devices__list" aria-labelledby="notification-devices-title">
+                    @foreach (var device in settings.Devices)
+                    {
+                        var isThisDevice = device.Id == State.ThisDevice?.Id;
+
+                        <li class="devices__row" @key="device.Id">
+                            <span class="fine">
+                                @NotificationsText.DeviceLine(device)@(isThisDevice ? " · this device" : null)
+                            </span>
+                            @if (!isThisDevice)
+                            {
+                                <button type="button"
+                                        class="ghost"
+                                        disabled="@State.IsBusy"
+                                        aria-label="@($"Turn off for {device.DeviceLabel ?? "this browser"}")"
+                                        @onclick="() => State.RemoveAsync(device)">
+                                    Remove
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (State.TestOutcome is { } outcome)
+        {
+            <p class="notice notice--quiet" role="status">@outcome</p>
+        }
+
+        @if (State.Message is { } message)
+        {
+            <p class="notice notice--warning" role="alert">@message</p>
+        }
+    </Panel>
+}
+else if (State.Settings is null && State.Message is { } loadFailure)
+{
+    @* The settings could not be read: say so, rather than look like a server without keys. *@
+    <Panel class="notifications" aria-labelledby="notifications-title">
+        <h2 class="title-panel" id="notifications-title">Notifications</h2>
+        <p class="notice notice--warning" role="alert">@loadFailure</p>
+    </Panel>
+}

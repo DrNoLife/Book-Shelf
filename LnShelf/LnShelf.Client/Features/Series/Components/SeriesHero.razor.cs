@@ -50,32 +50,38 @@ public partial class SeriesHero
     private void ToggleDescription() =>
         _expandedSeriesId = IsDescriptionExpanded ? null : Series.SeriesId;
 
+    /// <summary>The author, rendered as a link into the shelf. Null when no source names one.</summary>
+    private string? AuthorName => string.IsNullOrWhiteSpace(Series.Author) ? null : Series.Author;
+
     /// <summary>
-    /// "Carlo Zen, illustrated by Shinobu Shinotsuki · Kadokawa", with the clauses that
-    /// have no data left out rather than rendered empty. Null when none has any.
+    /// The rest of "Carlo Zen, illustrated by Shinobu Shinotsuki · Kadokawa" after the
+    /// author's link, with the clauses that have no data left out rather than rendered empty.
     /// </summary>
-    private string? CreditsLine
+    private string CreditsAfterAuthor
     {
         get
         {
-            var parts = new List<string>();
+            var credits = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(Series.Author)) parts.Add(Series.Author);
             if (!string.IsNullOrWhiteSpace(Series.Illustrator))
             {
-                parts.Add($"illustrated by {Series.Illustrator}");
+                credits = AuthorName is null
+                    ? $"illustrated by {Series.Illustrator}"
+                    : $", illustrated by {Series.Illustrator}";
             }
-
-            var credits = string.Join(", ", parts);
 
             if (!string.IsNullOrWhiteSpace(Series.Publisher))
             {
-                credits = credits.Length == 0 ? Series.Publisher : $"{credits} · {Series.Publisher}";
+                credits = AuthorName is null && credits.Length == 0
+                    ? Series.Publisher
+                    : $"{credits} · {Series.Publisher}";
             }
 
-            return credits.Length == 0 ? null : credits;
+            return credits;
         }
     }
+
+    private bool HasCredits => AuthorName is not null || CreditsAfterAuthor.Length > 0;
 
     /// <summary>"Since 2014" while it runs, "2014" once it has ended.</summary>
     private string? YearLine => Series.StartYear is { } startYear

@@ -85,6 +85,15 @@
                 @onclick="MarkOwnedThroughAsync">
             Mark 1–@(OwnedThrough?.ToVolumeText()) owned
         </button>
+
+        @* Only on a series kept by hand: a synced series' volumes are its sources' to decide.
+           Every width, because on a phone there is no other way to grow one. *@
+        @if (ManualSeries.IsKeptByHand(Series))
+        {
+            <button type="button" class="secondary" disabled="@SeriesState.IsSaving" @onclick="AddVolumeAsync">
+                Add Vol @NextVolumeNumber.ToVolumeText()
+            </button>
+        }
     }
 
     @if (IsReadDatePanelShown)

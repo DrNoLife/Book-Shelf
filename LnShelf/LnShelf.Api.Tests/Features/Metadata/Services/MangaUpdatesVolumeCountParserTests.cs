@@ -94,4 +94,55 @@ public sealed class MangaUpdatesVolumeCountParserTests
         // between publishers is the other, and the older note stops where it stopped.
         MangaUpdatesVolumeCountParser.ParseEnglishEditions(["14 Audiobooks; Ongoing", "16 Volumes; Ongoing", "12 Volumes; Cancelled"])
             .ShouldBe(16);
+
+    [Fact]
+    public void ReadCount_AnEnglishNote_QuotesThePublisherAndItsNote() =>
+        MangaUpdatesVolumeCountParser.ReadCount([("Yen On", "9 Volumes + 1 Extra - Complete")], "10 Volumes (Complete)")
+            .ShouldBe(new VolumeCountReading(9, VolumeCountBasis.EnglishPublisherNote, "Yen On: 9 Volumes + 1 Extra - Complete"));
+
+    [Fact]
+    public void ReadCount_SeveralEnglishNotes_QuotesTheOneWhoseCountWon() =>
+        MangaUpdatesVolumeCountParser.ReadCount(
+                [("Yen Audio", "14 Audiobooks; Ongoing"), ("Yen On", "16 Volumes; Ongoing"), ("Seven Seas", "12 Volumes; Cancelled")],
+                status: null)
+            .ShouldBe(new VolumeCountReading(16, VolumeCountBasis.EnglishPublisherNote, "Yen On: 16 Volumes; Ongoing"));
+
+    [Fact]
+    public void ReadCount_NoPublisherName_QuotesTheNoteAlone() =>
+        MangaUpdatesVolumeCountParser.ReadCount([(null, " 16 Volumes; Ongoing ")], status: null)
+            .ShouldBe(new VolumeCountReading(16, VolumeCountBasis.EnglishPublisherNote, "16 Volumes; Ongoing"));
+
+    // Slime: no English note states a count, so the status line does — and the line quoted is
+    // the one the count came from, not the web-novel line before it.
+    [Fact]
+    public void ReadCount_NoEnglishCount_QuotesTheStatusLineTheCountCameFrom() =>
+        MangaUpdatesVolumeCountParser.ReadCount(
+                [("Yen Audio", "14 Audiobooks; Ongoing")],
+                "14 WN Volumes + 2 SS Volumes (Complete)  \n23 LN Volumes + 2 SS Volumes (Complete)")
+            .ShouldBe(new VolumeCountReading(23, VolumeCountBasis.MangaUpdatesStatus, "23 LN Volumes + 2 SS Volumes (Complete)"));
+
+    // The count crosses a line break, so no single line carries it: the whole status is quoted.
+    [Fact]
+    public void ReadCount_CountSplitAcrossLines_QuotesTheWholeStatus() =>
+        MangaUpdatesVolumeCountParser.ReadCount([], " 12\nVolumes (Ongoing) ")
+            .ShouldBe(new VolumeCountReading(12, VolumeCountBasis.MangaUpdatesStatus, "12\nVolumes (Ongoing)"));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Ongoing")]
+    public void ReadCount_NothingCountable_IsNull(string? status) =>
+        MangaUpdatesVolumeCountParser.ReadCount([("Yen Audio", "14 Audiobooks; Ongoing")], status).ShouldBeNull();
+
+    // The provenance must describe the very number the shelf has always used: the same count as
+    // the English-edition rule, falling back to the status rule.
+    [Theory]
+    [InlineData("9 Volumes + 1 Extra - Complete", "10 Volumes (Complete)")]
+    [InlineData("33 Digital Volumes; Complete", "33 Volumes (Complete)")]
+    [InlineData(null, "26 LN Volumes (Complete)  \n24 Web Volumes (Complete)")]
+    [InlineData("", "14 WN Volumes (Complete)")]
+    [InlineData(null, "12\nVolumes (Ongoing)")]
+    [InlineData(null, "23 LN\nVolumes (Complete)")]
+    public void ReadCount_AnyText_CountsWhatTheOldRulesCounted(string? notes, string status) =>
+        (MangaUpdatesVolumeCountParser.ReadCount([("Publisher", notes)], status)?.Count)
+            .ShouldBe(MangaUpdatesVolumeCountParser.ParseEnglishEditions([notes]) ?? MangaUpdatesVolumeCountParser.Parse(status));
 }

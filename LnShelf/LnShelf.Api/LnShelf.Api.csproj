@@ -20,6 +20,12 @@
          are exactly the thing not to hand-roll. No dependencies of its own. -->
     <PackageReference Include="CsvHelper" Version="33.1.0" />
 
+    <!-- Web Push (feature-spec §4.5): the RFC 8291 payload encryption and VAPID signing,
+         which are exactly the thing not to hand-roll. On net5.0 and later it uses the
+         framework's own crypto, with Lib.Net.Http.EncryptedContentEncoding as its only
+         dependency (no BouncyCastle). -->
+    <PackageReference Include="Lib.Net.Http.WebPush" Version="3.3.1" />
+
     <!-- Cover normalization (feature-spec §4.3: cap dimensions, re-encode to webp,
          strip metadata). ImageSharp is under the Six Labors Split License, which is
          free for this project's use; it is the only practical option, since

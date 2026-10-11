@@ -299,8 +299,7 @@ public sealed class AddSeriesPipelineTests
                     new AddTimeReleaseLink(
                         SeriesCommandServiceTests.NoReleaseLink(),
                         dbContext,
-                        NullLogger<AddTimeReleaseLink>.Instance),
-                    TimeProvider.System),
+                        NullLogger<AddTimeReleaseLink>.Instance)),
             ],
             Substitute.For<IIsbnBackfill>(),
             Substitute.For<ISeriesSyncService>(),

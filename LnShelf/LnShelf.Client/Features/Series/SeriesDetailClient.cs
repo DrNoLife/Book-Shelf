@@ -1,4 +1,5 @@
 using System.Net;
+using LnShelf.Shared.Notifications;
 
 namespace LnShelf.Client.Features.Series;
 
@@ -154,6 +155,17 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
             "Could not save that",
             cancellationToken);
 
+    /// <summary>Mutes or unmutes notifications about this series. Answers with the refreshed series.</summary>
+    public Task<SeriesDetailResponse?> SetNotificationsMutedAsync(
+        Guid seriesId,
+        bool muted,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/series/{seriesId}/notifications",
+            new SetSeriesNotificationsRequest { Muted = muted },
+            "Could not save that",
+            cancellationToken);
+
     /// <summary>
     /// Acknowledges the new-volume badge, so the card stops glowing on the way back to
     /// the library.
@@ -219,6 +231,38 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
 
         return await ReadDetailAsync(response, "Could not remove that cover", cancellationToken);
     }
+
+    /// <summary>
+    /// Adds a volume to a series kept by hand: the next whole number when none is given.
+    /// </summary>
+    public async Task<SeriesDetailResponse?> AddVolumeAsync(
+        Guid seriesId,
+        decimal? number,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"api/series/{seriesId}/volumes", new AddLocalVolumeRequest { Number = number }, cancellationToken);
+
+        return await ReadDetailAsync(response, "Could not add that volume", cancellationToken);
+    }
+
+    /// <summary>Removes a volume added by hand, with the reader's state on it.</summary>
+    public async Task<SeriesDetailResponse?> RemoveVolumeAsync(
+        Guid seriesId,
+        Guid volumeId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync(
+            $"api/series/{seriesId}/volumes/{volumeId}", cancellationToken);
+
+        return await ReadDetailAsync(response, "Could not remove that volume", cancellationToken);
+    }
+
+    /// <summary>"More by {author}": AniList's list, marked with what is already on the shelf.</summary>
+    public Task<AuthorWorksResponse?> GetMoreByAuthorAsync(
+        Guid seriesId,
+        CancellationToken cancellationToken = default) =>
+        httpClient.GetFromJsonAsync<AuthorWorksResponse>($"api/series/{seriesId}/more-by-author", cancellationToken);
 
     /// <summary>
     /// A PUT that answers with the refreshed series — which is every write on this page

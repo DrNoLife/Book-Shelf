@@ -1,0 +1,29 @@
+@* A release calendar's link and what to do with it: open it in the calendar app (webcal://),
+   or copy it to paste into one that only takes a URL (Google Calendar: Other calendars,
+   From URL). Shared by the Profile card and Upcoming's "Subscribe in calendar". *@
+
+<div class="link">
+    <label class="link__label" for="@FieldId">Calendar link</label>
+    @* Read-only and selected on focus: the fallback where the clipboard is not available
+       (plain http on the home network). *@
+    <input id="@FieldId" class="link__field" type="text" readonly
+           value="@HttpsLink" onfocus="this.select()" />
+</div>
+
+<div class="actions">
+    <a class="secondary" href="@WebcalLink">
+        <Icon Name="IconName.CalendarBlank" Size="14" />
+        <span>Open in calendar app</span>
+    </a>
+    <button type="button" class="secondary" @onclick="OnCopyAsync">
+        @(HasCopied ? "Copied" : "Copy link")
+    </button>
+    @ChildContent
+</div>
+
+@if (CopyMessage is { } copyMessage)
+{
+    <p class="notice notice--quiet" role="status">@copyMessage</p>
+}
+
+<p class="fine">Google Calendar: Other calendars, then From URL, and paste the link.</p>

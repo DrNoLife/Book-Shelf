@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Routing;
+
 namespace LnShelf.Client.Features.Library.Components;
 
 public partial class ShelfSection : IDisposable
@@ -7,6 +9,18 @@ public partial class ShelfSection : IDisposable
 
     [Inject]
     public required PreferencesState Preferences { get; set; }
+
+    /// <summary>For the links into the shelf (LibraryLinks): a genre tag or an author.</summary>
+    [Inject]
+    public required NavigationManager Navigation { get; set; }
+
+    [Inject]
+    public required IJSRuntime JavaScript { get; set; }
+
+    private ElementReference _section;
+
+    /// <summary>A link was just applied: bring the shelf into view once it has drawn.</summary>
+    private bool _scrollToShelf;
 
     private LibraryResponse? Library => LibraryState.Library;
 
@@ -49,9 +63,11 @@ public partial class ShelfSection : IDisposable
         }
     }
 
-    /// <summary>A status or format filter is hiding series.</summary>
+    /// <summary>A status, format or genre filter is hiding series.</summary>
     private bool IsFiltered =>
-        !LibraryFilterSet.IsEverything(LibraryState.SelectedFilters) || LibraryState.SelectedFormat is not null;
+        !LibraryFilterSet.IsEverything(LibraryState.SelectedFilters)
+        || LibraryState.SelectedFormat is not null
+        || LibraryState.SelectedGenres.Count > 0;
 
     /// <summary>The footer names the order it is actually in, not the default one.</summary>
     private string SortLabel => LibraryState.Sort switch
@@ -69,12 +85,56 @@ public partial class ShelfSection : IDisposable
     {
         LibraryState.Changed += OnStateChanged;
         Preferences.Changed += OnStateChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+
+        ApplyLink(Navigation.Uri);
     }
 
     public void Dispose()
     {
         LibraryState.Changed -= OnStateChanged;
         Preferences.Changed -= OnStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    /// <summary>
+    /// A genre tag or an author clicked while the library is already open arrives as a new
+    /// query on the same page, not as a new page.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args) => ApplyLink(args.Location);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Waits for the shelf to load: the sections above it change height as they fill in.
+        if (!_scrollToShelf || Library is null)
+        {
+            return;
+        }
+
+        _scrollToShelf = false;
+        await JavaScript.InvokeVoidAsync("lnshelf.scrollIntoView", _section);
+    }
+
+    private void ApplyLink(string uri)
+    {
+        var link = LibraryLinks.Read(uri);
+        if (link.IsEmpty)
+        {
+            return;
+        }
+
+        LibraryState.ApplyLink(link.Genre, link.Text);
+        _scrollToShelf = true;
+
+        // One-shot: the query comes off the address straight away (replacing the history
+        // entry, so Back does not land on it again). Left in place, Back from a series or a
+        // reload would put the filter back after the reader had cleared it.
+        var withoutLink = Navigation.GetUriWithQueryParameters(uri, new Dictionary<string, object?>
+        {
+            [LibraryLinks.GenreParameter] = null,
+            [LibraryLinks.TextParameter] = null,
+        });
+        Navigation.NavigateTo(withoutLink, replace: true);
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

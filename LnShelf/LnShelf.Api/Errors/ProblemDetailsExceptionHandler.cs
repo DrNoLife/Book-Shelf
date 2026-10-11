@@ -82,6 +82,26 @@ public sealed class ProblemDetailsExceptionHandler(
     }
 
     /// <summary>
+    /// The request path as the log may hold it: a route that carries a secret token (the
+    /// release calendar feed, the shared shelf) logs its route template instead, so
+    /// <c>/api/calendar/{token}.ics</c> reaches the log and the token itself does not.
+    /// </summary>
+    // The token is a bearer secret: whoever reads the application log could otherwise open
+    // the feed or the shelf. Every other route keeps its real path, which is what makes a
+    // 500 traceable. The exception middleware clears the endpoint before calling handlers,
+    // so the matched one is read from the feature it leaves behind.
+    public static string LoggablePath(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        var endpoint = httpContext.Features.Get<IExceptionHandlerFeature>()?.Endpoint ?? httpContext.GetEndpoint();
+
+        return endpoint is RouteEndpoint { RoutePattern: var pattern } && pattern.GetParameter("token") is not null
+            ? "/" + (pattern.RawText ?? string.Empty).TrimStart('/')
+            : httpContext.Request.Path.ToString();
+    }
+
+    /// <summary>
     /// A 400 is the caller's problem and a normal event; a 500 is ours; a 503 is
     /// neither, and is the one worth noticing in the log without paging anyone.
     /// </summary>
@@ -91,17 +111,17 @@ public sealed class ProblemDetailsExceptionHandler(
         {
             case StatusCodes.Status500InternalServerError:
                 logger.LogError(exception, "Unhandled exception on {Method} {Path}",
-                    httpContext.Request.Method, httpContext.Request.Path);
+                    httpContext.Request.Method, LoggablePath(httpContext));
                 break;
 
             case StatusCodes.Status503ServiceUnavailable:
                 logger.LogWarning("Upstream unavailable on {Method} {Path}: {Reason}",
-                    httpContext.Request.Method, httpContext.Request.Path, exception.Message);
+                    httpContext.Request.Method, LoggablePath(httpContext), exception.Message);
                 break;
 
             default:
                 logger.LogInformation("Refused {Method} {Path}: {Reason}",
-                    httpContext.Request.Method, httpContext.Request.Path, exception.Message);
+                    httpContext.Request.Method, LoggablePath(httpContext), exception.Message);
                 break;
         }
     }

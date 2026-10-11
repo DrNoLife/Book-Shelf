@@ -1,0 +1,45 @@
+.review {
+  --page-width: 760px;
+}
+
+.review__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.review__intro { color: var(--muted); }
+
+/* One row per question on hairlines, the whole row a 52px target — the profile list's rhythm. */
+.review__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.review__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+}
+
+.review__row:hover .review__series { color: var(--text-strong); }
+
+.review__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.review__series { font-weight: 600; overflow-wrap: anywhere; }
+
+.review__question { color: var(--muted); }

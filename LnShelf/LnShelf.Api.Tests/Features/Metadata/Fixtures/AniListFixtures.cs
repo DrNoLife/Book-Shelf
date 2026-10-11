@@ -13,6 +13,9 @@ namespace LnShelf.Api.Tests.Features.Metadata.Fixtures;
 //   anilist-search-mushoku.json                      SeriesSearch, q=mushoku,
 //                                                    all three tracked formats, perPage 20
 //   anilist-media-85470-mushoku-tensei-novel.json    SeriesDetail, id 85470 (the light novel)
+//   anilist-author-works-85470-mushoku-tensei-novel.json
+//                                                    AuthorWorks, id 85470, perPage 20 —
+//                                                    captured 2026-10-11, verbatim
 //
 // Two amendments, flagged rather than hidden, both because a field joined a query after
 // the capture:
@@ -34,6 +37,7 @@ internal static class AniListFixtures
 {
     public const string MushokuSearch = "anilist-search-mushoku.json";
     public const string MushokuTenseiNovel = "anilist-media-85470-mushoku-tensei-novel.json";
+    public const string MushokuTenseiNovelAuthorWorks = "anilist-author-works-85470-mushoku-tensei-novel.json";
 
     /// <summary>AniList's media id for the Mushoku Tensei light novel.</summary>
     public const int MushokuTenseiNovelId = 85470;

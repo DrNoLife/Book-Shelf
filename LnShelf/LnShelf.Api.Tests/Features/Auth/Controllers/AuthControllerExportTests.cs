@@ -71,6 +71,8 @@ public sealed class AuthControllerExportTests
             LastSeenAt = new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero),
         },
         Sharing = new AccountExportSharing { IsPublic = false },
+        Calendar = new AccountExportCalendar { IsOn = false },
+        NotificationDevices = [],
         Preferences = new PreferencesResponse
         {
             GridDensity = GridDensity.Compact,

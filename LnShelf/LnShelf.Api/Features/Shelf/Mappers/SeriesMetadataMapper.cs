@@ -30,16 +30,11 @@ public static class SeriesMetadataMapper
         public string? Description { get; init; }
     }
 
-    /// <param name="syncedAt">
-    /// Supplied by the caller from <c>TimeProvider</c>, the same way
-    /// <see cref="LibraryCardProjection"/> takes "today".
-    /// </param>
     /// <param name="coverObjectKey">
     /// The locally cached cover, or null when caching did not happen.
     /// </param>
     public static Series ToTrackedSeries(
         SeriesMetadata metadata,
-        DateTimeOffset syncedAt,
         string? coverObjectKey)
     {
         ArgumentNullException.ThrowIfNull(metadata);
@@ -58,7 +53,7 @@ public static class SeriesMetadataMapper
             UserState = new SeriesUserState { TrackingStatus = TrackingStatus.PlanToStart },
         };
 
-        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
+        Apply(series, ToFacts(metadata), coverObjectKey);
 
         foreach (var volume in metadata.Volumes)
         {
@@ -88,7 +83,6 @@ public static class SeriesMetadataMapper
     // The fields both sources do describe go through the same Apply the AniList path uses.
     public static Series ToTrackedSeries(
         MangaUpdatesSeriesMetadata metadata,
-        DateTimeOffset syncedAt,
         string? coverObjectKey)
     {
         ArgumentNullException.ThrowIfNull(metadata);
@@ -105,7 +99,7 @@ public static class SeriesMetadataMapper
             UserState = new SeriesUserState { TrackingStatus = TrackingStatus.PlanToStart },
         };
 
-        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
+        Apply(series, ToFacts(metadata), coverObjectKey);
 
         for (var number = 1; number <= (metadata.VolumeCount ?? 0); number++)
         {
@@ -138,13 +132,12 @@ public static class SeriesMetadataMapper
     public static void ApplyMetadata(
         Series series,
         SeriesMetadata metadata,
-        DateTimeOffset syncedAt,
         string? coverObjectKey)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        Apply(series, ToFacts(metadata), syncedAt, coverObjectKey);
+        Apply(series, ToFacts(metadata), coverObjectKey);
     }
 
     private static SeriesFacts ToFacts(SeriesMetadata metadata) => new()
@@ -205,10 +198,13 @@ public static class SeriesMetadataMapper
     // this is metadata the source owns, so whatever it says now is the answer. A cover key
     // of null is the single exception — it leaves the existing one alone rather than
     // clearing it, because a failed fetch is not evidence that the cover is gone.
+    //
+    // LastSyncedAt is deliberately not written here. It means "the release source has been
+    // compared with this series", which only SeriesRefresher does; stamped at add time, the
+    // add-time refresh read as a second one and announced the whole backlist as news.
     private static void Apply(
         Series series,
         SeriesFacts facts,
-        DateTimeOffset syncedAt,
         string? coverObjectKey)
     {
         series.Format = facts.Format;
@@ -223,7 +219,6 @@ public static class SeriesMetadataMapper
         series.Author = facts.Author;
         series.Illustrator = facts.Illustrator;
         series.Description = facts.Description;
-        series.LastSyncedAt = syncedAt;
 
         if (coverObjectKey is not null)
         {

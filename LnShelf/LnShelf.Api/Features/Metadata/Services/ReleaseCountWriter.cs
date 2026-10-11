@@ -30,6 +30,11 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
         // later needs the count as it stood, and nothing else on the shelf records it.
         series.ReleaseSourceVolumeCount = sourceCount;
 
+        // Its provenance, beside it and nowhere else: these describe exactly this number, so
+        // they are written whenever it is, choice or no choice.
+        series.VolumeCountBasis = info.CountBasis;
+        series.VolumeCountEvidence = info.CountEvidence;
+
         // Main volumes only. The release source counts "9 Volumes + 1 Extra" as nine, so a
         // tracked bonus Vol. 7.5 is not a tenth volume to disagree about.
         var trackedCount = series.Volumes.Count(volume => !volume.Number.IsBonusVolume);

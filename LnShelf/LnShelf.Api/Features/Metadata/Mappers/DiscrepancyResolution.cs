@@ -30,6 +30,13 @@ public static class DiscrepancyResolutionReader
                 return new DiscrepancyResolution(choice.Source, ByChoice: true);
             }
 
+            // A link the user made by hand. It is no SourceChoice and cannot be reset, so the
+            // recorded resolution is still exactly what happened.
+            if (discrepancy is { Field: SyncDiscrepancyField.SeriesLink, ResolvedByChoice: true })
+            {
+                return new DiscrepancyResolution(discrepancy.ResolvedWith, ByChoice: true);
+            }
+
             // Recorded as the user's pick, and the pick has since been reset: the row no
             // longer describes what happens, so it reads as what automatic sync would do.
             return discrepancy.ResolvedByChoice

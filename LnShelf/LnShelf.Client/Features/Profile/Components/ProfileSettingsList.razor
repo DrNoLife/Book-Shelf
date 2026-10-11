@@ -37,6 +37,18 @@
         </span>
     </div>
 
+    @* The sidebar's "N to review" link, for the phone: only when the last sync left questions. *@
+    @if (SyncReviewCount > 0)
+    {
+        <a class="settings__row" href="review">
+            <span>Sync review</span>
+            <span class="settings__aside">
+                <Pill Tone="PillTone.Attention">@SyncReviewCount to review</Pill>
+                <Icon Name="IconName.CaretRight" Size="14" />
+            </span>
+        </a>
+    }
+
     @* The sidebar's "Sync now", for the phone, where there is no sidebar. *@
     <button type="button" class="settings__row" disabled="@SyncState.IsFollowingRun" @onclick="SyncNowAsync">
         <span>Sync now</span>

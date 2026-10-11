@@ -1,11 +1,12 @@
 @page "/upcoming"
+@using LnShelf.Client.Features.Calendar.Components
 @using LnShelf.Client.Features.Upcoming.Components
 
 @* "What do I need to buy?" (design: Upcoming.dc / MUpcoming.dc). Out now first, because it is
    the only group something can be done about today; then the next six months; then what is
    known to exist without a date. The format tabs apply here too — LN and manga are different
-   budgets. The mockup's "Subscribe in calendar" is left out until there is a feed to
-   subscribe to (design.md, Not built). *@
+   budgets. "Subscribe in calendar" sits under the head: the same dates, in the reader's own
+   calendar app (feature-spec §4.9). *@
 
 <div class="page upcoming">
     <div class="page__stack">
@@ -20,6 +21,8 @@
             </div>
             <FormatTabs Selected="State.SelectedFormat" SelectedChanged="State.SelectFormatAsync" />
         </header>
+
+        <CalendarSubscribe />
 
         @if (BuyState.Message is { } message)
         {

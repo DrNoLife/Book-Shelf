@@ -23,6 +23,9 @@ public static class ClientSource
     public static string ReadAllText(string relativePath) =>
         File.ReadAllText(Path.Combine(ProjectDirectory, relativePath));
 
+    public static byte[] ReadAllBytes(string relativePath) =>
+        File.ReadAllBytes(Path.Combine(ProjectDirectory, relativePath));
+
     private static string Locate([CallerFilePath] string testFilePath = "")
     {
         var testsDirectory = Path.GetDirectoryName(Path.GetDirectoryName(testFilePath))!;

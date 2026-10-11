@@ -8,8 +8,8 @@
 
     <div class="toolbar__bar">
         <SearchField class="toolbar__search"
-                     AriaLabel="Filter the shelf by title"
-                     Placeholder="Filter by title"
+                     AriaLabel="Filter the shelf by title or author"
+                     Placeholder="Filter by title or author"
                      ClearLabel="Clear the title filter"
                      Value="@TextFilter"
                      ValueChanged="TextFilterChanged" />
@@ -21,6 +21,9 @@
                                  SaveDefaultRequested="SaveDefaultRequested"
                                  Format="Format"
                                  FormatChanged="FormatChanged"
+                                 Genres="Genres"
+                                 SelectedGenres="SelectedGenres"
+                                 GenreToggled="GenreToggled"
                                  Sort="Sort"
                                  SortChanged="SortChanged"
                                  View="View"
@@ -33,6 +36,8 @@
     <div class="toolbar__summary">
         <ActiveFilterChips Status="Status"
                            Format="Format"
+                           Genres="SelectedGenres"
+                           GenreRemoved="GenreRemoved"
                            HasTextFilter="@(!string.IsNullOrWhiteSpace(TextFilter))"
                            StatusRemoved="StatusRemoved"
                            FormatCleared="() => FormatChanged.InvokeAsync(null)"

@@ -125,11 +125,12 @@ public sealed class NightlySyncBackgroundService(
         scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId);
         var sync = scope.ServiceProvider.GetRequiredService<ISeriesSyncService>();
 
+        bool completed;
         try
         {
             await sync.RunAsync(budget, stoppingToken);
 
-            return true;
+            completed = true;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -142,8 +143,15 @@ public sealed class NightlySyncBackgroundService(
             // others' runs, and the loop has to survive to try again tomorrow.
             logger.LogError(exception, "The nightly sync run for user {UserId} failed outright", userId);
 
-            return false;
+            completed = false;
         }
+
+        // After the run either way, still holding the lease and acting as the user: a run that
+        // fell over halfway saved the series before it, and their news is still news. Best
+        // effort, so it never changes what the heartbeat reports.
+        await scope.ServiceProvider.GetRequiredService<IReleaseNotificationDispatcher>().DispatchAsync(stoppingToken);
+
+        return completed;
     }
 
     private TimeSpan TimeUntilNextRun() =>

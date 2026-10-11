@@ -33,6 +33,8 @@ public static class MangaUpdatesSeriesMapper
     {
         ArgumentNullException.ThrowIfNull(record);
 
+        var countReading = ReadVolumeCount(record);
+
         return new ReleaseSeriesInfo
         {
             ExternalId = record.SeriesId,
@@ -47,7 +49,9 @@ public static class MangaUpdatesSeriesMapper
             // the same rule, so the two paths cannot disagree about one record.
             IsCompleted = ToPublicationStatus(record.Status) is PublicationStatus.Completed,
             PublicationStatus = ToPublicationStatus(record.Status),
-            VolumeCount = VolumeCountOf(record),
+            VolumeCount = countReading?.Count,
+            CountBasis = countReading?.Basis,
+            CountEvidence = Truncate(countReading?.Evidence, Series.VolumeCountEvidenceMaximumLength),
             ExtraVolumeCount = MangaUpdatesVolumeCountParser.ParseEnglishEditionExtras(EnglishPublisherNotes(record)),
             RawStatus = record.Status.NullIfBlank(),
         };
@@ -223,9 +227,20 @@ public static class MangaUpdatesSeriesMapper
     /// </summary>
     // One rule for search, add and refresh, so the count a reader is shown when adding a
     // series is the count the nightly sync then holds it to.
-    private static int? VolumeCountOf(MangaUpdatesSeriesRecord record) =>
-        MangaUpdatesVolumeCountParser.ParseEnglishEditions(EnglishPublisherNotes(record))
-        ?? MangaUpdatesVolumeCountParser.Parse(record.Status);
+    private static int? VolumeCountOf(MangaUpdatesSeriesRecord record) => ReadVolumeCount(record)?.Count;
+
+    /// <summary>The count of <see cref="VolumeCountOf"/>, with the text it was read from.</summary>
+    private static VolumeCountReading? ReadVolumeCount(MangaUpdatesSeriesRecord record) =>
+        MangaUpdatesVolumeCountParser.ReadCount(
+            (record.Publishers ?? [])
+                .Where(publisher => string.Equals(publisher.Type, "English", StringComparison.OrdinalIgnoreCase))
+                .Select(publisher => (publisher.PublisherName, publisher.Notes)),
+            record.Status);
+
+    // The column is bounded and a publisher's note is free text of any length; the head of
+    // the note is the part that states the count.
+    private static string? Truncate(string? text, int maximumLength) =>
+        text is { Length: var length } && length > maximumLength ? text[..maximumLength] : text;
 
     private static IEnumerable<string?> EnglishPublisherNotes(MangaUpdatesSeriesRecord record) =>
         (record.Publishers ?? [])

@@ -126,6 +126,16 @@
   color: var(--faint);
 }
 
+/* The review count reads as the rest of the note, underlined because it is the one part that
+   goes somewhere. */
+.sidebar ::deep .sync__review {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sidebar ::deep .sync__review:hover { color: var(--text); }
+
 .foot {
   display: flex;
   flex-wrap: wrap;

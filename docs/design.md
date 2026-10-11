@@ -158,8 +158,8 @@ On `--sidebar`, a `--line` hairline on the right. Top to bottom:
    `aria-pressed`; the active one is `--raise`. Only the attention shelf's
    *count* is `--acc-soft`.
 4. **Bottom:** Profile (`/profile`, a nav row) · the sync note (a `SignalDot`
-   and one line — "Synced 3 h ago", plus "· 2 to review" when something waits;
-   the run's own numbers are in the tooltip) · Changelog · Privacy · Sign out.
+   and one line — "Synced 3 h ago", plus "· 2 to review" when something waits,
+   the review count a link to `/review`; the run's own numbers are in the tooltip) · Changelog · Privacy · Sign out.
 
 ### The page frame
 
@@ -352,22 +352,30 @@ it is left out, listed under *Not built*.
 
 Header: eyebrow "Library · N series"; three hero `StatFigure`s — read, owned, out
 (the last `Quiet`); the lead line "N on your shelf waiting. N out there you
-haven't bought."; a large primary "Add series". Then, as the data supports
-them: **Continue reading** (cards: 96×138 cover, eyebrow "LN · VOL 18 OF 22", a
+haven't bought."; a large primary "Add series". Under the header, only when the sync
+found news since the reader last dismissed it: **Since your last visit**
+(`SinceLastVisit`, a plain `Panel`, no accent and no icon): the title and a `.ghost`
+"Got it" in the head, then one row per series — format badge, the title as a link to
+the series, and its news joined with " · " ("Vol 14 out · Vol 15 dated 12 Dec 2026") in
+`--muted`. Muted series are listed too; with no news the panel is not rendered at all.
+Then, as the data supports them: **Continue reading** (cards: 96×138 cover, eyebrow "LN · VOL 18 OF 22", a
 serif title at 21px, "3 unread volumes on your shelf", a tertiary "Mark Vol 18
 read" and a secondary "Open"); **Out now, not on your shelf** (a bordered list:
 format badge, title, "Vol 21–22", a "Vol 21 on Saxo ↗" outlined link, and "All
 upcoming →" in the head); **Shelf** — the toolbar (owner feedback 2026-10-10: one
 calm bar instead of every control laid out): the search field with its clear mark and
 a secondary "Filters" button carrying the count of filters hiding series; one quiet
-line under it of removable chips for the status and format filters, one per status
+line under it of removable chips for the status, format and genre filters, one per status
+and one per genre
 ("Clear all" once there are two things to clear; it returns to the reader's default
 filters), the count ("9 of 24 shown") and a "Key" disclosure
 that opens the legend (closed by default, remembered per browser). The button opens
 the filter panel — status chips (a multi-select: All · Owned · Behind · Reading ·
 Backlog · Up to date · Completed · Plan to start · Dropped, a series shows when it fits
 any; All clears the rest; a quiet "Save as default" beside the Status eyebrow, "Your
-default" once the selection is the default), the format segmented control, sort chips,
+default" once the selection is the default), the format segmented control, a **Genre**
+chip group (multi-select, every genre on the shelf laid out and wrapped, never scrolled; a
+series shows when it has any chosen genre; absent when no source named a genre), sort chips,
 Rows | Covers and density — as a bottom sheet on a phone and a popover under the button
 elsewhere; every choice applies at once, and the status and format filters are
 remembered per browser. The three sections under the header (Continue reading, Out
@@ -384,17 +392,24 @@ buy", `Neutral` "3 unread", or `Ok` "Up to date"); the title in the serif at 18.
 ### Series
 
 A back link; the hero (200×300 cover, radius 10; format badge, authors, year and
-a publication `StatusDot` with "Still publishing"; the title at 54; the romaji
+a publication `StatusDot` with "Still publishing"; the author's name is a quiet link to
+the library filtered by that name, and the genre tags (desktop) are links to the library
+filtered to that genre; the title at 54; the romaji
 and native title in `--faint`; the description at 15, max 64ch; the status
 segmented control, a large primary "Buy Vol 21 on Saxo ↗", and ghost links to
 AniList and MangaUpdates). The **progress panel**: three `StatFigure`s (read,
 owned, out, with "+ N announced"), "Next to read: Vol 18 · 3 unread · 2 to buy",
 a per-volume segment strip (10px, one per volume, radius 2, the four kinds of the
 tick strip), and "Started … · last read …". **Volumes**: the section title, the
-Covers | List toggle, Select, Bulk actions, and the tile grid
+Covers | List toggle, Select, Bulk actions (on a series kept by hand — no external id, so
+nothing syncs it — a `.secondary` "Add Vol N" for the next whole number, at every width),
+a native **How is this counted?** disclosure under the count line (`CountProvenance`;
+`fine` summary, closed by default, one `fine` line per step of the explanation), and the
+tile grid
 (`auto-fill, minmax(112px, 1fr)`, gap `18px 14px`) beside the **volume panel**
 (a `Panel`: "Vol 18", its date, an inset Unread · Reading · Read control, the
-ownership control, a Buy link when to buy, "Set cover…"). The **conflict
+ownership control, a Buy link when to buy, "Set cover…", and on a volume added by hand
+a `.ghost` "Remove volume" that asks first). The **conflict
 panel** (`SourceConflictPanel`, owner decision 2026-10-10): one per recorded
 disagreement, with the field named in words ("Sources disagree on Vol 23's
 release date", "…on the volume count", "…on publication status") and one line
@@ -407,7 +422,21 @@ side-by-side diff: one row per source with its name in `--muted`, the value
 "Use Apple Books" button per source (the chosen one reads "Using Apple Books" and
 is disabled) and a `.ghost` "Reset to automatic" when the reader picked. A quiet
 "Using X (your choice)" note sits beside an overridden value: the volume panel's
-date, the hero's status, the progress panel's "out". Last, the
+date, the hero's status, the progress panel's "out". A series the sync could not link
+gets the **not linked** panel instead (`ReleaseLinkPanel`, `Panel` `Warning`, large amber
+dot): the heading, one sentence on what is not checked, and a `.secondary` "Find it on
+MangaUpdates" that runs the first search only when pressed; then a `SearchField`
+prefilled with what the server searched for and a `.secondary` "Search", and one row per
+candidate — title, a `fine` detail line (plus who holds it when another series on the
+shelf is linked to it), a `.ghost` "Check ↗" to the record and a `.secondary` "Link"
+(absent on a held one). "Nothing on MangaUpdates for …" when the search finds none. After
+the volumes, **More by {author}** (`MoreByAuthor`): the author's other AniList works as
+small cover tiles in a row that scrolls sideways — cover, format badge, title, and a
+`.ghost` "On your shelf →" or a `.secondary` "Add". Nothing renders while it loads, and
+the section is absent when AniList credits no author or has no other works. The foot's **Sync** corner carries the
+per-series mute once some device has notifications on: one fine line and a `.ghost` "Mute
+this series" / "Unmute" (no `aria-pressed`: the label changes, and the fine line says the
+state). Last, the
 **danger zone**: a hairline above, "Remove from library", what it deletes, and a
 `.destructive` "Remove series…" that asks first.
 
@@ -421,7 +450,15 @@ volumes read, on the shelf, series reading, series finished); **Reading now**
 (covers with "Vol 18 next"); **month by month** (twelve light bars on a `--surf`
 card, a month letter under each); **Recently finished**; and a right column of
 cards — **Who can see your shelf** (a two-way segmented control: Private ·
-Public by link, with one line of help under it), **Library** (the status chips again,
+Public by link, with one line of help under it), **Notifications** (only when the server
+has Web Push keys: one line on what is sent, a `.secondary` "Turn on for this device" or a
+`.ghost` "Turn off on this device", "Send a test", and the devices that are on, each with a
+`.ghost` "Remove"; an iPhone or iPad not running from the Home Screen gets the "add to Home
+Screen first" line instead of the button), **Release calendar** (`CalendarFeedCard`, laid
+out like "Who can see your shelf": an Off · On segmented control, a line of help, and when on
+the private link with Copy and a `.ghost` "New link", which asks first with a `.secondary`
+"Make a new link" and a `.ghost` "Cancel"; then "In the calendar" / "Never in it" as two
+eyebrow-and-fine pairs), **Library** (the status chips again,
 for the filters the shelf opens on, and the section order as a short numbered list with
 a move up / move down `.secondary` caret pair per row; the end buttons are disabled with
 a title saying why), **Picture** (one line on which picture shows, a `.secondary`
@@ -446,6 +483,24 @@ every matched or decided series folded under one disclosure with its full card;
 and a foot with the counts and the large primary "Add N series to the shelf" ("Check
 N more to apply" while it cannot run). A side column: *Where to get the file*,
 *Earlier imports* (reopenable), and a pointer to the export on Profile.
+**Search** ends with one quiet `.ghost` line, "Can't find it? Add it by hand"
+(`ManualSeriesForm`, hidden while a search runs). It opens, in place of the line, a small
+form titled "Add a series by hand" with a `.ghost` "Cancel" in its head: a `fine` line on
+what it is for, Title (prefilled with the search text, focused on open), the format
+segmented control (web novel unless the search was filtered), Author and "Volumes out"
+(both optional), and a large primary "Add to shelf", which opens the new series' page.
+Cancel folds it back and returns focus to the line.
+
+### To review (`/review`)
+
+Eyebrow "Sync", title "To review" at the page size. One list of what the last sync could
+not settle, a row per question: an amber `SignalDot`, the series title, the question in
+words and a `fine` line with what each source said, and a caret; the whole row links to
+the series page, where it is settled — nothing is settled here. "Nothing to review" when
+the last run left no questions. Reached from the sidebar's sync note and, on a phone, from
+Profile's "Sync review" row (an amber `Pill` "N to review", shown only when there is
+something), just under the Sync row; that row's line then carries the failures only, so
+the count is not said twice.
 
 ### Upcoming (`/upcoming`)
 
@@ -496,8 +551,9 @@ Owner decisions, recorded so a screen does not "complete" the mockup:
   "Coming later" `Outline` pill; never a working-looking control.
 - **No `@handle` and no bio.** The name and avatar come from the signed-in
   identity.
-- **Upcoming's "Subscribe in calendar" and "Notify me when dated"** wait for a
-  calendar feed and a notifier; **Stats' period switch** (12 months · this year · all
+- **Upcoming's "Notify me when dated"** waits for a per-volume notifier
+  ("Subscribe in calendar" is built: a `.secondary` button under the page head that
+  opens a `Panel` with the feed link); **Stats' period switch** (12 months · this year · all
   time) and **"Add dates"** wait for the API to answer them; the **By format share
   bar** is left out because three formats in one bar would need three fills, and the
   progress colours already mean read, owned and out.

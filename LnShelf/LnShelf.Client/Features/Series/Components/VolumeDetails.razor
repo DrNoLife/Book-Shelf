@@ -87,5 +87,14 @@
                 Remove cover
             </button>
         }
+
+        @* Only a volume added by hand, on a series nothing syncs: a source's volume would come
+           straight back. Confirmed first, because its read and owned state goes with it. *@
+        @if (IsRemovable)
+        {
+            <button type="button" class="ghost" disabled="@IsBusy" @onclick="OnRemoveVolumeAsync">
+                Remove volume
+            </button>
+        }
     </div>
 </div>

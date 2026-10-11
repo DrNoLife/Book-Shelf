@@ -1,0 +1,22 @@
+@* The series page's mute (feature-spec §4.5), in the Sync corner because it is about what the
+   sync tells you. Only offered once some device has notifications on, or when the series is
+   muted already so it can be unmuted. Mute is about pushes only: the series still shows in
+   "Since your last visit". No aria-pressed: the label itself says what the button does next
+   (Mute / Unmute) and the fine line above says the state, so "pressed" would only contradict. *@
+
+@if (Notifications.HasDevices || Series.NotificationsMuted)
+{
+    <div class="mute">
+        <p class="fine">
+            @(Series.NotificationsMuted
+                ? "Muted: no notifications about this series."
+                : "New volumes and dates for this series are sent to your devices.")
+        </p>
+        <button type="button"
+                class="ghost mute__toggle"
+                disabled="@SeriesState.IsSaving"
+                @onclick="ToggleAsync">
+            @(Series.NotificationsMuted ? "Unmute" : "Mute this series")
+        </button>
+    </div>
+}

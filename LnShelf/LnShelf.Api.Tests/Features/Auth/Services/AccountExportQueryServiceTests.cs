@@ -1,4 +1,6 @@
 using System.Text.Json;
+using LnShelf.Api.Features.Calendar.Models;
+using LnShelf.Api.Features.Notifications.Models;
 using LnShelf.Api.Features.Preferences.Models;
 using LnShelf.Api.Features.Sharing.Models;
 using LnShelf.Shared.Auth;
@@ -33,10 +35,26 @@ public sealed class AccountExportQueryServiceTests
             Token = "token-owner",
             TokenCreatedAt = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero),
         });
+        export.Calendar.ShouldBe(new AccountExportCalendar
+        {
+            IsOn = true,
+            Token = "calendar-owner",
+            TokenCreatedAt = new DateTimeOffset(2026, 10, 4, 12, 0, 0, TimeSpan.Zero),
+        });
+        var device = export.NotificationDevices.ShouldHaveSingleItem();
+        device.PushServiceHost.ShouldBe("fcm.googleapis.com");
+        device.DeviceLabel.ShouldBe("Device of owner");
         export.Preferences.GridDensity.ShouldBe(GridDensity.Compact);
+        export.ActivitySeenAt.ShouldBe(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
 
         var series = export.Series.ShouldHaveSingleItem();
         series.TitleEnglish.ShouldBe("Title of owner");
+        series.VolumeCountBasis.ShouldBe(VolumeCountBasis.EnglishPublisherNote);
+        series.VolumeCountEvidence.ShouldBe("Evidence of owner");
+        var shelfEvent = series.Events.ShouldHaveSingleItem();
+        shelfEvent.Kind.ShouldBe(ShelfEventKind.ReleaseDateChanged);
+        shelfEvent.VolumeNumber.ShouldBe(3);
+        shelfEvent.NewDate.ShouldBe(new DateOnly(2026, 12, 12));
         series.TrackingStatus.ShouldBe(TrackingStatus.Reading);
         series.Notes.ShouldBe("Notes of owner");
         series.Volumes.Select(volume => volume.Number).ShouldBe([1, 2]);
@@ -77,6 +95,22 @@ public sealed class AccountExportQueryServiceTests
         file.ShouldNotContain(TestUsers.SomeoneElse.ToString());
     }
 
+    // The endpoint and the two keys are what it takes to push to a device; the export names
+    // the push service and the device, and carries none of the three.
+    [Fact]
+    public async Task ExportAsync_ADeviceWithNotificationsOn_LeavesOutItsEndpointAndKeys()
+    {
+        var database = $"export-{Guid.CreateVersion7()}";
+        await SeedAsync(database, TestUsers.Owner, "owner");
+
+        var file = JsonSerializer.Serialize(await ExportAsync(database, TestUsers.Owner));
+
+        file.ShouldContain("Device of owner");
+        file.ShouldNotContain("endpoint-owner");
+        file.ShouldNotContain("p256dh-owner");
+        file.ShouldNotContain("auth-owner");
+    }
+
     [Fact]
     public async Task ExportAsync_ASignedInUserWithNothingRecorded_IsAnAccountAndDefaults()
     {
@@ -90,7 +124,10 @@ public sealed class AccountExportQueryServiceTests
         var export = await ExportAsync(database, TestUsers.Owner);
 
         export.Sharing.ShouldBe(new AccountExportSharing { IsPublic = false });
+        export.Calendar.ShouldBe(new AccountExportCalendar { IsOn = false });
+        export.NotificationDevices.ShouldBeEmpty();
         export.Preferences.GridDensity.ShouldBe(GridDensity.Comfortable);
+        export.ActivitySeenAt.ShouldBeNull();
         export.Series.ShouldBeEmpty();
         export.ImportBatches.ShouldBeEmpty();
         export.SyncRuns.ShouldBeEmpty();
@@ -127,16 +164,46 @@ public sealed class AccountExportQueryServiceTests
             Token = $"token-{marker}",
             CreatedAt = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero),
         });
-        dbContext.UserPreferences.Add(new UserPreferences { GridDensity = GridDensity.Compact });
+        dbContext.CalendarFeeds.Add(new CalendarFeed
+        {
+            UserId = userId,
+            Token = $"calendar-{marker}",
+            CreatedAt = new DateTimeOffset(2026, 10, 4, 12, 0, 0, TimeSpan.Zero),
+        });
+        dbContext.PushSubscriptions.Add(new PushSubscription
+        {
+            Id = Guid.CreateVersion7(),
+            Endpoint = $"https://fcm.googleapis.com/fcm/send/endpoint-{marker}",
+            P256dh = $"p256dh-{marker}",
+            Auth = $"auth-{marker}",
+            DeviceLabel = $"Device of {marker}",
+            CreatedAt = new DateTimeOffset(2026, 10, 4, 13, 0, 0, TimeSpan.Zero),
+        });
+        dbContext.UserPreferences.Add(new UserPreferences
+        {
+            GridDensity = GridDensity.Compact,
+            ActivitySeenAt = new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero),
+        });
 
         var seriesId = Guid.CreateVersion7();
         var firstVolumeId = Guid.CreateVersion7();
+        dbContext.ShelfEvents.Add(new ShelfEvent
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesId = seriesId,
+            Kind = ShelfEventKind.ReleaseDateChanged,
+            VolumeNumber = 3,
+            NewDate = new DateOnly(2026, 12, 12),
+            OccurredAt = new DateTimeOffset(2026, 10, 3, 4, 5, 0, TimeSpan.Zero),
+        });
         dbContext.Series.Add(new Series
         {
             Id = seriesId,
             TitleEnglish = $"Title of {marker}",
             Format = Format.LightNovel,
             PublicationStatus = PublicationStatus.Ongoing,
+            VolumeCountBasis = VolumeCountBasis.EnglishPublisherNote,
+            VolumeCountEvidence = $"Evidence of {marker}",
             UserState = new SeriesUserState
             {
                 SeriesId = seriesId,

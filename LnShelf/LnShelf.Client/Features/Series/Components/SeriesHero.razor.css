@@ -122,6 +122,26 @@
   color: var(--muted);
 }
 
+/* Each tag opens the shelf filtered to that genre; the ring firms up the way a chip's does. */
+.tag:hover,
+.tag:focus-visible {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+
+/* The author opens the shelf filtered to them. Underlined on hover only: the meta line is
+   quiet, and a link that shouted would be the loudest thing in it. */
+.hero__credit-link {
+  color: inherit;
+}
+
+.hero__credit-link:hover,
+.hero__credit-link:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* --- synopsis ----------------------------------------------------------------- */
 
 .synopsis {

@@ -171,7 +171,22 @@ The series/volume tracking domain.
     §5). Sync then follows the chosen source's fresh value for that field and
     never creates, edits or deletes the choice; the disagreement is still
     recorded each run, as resolved by choice. Release dates, the volume count and
-    publication status can be chosen; `SeriesLink` cannot (backlog item 2).
+    publication status can be chosen; `SeriesLink` cannot be chosen, it is
+    answered by linking **[amended 2026-10-11]**: the series page's "Not linked"
+    panel searches MangaUpdates (prefilled with the romaji title), shows each
+    candidate with type, year and a link out to verify it, and "Link" writes
+    `MangaUpdatesId`, marks the open `SeriesLink` rows resolved by the user and
+    refreshes that one series at once (skipped, link kept, when a sync of the
+    shelf is already running). A record another series holds is refused (409).
+    `/review` lists the open questions of the last sweep, reached from the
+    sidebar's "N to review" and the phone's profile list. There is no
+    "not on MangaUpdates" marker yet: that would be a local override column.
+  - **Count provenance [added 2026-10-11]:** beside `ReleaseSourceVolumeCount` the
+    sync writes `VolumeCountBasis` (English publisher's note, MangaUpdates status
+    line, AniList when MangaUpdates gives no count at add time, Manual) and
+    `VolumeCountEvidence` (the verbatim note or status line, 300 chars). The
+    volume grid's "How is this counted?" explains it, and a volume's details
+    name the source of its date ("Date from Open Library").
   - Discrepancies land in the sync log — structured as `SyncDiscrepancy` rows
     (§5), carrying one `(source, value)` pair per disagreeing source, never
     silently resolved.
@@ -273,11 +288,28 @@ guessed.
     cannot see the future**: 6 of 7 not-yet-owned volumes probed returned no
     result at all. Forward-looking dates need a publisher, which is where the
     "release date moved" notification also still waits.
-- `IReleaseNotifier` seam with **one** v1 implementation (**[decision]**:
-  ntfy — trivial to self-host or use ntfy.sh, no bot tokens; Discord webhook
-  is implementation #2 whenever wanted). Fired by the sync run for: new
-  volume released, new volume announced, release date moved.
-- Notification preferences: global on/off + per-series mute. Nothing fancier.
+- `IReleaseNotifier` seam with **one** v1 implementation (**[decision, revised
+  2026-10-11]**: **Web Push** (VAPID, `Lib.Net.Http.WebPush`), not ntfy. The shelf
+  has several readers on phones, and Web Push needs no extra app or topic; the PWA
+  manifest makes it work on iOS 16.4+ once the app is on the Home Screen. ntfy or a
+  Discord webhook remain possible implementation #2.)
+  - **What is news** comes from one diff per series refresh (`ShelfEventDiff`), never
+    on a series' first refresh and never from user actions: a volume that was not out
+    and now is (`IsReleased`, or its date has come — the projections' rule), a volume
+    row past the old count and highest number (announced), and a not-yet-out volume
+    getting a new future date. Stored in `shelf_event` (§7), deduplicated per series,
+    pruned after 120 days.
+  - **Delivery** is a digest per user per run: after the nightly run and after "Sync
+    now", one push for everything not yet sent ("2 new volumes out · 86 Vol 14,
+    Overlord Vol 17 +1 more"), opening the series when there is one, the shelf
+    otherwise. Events older than 7 days are never pushed. A device the push service
+    calls gone (404/410) is deleted.
+  - Subscriptions are accepted only for https endpoints on the known push services
+    (FCM, Mozilla, WNS, APNs), unique per (user, endpoint). Off when the server has no
+    `WebPush` keys; `vapid-keys` prints a pair.
+- Notification preferences: global on/off + per-series mute. Nothing fancier. On/off is
+  per device (a push subscription, from the profile's Notifications card); mute is
+  `SeriesUserState.NotificationsMuted`, from the series page, and affects pushes only.
 
 ### 4.6 Preferences
 
@@ -370,6 +402,45 @@ Tunnel because the forwarded headers walk two hops (`ForwardLimit = 2`). Respons
 `Cache-Control: no-store` (covers: `private`, so no shared cache such as the Cloudflare
 edge keeps them past a revoke); the page is served `X-Robots-Tag: noindex` and
 `Referrer-Policy: no-referrer`. The app never logs the token.
+
+### 4.9 Release calendar (subscribable feed) **[added 2026-10-11]**
+
+The second anonymous read of a shelf, built exactly like §4.8 and for the same reason:
+a calendar app (Google, Apple, Outlook) fetches a subscribed feed from its own servers,
+with no session.
+
+**The setting.** "Release calendar" on the user page: **Off** (the default) or **On**.
+On creates a `CalendarFeed` row (`calendar_feed`, keyed by `UserId`, cascade from the
+user, not owner-filtered for `shelf_share`'s reason) holding a fresh token: 16 random
+bytes, base64url, 22 characters. Off deletes the row; **New link** replaces the token;
+either way the old URL is a 404 from the next fetch. Upcoming's **Subscribe in
+calendar** shows the link (or turns the feed on) with *Open in calendar app*
+(`webcal://`) and *Copy link*; the client builds both from its own origin.
+
+**The feed.** `GET /api/calendar/{token}.ics`, anonymous and rate-limited per client
+address (`Calendar:RequestsPerMinute`). It rejects a malformed token without a query,
+finds the owner in `calendar_feed`, then reads in its own scope under
+`ICurrentUser.ActAs(ownerId)`, so the owner filters isolate it. One all-day `VEVENT`
+per dated volume of every series that is not Dropped, owned or not, from 60 days ago
+onward: `SUMMARY` "Series title Vol N", with "(Manga)" or "(Web novel)" after it for
+those formats so the LN and the manga of one title stay apart, `UID` `{volumeId}@lnshelf` (a moved date
+updates in place), `DTSTART;VALUE=DATE`, `DTEND` the next day, a UTC `DTSTAMP`,
+`TRANSP:TRANSPARENT`. Hand-written RFC 5545 (`IcsCalendarWriter`): text escaping,
+lines folded at 75 UTF-8 octets without splitting a character, CRLF. Served
+`text/calendar; charset=utf-8` with `Cache-Control: private, max-age=3600`. Never in
+it: ownership, prices, notes, the user's identity. The app never logs the token: a
+failing request on a route with a `{token}` parameter (this feed, the shared shelf) is
+logged by its route template, not its path (`ProblemDetailsExceptionHandler.LoggablePath`).
+
+### 4.10 Installable app (PWA) **[added 2026-10-11]**
+
+`wwwroot/manifest.webmanifest` (name and short name "LN Shelf", start URL and scope
+`/`, `display: standalone`, colours `--bg`, icons 192, 512 and maskable 512 drawn from
+`favicon.svg`) and the Apple home-screen meta tags in `index.html`. Installing is what
+iOS (16.4+) requires before a page may receive web push (§4.5). There is **no offline
+mode and no caching service worker**: the only worker is the push worker, so a deploy
+can never be shadowed by a stale bundle. nginx serves `/manifest.webmanifest` as
+`application/manifest+json` and both it and `/push-worker.js` `no-cache`.
 
 ## 5. Data model
 
@@ -538,7 +609,10 @@ POST   /api/series          { aniListId, format, initialReadCount?, initialOwned
                                                    series already on the shelf
 GET    /api/series/tracked                         the shelf by external id → series id, for
                                                    the search page's "On shelf" and "Open"
-POST   /api/series/manual   { title, format }      no external id (WN, §4.2)
+POST   /api/series/manual   { titleEnglish, format, author?, volumeCount? }
+                                                   no external id (WN, §4.2): volumes 1..N out,
+                                                   IsLocalOnly, VolumeCountBasis Manual; 200 +
+                                                   alreadyTracked for the same title and format
 PUT    /api/series/{id}/state  { trackingStatus?, notes? }  partial: null = leave alone
 POST   /api/series/{id}/seen                       204; clears HasNewVolume
 DELETE /api/series/{id}
@@ -546,7 +620,13 @@ DELETE /api/series/{id}
 PUT    /api/volumes/{id}/read      { status }
 PUT    /api/volumes/{id}/owned     { owned, format?, price? }
 POST   /api/series/{id}/volumes/bulk  { throughNumber, read?, owned? }
-POST   /api/series/{id}/volumes       { number, releaseDate? }   manual, IsLocalOnly
+POST   /api/series/{id}/volumes       { number? }   series with no external id only (409
+                                                   otherwise); next whole number by default,
+                                                   decimals for bonus volumes; IsLocalOnly, out
+DELETE /api/series/{id}/volumes/{volumeId}         an IsLocalOnly volume of such a series, with its state
+GET    /api/series/{id}/more-by-author              the author's other AniList works (writing credits
+                                                   only), cached 24h per AniList id; "on your shelf"
+                                                   is marked per request, never cached
 
 GET    /api/search?q=&format=                      AniList passthrough (cached)
 GET    /api/releases/upcoming?format=             out now / this month / next 3 months / later / announced
@@ -566,14 +646,29 @@ GET    /api/sync/latest                            sidebar summary + discrepanci
 GET    /api/series/{id}/conflicts                  every disagreement of the last sweep, side by side
 PUT    /api/series/{id}/source-choice  { field, volumeNumber?, source }   pick a source; answers with the series
 DELETE /api/series/{id}/source-choice?field=&volumeNumber=                reset to automatic; answers with the series
+GET    /api/series/{id}/release-link/candidates?q=  MangaUpdates search for a hand-made link (rate-limited)
+PUT    /api/series/{id}/release-link   { mangaUpdatesId }  link + refresh; answers { series, refreshed }
 
 GET/PUT /api/preferences
+
+GET    /api/activity                               "Since your last visit": shelf_event rows after
+                                                   UserPreferences.ActivitySeenAt (never seen = the
+                                                   last 14 days), newest per volume, max 30, per series;
+                                                   Through = the newest OccurredAt read
+POST   /api/activity/seen                          204; "Got it" { through } sets ActivitySeenAt to the
+                                                   panel's Through (now when null; capped at now,
+                                                   never moved backwards)
 
 GET    /api/sharing                                Private/Public and the current token
 PUT    /api/sharing          { isPublic }          Public issues a token, Private deletes it
 POST   /api/sharing/regenerate                     new token, old link dead (409 when Private)
 GET    /api/shared/{token}                         anonymous, read-only shelf (§4.8)
 GET    /api/shared/{token}/covers/{objectKey}      anonymous, series art of that shelf only
+
+GET    /api/calendar                               Off/On and the current token
+PUT    /api/calendar         { isOn }              On issues a token, Off deletes it
+POST   /api/calendar/regenerate                    new token, old feed URL dead (409 when Off)
+GET    /api/calendar/{token}.ics                   anonymous, the release calendar (§4.9)
 ```
 
 Query/command service split behind each controller per CLAUDE.md.
@@ -610,13 +705,19 @@ bundle holds no token at all:
   first sign-in (`UserSignIn`), and the session carries the user id. Sign-up
   is open unless `Auth:AllowedEmails` lists addresses. Each user has separate
   copies of everything, including metadata: the roots `Series`,
-  `ImportBatch`, `SyncRun` and `UserPreferences` carry `OwnerId`, and EF
+  `ImportBatch`, `SyncRun`, `UserPreferences` and `PushSubscription` carry `OwnerId`, and EF
   global query filters on `LnShelfDbContext` restrict every query to the
   current user (children are filtered through their root). With no current
   user a query sees nothing and a new root cannot be saved, so a forgotten
   scope fails closed. Another user's id is a 404, never a 403.
   The one deliberate crossing is the shared shelf (§4.8): an anonymous request resolves a
   token to an owner in `shelf_share` and reads as that owner in a scope of its own.
+  **[added 2026-10-11]** The release calendar feed crosses the same way: a calendar app
+  fetches `/api/calendar/{token}.ics` with no session, so `calendar_feed` (keyed by the
+  user, a unique secret token, cascade-deleted with the account) is unfiltered for the
+  same reason `shelf_share` is, and the feed is read as its owner in a scope of its own.
+  The token is never logged. The activity log `shelf_event` is a child of `Series`,
+  filtered through it like `Volume`.
 - **Background work acts as each user.** The nightly sync runs once per user,
   each in its own scope after `ICurrentUser.ActAs`, sharing one lookup
   allowance for the night (`OpenLibrary:MaximumLookupsPerNight`); console
@@ -642,8 +743,8 @@ bundle holds no token at all:
 - **Closed by default.** A fallback authorization policy requires a signed-in
   owner on every endpoint. The only anonymous ones are `GET /api/auth/login`,
   `GET /api/health` (version and database reachability, which the deploy
-  polls) and the two shared-shelf reads `GET /api/shared/{token}` and its
-  covers (§4.8). An API call without a session gets a 401 ProblemDetails, never a
+  polls), the two shared-shelf reads `GET /api/shared/{token}` and its
+  covers (§4.8), and the release calendar `GET /api/calendar/{token}.ics` (§4.9). An API call without a session gets a 401 ProblemDetails, never a
   redirect.
 - **The client's only auth code** is `SignInRedirectHandler`: on a 401 it
   sends the browser to `/api/auth/login?returnUrl=…`. "Sign out" posts

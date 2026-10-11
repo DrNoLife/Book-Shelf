@@ -44,4 +44,12 @@ public sealed class UserPreferences : IOwned
 
     /// <summary>The library page's sections, in the order the reader wants them.</summary>
     public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; set; } = LibrarySections.Default;
+
+    /// <summary>
+    /// When the reader last dismissed "Since your last visit". Null means never: the panel
+    /// then looks back a fixed window instead.
+    /// </summary>
+    // An acknowledgment, like SeriesUserState.HasNewVolume: an event the reader caused, not
+    // something derivable from the shelf.
+    public DateTimeOffset? ActivitySeenAt { get; set; }
 }

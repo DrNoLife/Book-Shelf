@@ -124,7 +124,7 @@ public sealed class ImportCommandService(
         foreach (var seriesGroups in toApply.GroupBy(group => group.MatchedAniListId!.Value))
         {
             await shelfWriter.ApplyAsync(
-                seriesGroups.Key, [.. seriesGroups], counters, appliedAt, cancellationToken);
+                seriesGroups.Key, [.. seriesGroups], counters, cancellationToken);
         }
 
         foreach (var group in toApply)

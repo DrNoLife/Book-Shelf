@@ -1,10 +1,10 @@
 @* What is hiding series right now, each as a chip that removes itself — so a filter tucked
    into the panel is never a filter you forgot about. One chip per status filter, then the
-   format: the title filter shows its own text in the field, and sort, view and density hide
+   format, then each genre: the title filter shows its own text in the field, and sort, view and density hide
    nothing. "Clear all" appears once there are two things to clear; with one, its own chip is
    the clear. It goes back to the reader's default filters (LibraryState.ClearFiltersAsync). *@
 
-@if (Statuses.Count > 0 || Format is not null)
+@if (Statuses.Count > 0 || Format is not null || Genres.Count > 0)
 {
     <ul class="active" aria-label="Active filters">
         @foreach (var status in Statuses)
@@ -23,6 +23,15 @@
             <li>
                 <button type="button" class="active__chip" aria-label="@($"Remove the {label} filter")" @onclick="() => FormatCleared.InvokeAsync()">
                     @label <span class="active__mark"><Icon Name="IconName.Close" Size="11" /></span>
+                </button>
+            </li>
+        }
+
+        @foreach (var genre in Genres)
+        {
+            <li @key="@($"genre:{genre}")">
+                <button type="button" class="active__chip" aria-label="@($"Remove the {genre} filter")" @onclick="() => GenreRemoved.InvokeAsync(genre)">
+                    @genre <span class="active__mark"><Icon Name="IconName.Close" Size="11" /></span>
                 </button>
             </li>
         }
@@ -50,9 +59,14 @@
 
     [Parameter] public EventCallback FormatCleared { get; set; }
 
+    /// <summary>The genre chips that are on, each removable on its own.</summary>
+    [Parameter] public IReadOnlyList<string> Genres { get; set; } = [];
+
+    [Parameter] public EventCallback<string> GenreRemoved { get; set; }
+
     [Parameter] public EventCallback ClearAllRequested { get; set; }
 
     private IReadOnlyList<LibraryFilter> Statuses => [.. Status.Where(status => status != LibraryFilter.All)];
 
-    private int ActiveCount => Statuses.Count + (Format is not null ? 1 : 0) + (HasTextFilter ? 1 : 0);
+    private int ActiveCount => Statuses.Count + (Format is not null ? 1 : 0) + Genres.Count + (HasTextFilter ? 1 : 0);
 }

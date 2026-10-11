@@ -27,6 +27,8 @@ public static class LibraryCardProjection
                 ? series.UserState.TrackingStatus
                 : TrackingStatus.PlanToStart,
             HasNewVolume = series.UserState != null && series.UserState.HasNewVolume,
+            Author = series.Author,
+            Genres = series.Genres,
 
             // design.md: the card shows the latest volume's cover. "Latest" here is the
             // highest-numbered volume that actually has art — not simply the highest —

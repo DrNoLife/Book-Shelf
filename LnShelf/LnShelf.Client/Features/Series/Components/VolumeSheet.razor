@@ -19,6 +19,10 @@
             {
                 <span class="fine">@ConflictText.ChoiceMarker(dateChoice)</span>
             }
+            else if (Volume.DateSourceLine is { } dateSource)
+            {
+                <span class="fine">@dateSource</span>
+            }
         </div>
     </div>
 

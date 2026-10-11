@@ -85,6 +85,15 @@ public partial class VolumeGridToolbar
     private decimal? OwnedThrough => VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.Owned);
 
     /// <summary>
+    /// What "Add volume" adds: the next whole number after the highest one, the API's own
+    /// default, printed on the button so the reader knows before pressing it.
+    /// </summary>
+    private decimal NextVolumeNumber =>
+        decimal.Truncate(Series.Volumes.Select(volume => volume.Number).DefaultIfEmpty(0m).Max()) + 1;
+
+    private Task AddVolumeAsync() => SeriesState.AddVolumeAsync();
+
+    /// <summary>
     /// Choosing a view on a series sets that series' override, which is the point: the
     /// choice is about this series, not about the shelf. The global default is changed
     /// in preferences, not by looking at one series.

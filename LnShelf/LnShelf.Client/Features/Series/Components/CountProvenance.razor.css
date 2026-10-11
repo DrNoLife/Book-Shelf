@@ -1,0 +1,19 @@
+/* Fine print that opens in place: no panel, no colour of its own, so it reads as a footnote to
+   the count line above it rather than as another thing asking for a look. */
+.count-provenance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 68ch;
+}
+
+.count-provenance__summary {
+  width: fit-content;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.count-provenance__line {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

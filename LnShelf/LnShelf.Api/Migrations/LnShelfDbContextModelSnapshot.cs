@@ -68,6 +68,27 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("app_user", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Calendar.Models.CalendarFeed", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("calendar_feed", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -425,10 +446,57 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("sync_run", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Notifications.Models.PushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceLabel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("FailureCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("LastSuccessAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "Endpoint")
+                        .IsUnique();
+
+                    b.ToTable("push_subscription", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
                 {
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ActivitySeenAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DefaultLibraryFilter")
                         .IsRequired()
@@ -574,6 +642,14 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)");
 
+                    b.Property<string>("VolumeCountBasis")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("VolumeCountEvidence")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId", "AniListId")
@@ -618,6 +694,44 @@ namespace LnShelf.Api.Migrations
                     b.HasKey("SeriesId");
 
                     b.ToTable("series_user_state", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.ShelfEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateOnly?>("NewDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("PreviousDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("VolumeNumber")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotifiedAt")
+                        .HasFilter("\"NotifiedAt\" IS NULL");
+
+                    b.HasIndex("SeriesId", "OccurredAt");
+
+                    b.ToTable("shelf_event", (string)null);
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.Volume", b =>
@@ -726,6 +840,15 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("data_protection_key", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Calendar.Models.CalendarFeed", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
@@ -802,6 +925,15 @@ namespace LnShelf.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Notifications.Models.PushSubscription", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
@@ -834,6 +966,17 @@ namespace LnShelf.Api.Migrations
                     b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", "Series")
                         .WithOne("UserState")
                         .HasForeignKey("LnShelf.Api.Features.Shelf.Models.SeriesUserState", "SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Series");
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Shelf.Models.ShelfEvent", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Series", "Series")
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

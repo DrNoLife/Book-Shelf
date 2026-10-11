@@ -46,6 +46,12 @@ public sealed record SeriesDetailResponse
     public required bool HasNewVolume { get; init; }
 
     /// <summary>
+    /// The user silenced push notifications for this series. It still shows in "Since your
+    /// last visit": muting is about pushes only.
+    /// </summary>
+    public bool NotificationsMuted { get; init; }
+
+    /// <summary>
     /// This series' own volume view, or null to follow the global preference.
     /// </summary>
     // A per-series override rather than one global switch, because the right view is a
@@ -54,6 +60,9 @@ public sealed record SeriesDetailResponse
     public VolumeView? VolumeViewOverride { get; init; }
 
     public required SeriesCountsResponse Counts { get; init; }
+
+    /// <summary>Where the published count came from, for "How is this counted?".</summary>
+    public CountProvenanceResponse CountProvenance { get; init; } = new();
 
     /// <summary>
     /// Null when no volume has a purchase price.

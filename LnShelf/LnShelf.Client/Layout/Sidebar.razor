@@ -71,9 +71,19 @@
            live in the tooltip rather than as five lines of fine print. *@
         @if (LatestSync is { } latest)
         {
+            @* "N to review" is a link to the review list: the count is only useful if it leads
+               somewhere the questions can be read. *@
             <p class="sync" title="@latest.Detail">
                 <SignalDot Tone="latest.Tone(Now)" />
-                <span>@latest.Headline(Now)@(latest.Attention is { } attention ? $" · {attention}" : null)</span>
+                <span>
+                    @latest.Headline(Now)@latest.FailureClause
+                    @if (latest.ToReview.Count > 0)
+                    {
+                        @* A C# string, not markup: Razor drops the whitespace between the clause
+                           above and this block, so the separator carries its own leading space. *@
+                        @(" · ")<NavLink class="sync__review" href="review">@latest.ToReview.Count to review</NavLink>
+                    }
+                </span>
             </p>
         }
         else

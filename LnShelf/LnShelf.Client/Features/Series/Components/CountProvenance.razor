@@ -1,0 +1,16 @@
+@* "How is this counted?": a quiet native disclosure under the volume count line. Closed by
+   default — the count is right far more often than it is doubted — and keyboard and
+   screen-reader native, like the conflict panel's Details. *@
+
+<details class="count-provenance">
+    <summary class="count-provenance__summary fine">How is this counted?</summary>
+    @foreach (var line in Series.CountExplanation)
+    {
+        <p class="count-provenance__line fine">@line</p>
+    }
+</details>
+
+@code {
+    [Parameter]
+    public required SeriesDetailResponse Series { get; set; }
+}

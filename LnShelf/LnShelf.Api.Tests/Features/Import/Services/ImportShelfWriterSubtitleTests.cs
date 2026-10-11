@@ -24,7 +24,6 @@ public sealed class ImportShelfWriterSubtitleTests
             AniListId,
             [CreateGroup([3], subtitle: Subtitle)],
             counters,
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -43,7 +42,7 @@ public sealed class ImportShelfWriterSubtitleTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([3])], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [CreateGroup([3])], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var volume = await LoadVolumeAsync(dbContext, 3);
@@ -52,7 +51,7 @@ public sealed class ImportShelfWriterSubtitleTests
 
         var counters = new ImportWriteCounters();
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([3], subtitle: Subtitle)], counters, AppliedAt, CancellationToken.None);
+            AniListId, [CreateGroup([3], subtitle: Subtitle)], counters, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await LoadVolumeAsync(dbContext, 3)).Title.ShouldBe("The Bloody Valkyrie (Light Novel)");
@@ -66,7 +65,7 @@ public sealed class ImportShelfWriterSubtitleTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([3])], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [CreateGroup([3])], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         // Volume.Title's "" is a stored answer: a source was asked and this volume has
@@ -80,7 +79,6 @@ public sealed class ImportShelfWriterSubtitleTests
             AniListId,
             [CreateGroup([3], subtitle: Subtitle)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -94,7 +92,7 @@ public sealed class ImportShelfWriterSubtitleTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([3])], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [CreateGroup([3])], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         // Not "", which would tell enrichment this volume has been asked about.
@@ -114,7 +112,6 @@ public sealed class ImportShelfWriterSubtitleTests
             AniListId,
             [CreateGroup([3]), CreateGroup([3], subtitle: Subtitle)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 

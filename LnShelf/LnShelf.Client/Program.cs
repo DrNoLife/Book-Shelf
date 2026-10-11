@@ -1,7 +1,10 @@
 using LnShelf.Client;
+using LnShelf.Client.Features.Activity;
+using LnShelf.Client.Features.Calendar;
 using LnShelf.Client.Features.Changelog;
 using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
+using LnShelf.Client.Features.Notifications;
 using LnShelf.Client.Features.Profile;
 using LnShelf.Client.Features.Search;
 using LnShelf.Client.Features.Series;
@@ -46,7 +49,10 @@ builder.Services
     .AddUpcoming()
     .AddStats()
     .AddProfile()
-    .AddSharing();
+    .AddSharing()
+    .AddNotifications()
+    .AddActivity()
+    .AddCalendar();
 
 var host = builder.Build();
 

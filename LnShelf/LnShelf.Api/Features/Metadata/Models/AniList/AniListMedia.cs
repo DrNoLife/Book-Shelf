@@ -83,6 +83,30 @@ public sealed class AniListStaffEdge
 public sealed class AniListStaffNode
 {
     public AniListStaffName? Name { get; set; }
+
+    /// <summary>
+    /// What else this person is credited on. Only the author-works query asks for it; every
+    /// other query leaves it null.
+    /// </summary>
+    public AniListStaffMediaConnection? StaffMedia { get; set; }
+}
+
+/// <summary>A person's credits, most popular first, as <c>Staff.staffMedia</c> returns them.</summary>
+public sealed class AniListStaffMediaConnection
+{
+    public List<AniListStaffMediaEdge>? Edges { get; set; }
+}
+
+/// <inheritdoc cref="AniListStaffMediaConnection"/>
+public sealed class AniListStaffMediaEdge
+{
+    /// <summary>
+    /// The person's role on <see cref="Node"/>, as freeform as <see cref="AniListStaffEdge.Role"/>:
+    /// "Story ", "Original Story", "Illustration".
+    /// </summary>
+    public string? StaffRole { get; set; }
+
+    public AniListMedia? Node { get; set; }
 }
 
 /// <inheritdoc cref="AniListMedia"/>

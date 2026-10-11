@@ -104,6 +104,13 @@
                     Nothing searched yet. Type a title — the shelf will not judge the taste.
                 </p>
             }
+
+            @* Hidden while a search is in flight, so the line does not jump about under
+               "Searching…". *@
+            @if (!SearchState.IsSearching)
+            {
+                <ManualSeriesForm SuggestedTitle="@SearchState.Query" SuggestedFormat="SearchState.FormatFilter" />
+            }
         </section>
 
         @if (SelectedEntry is { } selected)

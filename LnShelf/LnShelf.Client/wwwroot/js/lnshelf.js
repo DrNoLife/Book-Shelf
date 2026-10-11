@@ -1,8 +1,8 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
 // C#: read a rendered layout, move focus between sibling elements, hand a
 // dropped file to a file input, copy a link to the clipboard, ask whether the
-// phone layout is showing, remember a per-browser display flag or the shelf's filters, and
-// follow a finger dragging a bottom sheet down.
+// phone layout is showing, remember a per-browser display flag or the shelf's filters,
+// follow a finger dragging a bottom sheet down, and subscribe this browser to Web Push.
 window.lnshelf = {
     // One entry per bottom sheet that listens for drags, so disposing it can remove exactly
     // the listeners it added.
@@ -374,5 +374,119 @@ window.lnshelf = {
     // the user to copy the link from its field instead.
     copyText: function (text) {
         return navigator.clipboard.writeText(text);
+    },
+
+    // --- Web Push, for the profile's Notifications card ---
+
+    // What this browser can do about notifications, and the subscription it already has, if
+    // any. keyMatches is false when that subscription was made with a key the server no longer
+    // uses (the keys were rotated): it will never receive anything, so Enable replaces it.
+    pushStatus: async function (publicKey) {
+        const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+        const status = {
+            supported: supported,
+            standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+            // iPadOS calls itself a Mac; the touch screen gives it away.
+            isAppleMobile: /iPhone|iPad|iPod/.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+            permission: 'Notification' in window ? Notification.permission : 'unsupported',
+            endpoint: null,
+            keyMatches: false
+        };
+        if (!supported) return status;
+
+        const subscription = await window.lnshelf.currentPushSubscription();
+        if (subscription) {
+            status.endpoint = subscription.endpoint;
+            status.keyMatches = window.lnshelf.isSubscribedWith(subscription, publicKey);
+        }
+        return status;
+    },
+
+    // Asks for permission and subscribes. Called as the very first thing the Enable click does,
+    // and requestPermission is the first thing here: Safari only shows the prompt inside the
+    // tap that asked for it, and every await before it would spend that tap.
+    subscribePush: async function (publicKey) {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return { error: permission };
+
+            // Registered at start-up; registering again here covers a start-up registration
+            // that failed. `ready` alone never settles when there is no worker at all (a 404,
+            // a refused script, a private window), which would leave the card busy for good.
+            await (await navigator.serviceWorker.getRegistration('/')
+                ?? navigator.serviceWorker.register('/push-worker.js', { scope: '/' }));
+            const registration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise(resolve => setTimeout(() => resolve(null), 10000))
+            ]);
+            if (!registration) return { error: 'failed' };
+
+            let subscription = await registration.pushManager.getSubscription();
+            if (subscription && !window.lnshelf.isSubscribedWith(subscription, publicKey)) {
+                await subscription.unsubscribe();
+                subscription = null;
+            }
+            if (!subscription) {
+                // userVisibleOnly: every push shows a notification (push-worker.js), which is
+                // the only kind of subscription Chrome and Safari allow.
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: window.lnshelf.base64UrlToBytes(publicKey)
+                });
+            }
+
+            const json = subscription.toJSON();
+            return { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, error: null };
+        } catch (error) {
+            return { error: 'failed' };
+        }
+    },
+
+    // Ends this browser's subscription. Returns the endpoint it had, so the server's row for
+    // it can be deleted too, or null when there was none.
+    unsubscribePush: async function () {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+        const subscription = await window.lnshelf.currentPushSubscription();
+        if (!subscription) return null;
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        return endpoint;
+    },
+
+    currentPushSubscription: async function () {
+        const registration = await navigator.serviceWorker.getRegistration('/');
+        return registration ? await registration.pushManager.getSubscription() : null;
+    },
+
+    // Whether a subscription was made with this server key. A browser that does not report the
+    // key it subscribed with is taken at its word, rather than re-subscribed on every visit.
+    isSubscribedWith: function (subscription, publicKey) {
+        const key = subscription.options && subscription.options.applicationServerKey;
+        if (!key) return true;
+        let binary = '';
+        for (const byte of new Uint8Array(key)) binary += String.fromCharCode(byte);
+        const encoded = btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+        return encoded === publicKey;
+    },
+
+    base64UrlToBytes: function (value) {
+        const padded = value.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - value.length % 4) % 4);
+        return Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+    },
+
+    // An author or genre link lands on the library with the shelf filtered, but the shelf
+    // sits below the front page's other sections; without this the click looks like nothing.
+    scrollIntoView: function (element) {
+        if (element) element.scrollIntoView({ block: 'start' });
     }
 };
+
+// The push-only service worker (push-worker.js), registered once when the app starts, so it
+// is ready by the time anyone turns notifications on and stays registered for the pushes after.
+// A browser without service workers simply never offers notifications.
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/push-worker.js', { scope: '/' }).catch(() => {
+        // No worker, no notifications; the rest of the app does not depend on it.
+    });
+}

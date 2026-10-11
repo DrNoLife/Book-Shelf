@@ -62,6 +62,7 @@ public static class MetadataFeatureExtensions
                 .AddSourcePoliteness(MetadataRateLimiting.AniList);
 
             services.AddScoped<ISeriesMetadataSource, AniListSeriesQueryService>();
+            services.AddScoped<IAuthorWorksQueryService, AniListAuthorWorksQueryService>();
 
             return services;
         }
@@ -285,6 +286,11 @@ public static class MetadataFeatureExtensions
             services.AddScoped<SourceChoiceApplier>();
             services.AddScoped<ISourceChoiceCommandService, SourceChoiceCommandService>();
             services.AddScoped<ISourceConflictQueryService, SourceConflictQueryService>();
+
+            // Linking by hand where the matcher would not: a search, and a write that refreshes
+            // the one series through the same refresh as adding it.
+            services.AddScoped<IReleaseLinkQueryService, ReleaseLinkQueryService>();
+            services.AddScoped<IReleaseLinkCommandService, ReleaseLinkCommandService>();
 
             // One nightly loop, no job framework (CLAUDE.md).
             services.AddHostedService<NightlySyncBackgroundService>();

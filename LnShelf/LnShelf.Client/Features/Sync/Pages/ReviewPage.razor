@@ -1,0 +1,52 @@
+@page "/review"
+
+@* Everything the last sync could not settle on its own, one row per question, each a link to
+   the series page where it is settled. No settling here: the series page has the side-by-side
+   view a choice needs, and two places to make one would be two places to word it. *@
+
+<div class="page">
+    <div class="page__stack review">
+
+        <header class="review__header">
+            <p class="eyebrow">Sync</p>
+            <h1 class="title-page">To review</h1>
+        </header>
+
+        @if (!SyncState.HasLoaded)
+        {
+            <p class="notice">Loading the last sync…</p>
+        }
+        else if (SyncState.Latest is not { } latest)
+        {
+            <p class="notice">@SyncStatusText.NeverSyncedHeadline. Questions show up here after the first sync.</p>
+        }
+        else if (latest.ToReview is { Count: 0 })
+        {
+            <p class="notice">Nothing to review. The last sync settled everything on its own.</p>
+        }
+        else
+        {
+            <p class="review__intro fine">
+                What the last sync couldn't settle on its own. Open a series to settle it there.
+            </p>
+
+            <ul class="review__list" aria-label="Questions from the last sync">
+                @foreach (var item in latest.ToReview)
+                {
+                    <li @key="(item.SeriesId, item.Field, item.VolumeNumber)">
+                        <a class="review__row" href="@($"series/{item.SeriesId}")">
+                            <SignalDot Tone="SignalTone.Attention" />
+                            <span class="review__text">
+                                <span class="review__series">@item.SeriesTitle</span>
+                                <span class="review__question">@item.Question</span>
+                                <span class="fine">@item.Said</span>
+                            </span>
+                            <Icon Name="IconName.CaretRight" Size="14" />
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+
+    </div>
+</div>

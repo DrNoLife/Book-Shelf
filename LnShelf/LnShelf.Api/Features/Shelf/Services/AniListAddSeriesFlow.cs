@@ -4,8 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class AniListAddSeriesFlow(
     ISeriesMetadataSource metadataSource,
     ICoverCache coverCache,
-    AddTimeReleaseLink releaseLink,
-    TimeProvider timeProvider) : IAddSeriesFlow
+    AddTimeReleaseLink releaseLink) : IAddSeriesFlow
 {
     public MetadataSourceName Source => MetadataSourceName.AniList;
 
@@ -53,8 +52,7 @@ public sealed class AniListAddSeriesFlow(
         var coverObjectKey = await coverCache.EnsureCachedAsync(
             metadata.ExternalId, metadata.CoverImageUrl, cancellationToken);
 
-        var series = SeriesMetadataMapper.ToTrackedSeries(
-            metadata, timeProvider.GetUtcNow(), coverObjectKey);
+        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey);
 
         // Before the reader's starting state is applied, so "read 9" lands on the volumes the
         // release source counts rather than on AniList's.

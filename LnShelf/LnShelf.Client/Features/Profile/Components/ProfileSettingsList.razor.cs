@@ -31,8 +31,11 @@ public partial class ProfileSettingsList : IDisposable
     private int ReviewCount => ImportState.PendingReviewCount;
 
     private string SyncHeadline => SyncState.Latest is { } latest
-        ? latest.Headline(Now) + (latest.Attention is { } attention ? $" · {attention}" : null)
+        // The failures only: the review count has its own linked row just below.
+        ? latest.Headline(Now) + latest.FailureClause
         : SyncStatusText.NeverSyncedHeadline;
+
+    private int SyncReviewCount => SyncState.Latest?.ToReview.Count ?? 0;
 
     private string SyncDetail => SyncState.Latest?.Detail ?? SyncStatusText.NeverSyncedDetail;
 

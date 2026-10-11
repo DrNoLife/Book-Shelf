@@ -23,6 +23,18 @@ public partial class ShelfFilterControls
     [Parameter]
     public EventCallback<Format?> FormatChanged { get; set; }
 
+    /// <summary>Every genre the shelf's series carry; empty hides the section.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Genres { get; set; } = [];
+
+    /// <summary>The genre chips that are on.</summary>
+    [Parameter]
+    public IReadOnlyList<string> SelectedGenres { get; set; } = [];
+
+    /// <summary>One genre chip tapped; the state decides whether that turns it on or off.</summary>
+    [Parameter]
+    public EventCallback<string> GenreToggled { get; set; }
+
     [Parameter]
     public LibrarySort Sort { get; set; }
 
@@ -42,6 +54,9 @@ public partial class ShelfFilterControls
     public EventCallback<GridDensity> DensityChanged { get; set; }
 
     private bool IsDefaultStatus => Status.SequenceEqual(DefaultStatus);
+
+    private IReadOnlyList<SegmentedOption<string>> GenreOptions =>
+        [.. Genres.Select(genre => new SegmentedOption<string>(genre, genre, $"Series tagged {genre}"))];
 
     /// <summary>Density is a grid setting, and the rows view has no grid.</summary>
     private bool IsDensityDisabled => View == LibraryView.Rows;

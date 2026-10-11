@@ -118,6 +118,24 @@
                                     <td data-label="How long">Until you make the shelf private, make a new link, or delete your account.</td>
                                 </tr>
                                 <tr>
+                                    <th scope="row">Notifications</th>
+                                    <td data-label="Details">Only if you turn notifications on for a device: that browser&rsquo;s push subscription, which is the address of its push service and the two encryption keys the browser makes for it. A short device label worked out from your browser&rsquo;s user agent, such as &ldquo;Chrome on Android&rdquo; (the user agent itself is not kept), when you turned it on, when a message was last accepted, and how many deliveries in a row have failed.</td>
+                                    <td data-label="Why">To send you the release notifications you switched on.</td>
+                                    <td data-label="How long">Until you turn notifications off on that device, remove it on your profile, sign out on that browser, or delete your account. Also deleted when the push service says the subscription no longer exists, or after it has refused five deliveries in a row.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Activity log</th>
+                                    <td data-label="Details">Which volumes on your series came out, were announced, or got a new release date, and when. How far you have read &ldquo;Since your last visit&rdquo; (the time of the newest news you dismissed).</td>
+                                    <td data-label="Why">For &ldquo;Since your last visit&rdquo; on the library and for your notifications.</td>
+                                    <td data-label="How long">120 days, then deleted automatically by the nightly sync. The &ldquo;seen&rdquo; time until you delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Your calendar link</th>
+                                    <td data-label="Details">Only if you turn on the release calendar: the random code in its link, and when it was made.</td>
+                                    <td data-label="Why">It is the calendar link you asked for.</td>
+                                    <td data-label="How long">Until you turn the calendar off, make a new link, or delete your account.</td>
+                                </tr>
+                                <tr>
                                     <th scope="row">Technical logs</th>
                                     <td data-label="Details">The web server logs each request: IP address, time, the page or API address requested, the response, the referring page and your browser&rsquo;s user agent. The application logs events such as sign-ups, errors and changes to your shelf, which can include your account ID, series titles and, in a few cases such as a refused sign-in, an email address.</td>
                                     <td data-label="Why">To keep the service secure, find faults and stop abuse.</td>
@@ -125,7 +143,7 @@
                                 </tr>
                                 <tr>
                                     <th scope="row">Rate-limit counters</th>
-                                    <td data-label="Details">Your IP address (when viewing a public shelf) or your account ID, held in memory only. Never written to disk.</td>
+                                    <td data-label="Details">The IP address that opens a public shelf or a calendar link, or your account ID, held in memory only. Never written to disk.</td>
                                     <td data-label="Why">To protect the server and the free catalogues it relies on from overload.</td>
                                     <td data-label="How long">About a minute.</td>
                                 </tr>
@@ -145,7 +163,7 @@
                 <section class="privacy__section" id="basis" aria-labelledby="basis-title">
                     <h2 class="title-section" id="basis-title">Legal basis</h2>
                     <ul>
-                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers and your public link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers, your public link, notifications, the activity log and your calendar link: we need this data to provide the service you asked for.</li>
                         <li><strong>Legitimate interests (Article 6(1)(f))</strong> for technical logs, rate limiting and backups: keeping a small public service secure, working and recoverable, and not overloading the free community catalogues it relies on. We keep these to what a web server normally needs, for a short time, and never use them for profiling or marketing. You can object to this; see your rights.</li>
                     </ul>
                     <p>You need a Google account with a verified email address to sign up. Nothing is decided about you automatically.</p>
@@ -158,6 +176,8 @@
                         <li><strong>Google</strong> handles signing in. You sign in on Google&rsquo;s own page, so Google knows you signed in to LN Shelf, under its own privacy policy. We receive your account ID, your email address, whether the address is verified, your name and your profile picture. The name is not kept. The picture is copied to our server, by our server, and shown from there.</li>
                         <li><strong>Cloudflare</strong> carries the traffic between your browser and our server (a &ldquo;Cloudflare Tunnel&rdquo;) and provides the HTTPS connection. Because the encryption ends at Cloudflare, it can technically see the traffic passing through, including your IP address. Cloudflare acts as our processor under its data processing agreement.</li>
                         <li><strong>Book catalogues</strong> (AniList, MangaUpdates, Open Library and Apple Books) supply series details, release dates and covers. Our server asks them about titles, catalogue IDs, ISBNs and the search text you type. Nothing that identifies you is sent: no email, no account ID, and the requests come from our server, not your browser.</li>
+                        <li><strong>Push services</strong>, only if you turn notifications on. Each notification goes through your browser maker&rsquo;s push service: Google (Firebase Cloud Messaging) for Chrome and Android, Mozilla for Firefox, Microsoft for Edge on Windows, Apple for Safari, iPhone and iPad. The content (series titles, volume numbers, dates) is encrypted end to end, so the push service sees only the subscription address, the size of the message and when it was sent, not what it says.</li>
+                        <li><strong>Your calendar app</strong>, only if you subscribe to the release calendar. Google Calendar, Apple Calendar or Outlook then fetch the feed from their own servers and keep a copy under their own terms. It holds the titles (with Manga or Web novel where that applies), volume numbers and release dates of the series you track, nothing about what you own, paid or noted, and nothing that names you.</li>
                         <li><strong>Saxo, AniList and MangaUpdates links</strong> open those sites only when you click them. Nothing about you or your shelf is passed along, beyond the book title and volume in a Saxo search.</li>
                     </ul>
                     <p>Your browser loads nothing from other websites while you use LN Shelf: fonts, covers and your picture are served by our own server.</p>
@@ -165,7 +185,7 @@
 
                 <section class="privacy__section" id="transfers" aria-labelledby="transfers-title">
                     <h2 class="title-section" id="transfers-title">Outside the EU</h2>
-                    <p>The server, database and covers are in Denmark. Google and Cloudflare are US companies. Transfers to them rely on the EU-US Data Privacy Framework, under which both are certified, and in Cloudflare&rsquo;s case also on the EU Standard Contractual Clauses.</p>
+                    <p>The server, database and covers are in Denmark. Google and Cloudflare are US companies. Transfers to them rely on the EU-US Data Privacy Framework, under which both are certified, and in Cloudflare&rsquo;s case also on the EU Standard Contractual Clauses. If you turn notifications on, the push service your browser uses may be outside the EU too: Google, Microsoft and Apple are certified under the same framework, and the message content is encrypted so that only your device can read it.</p>
                 </section>
 
                 <section class="privacy__section" id="keep" aria-labelledby="keep-title">
@@ -175,6 +195,9 @@
                         <li><strong>Things you delete yourself</strong> (a series, a note, a cover, an uploaded picture) are gone straight away. That includes covers you uploaded to a series you remove.</li>
                         <li><strong>Your picture:</strong> the copy of your Google picture until that picture changes or you delete your account; a picture you upload until you replace it, go back to the Google picture, or delete your account.</li>
                         <li><strong>Your public link:</strong> until you make your shelf private, make a new link, or delete your account.</li>
+                        <li><strong>Your calendar link:</strong> until you turn the calendar off, make a new link, or delete your account.</li>
+                        <li><strong>Notifications:</strong> a device&rsquo;s subscription until you turn notifications off on it, remove it on your profile, sign out on that browser, or delete your account.</li>
+                        <li><strong>Activity log:</strong> 120 days.</li>
                         <li><strong>Imports and sync records:</strong> as long as your account exists.</li>
                         <li><strong>Technical logs:</strong> rotated automatically by size, so only the most recent entries are kept, and cleared when the service is updated.</li>
                         <li><strong>Rate-limit data:</strong> about a minute, in memory only.</li>
@@ -186,7 +209,7 @@
                     <h2 class="title-section" id="rights-title">Your rights</h2>
                     <p>You have the right to:</p>
                     <ul>
-                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports and your sync records as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
+                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports, your sync records, your activity log, your calendar link and the devices you turned notifications on for (without their encryption keys) as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
                         <li><strong>Correct</strong> it. You can edit everything on your shelf yourself. Your email address follows your Google account.</li>
                         <li><strong>Delete</strong> it. <em>Delete account</em> on your profile deletes your account and all its data immediately.</li>
                         <li><strong>Take it with you</strong> (data portability). The export is a standard JSON file.</li>
@@ -206,6 +229,7 @@
                     </ul>
                     <p>No analytics, advertising or tracking cookies.</p>
                     <p>Your browser&rsquo;s local storage keeps two display choices for this device only: the library filters you last used (<code>lnshelf.library-filters</code>: which statuses and which format, never what you typed in the title filter) and whether the shelf&rsquo;s colour key is open (<code>lnshelf.shelf-key-open</code>). They are never sent to the server, and they go when you clear this site&rsquo;s data in your browser. &ldquo;Clear all&rdquo; on the shelf forgets the filters too.</p>
+                    <p>The site also registers a small service worker in your browser. It only shows the notifications you turned on; it stores nothing and caches nothing.</p>
                 </section>
 
                 <section class="privacy__section" id="sharing" aria-labelledby="sharing-title">
@@ -213,6 +237,7 @@
                     <p>Your shelf is private unless you make it public on your profile. Then anyone with the link can see the titles of the series on it, their format, publication status and cover, whether you are reading, have finished or plan to start each one, and how many volumes you have read and how many are out.</p>
                     <p>They never see your name, email or picture, what you own or paid, your dates, your notes, the series you dropped, or covers you uploaded. Public shelf pages ask search engines not to index them.</p>
                     <p>Anyone who has the link can pass it on. Making your shelf private, or making a new link, stops the old link from working immediately.</p>
+                    <p>The release calendar link works the same way: anyone who has it can see the release dates of the series you track, until you turn the calendar off or make a new link. It shows nothing else.</p>
                 </section>
 
                 <section class="privacy__section" id="security" aria-labelledby="security-title">
@@ -222,7 +247,7 @@
                         <li>Each user&rsquo;s data is separated in the database: every query is limited to the signed-in user.</li>
                         <li>The session cookie is HttpOnly and protected against cross-site use, and the site uses a strict Content Security Policy.</li>
                         <li>The database and file storage are not exposed to the internet; only the web front end is reachable, through the tunnel.</li>
-                        <li>Public links use long random codes, and public pages are rate limited.</li>
+                        <li>Public links and calendar links use long random codes, public pages and the calendar feed are rate limited, and the application&rsquo;s own logs never contain those codes (the web server&rsquo;s request log records them as part of the address, like any other request).</li>
                     </ul>
                     <p>No system is perfectly secure. If a breach affects your data, we will tell Datatilsynet and, where required, you.</p>
                 </section>

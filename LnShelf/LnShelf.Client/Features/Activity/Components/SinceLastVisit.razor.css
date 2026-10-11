@@ -1,0 +1,24 @@
+.since {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.since__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Wraps on a phone: the title keeps its line and the news drops under it. */
+.since__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.since__news { color: var(--muted); }

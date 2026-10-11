@@ -49,6 +49,9 @@ public sealed class ManualSyncRunnerTests
         // Released when the run ends, whether it finished or fell over: a failed run that
         // kept the lease would refuse every later "Sync now" until a restart.
         await WaitUntilAsync(() => host.RanFor.Contains(User));
+
+        // "Sync now" pushes what it found, the same pass the night ends with.
+        await WaitUntilAsync(() => host.NotifiedFor.Contains(User));
         await WaitUntilAsync(() =>
         {
             using var lease = host.Gate.TryEnter(User);

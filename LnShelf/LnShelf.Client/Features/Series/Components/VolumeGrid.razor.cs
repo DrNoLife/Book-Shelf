@@ -128,7 +128,9 @@ public partial class VolumeGrid
             rect,
             VolumePopover.WidthFor(volume),
             VolumePopover.HeightFor(
-                volume, hasChoiceNote: Series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, volume.Number) is not null));
+                volume,
+                hasChoiceNote: Series.ChoiceFor(SyncDiscrepancyField.ReleaseDate, volume.Number) is not null,
+                isRemovable: ManualSeries.IsRemovable(Series, volume)));
         Selection.OpenMenu(volume);
     }
 

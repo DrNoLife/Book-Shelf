@@ -70,7 +70,21 @@ per volume, presumably — decide with data).
 
 </details>
 
-## 2. SeriesLink review surface
+## 2. SeriesLink review surface — DONE (2026-10-11, v0.29.0)
+
+Built in round 3 (D8): the series page's "Not linked" panel searches MangaUpdates
+(`GET api/series/{id}/release-link/candidates`), and Link (`PUT api/series/{id}/release-link`)
+saves the id, answers the open SeriesLink questions and refreshes the series. `/review`
+lists everything the last sync could not settle. Still open:
+
+- **"Not on MangaUpdates / leave unlinked"** marker, so a series is not asked about on every
+  sweep. It is a local override column, so it needs the owner's sign-off first.
+- **Re-link** from the UI for a series the matcher linked to the wrong record. The endpoint
+  accepts it (and treats the next refresh as a first one, so the new record's volumes are not
+  news); the panel only shows for unlinked series.
+
+<details>
+<summary>The original item</summary>
 
 Sync records unmatched/ambiguous MangaUpdates links as `SyncDiscrepancy` rows
 with `Field = SeriesLink` — currently 4 waiting, visible only in the sync
@@ -79,6 +93,8 @@ same pattern as the import queue — reuse those components) and a resolve
 endpoint that sets `MangaUpdatesId`. Until resolved, those series get no
 count-based `IsReleased` updates. Natural companion to any sync-related
 session; too small to be its own phase.
+
+</details>
 
 ## 3. Series grouping (the Bookworm problem)
 
@@ -97,48 +113,60 @@ completion, furthest read. **Still parked: the backlog-over-time chart** — an
 import carries no purchase dates, so a trend would be drawn from the handful of
 volumes that have one. It un-parks once a few months of `PurchasedAt` exist.
 
-## 5. WebNovel manual volumes
+## 5. WebNovel manual volumes — DONE (2026-10-11, v0.29.0)
 
-The v1 contract (feature-spec §4.2): WN series carry no external ids, sync
-skips them, volumes enter via `POST /api/series/{id}/volumes`. The endpoint
-exists; the UI for it doesn't (an "add volume" affordance on the series detail
-page, probably in the volume-grid header, only shown for id-less series).
-Small; bundle into whichever session next touches the series detail page.
+This item used to say `POST /api/series/{id}/volumes` already existed. It did not: no
+manual-add or volume endpoint existed before round 3. Now built (D9):
+`POST api/series/manual` adds an id-less series of any format (never synced), and
+`POST api/series/{id}/volumes` / `DELETE api/series/{id}/volumes/{volumeId}` grow and shrink
+it, with "Can't find it? Add it by hand" on Search & add, "Add Vol N" in the volume toolbar
+and "Remove volume" in a local volume's menu. Still open:
 
-## 6. Notification niceties (post-phase-5)
+- A decimal (bonus) number in the "Add volume" UI; the API already accepts one.
+- Manual series have no dates or announced volumes; a volume added by hand is always out.
 
-Phase 5 ships the seam + ntfy on IsReleased transitions. Parked beyond that:
-per-series notification preferences UI (the mute flag exists in the model),
-Discord webhook as `IReleaseNotifier` implementation #2, and the "date moved"
-notification — which un-parks only if spike #1 delivers dates.
+## 6. Notification niceties — first notifier DONE (2026-10-11, v0.29.0)
+
+Round 3 shipped the `IReleaseNotifier` seam with Web Push as its first implementation
+(not ntfy; feature-spec §4.5 revised), one digest per user after each sync run covering
+released volumes and changed release dates ("date moved" included), and a per-series
+mute on the series page. Still open:
+
+- ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.
+- "Notify me when dated" per volume on Upcoming.
+- Remove a device automatically after N refused deliveries in a row. A key rotation leaves
+  old subscriptions answering 403 rather than 410; today they show "the last N deliveries
+  failed" with a Remove button.
+- Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
+  tap keeps the user gesture through Blazor interop.
 
 ## 0. Owner feedback after the multi-user deploy (2026-10-10) — next up
 
-- **Search & add keeps saying "Add"** for a series that was just added. The row should
+- **Search & add keeps saying "Add"** [done, 0.24.1: "On your shelf · Open"] for a series that was just added. The row should
   show it is on the shelf (and not offer Add again).
 - **"Not owned" / "Owned" wording is confusing.** The menu item reads "Not owned", and
   clicking it makes the volume owned. Reword so the label says what clicking does, or is
   a clear on/off state.
 - **The tracking-status dropdown at the top of the series page does not seem to work.**
   Reproduce and fix.
-- **The changelog was not updated** for the audit fixes, e2e, login and multi-user work.
+- **The changelog was not updated** [done: every release since 0.12.0 has an entry] for the audit fixes, e2e, login and multi-user work.
   Add the entry and bump `Version` in Directory.Build.props (ChangelogCatalogTests).
 - **The sync text in the sidebar** is not good. Rework or hide it (and it is now per user).
-- **A real favicon.** `wwwroot/favicon.png` and `icon-192.png` are placeholders; make
+- **A real favicon** [done: `favicon.svg`; the 512 and maskable icons followed in 0.29.0]. `wwwroot/favicon.png` and `icon-192.png` are placeholders; make
   one that fits docs/design.md and use it on the static pages too.
-- **A landing page for visitors who are not signed in**: what LN Shelf is, why it is
+- **A landing page for visitors who are not signed in** [done: `welcome.html`]: what LN Shelf is, why it is
   useful, and a clear "Sign in with Google". Today a signed-out visitor goes straight to
   Google's login with no explanation. Static, like privacy.html, so it needs no session.
-- **Redesign.** The current UI is fine but far from good. The owner has a new design from
+- **Redesign** [done, 7245645 and later]. The current UI is fine but far from good. The owner has a new design from
   another Claude session to start from (the link is kept outside the repo, because it
   carries a share key). Do the landing page as part of it.
-- **A user page** (in the same design): your own account and shelf at a glance. Natural
+- **A user page** [done: `/profile`] (in the same design): your own account and shelf at a glance. Natural
   home for signing out, the account details now on privacy.html, and deleting the account.
 - **Something social, to explore (nothing decided).** Ideas so far:
   - Shared series: "you both read 86: you are on vol 11, they are on vol 13".
   - A spoiler-aware feed: activity on a volume you have not read yet is blurred.
   - Recommendations from people you follow, weighted by how much your shelves overlap.
-  - A shareable read-only shelf by link, before real followers. Cheap, and gets most of
+  - A shareable read-only shelf by link, before real followers [done: `Features/Sharing`]. Cheap, and gets most of
     the value; the natural first step.
   Notes for when this is picked up: feature-spec §1 lists social features as a non-goal,
   so it is a spec change first. Shelves are separate copies per user, so matching "the

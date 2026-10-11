@@ -246,6 +246,13 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
                 series.SeriesId, view, cancellationToken)))
             : Task.CompletedTask;
 
+    /// <summary>Mutes or unmutes notifications about this series. Pushes only; the activity stays.</summary>
+    public Task SetNotificationsMutedAsync(bool muted, CancellationToken cancellationToken = default) =>
+        Series is { } series
+            ? RunAsync(async () => ReplaceSeries(await client.SetNotificationsMutedAsync(
+                series.SeriesId, muted, cancellationToken)))
+            : Task.CompletedTask;
+
     /// <summary>How the series is being tracked. The note is left alone.</summary>
     public Task SetTrackingStatusAsync(
         TrackingStatus trackingStatus,
@@ -345,6 +352,24 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
             ? Task.CompletedTask
             : RunAsync(async () =>
                 ReplaceSeries(await client.RemoveCoverAsync(volume.VolumeId, cancellationToken)));
+    }
+
+    /// <summary>"Add volume" on a series kept by hand: the next whole number.</summary>
+    public Task AddVolumeAsync(CancellationToken cancellationToken = default) =>
+        Series is { } series
+            ? RunAsync(async () => ReplaceSeries(
+                await client.AddVolumeAsync(series.SeriesId, number: null, cancellationToken)))
+            : Task.CompletedTask;
+
+    /// <summary>"Remove volume" on a volume added by hand. The caller confirms first.</summary>
+    public Task RemoveVolumeAsync(VolumeResponse volume, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        return Series is { } series
+            ? RunAsync(async () => ReplaceSeries(
+                await client.RemoveVolumeAsync(series.SeriesId, volume.VolumeId, cancellationToken)))
+            : Task.CompletedTask;
     }
 
     private Task<bool> SetStateAsync(

@@ -394,6 +394,70 @@ public sealed class SeriesSyncServiceTests
         (await dbContext.Volumes.ToListAsync()).ShouldAllBe(volume => !volume.IsReleased);
     }
 
+    // A link made by hand while the sweep runs: the sweep loaded the series unlinked, and must
+    // neither ask about it again nor save its own match over the person's choice.
+    [Fact]
+    public async Task RunAsync_LinkedByHandAfterTheSweepLoadedIt_KeepsTheLinkAndAsksNothing()
+    {
+        const long handLinkedId = 777;
+        var databaseName = $"sync-{Guid.CreateVersion7()}";
+        await using var dbContext = CreateDbContext(databaseName);
+        await SeedSeriesAsync(dbContext, volumeCount: 3, titleEnglish: "A Series", aniListId: 1);
+        await SeedSeriesAsync(dbContext, volumeCount: 3, titleEnglish: "B Series", aniListId: 2);
+        dbContext.ChangeTracker.Clear();
+
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(IsTitled("A Series"), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                // The hand link lands mid-sweep, through another request's context.
+                await using var otherRequest = CreateDbContext(databaseName);
+                var other = await otherRequest.Series.SingleAsync(series => series.TitleEnglish == "B Series");
+                other.MangaUpdatesId = handLinkedId;
+                await otherRequest.SaveChangesAsync();
+
+                return new ReleaseSourceMatch { Outcome = ReleaseMatchOutcome.NoCandidate, Explanation = "Nothing found." };
+            });
+        matcher.MatchAsync(IsTitled("B Series"), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns(Linked(volumeCount: 3));
+
+        var run = await CreateService(dbContext, matcher).RunAsync(CancellationToken.None);
+
+        await matcher.DidNotReceive().MatchAsync(
+            IsTitled("B Series"), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>());
+        run.Discrepancies.ShouldHaveSingleItem().Field.ShouldBe(SyncDiscrepancyField.SeriesLink);
+
+        await using var verify = CreateDbContext(databaseName);
+        (await verify.Series.SingleAsync(series => series.TitleEnglish == "B Series"))
+            .MangaUpdatesId.ShouldBe(handLinkedId);
+    }
+
+    // A series the sweep could not link was never refreshed (LastSyncedAt stays null), so the
+    // refresh after linking it by hand is its first: its backlist arriving then is not news.
+    [Fact]
+    public async Task RunForSeriesAsync_AfterAHandLinkOfAnUnmatchedSeries_RaisesNoNewVolumeBadgeOrNews()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedSeriesAsync(dbContext, volumeCount: 3, withUserState: true);
+        var unmatched = new ReleaseSourceMatch { Outcome = ReleaseMatchOutcome.NoCandidate, Explanation = "Nothing found." };
+        await CreateService(dbContext, unmatched).RunAsync(CancellationToken.None);
+
+        var series = await dbContext.Series.Include(candidate => candidate.UserState).SingleAsync();
+        series.LastSyncedAt.ShouldBeNull();
+        series.MangaUpdatesId = MangaUpdatesId;
+        await dbContext.SaveChangesAsync();
+
+        var run = await CreateService(dbContext, unmatched).RunForSeriesAsync(series.Id, CancellationToken.None);
+
+        run.ShouldNotBeNull().NewVolumes.ShouldBe(11);
+        series.UserState.ShouldNotBeNull().HasNewVolume.ShouldBeFalse();
+        series.LastSyncedAt.ShouldNotBeNull();
+        (await dbContext.ShelfEvents.AsNoTracking().CountAsync()).ShouldBe(0);
+    }
+
+    private static Series IsTitled(string titleEnglish) =>
+        Arg.Is<Series>(series => series.TitleEnglish == titleEnglish);
+
     internal static ReleaseSourceMatch Linked(int? volumeCount) => new()
     {
         Outcome = ReleaseMatchOutcome.Linked,
@@ -518,8 +582,8 @@ public sealed class SeriesSyncServiceTests
         return source;
     }
 
-    private static LnShelfDbContext CreateDbContext() =>
+    private static LnShelfDbContext CreateDbContext(string? databaseName = null) =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()
-            .UseInMemoryDatabase($"sync-{Guid.CreateVersion7()}")
+            .UseInMemoryDatabase(databaseName ?? $"sync-{Guid.CreateVersion7()}")
             .Options, TestUsers.Current);
 }

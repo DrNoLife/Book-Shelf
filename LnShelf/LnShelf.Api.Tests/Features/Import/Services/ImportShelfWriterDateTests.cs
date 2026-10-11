@@ -28,7 +28,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: StampedToday)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -36,7 +35,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -53,7 +51,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -61,7 +58,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: StampedToday)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -78,7 +74,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -88,7 +83,7 @@ public sealed class ImportShelfWriterDateTests
         undated.Rows.Single().ReadAt = null;
 
         await writer.ApplyAsync(
-            AniListId, [undated], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [undated], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await LoadVolumeAsync(dbContext, 1)).UserState!.ReadAt.ShouldBe(ExportDate);
@@ -104,14 +99,13 @@ public sealed class ImportShelfWriterDateTests
         undated.Rows.Single().ReadAt = null;
 
         await writer.ApplyAsync(
-            AniListId, [undated], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [undated], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -128,7 +122,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: StampedToday)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -140,7 +133,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -161,7 +153,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -169,7 +160,7 @@ public sealed class ImportShelfWriterDateTests
         undated.Rows.Single().ReadAt = null;
 
         await writer.ApplyAsync(
-            AniListId, [undated], new ImportWriteCounters(), AppliedAt, CancellationToken.None);
+            AniListId, [undated], new ImportWriteCounters(), CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await LoadSeriesAsync(dbContext)).UserState!.StartedAt.ShouldBe(ExportDate);
@@ -189,7 +180,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readStatus, readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -209,7 +199,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], ReadStatus.Reading, readAt: ExportDate), CreateGroup([2], readAt: StampedToday)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -228,7 +217,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], ReadStatus.Unread, readAt: ExportDate)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -248,7 +236,6 @@ public sealed class ImportShelfWriterDateTests
             AniListId,
             [CreateGroup([1], readAt: ExportDate), CreateGroup([1], readAt: StampedToday)],
             new ImportWriteCounters(),
-            AppliedAt,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 

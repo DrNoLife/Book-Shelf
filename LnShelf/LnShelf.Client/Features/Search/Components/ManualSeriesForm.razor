@@ -1,0 +1,84 @@
+@* "Can't find it? Add it by hand": a series no catalogue knows — a web novel, or anything the
+   search does not turn up. Folded away behind one quiet line until asked for, because most
+   adds come from a search row. Opens prefilled with whatever was searched. The series it adds
+   has no external id, so the sync never touches it; volumes are added and removed on its own
+   page, and a cover is dropped onto any tile there.
+
+   The open button and the form replace each other, so neither carries aria-expanded (it would
+   never be heard changing); focus is moved instead: into Title on open, back to the button on
+   Cancel. *@
+
+<div class="manual">
+    @if (!_isOpen)
+    {
+        <button type="button" class="ghost manual__open" @ref="_openButton" @onclick="Open">
+            Can't find it? Add it by hand
+        </button>
+    }
+    else
+    {
+        <form class="manual__form" aria-labelledby="manual-title" @onsubmit="OnSubmitAsync" @onsubmit:preventDefault>
+            <div class="manual__head">
+                <h2 id="manual-title" class="title-panel">Add a series by hand</h2>
+                <button type="button" class="ghost" @onclick="Close">Cancel</button>
+            </div>
+
+            <p class="fine">
+                For a web novel or anything the search cannot find. Nothing syncs it: you add its
+                volumes yourself, and drop a cover onto any of them.
+            </p>
+
+            <label class="manual__field">
+                <span class="eyebrow">Title</span>
+                <input class="manual__input"
+                       @ref="_titleInput"
+                       type="text"
+                       required
+                       maxlength="@AddManualSeriesRequest.MaximumTitleLength"
+                       autocomplete="off"
+                       @bind="_title"
+                       @bind:event="oninput" />
+            </label>
+
+            <div class="manual__field">
+                <span class="eyebrow">Format</span>
+                <SegmentedControl TValue="Format"
+                                  Options="FormatOptions"
+                                  Value="_format"
+                                  ValueChanged="format => _format = format"
+                                  AriaLabel="Format"
+                                  Inset="true" />
+            </div>
+
+            <div class="manual__row">
+                <label class="manual__field manual__field--grow">
+                    <span class="eyebrow">Author <span class="manual__optional">optional</span></span>
+                    <input class="manual__input"
+                           type="text"
+                           maxlength="@AddManualSeriesRequest.MaximumAuthorLength"
+                           autocomplete="off"
+                           @bind="_author" />
+                </label>
+
+                <label class="manual__field">
+                    <span class="eyebrow">Volumes out</span>
+                    <input class="manual__input manual__input--number tabular"
+                           type="number"
+                           inputmode="numeric"
+                           min="0"
+                           max="@AddManualSeriesRequest.MaximumVolumeCount"
+                           @bind="_volumeCount" />
+                </label>
+            </div>
+
+            @if (_message is { } message)
+            {
+                <p class="notice notice--message" role="status">@message</p>
+            }
+
+            <button type="submit" class="primary button--large" disabled="@(_isSaving || !CanSubmit)">
+                Add to shelf
+            </button>
+        </form>
+    }
+</div>

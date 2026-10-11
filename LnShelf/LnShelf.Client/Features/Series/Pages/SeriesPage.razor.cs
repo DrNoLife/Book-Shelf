@@ -117,6 +117,20 @@ public partial class SeriesPage : IDisposable
         await SyncState.LoadAsync();
     }
 
+    /// <summary>What the last hand-made link did, said once on this series' page.</summary>
+    private string? _linkOutcome;
+
+    /// <summary>
+    /// A link changes the volumes, the counts and the open questions at once, so the series is
+    /// read again whole; the sidebar's "to review" count drops with it.
+    /// </summary>
+    private async Task OnLinkedAsync(ReleaseLinkResponse linked)
+    {
+        _linkOutcome = ReleaseLinkText.Outcome(linked);
+        await LoadSeriesAsync();
+        await SyncState.LoadAsync();
+    }
+
     private void OpenActions() => _isActionsOpen = true;
 
     /// <summary>Closes the More sheet and hands focus back to the button that opened it.</summary>
@@ -164,6 +178,7 @@ public partial class SeriesPage : IDisposable
         {
             _selectionSeriesId = SeriesId;
             Selection.Reset();
+            _linkOutcome = null;
         }
 
         await LoadSeriesAsync();

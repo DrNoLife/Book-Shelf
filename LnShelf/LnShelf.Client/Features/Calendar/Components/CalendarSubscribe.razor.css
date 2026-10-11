@@ -1,0 +1,27 @@
+/* A quiet row under the page head, the button at its end, and the panel under it at a
+   readable width rather than the page's full 1180px. */
+
+.calendar-subscribe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.subscribe {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.calendar-subscribe ::deep .subscribe__panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+}
+
+/* On a phone the button sits under the format tabs, so it starts where they do. */
+@media (max-width: 720px) {
+  .subscribe { justify-content: flex-start; }
+
+  .calendar-subscribe ::deep .subscribe__panel { max-width: none; }
+}

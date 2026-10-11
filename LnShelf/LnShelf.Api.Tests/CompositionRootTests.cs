@@ -1,9 +1,12 @@
 using LnShelf.Api.Commands;
+using LnShelf.Api.Features.Activity;
 using LnShelf.Api.Features.Auth;
+using LnShelf.Api.Features.Calendar;
 using LnShelf.Api.Features.Covers;
 using LnShelf.Api.Features.Import;
 using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Monitoring;
+using LnShelf.Api.Features.Notifications;
 using LnShelf.Api.Features.Preferences;
 using LnShelf.Api.Features.Releases;
 using LnShelf.Api.Features.Sharing;
@@ -52,6 +55,7 @@ public sealed class CompositionRootTests
     [InlineData("enrichment-verify")]
     [InlineData("subtitle-backfill")]
     [InlineData("cover-orphan-sweep")]
+    [InlineData("vapid-keys")]
     public void EveryConsoleCommand_IsResolvableByItsName(string commandName)
     {
         using var provider = BuildServices().BuildServiceProvider();
@@ -121,7 +125,10 @@ public sealed class CompositionRootTests
         services.AddPreferences();
         services.AddSharing(configuration);
         services.AddReleases();
+        services.AddNotifications(configuration);
+        services.AddCalendar(configuration);
         services.AddStats();
+        services.AddActivity();
         services.AddMonitoring(configuration);
 
         // The real cookie and OpenID Connect registration, as production has it: the

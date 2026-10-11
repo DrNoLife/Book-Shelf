@@ -11,6 +11,7 @@ public static class UserRateLimits
 {
     public const string ExternalSources = "external-sources";
     public const string WholeShelfSync = "whole-shelf-sync";
+    public const string AuthorWorks = "author-works";
 
     extension(IServiceCollection services)
     {
@@ -33,6 +34,16 @@ public static class UserRateLimits
                     {
                         TokenLimit = limits.ExternalRequestsPerMinute,
                         TokensPerPeriod = limits.ExternalRequestsPerMinute,
+                        ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
+
+                limiter.AddPolicy(AuthorWorks, context => RateLimitPartition.GetTokenBucketLimiter(
+                    PartitionKey(context),
+                    _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = limits.AuthorWorksRequestsPerMinute,
+                        TokensPerPeriod = limits.AuthorWorksRequestsPerMinute,
                         ReplenishmentPeriod = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                     }));

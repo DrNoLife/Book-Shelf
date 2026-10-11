@@ -1,3 +1,5 @@
+using LnShelf.Shared.Metadata;
+
 namespace LnShelf.Shared.Shelf;
 
 /// <summary>
@@ -10,6 +12,12 @@ public sealed record VolumeResponse
 
     /// <summary>Null when no source knows the date, which is most volumes.</summary>
     public DateOnly? ReleaseDate { get; init; }
+
+    /// <summary>
+    /// Which per-volume source wrote <see cref="ReleaseDate"/> ("Date from Open Library"). Null
+    /// when the date is unknown or was written before its source was recorded.
+    /// </summary>
+    public MetadataSourceName? ReleaseDateSource { get; init; }
 
     /// <summary>
     /// This volume's own title, when a source supplied one. Null is the norm, and

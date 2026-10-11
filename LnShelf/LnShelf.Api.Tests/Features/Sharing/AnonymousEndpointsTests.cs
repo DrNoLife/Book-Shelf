@@ -1,4 +1,5 @@
 using System.Reflection;
+using LnShelf.Api.Features.Calendar.Controllers;
 using LnShelf.Api.Features.Sharing.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,8 @@ namespace LnShelf.Api.Tests.Features.Sharing;
 
 /// <summary>
 /// The app is closed by default (feature-spec §7): the only endpoints a stranger may call are
-/// login, health and the shared shelf, and the shared shelf's are rate-limited.
+/// login, health, the shared shelf and the release calendar feed, and the last two are
+/// rate-limited.
 /// </summary>
 public sealed class AnonymousEndpointsTests
 {
@@ -17,12 +19,13 @@ public sealed class AnonymousEndpointsTests
     [
         "AuthController.Login",
         "HealthController.GetAsync",
+        "ReleaseCalendarController.GetAsync",
         "SharedShelfController.GetAsync",
         "SharedShelfController.GetCoverAsync",
     ];
 
     [Fact]
-    public void AllowAnonymous_IsOnlyOnLoginHealthAndTheSharedShelf()
+    public void AllowAnonymous_IsOnlyOnLoginHealthTheSharedShelfAndTheCalendarFeed()
     {
         var anonymous = Actions()
             .Where(action => action.Controller.IsDefined(typeof(AllowAnonymousAttribute))
@@ -33,10 +36,12 @@ public sealed class AnonymousEndpointsTests
         anonymous.ShouldBe(AllowedAnonymous);
     }
 
-    [Fact]
-    public void SharedShelfController_EveryAction_HasARateLimit()
+    [Theory]
+    [InlineData(typeof(SharedShelfController))]
+    [InlineData(typeof(ReleaseCalendarController))]
+    public void AnonymousController_EveryAction_HasARateLimit(Type controller)
     {
-        var actions = Actions().Where(action => action.Controller == typeof(SharedShelfController)).ToList();
+        var actions = Actions().Where(action => action.Controller == controller).ToList();
 
         actions.ShouldNotBeEmpty();
         actions.ShouldAllBe(action => action.Method.IsDefined(typeof(EnableRateLimitingAttribute)));

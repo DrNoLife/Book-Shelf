@@ -1,4 +1,9 @@
 using LnShelf.Api.Tests.Data.Fixtures;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
+using Microsoft.Extensions.Logging;
 
 namespace LnShelf.Api.Tests.Errors;
 
@@ -111,5 +116,82 @@ public sealed class ProblemDetailsExceptionHandlerTests
         statusCode.ShouldBe(status);
         title.ShouldBe(expectedTitle);
         detail.ShouldNotBeNull();
+    }
+
+    [Theory]
+    [InlineData("api/calendar/{token}.ics", "/api/calendar/SecretCalendarToken0001.ics", "/api/calendar/{token}.ics")]
+    [InlineData("api/shared/{token}", "/api/shared/SecretSharedToken00000001", "/api/shared/{token}")]
+    public async Task TryHandleAsync_ATokenRouteFailing_LogsTheRouteTemplateNotTheToken(
+        string routeTemplate, string requestPath, string expectedPath)
+    {
+        // A Postgres outage inside the anonymous calendar feed: the 500 is logged, and whoever
+        // reads the log must not be able to open the feed (or the shared shelf) with it.
+        var logger = new CapturingLogger();
+        var httpContext = FailedRequest(routeTemplate, requestPath);
+
+        await HandlerLoggingTo(logger).TryHandleAsync(
+            httpContext, new InvalidOperationException("connection refused"), CancellationToken.None);
+
+        var message = logger.Messages.ShouldHaveSingleItem();
+        message.ShouldContain(expectedPath);
+        message.ShouldNotContain("Secret");
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_AnOrdinaryRouteFailing_LogsTheRealPath()
+    {
+        // Everything without a secret in it keeps the path that makes a 500 traceable.
+        var logger = new CapturingLogger();
+        var httpContext = FailedRequest("api/series/{id}", "/api/series/0199a0f1-1111-7000-8000-000000000001");
+
+        await HandlerLoggingTo(logger).TryHandleAsync(
+            httpContext, new InvalidOperationException("boom"), CancellationToken.None);
+
+        logger.Messages.ShouldHaveSingleItem().ShouldContain("/api/series/0199a0f1-1111-7000-8000-000000000001");
+    }
+
+    private static ProblemDetailsExceptionHandler HandlerLoggingTo(CapturingLogger logger) =>
+        new(Substitute.For<IProblemDetailsService>(), logger);
+
+    // As the exception middleware leaves it: the endpoint cleared from the context, the
+    // matched one kept on the feature.
+    private static DefaultHttpContext FailedRequest(string routeTemplate, string requestPath)
+    {
+        var endpoint = new RouteEndpoint(
+            _ => Task.CompletedTask,
+            RoutePatternFactory.Parse(routeTemplate),
+            order: 0,
+            EndpointMetadataCollection.Empty,
+            displayName: routeTemplate);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = requestPath;
+        httpContext.Features.Set<IExceptionHandlerFeature>(
+            new ExceptionHandlerFeature
+            {
+                Error = new InvalidOperationException(),
+                Path = requestPath,
+                Endpoint = endpoint,
+            });
+
+        return httpContext;
+    }
+
+    private sealed class CapturingLogger : ILogger<ProblemDetailsExceptionHandler>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 }

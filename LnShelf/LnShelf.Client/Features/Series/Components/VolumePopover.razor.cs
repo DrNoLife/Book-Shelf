@@ -38,13 +38,22 @@ public partial class VolumePopover
         HasBlurb(volume) ? DescribedWidth : Width;
 
     /// <param name="hasChoiceNote">Whether the reader picked this volume's date source.</param>
-    public static double HeightFor(VolumeResponse volume, bool hasChoiceNote = false)
+    /// <param name="isRemovable">Whether the panel offers "Remove volume" (ManualSeries.IsRemovable).</param>
+    public static double HeightFor(VolumeResponse volume, bool hasChoiceNote = false, bool isRemovable = false)
     {
         ArgumentNullException.ThrowIfNull(volume);
 
         var height = HasBlurb(volume) ? DescribedHeight : Height;
 
-        if (hasChoiceNote)
+        // Counted as a row of its own: beside "Set cover…" and "Remove cover" it wraps.
+        if (isRemovable)
+        {
+            height += RemoveCoverRowHeight;
+        }
+
+        // One note line at most: the reader's pick, or else the date's source (the two never
+        // show together, since a pick says where the date came from already).
+        if (hasChoiceNote || volume.DateSourceLine is not null)
         {
             height += ChoiceNoteHeight;
         }

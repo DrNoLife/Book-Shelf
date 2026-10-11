@@ -7,7 +7,6 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class MangaUpdatesAddSeriesFlow(
     IMangaUpdatesSeriesQueryService mangaUpdatesSource,
     ISeriesCoverCache seriesCoverCache,
-    TimeProvider timeProvider,
     ILogger<MangaUpdatesAddSeriesFlow> logger) : IAddSeriesFlow
 {
     public MetadataSourceName Source => MetadataSourceName.MangaUpdates;
@@ -49,8 +48,7 @@ public sealed class MangaUpdatesAddSeriesFlow(
         var coverObjectKey = await seriesCoverCache.EnsureCachedAsync(
             MetadataSourceName.MangaUpdates, metadata.SourceId, metadata.CoverImageUrl, cancellationToken);
 
-        var series = SeriesMetadataMapper.ToTrackedSeries(
-            metadata, timeProvider.GetUtcNow(), coverObjectKey);
+        var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey);
 
         // Logged here rather than folded into the pipeline's "Added" line, because the raw
         // status is the only thing this source knows that the stored row does not: the

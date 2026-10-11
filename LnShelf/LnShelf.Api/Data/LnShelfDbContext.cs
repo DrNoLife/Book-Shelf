@@ -18,12 +18,21 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     public DbSet<SeriesUserState> SeriesUserStates => Set<SeriesUserState>();
     public DbSet<VolumeUserState> VolumeUserStates => Set<VolumeUserState>();
 
+    /// <summary>The activity log sync writes (Features/Shelf); filtered through its series.</summary>
+    public DbSet<ShelfEvent> ShelfEvents => Set<ShelfEvent>();
+
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
 
     public DbSet<User> Users => Set<User>();
 
     /// <summary>Public shelf links (Features/Sharing). Unfiltered on purpose, like Users.</summary>
     public DbSet<ShelfShare> ShelfShares => Set<ShelfShare>();
+
+    /// <summary>Release calendar links (Features/Calendar). Unfiltered on purpose, like ShelfShares.</summary>
+    public DbSet<CalendarFeed> CalendarFeeds => Set<CalendarFeed>();
+
+    /// <summary>Devices with Web Push turned on (Features/Notifications).</summary>
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
@@ -53,22 +62,24 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     /// </summary>
     // Here rather than in the slices' configurations because a filter that reads the current
     // user has to close over this context. A scope with no user matches nothing: a forgotten
-    // ActAs reads an empty shelf instead of everyone's. The four roots carry OwnerId; the
+    // ActAs reads an empty shelf instead of everyone's. The five roots carry OwnerId; the
     // children that request paths query by their own id are filtered through their root.
     // Children reached only through a root (volume user state, import rows and candidates,
     // discrepancies) are covered by the root's filter; OwnerFiltersTests holds that list.
-    // ShelfShare is unfiltered on purpose (Features/Sharing): it is how an anonymous request
-    // learns whom to act for, the same reason User is.
+    // ShelfShare and CalendarFeed are unfiltered on purpose (Features/Sharing, Features/Calendar):
+    // each is how an anonymous request learns whom to act for, the same reason User is.
     private void ApplyOwnerFilters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Series>().HasQueryFilter(OwnerFilter, series => series.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<ImportBatch>().HasQueryFilter(OwnerFilter, batch => batch.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SyncRun>().HasQueryFilter(OwnerFilter, run => run.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<UserPreferences>().HasQueryFilter(OwnerFilter, preferences => preferences.OwnerId == CurrentOwnerId);
+        modelBuilder.Entity<PushSubscription>().HasQueryFilter(OwnerFilter, subscription => subscription.OwnerId == CurrentOwnerId);
 
         modelBuilder.Entity<Volume>().HasQueryFilter(OwnerFilter, volume => volume.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SeriesUserState>().HasQueryFilter(OwnerFilter, state => state.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SourceChoice>().HasQueryFilter(OwnerFilter, choice => choice.Series!.OwnerId == CurrentOwnerId);
+        modelBuilder.Entity<ShelfEvent>().HasQueryFilter(OwnerFilter, shelfEvent => shelfEvent.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<ImportGroup>().HasQueryFilter(OwnerFilter, group => group.Batch!.OwnerId == CurrentOwnerId);
     }
 
