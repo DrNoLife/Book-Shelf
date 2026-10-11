@@ -224,7 +224,7 @@
                     <h2 class="title-section" id="cookies-title">Cookies and local storage</h2>
                     <p>LN Shelf uses only cookies that are strictly necessary for signing in, so it doesn&rsquo;t ask for consent:</p>
                     <ul>
-                        <li><code>lnshelf.session</code> keeps you signed in. Scripts can&rsquo;t read it, and it ends when you sign out, when your browser ends the session, or after 30 days without use.</li>
+                        <li><code>lnshelf.session</code> keeps you signed in. Scripts can&rsquo;t read it, and it ends when you sign out or after 30 days without use. Closing the browser does not end it.</li>
                         <li>During sign-in, two short-lived cookies (<code>.AspNetCore.Correlation&hellip;</code> and <code>.AspNetCore.OpenIdConnect.Nonce&hellip;</code>) protect the login against tampering. They are removed when sign-in finishes.</li>
                     </ul>
                     <p>No analytics, advertising or tracking cookies.</p>

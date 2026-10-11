@@ -44,7 +44,12 @@ public sealed class AuthController(
             return LocalRedirect(target);
         }
 
-        return Challenge(new AuthenticationProperties { RedirectUri = target }, OpenIdConnectDefaults.AuthenticationScheme);
+        // Persistent, or the cookie is a browser-session cookie that dies when the browser
+        // closes, and Auth:SessionLifetime (sliding) never gets the chance to apply. The
+        // properties ride the OpenID Connect round trip into the cookie sign-in.
+        var properties = new AuthenticationProperties { RedirectUri = target, IsPersistent = true };
+
+        return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
     }
 
     /// <summary>Ends the session here. The provider's own session is left alone.</summary>

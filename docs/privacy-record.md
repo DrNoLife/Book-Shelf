@@ -23,7 +23,7 @@ Controller: Thor Christiansen, a private person in Denmark. Supervisory authorit
 | How far the user has read "Since your last visit" (`ActivitySeenAt`, the newest event shown when they pressed Got it) | `user_preferences` | not showing dismissed news again | 6(1)(b) | account lifetime |
 | Calendar feed token (22 random characters), created | `calendar_feed` | the private calendar link the user turned on | 6(1)(b) | until turned off, regenerated or the account is deleted |
 | Push service worker (`push-worker.js`) | browser service worker registration | showing notifications; re-registering a rotated subscription with the server | 6(1)(b); stores and caches nothing | until the user clears the site's data |
-| Session cookie, login cookies | browser | staying signed in; login protection | 6(1)(b), strictly necessary | session, at most 30 days idle |
+| Session cookie, login cookies | browser | staying signed in; login protection | 6(1)(b), strictly necessary | until sign-out, at most 30 days idle |
 | Remembered library filters (status, format), whether the colour key is open | browser local storage (`lnshelf.library-filters`, `lnshelf.shelf-key-open`) | opening the shelf as this device left it | 6(1)(b), strictly necessary for a feature the user asked for; never sent to the server | until the user clears the site's data, or Clear all on the shelf (filters) |
 | API console logs (user ids, titles, some emails) | Docker json-file | running, debugging, abuse | 6(1)(f) | rotated: 3 x 10 MB per service |
 | nginx access log (IP, user agent, URL) | Docker json-file | security, faults, abuse | 6(1)(f) | rotated: 3 x 10 MB |

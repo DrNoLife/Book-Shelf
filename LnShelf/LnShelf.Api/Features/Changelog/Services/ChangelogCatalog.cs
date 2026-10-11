@@ -20,6 +20,14 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.29.1", new DateOnly(2026, 10, 11), "Stay signed in",
+            Features: [],
+            Improvements: [],
+            Fixes: [
+                "Closing the browser no longer signs you out. A sign-in now lasts 30 days, and every visit " +
+                    "extends it.",
+            ]
+        ),
         new("0.29.0", new DateOnly(2026, 10, 11), "Your shelf tells you",
             Features: [
                 "Notifications: turn them on for each device under Profile, Notifications. After each nightly sync " +
@@ -48,7 +56,8 @@ public static class ChangelogCatalog
             Improvements: [
                 "\"How is this counted?\" under the volume grid says where a series' volume count comes from, and a " +
                     "volume's details say where its release date came from.",
-                "Signing out turns notifications off on that browser.",
+                "Choosing \"Sign out\" turns notifications off on that browser. A session that simply runs out " +
+                    "leaves them on.",
             ],
             Fixes: []
         ),
