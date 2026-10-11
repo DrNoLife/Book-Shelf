@@ -91,6 +91,20 @@ public sealed class AddSeriesPipelineTests
         series.UserState.LastReadAt.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task RunAsync_StartWithEveryVolumeReadOnAFinishedSeries_LandsOnCompleted()
+    {
+        await using var dbContext = CreateDbContext();
+
+        // The source reports the series Completed, and read volumes count as owned, so all
+        // five are out and read.
+        await CreatePipeline(dbContext, volumeCount: 5).RunAsync(
+            StartWith(read: 5, owned: 5), CancellationToken.None);
+
+        var series = await LoadAsync();
+        series.UserState.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Completed);
+    }
+
     [Theory]
     [InlineData(null, null)]
     [InlineData(0, 0)]
@@ -290,7 +304,7 @@ public sealed class AddSeriesPipelineTests
             ],
             Substitute.For<IIsbnBackfill>(),
             Substitute.For<ISeriesSyncService>(),
-            TestUsers.Limits(dbContext),
+            TestUsers.Limits(dbContext), TimeProvider.System,
             NullLogger<AddSeriesPipeline>.Instance);
     }
 

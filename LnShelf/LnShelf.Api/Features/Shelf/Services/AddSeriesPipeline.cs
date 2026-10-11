@@ -17,6 +17,7 @@ public sealed class AddSeriesPipeline(
     IIsbnBackfill isbnBackfill,
     ISeriesSyncService seriesSync,
     UserLimits userLimits,
+    TimeProvider timeProvider,
     ILogger<AddSeriesPipeline> logger)
 {
     /// <returns>Null when the source has no series with that id.</returns>
@@ -61,7 +62,7 @@ public sealed class AddSeriesPipeline(
 
         // Before the save, so the series and the reader's place in it are one write: a race
         // lost below detaches both together and leaves the winner's state alone.
-        startingState.ApplyTo(series);
+        startingState.ApplyTo(series, timeProvider.Today());
 
         dbContext.Series.Add(series);
 

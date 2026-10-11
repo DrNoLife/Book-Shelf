@@ -39,6 +39,8 @@ public sealed class VolumeCommandService(
             StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
         }
 
+        AdvanceTrackingStatus(series);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
@@ -141,6 +143,11 @@ public sealed class VolumeCommandService(
         {
             // The series is already loaded with its user state here, so no second read.
             StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
+        }
+
+        if (request.Read is not null)
+        {
+            AdvanceTrackingStatus(series);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -267,6 +274,29 @@ public sealed class VolumeCommandService(
     /// </summary>
     private static VolumeUserState EnsureState(Volume volume) =>
         volume.UserState ??= new VolumeUserState { VolumeId = volume.Id };
+
+    /// <summary>
+    /// Moves the series' tracking status forward when what has been read says it should:
+    /// started, or finished.
+    /// </summary>
+    // Runs on the series as loaded, before the save, so the status lands in the same write as
+    // the read state that caused it. The rule itself never moves a status backwards.
+    private void AdvanceTrackingStatus(Series series)
+    {
+        var previous = series.UserState?.TrackingStatus ?? TrackingStatus.PlanToStart;
+        var next = TrackingStatusRules.NextStatus(series, timeProvider.Today());
+        if (next == previous)
+        {
+            return;
+        }
+
+        series.UserState ??= SeriesUserState.Untouched(series.Id);
+        series.UserState.TrackingStatus = next;
+
+        logger.LogInformation(
+            "Tracking status of {SeriesId} moved from {PreviousStatus} to {TrackingStatus} after a read change",
+            series.Id, previous, next);
+    }
 
     /// <summary>
     /// Moves the series' "last read" date up to today.

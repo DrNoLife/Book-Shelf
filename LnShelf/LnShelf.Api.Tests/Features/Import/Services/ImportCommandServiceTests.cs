@@ -330,7 +330,7 @@ public sealed class ImportCommandServiceTests
 
         return new ImportCommandService(
             dbContext,
-            new ImportShelfWriter(dbContext, metadataSource, coverCache, TestUsers.Limits(dbContext), NullLogger<ImportShelfWriter>.Instance),
+            new ImportShelfWriter(dbContext, metadataSource, coverCache, TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<ImportShelfWriter>.Instance),
             metadataSource,
             coverCache,
             TimeProvider.System,

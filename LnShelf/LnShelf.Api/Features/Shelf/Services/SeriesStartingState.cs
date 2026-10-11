@@ -52,7 +52,7 @@ public sealed record SeriesStartingState
     /// so the series and the reader's place in it land in one save.
     /// </summary>
     /// <exception cref="InvalidInputException">The counts run past the series' volumes.</exception>
-    public void ApplyTo(Series series)
+    public void ApplyTo(Series series, DateOnly today)
     {
         ArgumentNullException.ThrowIfNull(series);
 
@@ -69,11 +69,11 @@ public sealed record SeriesStartingState
         BulkVolumeStateWriter.ApplyThrough(series, ReadCount, ReadStatus.Read, owned: null, stampedOn: null);
         BulkVolumeStateWriter.ApplyThrough(series, OwnedCount, read: null, owned: true, stampedOn: null);
 
-        // The tracking status follows the start: anything read is a series being read. Set,
-        // not promoted, because this series is brand new — there is no choice of the
-        // reader's to overrule yet.
+        // The tracking status follows the start through the shared rule, so adding a finished
+        // series with everything read lands on Completed. Assigned rather than promoted
+        // because this series is brand new: there is no choice of the reader's to overrule.
         series.UserState ??= SeriesUserState.Untouched(series.Id);
-        series.UserState.TrackingStatus = ReadCount > 0 ? TrackingStatus.Reading : TrackingStatus.PlanToStart;
+        series.UserState.TrackingStatus = TrackingStatusRules.NextStatus(series, today);
     }
 
     private void EnsureWithinVolumeCount(Series series)

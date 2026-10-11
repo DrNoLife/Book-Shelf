@@ -10,6 +10,7 @@ public sealed class ImportShelfWriter(
     ISeriesMetadataSource metadataSource,
     ICoverCache coverCache,
     UserLimits userLimits,
+    TimeProvider timeProvider,
     ILogger<ImportShelfWriter> logger)
 {
     /// <param name="groups">
@@ -34,7 +35,7 @@ public sealed class ImportShelfWriter(
             ApplyVolume(series, desired, counters);
         }
 
-        ApplySeriesState(series, desiredStates.Values);
+        ApplySeriesState(series, desiredStates.Values, timeProvider.Today());
 
         logger.LogInformation(
             "Applied AniList {AniListId} ({TitleEnglish}): {VolumeCount} volumes from {GroupCount} import group(s)",
@@ -180,7 +181,7 @@ public sealed class ImportShelfWriter(
     /// <summary>
     /// Series-level state from what was imported, without overruling the user.
     /// </summary>
-    private static void ApplySeriesState(Series series, IEnumerable<DesiredVolumeState> desiredStates)
+    private static void ApplySeriesState(Series series, IEnumerable<DesiredVolumeState> desiredStates, DateOnly today)
     {
         var states = desiredStates.ToList();
 
@@ -192,13 +193,10 @@ public sealed class ImportShelfWriter(
 
         var userState = series.UserState;
 
-        // Only ever promoted from the untouched default. Someone who has marked a
-        // series Dropped or Completed has said something the importer must not
-        // argue with.
-        if (userState.TrackingStatus is TrackingStatus.PlanToStart)
-        {
-            userState.TrackingStatus = ChooseTrackingStatus(series, states);
-        }
+        // Only ever moved forward, by the same rule the volume writes use. Someone who has
+        // marked a series Dropped or Completed has said something the importer must not
+        // argue with, and a to-read-only export leaves a series where it started.
+        userState.TrackingStatus = TrackingStatusRules.NextStatus(series, today);
 
         // Started from any evidence of reading, last-read from finished volumes only —
         // see DesiredVolumeState.ReadingEvidenceAt for why the two differ.
@@ -224,30 +222,6 @@ public sealed class ImportShelfWriter(
             (var other, null) => other,
             _ => left < right ? left : right,
         };
-
-    private static TrackingStatus ChooseTrackingStatus(Series series, List<DesiredVolumeState> states)
-    {
-        if (states.Any(state => state.ReadStatus is ReadStatus.Reading))
-        {
-            return TrackingStatus.Reading;
-        }
-
-        // An export of nothing but to-read (and abandoned) rows is a wish list, not
-        // evidence of reading — it stays where an untouched series starts.
-        if (!states.Any(state => state.ReadStatus is ReadStatus.Read))
-        {
-            return TrackingStatus.PlanToStart;
-        }
-
-        // Completed means the series is finished *and* every volume of it is read.
-        // Anything else is Reading, because the import is evidence of reading.
-        var everyVolumeRead = series.Volumes.Count > 0
-            && series.Volumes.All(volume => volume.UserState?.ReadStatus is ReadStatus.Read);
-
-        return series.PublicationStatus is PublicationStatus.Completed && everyVolumeRead
-            ? TrackingStatus.Completed
-            : TrackingStatus.Reading;
-    }
 
     private static int RankOf(ReadStatus readStatus) => readStatus switch
     {

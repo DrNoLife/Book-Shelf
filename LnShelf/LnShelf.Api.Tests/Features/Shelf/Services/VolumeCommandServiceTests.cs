@@ -214,18 +214,111 @@ public sealed class VolumeCommandServiceTests
     }
 
     [Fact]
-    public async Task SetReadAsync_ASeriesWithNoUserStateRow_StaysPlanToStart()
+    public async Task SetReadAsync_ASeriesWithNoUserStateRow_BecomesReading()
     {
         await using var dbContext = CreateDbContext();
         var series = await SeedAsync(dbContext, volumeCount: 2, withSeriesState: false);
 
-        await CreateService(dbContext).SetReadAsync(
+        var detail = await CreateService(dbContext).SetReadAsync(
             series.Volumes.Single(candidate => candidate.Number == 1).Id,
             new SetVolumeReadRequest { Status = ReadStatus.Read },
             CancellationToken.None);
 
-        // The row is created to hold the last-read date; the status has to be the one a
-        // missing row already read as, not the enum's default of Reading.
+        // A missing row reads as PlanToStart, and the first read volume is what moves it on;
+        // the row is not left holding the enum's default of Reading by accident.
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Reading);
+        detail.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Reading);
+    }
+
+    [Fact]
+    public async Task SetReadAsync_TheLastOutVolumeOfAFinishedSeries_CompletesTheSeries()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(
+            dbContext, volumeCount: 2, publicationStatus: PublicationStatus.Completed);
+        var service = CreateService(dbContext);
+
+        var first = await service.SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 1).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+        first.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Reading);
+
+        var last = await service.SetReadAsync(
+            series.Volumes.Single(candidate => candidate.Number == 2).Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        // The response carries the status, which is how the client picks it up without a reload.
+        last.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Completed);
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Completed);
+    }
+
+    [Fact]
+    public async Task SetReadAsync_EverythingReadOnAnOngoingSeries_StaysReading()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 1);
+
+        await CreateService(dbContext).SetReadAsync(
+            series.Volumes.Single().Id,
+            new SetVolumeReadRequest { Status = ReadStatus.Read },
+            CancellationToken.None);
+
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Reading);
+    }
+
+    [Fact]
+    public async Task SetReadAsync_UnreadingAVolumeOfACompletedSeries_LeavesItCompleted()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(
+            dbContext,
+            volumeCount: 2,
+            publicationStatus: PublicationStatus.Completed,
+            trackingStatus: TrackingStatus.Completed);
+        var service = CreateService(dbContext);
+        var volumeId = series.Volumes.Single(candidate => candidate.Number == 2).Id;
+
+        await service.SetReadAsync(
+            volumeId, new SetVolumeReadRequest { Status = ReadStatus.Read }, CancellationToken.None);
+        await service.SetReadAsync(
+            volumeId, new SetVolumeReadRequest { Status = ReadStatus.Unread }, CancellationToken.None);
+
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Completed);
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_MarkingEveryVolumeOfAFinishedSeriesRead_CompletesTheSeries()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(
+            dbContext, volumeCount: 3, publicationStatus: PublicationStatus.Completed);
+
+        var detail = await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 3, Read = ReadStatus.Read },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Completed);
+        (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.Completed);
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_MarkingOnlyOwnership_DoesNotMoveTheTrackingStatus()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(
+            dbContext,
+            volumeCount: 2,
+            publicationStatus: PublicationStatus.Completed,
+            trackingStatus: TrackingStatus.PlanToStart);
+
+        await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 2, Owned = true },
+            CancellationToken.None);
+
         (await dbContext.SeriesUserStates.SingleAsync()).TrackingStatus.ShouldBe(TrackingStatus.PlanToStart);
     }
 
@@ -633,7 +726,9 @@ public sealed class VolumeCommandServiceTests
     private static async Task<Series> SeedAsync(
         LnShelfDbContext dbContext,
         int volumeCount,
-        bool withSeriesState = true)
+        bool withSeriesState = true,
+        PublicationStatus publicationStatus = PublicationStatus.Ongoing,
+        TrackingStatus trackingStatus = TrackingStatus.Reading)
     {
         var series = new Series
         {
@@ -641,8 +736,8 @@ public sealed class VolumeCommandServiceTests
             AniListId = 94846,
             TitleEnglish = "The Saga of Tanya the Evil",
             Format = Format.LightNovel,
-            PublicationStatus = PublicationStatus.Ongoing,
-            UserState = withSeriesState ? new SeriesUserState { TrackingStatus = TrackingStatus.Reading } : null,
+            PublicationStatus = publicationStatus,
+            UserState = withSeriesState ? new SeriesUserState { TrackingStatus = trackingStatus } : null,
         };
 
         foreach (var number in Enumerable.Range(1, volumeCount))

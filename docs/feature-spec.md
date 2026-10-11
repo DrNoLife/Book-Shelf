@@ -105,6 +105,12 @@ The series/volume tracking domain.
   (import and catch-up flows depend on these).
 - Per-series: tracking status, notes (series-level free text), title-language
   preference override, cover-source preference (latest/first volume).
+- Tracking status follows reading, forward only (`TrackingStatusRules`, applied
+  after a read change, on add and on import; never by sync): `PlanToStart → Reading`
+  once any volume is read or being read; `PlanToStart`/`Reading → Completed` when
+  publication is Completed and every volume that is *out* is read (announced
+  volumes do not block; bonus volumes count). Dropped and Completed are never
+  changed automatically, and marking a volume unread never downgrades.
 - Derived states (**computed in queries, never stored** — CLAUDE.md):
   - *To buy* = released ∧ ¬owned
   - *Backlog* = owned ∧ ¬read
