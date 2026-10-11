@@ -11,6 +11,40 @@
   gap: var(--space-2);
 }
 
+/* The eyebrow and the status filter's one action on a line, at the height of the action, so
+   swapping "Save as default" for "Your default" moves nothing below it. */
+.controls__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 30px;
+}
+
+/* Words, not a button shape, as "Clear all" is under the search bar: it sits beside an
+   eyebrow and should not outweigh the chips. */
+.controls__save {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.controls__save:hover { color: var(--text); }
+
+.controls__default {
+  padding: 0 var(--space-2);
+  color: var(--faint);
+  font-size: var(--fs-caption);
+}
+
+@media (pointer: coarse) {
+  .controls__head,
+  .controls__save { min-height: 36px; }
+}
+
 /* The stretched view control takes the width (its own 100%, shrunk by the flex row); the
    density toggle keeps its two icon segments. */
 .controls__row {

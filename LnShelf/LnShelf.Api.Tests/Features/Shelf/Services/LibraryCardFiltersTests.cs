@@ -16,6 +16,10 @@ public sealed class LibraryCardFiltersTests
         {   0,     0,       TrackingStatus.Reading,      LibraryFilter.All,           true  },
         {   3,     3,       TrackingStatus.Reading,      LibraryFilter.All,           true  },
 
+        // Owned = backlog in CreateCard: any volume owned puts the series on the owned shelf.
+        {   0,     1,       TrackingStatus.Dropped,      LibraryFilter.Owned,         true  },
+        {   3,     0,       TrackingStatus.Reading,      LibraryFilter.Owned,         false },
+
         {   3,     0,       TrackingStatus.Reading,      LibraryFilter.Behind,        true  },
         {   0,     3,       TrackingStatus.Reading,      LibraryFilter.Behind,        true  },
         {   3,     3,       TrackingStatus.Reading,      LibraryFilter.Behind,        true  },

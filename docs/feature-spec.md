@@ -296,6 +296,22 @@ a question about how the reader reads the shelf — and a series whose volumes h
 no titles shows none regardless, which is the per-series answer arriving for
 free. The toggle appears on the series page only where a volume actually has one.
 
+**Library filters and section order** (**[added 2026-10-11]**). The shelf's status
+filter is a multi-select: several chips can be on, and a series shows when it fits any
+of them (the union, taken server-side over the one projected query: `GET
+/api/library?filter=Behind&filter=Reading`; a single `filter` and an omitted one, which
+means Behind, still work). All is exclusive and nothing chosen means All. A new status,
+**Owned** (at least one volume owned), is the "everything I own" view. The
+`DefaultLibraryFilter` single value became `DefaultLibraryFilters`, a set (Behind by
+default), stored as comma-separated names; the old column stays unused for one release.
+`LibrarySectionOrder` orders the three sections under the library header (Continue
+reading, Out now, Shelf; that order by default); unknown names are skipped and missing
+sections appended, so no order can lose one. Both are set on the profile's Library card;
+the filter panel also offers "Save as default". The status and format filters are
+remembered per browser in local storage (not the title filter), and win over the
+account default on load: remembered → `DefaultLibraryFilters` → Behind. Clear all goes
+back to the default set and forgets what the browser remembered.
+
 ### 4.7 Stats (post-v1, seam only — with one exception)
 
 **The series-detail spend line is v1** (phase 3): "11 volumes owned ·

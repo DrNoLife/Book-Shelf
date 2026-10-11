@@ -79,6 +79,8 @@ public sealed class AuthControllerExportTests
             VolumeView = VolumeView.Tiles,
             ShowVolumeTitles = true,
             DefaultLibraryFilter = LibraryFilter.Behind,
+            DefaultLibraryFilters = LibraryFilterSet.Default,
+            LibrarySectionOrder = LibrarySections.Default,
         },
         Series = [],
         ImportBatches = [],

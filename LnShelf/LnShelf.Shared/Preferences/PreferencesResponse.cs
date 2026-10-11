@@ -28,8 +28,25 @@ public sealed record PreferencesResponse
     /// </summary>
     public required bool ShowVolumeTitles { get; init; }
 
-    /// <summary>The library's opinionated default filter (§4.6).</summary>
+    /// <summary>
+    /// The single default the multi-select replaced. Nothing reads it any more.
+    /// </summary>
+    // Still sent for one release: a browser holding the previous client bundle deserializes
+    // this record with the property required, and would fail on its absence. Removed with the
+    // column a release later (data-access.md, expand then contract).
     public required LibraryFilter DefaultLibraryFilter { get; init; }
+
+    /// <summary>
+    /// The status filters the shelf opens on when this browser has none of its own
+    /// remembered. Normalised (<see cref="LibraryFilterSet.Normalize"/>); Behind by default.
+    /// </summary>
+    public required IReadOnlyList<LibraryFilter> DefaultLibraryFilters { get; init; }
+
+    /// <summary>
+    /// The library page's sections in the reader's order, each exactly once
+    /// (<see cref="LibrarySections.Normalize"/>).
+    /// </summary>
+    public required IReadOnlyList<LibrarySection> LibrarySectionOrder { get; init; }
 }
 
 /// <summary>Partial update: every null leaves that setting alone.</summary>
@@ -40,5 +57,10 @@ public sealed record UpdatePreferencesRequest
     public LibraryView? LibraryView { get; init; }
     public VolumeView? VolumeView { get; init; }
     public bool? ShowVolumeTitles { get; init; }
-    public LibraryFilter? DefaultLibraryFilter { get; init; }
+
+    /// <summary>Normalised on save, so an empty set stores All.</summary>
+    public IReadOnlyList<LibraryFilter>? DefaultLibraryFilters { get; init; }
+
+    /// <summary>Normalised on save: repeats dropped, missing sections appended.</summary>
+    public IReadOnlyList<LibrarySection>? LibrarySectionOrder { get; init; }
 }

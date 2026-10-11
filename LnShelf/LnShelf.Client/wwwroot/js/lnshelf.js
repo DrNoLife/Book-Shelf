@@ -1,8 +1,8 @@
 // The only JavaScript in the client, and only for the things Blazor cannot do from
 // C#: read a rendered layout, move focus between sibling elements, hand a
 // dropped file to a file input, copy a link to the clipboard, ask whether the
-// phone layout is showing, remember a per-browser display flag, and follow a finger dragging a
-// bottom sheet down.
+// phone layout is showing, remember a per-browser display flag or the shelf's filters, and
+// follow a finger dragging a bottom sheet down.
 window.lnshelf = {
     // One entry per bottom sheet that listens for drags, so disposing it can remove exactly
     // the listeners it added.
@@ -345,6 +345,28 @@ window.lnshelf = {
 
     writeFlag: function (name, value) {
         try { window.localStorage.setItem(name, value ? 'true' : 'false'); } catch { /* not remembered */ }
+    },
+
+    // The same, for a small value with some shape: the shelf's remembered filters. A value
+    // that is missing or will not parse reads as null, as if nothing had been remembered;
+    // writing null forgets it.
+    readJson: function (name) {
+        try {
+            const text = window.localStorage.getItem(name);
+            return text === null ? null : JSON.parse(text);
+        } catch {
+            return null;
+        }
+    },
+
+    writeJson: function (name, value) {
+        try {
+            if (value === null || value === undefined) {
+                window.localStorage.removeItem(name);
+            } else {
+                window.localStorage.setItem(name, JSON.stringify(value));
+            }
+        } catch { /* not remembered */ }
     },
 
     // The shared-shelf link's "Copy link". The clipboard needs a secure context (the

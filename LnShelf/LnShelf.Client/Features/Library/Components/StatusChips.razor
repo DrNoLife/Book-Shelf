@@ -1,24 +1,30 @@
-@* The status filter inside the shelf's filter panel: every state in view at once, wrapped
-   rather than scrolled — the panel is the one place they all live, at every width. Grouped
-   as the reader thinks of them: everything, then the derived states (Behind, Reading,
-   Backlog, Up to date), then the ones the reader sets. The words come from ShelfFilterText,
-   so the chip under the search bar names a filter exactly as this group does. *@
+@* The status filter: every state in view at once, wrapped rather than scrolled, and several
+   can be on together — a series shows when it fits any of them. All is "no filter", so it
+   clears the rest, and turning the last one off leaves All (LibraryFilterSelection). Grouped
+   as the reader thinks of them: everything and everything owned, then the derived states
+   (Behind, Reading, Backlog, Up to date), then the ones the reader sets. The words come from
+   ShelfFilterText, so the chip under the search bar names a filter exactly as this group
+   does. Used in the shelf's filter panel and for the default on the profile page. *@
 
 <ChipGroup TValue="LibraryFilter"
            Options="Options"
-           Value="Selected"
-           ValueChanged="SelectedChanged"
-           AriaLabel="Status filter"
+           SelectedValues="Selected"
+           ValueToggled="OnToggledAsync"
+           AriaLabel="@AriaLabel"
            Wrap="true" />
 
 @code {
-    [Parameter] public required LibraryFilter Selected { get; set; }
+    [Parameter] public required IReadOnlyList<LibraryFilter> Selected { get; set; }
 
-    [Parameter] public EventCallback<LibraryFilter> SelectedChanged { get; set; }
+    /// <summary>The whole new selection, normalised.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<LibraryFilter>> SelectedChanged { get; set; }
+
+    [Parameter] public string AriaLabel { get; set; } = "Status filter";
 
     private static readonly IReadOnlyList<SegmentedOption<LibraryFilter>> Options =
     [
         Option(LibraryFilter.All, "Everything on the shelf"),
+        Option(LibraryFilter.Owned, "Series with at least one volume you own"),
         Option(LibraryFilter.Behind, "Something to buy or something to read"),
         Option(LibraryFilter.Reading, "Series you are reading"),
         Option(LibraryFilter.Backlog, "Owned and unread"),
@@ -30,4 +36,7 @@
 
     private static SegmentedOption<LibraryFilter> Option(LibraryFilter filter, string title) =>
         new(filter, ShelfFilterText.StatusLabel(filter), title);
+
+    private Task OnToggledAsync(LibraryFilter filter) =>
+        SelectedChanged.InvokeAsync(LibraryFilterSelection.Toggle(Selected, filter));
 }

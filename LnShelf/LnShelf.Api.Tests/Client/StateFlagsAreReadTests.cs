@@ -76,7 +76,8 @@ public sealed class StateFlagsAreReadTests
     }
 
     [Theory]
-    [InlineData("Features/Library/Pages/LibraryPage.razor")]
+    [InlineData("Features/Library/Components/ShelfSection.razor")]
+    [InlineData("Features/Profile/Components/LibrarySettingsCard.razor")]
     [InlineData("Features/Series/Pages/SeriesPage.razor")]
     public void EveryPageWithPreferenceControls_PrintsAFailedSave(string markupPath)
     {

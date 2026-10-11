@@ -6,9 +6,11 @@ public sealed class LibraryQueryService(LnShelfDbContext dbContext, TimeProvider
 {
     public async Task<LibraryResponse> GetLibraryAsync(
         Format? format,
-        LibraryFilter filter,
+        IReadOnlyCollection<LibraryFilter> filters,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(filters);
+
         var today = timeProvider.Today();
 
         var query = dbContext.Series.AsNoTracking();
@@ -22,7 +24,9 @@ public sealed class LibraryQueryService(LnShelfDbContext dbContext, TimeProvider
         // so fetching it once and aggregating in memory costs one round trip
         // where per-shelf SQL counts would cost seven. This is a single user's
         // few hundred series; if the shelf ever grows enough to matter, the
-        // aggregates move into the query and this comment is the reason to look.
+        // aggregates move into the query and this comment is the reason to look. Several
+        // status filters cost nothing extra for the same reason: their union is taken over
+        // the cards already in hand.
         var scoped = await query
             .Select(LibraryCardProjection.ToCard(today))
             .ToListAsync(cancellationToken);
@@ -32,7 +36,7 @@ public sealed class LibraryQueryService(LnShelfDbContext dbContext, TimeProvider
             Totals = CreateTotals(scoped),
             Shelves = CreateShelfCounts(scoped),
             Cards = scoped
-                .Where(card => card.Matches(filter))
+                .Where(card => card.MatchesAny(filters))
                 // Most behind first — what the grid footer claims it is doing.
                 .OrderByDescending(card => card.ToBuy + card.Backlog)
                 .ThenBy(card => card.TitleEnglish, StringComparer.OrdinalIgnoreCase)

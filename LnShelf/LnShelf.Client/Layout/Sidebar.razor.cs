@@ -167,11 +167,12 @@ public partial class Sidebar : IDisposable
 
     /// <summary>
     /// A shelf row is a library filter, so choosing one from any other page goes to the
-    /// library — otherwise the click changes a filter nobody is looking at.
+    /// library — otherwise the click changes a filter nobody is looking at. It shows that
+    /// shelf alone: a one-click switch, where the panel's chips are for combining.
     /// </summary>
     private async Task SelectShelfAsync(LibraryFilter filter)
     {
-        await LibraryState.SelectFilterAsync(filter);
+        await LibraryState.ShowOnlyAsync(filter);
 
         if (Navigation.ToBaseRelativePath(Navigation.Uri).Length > 0)
         {

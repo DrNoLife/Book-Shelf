@@ -11,6 +11,7 @@ public static class ShelfFilterText
     public static string StatusLabel(LibraryFilter filter) => filter switch
     {
         LibraryFilter.All => "All",
+        LibraryFilter.Owned => "Owned",
         LibraryFilter.Behind => "Behind",
         LibraryFilter.Backlog => "Backlog",
         LibraryFilter.UpToDate => "Up to date",

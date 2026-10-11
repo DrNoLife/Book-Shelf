@@ -22,6 +22,15 @@ public sealed class PreferencesState(HttpClient httpClient)
     // already prints.
     public bool ShowVolumeTitles { get; private set; }
 
+    /// <summary>
+    /// What the shelf opens on when this browser remembers no filters of its own; Behind until
+    /// the row says otherwise.
+    /// </summary>
+    public IReadOnlyList<LibraryFilter> DefaultLibraryFilters { get; private set; } = LibraryFilterSet.Default;
+
+    /// <summary>The library page's sections, in the reader's order.</summary>
+    public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; private set; } = LibrarySections.Default;
+
     public bool HasLoaded { get; private set; }
     public string? Message { get; private set; }
 
@@ -41,6 +50,11 @@ public sealed class PreferencesState(HttpClient httpClient)
                 LibraryView = preferences.LibraryView;
                 VolumeView = preferences.VolumeView;
                 ShowVolumeTitles = preferences.ShowVolumeTitles;
+
+                // Normalised here as well: the page draws one section per entry, so an order
+                // missing one would lose that section outright.
+                DefaultLibraryFilters = LibraryFilterSet.Normalize(preferences.DefaultLibraryFilters);
+                LibrarySectionOrder = LibrarySections.Normalize(preferences.LibrarySectionOrder);
             }
         }
         catch (HttpRequestException)
@@ -118,6 +132,38 @@ public sealed class PreferencesState(HttpClient httpClient)
         Changed?.Invoke();
 
         return SaveAsync(new UpdatePreferencesRequest { LibrarySort = sort }, cancellationToken);
+    }
+
+    public Task SetDefaultLibraryFiltersAsync(
+        IReadOnlyList<LibraryFilter> filters,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = LibraryFilterSet.Normalize(filters);
+        if (normalized.SequenceEqual(DefaultLibraryFilters))
+        {
+            return Task.CompletedTask;
+        }
+
+        DefaultLibraryFilters = normalized;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { DefaultLibraryFilters = normalized }, cancellationToken);
+    }
+
+    public Task SetLibrarySectionOrderAsync(
+        IReadOnlyList<LibrarySection> order,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = LibrarySections.Normalize(order);
+        if (normalized.SequenceEqual(LibrarySectionOrder))
+        {
+            return Task.CompletedTask;
+        }
+
+        LibrarySectionOrder = normalized;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { LibrarySectionOrder = normalized }, cancellationToken);
     }
 
     private async Task SaveAsync(UpdatePreferencesRequest request, CancellationToken cancellationToken)

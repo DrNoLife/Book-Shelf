@@ -1,0 +1,64 @@
+@using LnShelf.Client.Features.Library.Components
+
+@* How the library opens, for the user page's right column (and, on a phone, its one column):
+   the status filters the shelf starts on and the order of the page's sections. Both are
+   account preferences, saved the moment they change, as the shelf's own controls are. *@
+
+<Panel id="library-settings" aria-labelledby="library-settings-title">
+    <h2 class="title-panel" id="library-settings-title">Library</h2>
+
+    <div class="setting">
+        <span class="eyebrow">Shelf opens on</span>
+        <StatusChips Selected="Preferences.DefaultLibraryFilters"
+                     SelectedChanged="OnDefaultFiltersChangedAsync"
+                     AriaLabel="Default status filters" />
+        <p class="fine">
+            Used where this browser remembers no filters of its own. Clear all on the shelf
+            comes back to these.
+        </p>
+    </div>
+
+    <div class="setting">
+        <span class="eyebrow" id="library-order-title">Section order</span>
+        <ol class="order" aria-labelledby="library-order-title">
+            @for (var index = 0; index < Order.Count; index++)
+            {
+                var section = Order[index];
+                var label = LibrarySectionMoves.Label(section);
+                var isFirst = index == 0;
+                var isLast = index == Order.Count - 1;
+
+                <li class="order__row" @key="section">
+                    @* The number is for a glance; a screen reader already hears the position
+                       from the ordered list. *@
+                    <span class="order__position tabular" aria-hidden="true">@(index + 1)</span>
+                    <span class="order__label">@label</span>
+                    <span class="order__moves">
+                        <button type="button"
+                                class="secondary order__move"
+                                aria-label="@($"Move {label} up")"
+                                title="@(isFirst ? "Already first" : null)"
+                                disabled="@isFirst"
+                                @onclick="() => MoveAsync(section, -1)">
+                            <Icon Name="IconName.CaretUp" Size="14" />
+                        </button>
+                        <button type="button"
+                                class="secondary order__move"
+                                aria-label="@($"Move {label} down")"
+                                title="@(isLast ? "Already last" : null)"
+                                disabled="@isLast"
+                                @onclick="() => MoveAsync(section, 1)">
+                            <Icon Name="IconName.CaretDown" Size="14" />
+                        </button>
+                    </span>
+                </li>
+            }
+        </ol>
+        <p class="fine">The header stays on top.</p>
+    </div>
+
+    @if (Preferences.Message is { } message)
+    {
+        <p class="notice notice--warning" role="alert">@message</p>
+    }
+</Panel>

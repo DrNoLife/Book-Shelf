@@ -3,10 +3,18 @@ namespace LnShelf.Client.Features.Library.Components;
 public partial class ShelfFilterControls
 {
     [Parameter]
-    public required LibraryFilter Status { get; set; }
+    public required IReadOnlyList<LibraryFilter> Status { get; set; }
 
     [Parameter]
-    public EventCallback<LibraryFilter> StatusChanged { get; set; }
+    public EventCallback<IReadOnlyList<LibraryFilter>> StatusChanged { get; set; }
+
+    /// <summary>The reader's default status filters (preferences).</summary>
+    [Parameter]
+    public required IReadOnlyList<LibraryFilter> DefaultStatus { get; set; }
+
+    /// <summary>Make the current status filters the default.</summary>
+    [Parameter]
+    public EventCallback SaveDefaultRequested { get; set; }
 
     /// <summary>Null is "All".</summary>
     [Parameter]
@@ -32,6 +40,8 @@ public partial class ShelfFilterControls
 
     [Parameter]
     public EventCallback<GridDensity> DensityChanged { get; set; }
+
+    private bool IsDefaultStatus => Status.SequenceEqual(DefaultStatus);
 
     /// <summary>Density is a grid setting, and the rows view has no grid.</summary>
     private bool IsDensityDisabled => View == LibraryView.Rows;

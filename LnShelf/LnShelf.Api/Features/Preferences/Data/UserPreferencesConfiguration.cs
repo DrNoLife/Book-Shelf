@@ -23,5 +23,15 @@ public sealed class UserPreferencesConfiguration : IEntityTypeConfiguration<User
             .HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(preferences => preferences.DefaultLibraryFilter)
             .HasConversion<string>().HasMaxLength(32).IsRequired();
+
+        // The two ordered sets as comma-separated names in one text column each, rather than a
+        // child table or a Postgres array: a handful of values read and written only as a
+        // whole, and names keep them as readable in psql as the single enums above.
+        builder.Property(preferences => preferences.DefaultLibraryFilters)
+            .HasConversion(new EnumListConverter<LibraryFilter>(), new EnumListComparer<LibraryFilter>())
+            .HasMaxLength(256).IsRequired();
+        builder.Property(preferences => preferences.LibrarySectionOrder)
+            .HasConversion(new EnumListConverter<LibrarySection>(), new EnumListComparer<LibrarySection>())
+            .HasMaxLength(128).IsRequired();
     }
 }

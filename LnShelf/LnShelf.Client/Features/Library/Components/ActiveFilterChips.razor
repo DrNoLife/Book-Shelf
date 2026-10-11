@@ -1,16 +1,17 @@
 @* What is hiding series right now, each as a chip that removes itself — so a filter tucked
-   into the panel is never a filter you forgot about. Status and format only: the title
-   filter shows its own text in the field, and sort, view and density hide nothing. "Clear
-   all" appears once there are two things to clear; with one, its own chip is the clear. *@
+   into the panel is never a filter you forgot about. One chip per status filter, then the
+   format: the title filter shows its own text in the field, and sort, view and density hide
+   nothing. "Clear all" appears once there are two things to clear; with one, its own chip is
+   the clear. It goes back to the reader's default filters (LibraryState.ClearFiltersAsync). *@
 
-@if (Status != LibraryFilter.All || Format is not null)
+@if (Statuses.Count > 0 || Format is not null)
 {
     <ul class="active" aria-label="Active filters">
-        @if (Status != LibraryFilter.All)
+        @foreach (var status in Statuses)
         {
-            var label = ShelfFilterText.StatusLabel(Status);
-            <li>
-                <button type="button" class="active__chip" aria-label="@($"Remove the {label} filter")" @onclick="() => StatusCleared.InvokeAsync()">
+            var label = ShelfFilterText.StatusLabel(status);
+            <li @key="status">
+                <button type="button" class="active__chip" aria-label="@($"Remove the {label} filter")" @onclick="() => StatusRemoved.InvokeAsync(status)">
                     @label <span class="active__mark"><Icon Name="IconName.Close" Size="11" /></span>
                 </button>
             </li>
@@ -36,7 +37,8 @@
 }
 
 @code {
-    [Parameter] public required LibraryFilter Status { get; set; }
+    /// <summary>The chosen status filters; All is no filter, so it has no chip.</summary>
+    [Parameter] public required IReadOnlyList<LibraryFilter> Status { get; set; }
 
     /// <summary>Null is "All".</summary>
     [Parameter] public Format? Format { get; set; }
@@ -44,12 +46,13 @@
     /// <summary>Counts towards "Clear all", which empties the field too.</summary>
     [Parameter] public bool HasTextFilter { get; set; }
 
-    [Parameter] public EventCallback StatusCleared { get; set; }
+    [Parameter] public EventCallback<LibraryFilter> StatusRemoved { get; set; }
 
     [Parameter] public EventCallback FormatCleared { get; set; }
 
     [Parameter] public EventCallback ClearAllRequested { get; set; }
 
-    private int ActiveCount =>
-        (Status != LibraryFilter.All ? 1 : 0) + (Format is not null ? 1 : 0) + (HasTextFilter ? 1 : 0);
+    private IReadOnlyList<LibraryFilter> Statuses => [.. Status.Where(status => status != LibraryFilter.All)];
+
+    private int ActiveCount => Statuses.Count + (Format is not null ? 1 : 0) + (HasTextFilter ? 1 : 0);
 }

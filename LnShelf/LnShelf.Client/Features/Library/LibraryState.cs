@@ -6,13 +6,27 @@ namespace LnShelf.Client.Features.Library;
 // The named seam: the grid and the sidebar both render from one fetch instead of
 // issuing their own requests, which is what lets the sidebar show counts across
 // the whole format scope while the grid shows only the filtered subset.
-public sealed class LibraryState(HttpClient httpClient)
+public sealed class LibraryState(
+    HttpClient httpClient,
+    LibraryFilterMemory filterMemory,
+    PreferencesState preferences)
 {
     /// <summary>Null is the "All" tab.</summary>
     public Format? SelectedFormat { get; private set; }
 
-    /// <summary>Behind is the opinionated default (feature-spec §4.6).</summary>
-    public LibraryFilter SelectedFilter { get; private set; } = LibraryFilter.Behind;
+    /// <summary>
+    /// The status filters, normalised (<see cref="LibraryFilterSet"/>): a series shows when it
+    /// fits any of them. Behind until <see cref="RestoreFiltersAsync"/> has run.
+    /// </summary>
+    public IReadOnlyList<LibraryFilter> SelectedFilters { get; private set; } = LibraryFilterSet.Default;
+
+    /// <summary>
+    /// The reader's default set, from their preferences: where "Clear all" goes back to.
+    /// </summary>
+    // Read through rather than copied, so "Save as default" moves Clear all's target at once.
+    public IReadOnlyList<LibraryFilter> DefaultFilters => preferences.DefaultLibraryFilters;
+
+    private bool _hasRestoredFilters;
 
     /// <summary>
     /// Type-to-filter text. Applied in the browser, not on the server: the whole
@@ -126,33 +140,69 @@ public sealed class LibraryState(HttpClient httpClient)
         }
 
         SelectedFormat = format;
+        await RememberFiltersAsync();
         await ReloadAsync(refreshOverview: true, cancellationToken);
     }
 
-    public async Task SelectFilterAsync(LibraryFilter filter, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Opens the shelf the way this browser left it, or on the reader's default when it
+    /// remembers nothing (<see cref="LibraryFilterChoice.Resolve"/>). Once per session: after
+    /// that the state container already holds the current choice. Call it once the
+    /// preferences have loaded, or the default it falls back to is only the built-in one.
+    /// </summary>
+    public async Task RestoreFiltersAsync()
     {
-        if (SelectedFilter == filter)
+        if (_hasRestoredFilters)
         {
             return;
         }
 
-        SelectedFilter = filter;
+        _hasRestoredFilters = true;
+        var choice = LibraryFilterChoice.Resolve(await filterMemory.ReadAsync(), DefaultFilters);
+        SelectedFilters = choice.Statuses;
+        SelectedFormat = choice.Format;
+    }
+
+    /// <summary>A removable chip under the search bar.</summary>
+    public Task RemoveFilterAsync(LibraryFilter filter, CancellationToken cancellationToken = default) =>
+        SelectFiltersAsync(LibraryFilterSelection.Remove(SelectedFilters, filter), cancellationToken);
+
+    /// <summary>A sidebar shelf: that one filter and nothing else.</summary>
+    public Task ShowOnlyAsync(LibraryFilter filter, CancellationToken cancellationToken = default) =>
+        SelectFiltersAsync([filter], cancellationToken);
+
+    /// <summary>The status chips in the filter panel: the whole new selection, remembered.</summary>
+    public async Task SelectFiltersAsync(IReadOnlyList<LibraryFilter> filters, CancellationToken cancellationToken = default)
+    {
+        var normalized = LibraryFilterSet.Normalize(filters);
+        if (normalized.SequenceEqual(SelectedFilters))
+        {
+            return;
+        }
+
+        SelectedFilters = normalized;
+        await RememberFiltersAsync();
         await ReloadAsync(refreshOverview: false, cancellationToken);
     }
 
     /// <summary>
-    /// "Clear all": every status and format filter off and the title filter emptied, in one
-    /// reload rather than one per filter.
+    /// "Clear all": the status filters back to the reader's default, the format and the title
+    /// filter off, in one reload rather than one per filter. This browser forgets what it
+    /// remembered, so the next visit opens on the default too.
     /// </summary>
+    // Back to the default rather than to All: the default is the reader's own answer to "what
+    // should the shelf show", and with All one tap away in the panel, a Clear all that
+    // discarded it would be the less useful of the two.
     public async Task ClearFiltersAsync(CancellationToken cancellationToken = default)
     {
         var isFormatChanging = SelectedFormat is not null;
-        var isReloadNeeded = isFormatChanging || SelectedFilter != LibraryFilter.All;
+        var isReloadNeeded = isFormatChanging || !SelectedFilters.SequenceEqual(DefaultFilters);
 
-        SelectedFilter = LibraryFilter.All;
+        SelectedFilters = DefaultFilters;
         SelectedFormat = null;
         TextFilter = string.Empty;
         _visibleCards = null;
+        await filterMemory.ForgetAsync();
 
         if (isReloadNeeded)
         {
@@ -163,6 +213,9 @@ public sealed class LibraryState(HttpClient httpClient)
             Changed?.Invoke();
         }
     }
+
+    private Task RememberFiltersAsync() =>
+        filterMemory.RememberAsync(new LibraryFilterChoice(SelectedFilters, SelectedFormat));
 
     /// <summary>The token of the reload in flight, cancelled when a newer one starts.</summary>
     // Clicking Manga then All in quick succession starts two fetches, and nothing made
@@ -190,12 +243,12 @@ public sealed class LibraryState(HttpClient httpClient)
 
         try
         {
-            var gridRequest = FetchAsync(SelectedFilter, token);
+            var gridRequest = FetchAsync(SelectedFilters, token);
 
             // The grid's own fetch doubles as the overview when no status filter applies.
-            var overviewRequest = SelectedFilter == LibraryFilter.All
+            var overviewRequest = LibraryFilterSet.IsEverything(SelectedFilters)
                 ? gridRequest
-                : refreshOverview || Overview is null ? FetchAsync(LibraryFilter.All, token) : null;
+                : refreshOverview || Overview is null ? FetchAsync(LibraryFilterSet.Everything, token) : null;
 
             var library = await gridRequest;
             var overview = overviewRequest is null ? Overview : await overviewRequest;
@@ -221,11 +274,13 @@ public sealed class LibraryState(HttpClient httpClient)
         Changed?.Invoke();
     }
 
-    private Task<LibraryResponse?> FetchAsync(LibraryFilter filter, CancellationToken cancellationToken)
+    /// <summary>Several filters travel as a repeated parameter: <c>filter=Behind&amp;filter=Reading</c>.</summary>
+    private Task<LibraryResponse?> FetchAsync(IReadOnlyList<LibraryFilter> filters, CancellationToken cancellationToken)
     {
+        var query = string.Join('&', filters.Select(filter => $"filter={filter}"));
         var route = SelectedFormat is null
-            ? $"api/library?filter={filter}"
-            : $"api/library?filter={filter}&format={SelectedFormat}";
+            ? $"api/library?{query}"
+            : $"api/library?{query}&format={SelectedFormat}";
 
         return httpClient.GetFromJsonAsync<LibraryResponse>(route, cancellationToken);
     }

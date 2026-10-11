@@ -30,6 +30,18 @@ public sealed class UserPreferences : IOwned
     // "Volume 3" after "Vol 3" redundant, and a series with no titles still shows none.
     public bool ShowVolumeTitles { get; set; } = true;
 
-    /// <summary>Behind is the opinionated default (§4.6).</summary>
+    /// <summary>The single default filter, before the shelf's status filter took several.</summary>
+    // Unused: DefaultLibraryFilters replaced it. The column stays for one release so the
+    // previous image still runs against this schema (data-access.md, expand then contract),
+    // and goes, with this property, in the release after.
     public LibraryFilter DefaultLibraryFilter { get; set; } = LibraryFilter.Behind;
+
+    /// <summary>
+    /// The status filters the shelf opens on when the browser has none remembered. Behind is
+    /// the opinionated default (§4.6).
+    /// </summary>
+    public IReadOnlyList<LibraryFilter> DefaultLibraryFilters { get; set; } = LibraryFilterSet.Default;
+
+    /// <summary>The library page's sections, in the order the reader wants them.</summary>
+    public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; set; } = LibrarySections.Default;
 }

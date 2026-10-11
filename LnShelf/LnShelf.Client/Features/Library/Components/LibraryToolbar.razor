@@ -17,6 +17,8 @@
         <ShelfFilterButton ActiveCount="ActiveFilterCount">
             <ShelfFilterControls Status="Status"
                                  StatusChanged="StatusChanged"
+                                 DefaultStatus="DefaultStatus"
+                                 SaveDefaultRequested="SaveDefaultRequested"
                                  Format="Format"
                                  FormatChanged="FormatChanged"
                                  Sort="Sort"
@@ -32,7 +34,7 @@
         <ActiveFilterChips Status="Status"
                            Format="Format"
                            HasTextFilter="@(!string.IsNullOrWhiteSpace(TextFilter))"
-                           StatusCleared="() => StatusChanged.InvokeAsync(LibraryFilter.All)"
+                           StatusRemoved="StatusRemoved"
                            FormatCleared="() => FormatChanged.InvokeAsync(null)"
                            ClearAllRequested="ClearAllRequested" />
 

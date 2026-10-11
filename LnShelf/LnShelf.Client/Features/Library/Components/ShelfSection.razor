@@ -1,0 +1,92 @@
+@* The shelf: its title, the toolbar and the grid or rows, for every width. One of the three
+   library sections the reader can reorder (LibrarySection), so it carries its own state
+   subscriptions rather than relying on the page to re-render it. *@
+
+<section class="shelf" aria-labelledby="shelf-title">
+    <div class="section-head">
+        <h2 id="shelf-title" class="title-section shelf__title">Shelf</h2>
+        @if (Library is not null)
+        {
+            <span class="section-head__aside phone-only tabular">@Library.Totals.Read read · @Library.Totals.Owned owned</span>
+        }
+    </div>
+
+    @* One toolbar at every width: the bar, the panel it opens (a sheet on a phone),
+       the active-filter chips, the count and the colour key. *@
+    <LibraryToolbar TextFilter="@LibraryState.TextFilter"
+                    TextFilterChanged="OnTextFilterChanged"
+                    Status="LibraryState.SelectedFilters"
+                    StatusChanged="OnFiltersSelectedAsync"
+                    StatusRemoved="OnFilterRemovedAsync"
+                    DefaultStatus="Preferences.DefaultLibraryFilters"
+                    SaveDefaultRequested="OnSaveDefaultAsync"
+                    Format="LibraryState.SelectedFormat"
+                    FormatChanged="OnFormatSelectedAsync"
+                    Sort="LibraryState.Sort"
+                    SortChanged="OnSortChangedAsync"
+                    Density="Preferences.GridDensity"
+                    DensityChanged="OnDensityChangedAsync"
+                    View="Preferences.LibraryView"
+                    ViewChanged="OnViewChangedAsync"
+                    ClearAllRequested="OnClearFiltersAsync"
+                    CountText="@ToolbarCount" />
+
+    @* A preference that failed to save says so where the control that failed lives
+       — silently reverting on the next load is the bug. *@
+    @if (Preferences.Message is { } preferenceMessage)
+    {
+        <p class="notice notice--warning">@preferenceMessage</p>
+    }
+
+    @if (LibraryState.LoadFailed)
+    {
+        <p class="notice">Could not reach the API.</p>
+    }
+    else if (Library is null)
+    {
+        <p class="notice">Loading the shelf…</p>
+    }
+    else if (Cards.Count == 0)
+    {
+        <p class="notice">
+            @if (!string.IsNullOrWhiteSpace(LibraryState.TextFilter))
+            {
+                @($"Nothing here matches “{LibraryState.TextFilter}”.")
+            }
+            else if (IsFiltered)
+            {
+                @* The filters now live in a panel, so the empty shelf must not claim
+                   nothing is hidden when a chip above says otherwise. *@
+                @("No series fit these filters. Remove one above to see more.")
+            }
+            else
+            {
+                @("Nothing on this shelf — and nothing hidden by a filter menu you forgot about.")
+            }
+        </p>
+    }
+    else
+    {
+        @* Two renderings of the identical set: the chips, tabs, filter text and
+           sort have all been applied before either of these sees a card. *@
+        @if (Preferences.LibraryView == LibraryView.Rows)
+        {
+            <SeriesRows Cards="Cards" />
+        }
+        else
+        {
+            <div class="@GridDensityClass">
+                @foreach (var card in Cards)
+                {
+                    <SeriesCard Card="card" @key="card.SeriesId" />
+                }
+            </div>
+        }
+
+        @* Counts honestly: when a filter is narrowing the view, the line says
+           what is hidden rather than quietly reporting a smaller number. *@
+        <p class="fine">
+            @FooterCount shown · @SortLabel · Numbers under each cover: read · owned · out.
+        </p>
+    }
+</section>

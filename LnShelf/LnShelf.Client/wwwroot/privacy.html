@@ -47,7 +47,7 @@
                     <li><a href="#transfers">Outside the EU</a></li>
                     <li><a href="#keep">How long we keep it</a></li>
                     <li><a href="#rights">Your rights</a></li>
-                    <li><a href="#cookies">Cookies</a></li>
+                    <li><a href="#cookies">Cookies and local storage</a></li>
                     <li><a href="#sharing">Public shelves</a></li>
                     <li><a href="#security">Security</a></li>
                     <li><a href="#changes">Changes</a></li>
@@ -198,13 +198,14 @@
                 </section>
 
                 <section class="privacy__section" id="cookies" aria-labelledby="cookies-title">
-                    <h2 class="title-section" id="cookies-title">Cookies</h2>
+                    <h2 class="title-section" id="cookies-title">Cookies and local storage</h2>
                     <p>LN Shelf uses only cookies that are strictly necessary for signing in, so it doesn&rsquo;t ask for consent:</p>
                     <ul>
                         <li><code>lnshelf.session</code> keeps you signed in. Scripts can&rsquo;t read it, and it ends when you sign out, when your browser ends the session, or after 30 days without use.</li>
                         <li>During sign-in, two short-lived cookies (<code>.AspNetCore.Correlation&hellip;</code> and <code>.AspNetCore.OpenIdConnect.Nonce&hellip;</code>) protect the login against tampering. They are removed when sign-in finishes.</li>
                     </ul>
-                    <p>No analytics, advertising or tracking cookies, and nothing stored in your browser&rsquo;s local storage.</p>
+                    <p>No analytics, advertising or tracking cookies.</p>
+                    <p>Your browser&rsquo;s local storage keeps two display choices for this device only: the library filters you last used (<code>lnshelf.library-filters</code>: which statuses and which format, never what you typed in the title filter) and whether the shelf&rsquo;s colour key is open (<code>lnshelf.shelf-key-open</code>). They are never sent to the server, and they go when you clear this site&rsquo;s data in your browser. &ldquo;Clear all&rdquo; on the shelf forgets the filters too.</p>
                 </section>
 
                 <section class="privacy__section" id="sharing" aria-labelledby="sharing-title">

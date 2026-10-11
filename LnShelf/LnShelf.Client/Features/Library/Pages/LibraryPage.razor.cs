@@ -19,61 +19,6 @@ public partial class LibraryPage : IDisposable
 
     private LibraryResponse? Library => LibraryState.Library;
 
-    private IReadOnlyList<LibraryCardResponse> Cards => LibraryState.VisibleCards;
-
-    /// <summary>
-    /// "All 24" when nothing is hidden, "9 of 24" when a filter is narrowing.
-    /// </summary>
-    private string FooterCount
-    {
-        get
-        {
-            if (Library is null)
-            {
-                return string.Empty;
-            }
-
-            var shown = Cards.Count;
-            var total = Library.Totals.SeriesCount;
-            return shown == total ? $"All {total}" : $"{shown} of {total}";
-        }
-    }
-
-    /// <summary>
-    /// The toolbar's short count: "9 of 24 shown" while something is hidden, "24 series" when
-    /// nothing is; nothing until the shelf has loaded.
-    /// </summary>
-    private string? ToolbarCount
-    {
-        get
-        {
-            if (Library is null)
-            {
-                return null;
-            }
-
-            var shown = Cards.Count;
-            var total = Library.Totals.SeriesCount;
-            return shown == total ? $"{total} series" : $"{shown} of {total} shown";
-        }
-    }
-
-    /// <summary>A status or format filter is hiding series.</summary>
-    private bool IsFiltered =>
-        LibraryState.SelectedFilter != LibraryFilter.All || LibraryState.SelectedFormat is not null;
-
-    /// <summary>The footer names the order it is actually in, not the default one.</summary>
-    private string SortLabel => LibraryState.Sort switch
-    {
-        LibrarySort.Alphabetical => "sorted A–Z",
-        LibrarySort.RecentlyUpdated => "sorted by most recently synced",
-        LibrarySort.LastRead => "sorted by what you read last",
-        _ => "sorted by how far behind you are",
-    };
-
-    private string GridDensityClass =>
-        Preferences.GridDensity == GridDensity.Compact ? "grid grid--compact" : "grid";
-
     // Both lists follow the format tab but not the status filter or the text box: they
     // are about the whole shelf, not about whatever the grid below is narrowed to.
     private IReadOnlyList<ContinueReadingEntry> ContinueEntries =>
@@ -100,16 +45,18 @@ public partial class LibraryPage : IDisposable
         Finishing.Changed += OnStateChanged;
         Profile.Changed += OnStateChanged;
 
-        // The density and sort come from the server row, so they are read before the
-        // grid is drawn — a grid that re-flows a moment after landing reads as a bug.
-        // Guarded, as the series page's is: the container is scoped, so a second visit
-        // to the library already has them.
+        // The density, sort, section order and default filters come from the server row, so
+        // they are read before the grid is drawn — a grid that re-flows a moment after landing
+        // reads as a bug. Guarded, as the series page's is: the container is scoped, so a
+        // second visit to the library already has them.
         if (!Preferences.HasLoaded)
         {
             await Preferences.LoadAsync();
         }
         LibraryState.SetSort(Preferences.LibrarySort);
 
+        // After the preferences, which hold the default it falls back to.
+        await LibraryState.RestoreFiltersAsync();
         await LibraryState.LoadAsync();
 
         // After the shelf, never before it: the avatar is decoration, the shelf is not.
@@ -127,22 +74,4 @@ public partial class LibraryPage : IDisposable
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
     private Task OnFinishedAsync(ContinueReadingEntry entry) => Finishing.FinishAsync(entry);
-
-    private Task OnFormatSelectedAsync(Format? format) => LibraryState.SelectFormatAsync(format);
-
-    private Task OnFilterSelectedAsync(LibraryFilter filter) => LibraryState.SelectFilterAsync(filter);
-
-    private void OnTextFilterChanged(string text) => LibraryState.SetTextFilter(text);
-
-    private Task OnClearFiltersAsync() => LibraryState.ClearFiltersAsync();
-
-    private async Task OnSortChangedAsync(LibrarySort sort)
-    {
-        LibraryState.SetSort(sort);
-        await Preferences.SetSortAsync(sort);
-    }
-
-    private Task OnDensityChangedAsync(GridDensity density) => Preferences.SetDensityAsync(density);
-
-    private Task OnViewChangedAsync(LibraryView view) => Preferences.SetLibraryViewAsync(view);
 }

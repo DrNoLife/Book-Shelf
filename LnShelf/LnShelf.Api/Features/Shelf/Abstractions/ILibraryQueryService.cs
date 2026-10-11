@@ -7,9 +7,12 @@ namespace LnShelf.Api.Features.Shelf.Abstractions;
 public interface ILibraryQueryService
 {
     /// <param name="format">Null means every format — the "All" tab.</param>
-    /// <param name="filter">Narrows the cards; totals and shelves ignore it.</param>
+    /// <param name="filters">
+    /// Narrows the cards to those fitting any of them; empty or All shows every card. Totals
+    /// and shelves ignore it.
+    /// </param>
     Task<LibraryResponse> GetLibraryAsync(
         Format? format,
-        LibraryFilter filter,
+        IReadOnlyCollection<LibraryFilter> filters,
         CancellationToken cancellationToken);
 }

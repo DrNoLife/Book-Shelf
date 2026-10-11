@@ -62,7 +62,7 @@ public sealed class ShelfFiltersTests(EndToEndFixture fixture) : JourneyTest(fix
     }
 
     [Fact]
-    public async Task TitleFilter_ClearMark_EmptiesTheField_AndClearAllResetsEveryFilter()
+    public async Task TitleFilter_ClearMark_EmptiesTheField_AndClearAllReturnsToTheDefault()
     {
         await Page.GotoAsync("/");
         await Assertions.Expect(Page.Locator(".card").First).ToBeVisibleAsync();
@@ -80,9 +80,12 @@ public sealed class ShelfFiltersTests(EndToEndFixture fixture) : JourneyTest(fix
         await field.FillAsync("a");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Clear all" }).ClickAsync();
 
+        // Clear all goes back to the reader's default filters, Behind until they choose others.
+        var chips = Page.GetByRole(AriaRole.List, new() { Name = "Active filters" });
         await Assertions.Expect(field).ToHaveValueAsync(string.Empty);
-        await Assertions.Expect(Page.GetByRole(AriaRole.List, new() { Name = "Active filters" })).ToHaveCountAsync(0);
-        await Assertions.Expect(FiltersButton()).ToHaveAttributeAsync("aria-label", "Filters and sort");
+        await Assertions.Expect(chips.GetByRole(AriaRole.Button, new() { Name = "Remove the Behind filter" })).ToBeVisibleAsync();
+        await Assertions.Expect(chips.GetByRole(AriaRole.Button, new() { Name = "Clear all" })).ToHaveCountAsync(0);
+        await Assertions.Expect(FiltersButton()).ToHaveAttributeAsync("aria-label", "Filters and sort, 1 filter on");
     }
 
     [Fact]

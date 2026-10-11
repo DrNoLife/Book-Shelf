@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Preferences.Data;
+using LnShelf.Api.Features.Preferences.Models;
 using LnShelf.Api.Features.Preferences.Services;
 using LnShelf.Shared.Preferences;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +26,9 @@ public sealed class PreferencesServiceTests
         response.LibraryView.ShouldBe(LibraryView.Covers);
         response.VolumeView.ShouldBe(VolumeView.Tiles);
         response.ShowVolumeTitles.ShouldBeTrue();
-        response.DefaultLibraryFilter.ShouldBe(LibraryFilter.Behind);
+        response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Behind]);
+        response.LibrarySectionOrder.ShouldBe(
+            [LibrarySection.ContinueReading, LibrarySection.OutNow, LibrarySection.Shelf]);
 
         // Absent means "never changed anything", which is not a reason to write a row
         // before the user has an opinion.
@@ -66,7 +70,8 @@ public sealed class PreferencesServiceTests
                 LibraryView = LibraryView.Rows,
                 VolumeView = VolumeView.List,
                 ShowVolumeTitles = false,
-                DefaultLibraryFilter = LibraryFilter.All,
+                DefaultLibraryFilters = [LibraryFilter.Owned, LibraryFilter.Reading],
+                LibrarySectionOrder = [LibrarySection.Shelf, LibrarySection.OutNow, LibrarySection.ContinueReading],
             },
             CancellationToken.None);
 
@@ -79,7 +84,9 @@ public sealed class PreferencesServiceTests
         response.LibraryView.ShouldBe(LibraryView.Rows);
         response.VolumeView.ShouldBe(VolumeView.List);
         response.ShowVolumeTitles.ShouldBeFalse();
-        response.DefaultLibraryFilter.ShouldBe(LibraryFilter.All);
+        response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Owned, LibraryFilter.Reading]);
+        response.LibrarySectionOrder.ShouldBe(
+            [LibrarySection.Shelf, LibrarySection.OutNow, LibrarySection.ContinueReading]);
     }
 
     /// <summary>
@@ -136,11 +143,67 @@ public sealed class PreferencesServiceTests
         var service = CreateService(dbContext);
 
         await service.UpdateAsync(
-            new UpdatePreferencesRequest { DefaultLibraryFilter = LibraryFilter.Backlog },
+            new UpdatePreferencesRequest
+            {
+                DefaultLibraryFilters = [LibraryFilter.Backlog, LibraryFilter.Behind],
+                LibrarySectionOrder = [LibrarySection.Shelf],
+            },
             CancellationToken.None);
 
-        (await service.GetAsync(CancellationToken.None))
-            .DefaultLibraryFilter.ShouldBe(LibraryFilter.Backlog);
+        var response = await service.GetAsync(CancellationToken.None);
+
+        response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Behind, LibraryFilter.Backlog]);
+        response.LibrarySectionOrder.ShouldBe(
+            [LibrarySection.Shelf, LibrarySection.ContinueReading, LibrarySection.OutNow]);
+    }
+
+    /// <summary>
+    /// What is saved is the normalised set: the same answer the shelf would give for it.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(DefaultFilterSets))]
+    public async Task UpdateAsync_DefaultLibraryFilters_StoresTheNormalisedSet(
+        LibraryFilter[] sent,
+        LibraryFilter[] stored)
+    {
+        await using var dbContext = CreateDbContext();
+
+        var response = await CreateService(dbContext).UpdateAsync(
+            new UpdatePreferencesRequest { DefaultLibraryFilters = sent }, CancellationToken.None);
+
+        response.DefaultLibraryFilters.ShouldBe(stored);
+        (await dbContext.UserPreferences.SingleAsync()).DefaultLibraryFilters.ShouldBe(stored);
+    }
+
+    public static TheoryData<LibraryFilter[], LibraryFilter[]> DefaultFilterSets => new()
+    {
+        { [LibraryFilter.Owned], [LibraryFilter.Owned] },
+        { [LibraryFilter.Reading, LibraryFilter.Owned, LibraryFilter.Reading], [LibraryFilter.Owned, LibraryFilter.Reading] },
+        { [LibraryFilter.Behind, LibraryFilter.All], [LibraryFilter.All] },
+        { [], [LibraryFilter.All] },
+    };
+
+    /// <summary>
+    /// The column outlives the enum: a name a later release dropped must not make the row
+    /// unreadable, and the order that comes back still holds every section.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_StoredNamesTheEnumDoesNotKnow_AreSkippedAndTheOrderCompleted()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.UserPreferences.Add(new UserPreferences
+        {
+            OwnerId = TestUsers.Owner,
+            DefaultLibraryFilters = EnumListConverter<LibraryFilter>.FromText("Reading,Retired, Owned"),
+            LibrarySectionOrder = EnumListConverter<LibrarySection>.FromText("OutNow,Gone,OutNow"),
+        });
+        await dbContext.SaveChangesAsync();
+
+        var response = await CreateService(dbContext).GetAsync(CancellationToken.None);
+
+        response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Owned, LibraryFilter.Reading]);
+        response.LibrarySectionOrder.ShouldBe(
+            [LibrarySection.OutNow, LibrarySection.ContinueReading, LibrarySection.Shelf]);
     }
 
     private static PreferencesService CreateService(LnShelfDbContext dbContext) =>

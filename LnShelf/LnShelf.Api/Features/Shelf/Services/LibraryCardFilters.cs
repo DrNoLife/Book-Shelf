@@ -1,7 +1,7 @@
 namespace LnShelf.Api.Features.Shelf.Services;
 
 /// <summary>
-/// The status filter, applied to an already-projected card.
+/// The status filters, applied to an already-projected card.
 /// </summary>
 // Filtering the card rather than the entity means the derived-state rules stay
 // in exactly one place (LibraryCardProjection). A second set of SQL predicates
@@ -13,6 +13,7 @@ public static class LibraryCardFilters
         public bool Matches(LibraryFilter filter) => filter switch
         {
             LibraryFilter.All => true,
+            LibraryFilter.Owned => card.Owned > 0,
             LibraryFilter.Behind => card.Behind,
             LibraryFilter.Backlog => card.Backlog > 0,
 
@@ -28,5 +29,11 @@ public static class LibraryCardFilters
             _ => throw new ArgumentOutOfRangeException(
                 nameof(filter), filter, "Unknown library filter."),
         };
+
+        /// <summary>
+        /// Whether the card fits any of the filters: several chosen at once show their union.
+        /// </summary>
+        public bool MatchesAny(IReadOnlyCollection<LibraryFilter> filters) =>
+            LibraryFilterSet.IsEverything(filters) || filters.Any(filter => card.Matches(filter));
     }
 }

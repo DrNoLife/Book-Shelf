@@ -41,15 +41,26 @@ public sealed class PreferencesService(LnShelfDbContext dbContext, ILogger<Prefe
         preferences.LibraryView = request.LibraryView ?? preferences.LibraryView;
         preferences.VolumeView = request.VolumeView ?? preferences.VolumeView;
         preferences.ShowVolumeTitles = request.ShowVolumeTitles ?? preferences.ShowVolumeTitles;
-        preferences.DefaultLibraryFilter = request.DefaultLibraryFilter ?? preferences.DefaultLibraryFilter;
+
+        if (request.DefaultLibraryFilters is { } filters)
+        {
+            preferences.DefaultLibraryFilters = LibraryFilterSet.Normalize(filters);
+        }
+
+        if (request.LibrarySectionOrder is { } order)
+        {
+            preferences.LibrarySectionOrder = LibrarySections.Normalize(order);
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Preferences saved: density {GridDensity}, sort {LibrarySort}, library view {LibraryView}, "
-            + "volume view {VolumeView}, volume titles {ShowVolumeTitles}, default filter {DefaultLibraryFilter}",
+            + "volume view {VolumeView}, volume titles {ShowVolumeTitles}, default filters {DefaultLibraryFilters}, "
+            + "section order {LibrarySectionOrder}",
             preferences.GridDensity, preferences.LibrarySort, preferences.LibraryView,
-            preferences.VolumeView, preferences.ShowVolumeTitles, preferences.DefaultLibraryFilter);
+            preferences.VolumeView, preferences.ShowVolumeTitles,
+            preferences.DefaultLibraryFilters, preferences.LibrarySectionOrder);
 
         return PreferencesMapper.ToResponse(preferences);
     }

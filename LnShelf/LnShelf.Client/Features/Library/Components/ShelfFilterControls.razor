@@ -7,7 +7,22 @@
 <div class="controls">
 
     <div class="controls__section">
-        <span class="eyebrow">Status</span>
+        @* The head holds one quiet action at a fixed height, so the chips below never move
+           when it turns into words: a button while the selection differs from the default,
+           "Your default" once it matches. *@
+        <div class="controls__head">
+            <span class="eyebrow">Status</span>
+            @if (IsDefaultStatus)
+            {
+                <span class="controls__default">Your default</span>
+            }
+            else
+            {
+                <button type="button" class="controls__save" title="Open the shelf on these filters when nothing else is remembered" @onclick="() => SaveDefaultRequested.InvokeAsync()">
+                    Save as default
+                </button>
+            }
+        </div>
         <StatusChips Selected="Status" SelectedChanged="StatusChanged" />
     </div>
 

@@ -3,68 +3,8 @@
   --page-gap: var(--space-9);
 }
 
-.shelf {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* The type and the colour are global (app.css); only the padding is this page's. */
-.notice { padding: 8px 0; }
-
-/* Auto-fill with a capped card width, left-aligned: a wide viewport gains columns
-   rather than stretching six cards to fill it. The cap is what keeps cover
-   proportions constant. */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 230px));
-  gap: 28px 22px;
-  justify-content: start;
-}
-
-/* Compact narrows the cap and tightens the gutters. The card itself is untouched —
-   it already scales, so density is a grid setting rather than a second card. */
-.grid--compact {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 170px));
-  gap: 20px 14px;
-}
-
-@media (max-width: 860px) {
-  /* Three at phone width — a minimum small enough to fit three, with the cap removed
-     so they share the width evenly. */
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-    gap: 18px 13px;
-  }
-
-  /* Compact has to be restated inside every context that sets the base geometry:
-     both selectors carry one class, so the later rule wins regardless of which is
-     more specific. Without this the toggle changed the class and saved the
-     preference while the grid stayed exactly as it was — a control that did
-     nothing at any width below 860px. `LibraryGridDensityStylesheetTests` now
-     fails if a context sets `.grid`'s geometry without restating `.grid--compact`. */
-  .grid--compact {
-    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    gap: 12px 9px;
-  }
-}
-
-/* Phones (the mobile mockup): a tighter rhythm, section titles a step smaller, and the
-   covers three across with the gutters the mockup draws. */
+/* Phones (the mobile mockup): a tighter rhythm between the sections. The shelf's own phone
+   geometry lives with it (ShelfSection). */
 @media (max-width: 720px) {
   .library { --page-gap: var(--space-7); }
-
-  .shelf { gap: 14px; }
-
-  .shelf__title { font-size: var(--fs-panel-title); }
-
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px 12px;
-  }
-
-  .grid--compact {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px 8px;
-  }
 }

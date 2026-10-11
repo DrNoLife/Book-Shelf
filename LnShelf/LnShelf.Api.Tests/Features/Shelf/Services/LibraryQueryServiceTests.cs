@@ -17,7 +17,7 @@ public sealed class LibraryQueryServiceTests
         await using var dbContext = CreateDbContext();
 
         var response = await CreateService(dbContext)
-            .GetLibraryAsync(format: null, LibraryFilter.All, CancellationToken.None);
+            .GetLibraryAsync(format: null, [LibraryFilter.All], CancellationToken.None);
 
         response.Cards.ShouldBeEmpty();
         response.Totals.SeriesCount.ShouldBe(0);
@@ -42,7 +42,7 @@ public sealed class LibraryQueryServiceTests
         await dbContext.SaveChangesAsync();
 
         var totals = (await CreateService(dbContext)
-            .GetLibraryAsync(format: null, LibraryFilter.All, CancellationToken.None)).Totals;
+            .GetLibraryAsync(format: null, [LibraryFilter.All], CancellationToken.None)).Totals;
 
         totals.SeriesCount.ShouldBe(2);
         totals.Read.ShouldBe(1);
@@ -76,7 +76,7 @@ public sealed class LibraryQueryServiceTests
         await dbContext.SaveChangesAsync();
 
         var shelves = (await CreateService(dbContext)
-            .GetLibraryAsync(format: null, LibraryFilter.All, CancellationToken.None)).Shelves;
+            .GetLibraryAsync(format: null, [LibraryFilter.All], CancellationToken.None)).Shelves;
 
         shelves.Reading.ShouldBe(1);
         shelves.Completed.ShouldBe(1);
@@ -105,12 +105,50 @@ public sealed class LibraryQueryServiceTests
         await dbContext.SaveChangesAsync();
 
         var response = await CreateService(dbContext)
-            .GetLibraryAsync(format: null, LibraryFilter.Reading, CancellationToken.None);
+            .GetLibraryAsync(format: null, [LibraryFilter.Reading], CancellationToken.None);
 
         response.Cards.Select(card => card.TitleEnglish).ShouldBe(["Tanya"]);
         response.Totals.SeriesCount.ShouldBe(2);
         response.Shelves.Dropped.ShouldBe(1);
     }
+
+    /// <summary>
+    /// Several status filters show their union; All, or no filter at all, shows everything;
+    /// one filter alone behaves as the single value always did.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(FilterSets))]
+    public async Task GetLibraryAsync_SeveralFilters_ShowTheUnionOfThem(LibraryFilter[] filters, string[] expected)
+    {
+        await using var dbContext = CreateDbContext();
+
+        // Owned, read up to date, reading.
+        Add(dbContext, "Tanya", Format.LightNovel, TrackingStatus.Reading, (ReadStatus.Read, true));
+
+        // Nothing owned, one to buy: behind, plan to start.
+        Add(dbContext, "Overlord", Format.LightNovel, TrackingStatus.PlanToStart, (ReadStatus.Unread, false));
+
+        // Owned and dropped, up to date.
+        Add(dbContext, "Slime", Format.Manga, TrackingStatus.Dropped, (ReadStatus.Read, true));
+
+        await dbContext.SaveChangesAsync();
+
+        var cards = (await CreateService(dbContext)
+            .GetLibraryAsync(format: null, filters, CancellationToken.None)).Cards;
+
+        cards.Select(card => card.TitleEnglish).Order().ShouldBe(expected);
+    }
+
+    public static TheoryData<LibraryFilter[], string[]> FilterSets => new()
+    {
+        { [LibraryFilter.Owned], ["Slime", "Tanya"] },
+        { [LibraryFilter.Reading], ["Tanya"] },
+        { [LibraryFilter.Behind, LibraryFilter.Reading], ["Overlord", "Tanya"] },
+        { [LibraryFilter.Reading, LibraryFilter.Dropped, LibraryFilter.Reading], ["Slime", "Tanya"] },
+        { [LibraryFilter.All], ["Overlord", "Slime", "Tanya"] },
+        { [LibraryFilter.All, LibraryFilter.Reading], ["Overlord", "Slime", "Tanya"] },
+        { [], ["Overlord", "Slime", "Tanya"] },
+    };
 
     [Fact]
     public async Task GetLibraryAsync_AFormat_ScopesTheCountsTooNotJustTheCards()
@@ -122,7 +160,7 @@ public sealed class LibraryQueryServiceTests
         await dbContext.SaveChangesAsync();
 
         var response = await CreateService(dbContext)
-            .GetLibraryAsync(Format.Manga, LibraryFilter.All, CancellationToken.None);
+            .GetLibraryAsync(Format.Manga, [LibraryFilter.All], CancellationToken.None);
 
         response.Cards.Select(card => card.TitleEnglish).ShouldBe(["Slime"]);
 
@@ -147,7 +185,7 @@ public sealed class LibraryQueryServiceTests
         await dbContext.SaveChangesAsync();
 
         var cards = (await CreateService(dbContext)
-            .GetLibraryAsync(format: null, LibraryFilter.All, CancellationToken.None)).Cards;
+            .GetLibraryAsync(format: null, [LibraryFilter.All], CancellationToken.None)).Cards;
 
         cards.Select(card => card.TitleEnglish).ShouldBe(["Zebra", "Apple", "Banana"]);
     }

@@ -12,6 +12,9 @@ public static class LibraryClientExtensions
             // The named seam: the grid and the sidebar render from one library fetch.
             services.AddScoped<LibraryState>();
 
+            // The status and format filters, remembered per browser.
+            services.AddScoped<LibraryFilterMemory>();
+
             // "I finished Vol N" and its undo, shared by the desktop card and the phone carousel.
             services.AddScoped<FinishVolumeState>();
 

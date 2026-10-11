@@ -360,12 +360,19 @@ format badge, title, "Vol 21–22", a "Vol 21 on Saxo ↗" outlined link, and "A
 upcoming →" in the head); **Shelf** — the toolbar (owner feedback 2026-10-10: one
 calm bar instead of every control laid out): the search field with its clear mark and
 a secondary "Filters" button carrying the count of filters hiding series; one quiet
-line under it of removable chips for the status and format filters ("Clear all" once
-there are two things to clear), the count ("9 of 24 shown") and a "Key" disclosure
+line under it of removable chips for the status and format filters, one per status
+("Clear all" once there are two things to clear; it returns to the reader's default
+filters), the count ("9 of 24 shown") and a "Key" disclosure
 that opens the legend (closed by default, remembered per browser). The button opens
-the filter panel — status chips, the format segmented control, sort chips, Rows |
-Covers and density — as a bottom sheet on a phone and a popover under the button
-elsewhere; every choice applies at once. Then the card grid (`auto-fill,
+the filter panel — status chips (a multi-select: All · Owned · Behind · Reading ·
+Backlog · Up to date · Completed · Plan to start · Dropped, a series shows when it fits
+any; All clears the rest; a quiet "Save as default" beside the Status eyebrow, "Your
+default" once the selection is the default), the format segmented control, sort chips,
+Rows | Covers and density — as a bottom sheet on a phone and a popover under the button
+elsewhere; every choice applies at once, and the status and format filters are
+remembered per browser. The three sections under the header (Continue reading, Out
+now, Shelf) are drawn in the reader's order, at every width; the header stays first.
+Then the card grid (`auto-fill,
 minmax(190px, 1fr)`, gap `28px 22px`) and the footer line "Numbers under each cover:
 read · owned · out."
 
@@ -414,11 +421,13 @@ volumes read, on the shelf, series reading, series finished); **Reading now**
 (covers with "Vol 18 next"); **month by month** (twelve light bars on a `--surf`
 card, a month letter under each); **Recently finished**; and a right column of
 cards — **Who can see your shelf** (a two-way segmented control: Private ·
-Public by link, with one line of help under it), **Picture** (one line on which
-picture shows, a `.secondary` "Change picture" and, over an uploaded one, a
-`.ghost` "Use Google picture") and **Account** (signed in with Google, the email,
-Export my data, Sign out, Delete account…). The phone library's round profile
-shortcut shows the same picture.
+Public by link, with one line of help under it), **Library** (the status chips again,
+for the filters the shelf opens on, and the section order as a short numbered list with
+a move up / move down `.secondary` caret pair per row; the end buttons are disabled with
+a title saying why), **Picture** (one line on which picture shows, a `.secondary`
+"Change picture" and, over an uploaded one, a `.ghost` "Use Google picture") and
+**Account** (signed in with Google, the email, Export my data, Sign out, Delete
+account…). The phone library's round profile shortcut shows the same picture.
 
 ### Add a series (`/search`, `/search/import`)
 

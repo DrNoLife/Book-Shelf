@@ -12,7 +12,7 @@ namespace LnShelf.Api.Tests.Client;
 // the defect lived. A component test would have passed throughout.
 public sealed class LibraryGridDensityStylesheetTests
 {
-    private const string Stylesheet = "Features/Library/Pages/LibraryPage.razor.css";
+    private const string Stylesheet = "Features/Library/Components/ShelfSection.razor.css";
     private const string Comfortable = ".grid";
     private const string Compact = ".grid--compact";
 
