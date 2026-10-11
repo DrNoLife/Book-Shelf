@@ -7,27 +7,15 @@ public partial class ImportPage : IDisposable
 
     private ImportQueueResponse? Queue => ImportState.Queue;
 
-    private ImportBatchResponse? Batch => ImportState.Queue?.Batch;
-
     private ImportCommitResponse? CommitResult => ImportState.CommitResult;
 
-    /// <summary>
-    /// The count is computed into the label, the way design.md computes the next
-    /// needed volume into "Vol 12 on Saxo".
-    /// </summary>
-    private string CommitLabel
+    /// <summary>Which of Upload · Check · Apply the open export is on.</summary>
+    private int CurrentStep => Queue?.Batch switch
     {
-        get
-        {
-            if (Batch is null)
-            {
-                return "Add to the shelf";
-            }
-
-            var ready = Batch.AutoMatched + Batch.Resolved;
-            return ready == 1 ? "Add 1 series to the shelf" : $"Add {ready} series to the shelf";
-        }
-    }
+        null => 1,
+        { NeedsReview: > 0 } => 2,
+        _ => 3,
+    };
 
     protected override async Task OnInitializedAsync()
     {

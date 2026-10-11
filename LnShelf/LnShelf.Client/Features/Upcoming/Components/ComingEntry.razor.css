@@ -1,0 +1,44 @@
+.entry {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raise);
+  color: var(--text);
+}
+
+.entry:hover { border-color: var(--line-3); }
+
+.entry__cover {
+  flex: 0 0 28px;
+  align-self: flex-start;
+  aspect-ratio: 2 / 3;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--cover-placeholder);
+}
+
+.entry__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.entry__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.entry__title {
+  font-size: var(--fs-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.entry__when {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}

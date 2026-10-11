@@ -142,6 +142,9 @@ public static class StatsCalculator
                 Format = entry.Series.Format,
                 Read = entry.Volumes.Count(volume => volume.ReadStatus is ReadStatus.Read),
                 Tracked = entry.Volumes.Count,
+                Owned = entry.Volumes.Count(volume => volume.Owned),
+                Out = entry.Volumes.Count(volume => volume.IsOut),
+                CoverObjectKey = entry.Series.CoverObjectKey,
             })
             .Where(longest => longest.Read > 0)
             .OrderByDescending(longest => longest.Read)

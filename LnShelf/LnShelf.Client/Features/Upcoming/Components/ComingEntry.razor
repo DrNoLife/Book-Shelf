@@ -1,0 +1,33 @@
+@using LnShelf.Shared.Releases
+
+@* One dated volume on the timeline: a small cover, the title, "Vol 15 · 9 Dec". *@
+
+<a class="entry" href="@($"/series/{Entry.SeriesId}")">
+    <span class="entry__cover" aria-hidden="true">
+        @if (Entry.CoverObjectKey is { } coverObjectKey)
+        {
+            <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
+        }
+    </span>
+    <span class="entry__text">
+        <span class="entry__title">@Entry.SeriesTitle</span>
+        <span class="entry__when tabular">
+            Vol @Entry.VolumeNumbers[0] · @DateText@if (Entry.VolumeTitle is { } volumeTitle)
+            {
+                <span class="entry__subtitle"> · @volumeTitle</span>
+            }
+        </span>
+    </span>
+</a>
+
+@code {
+    [Inject]
+    public required ApiUrlBuilder ApiUrls { get; set; }
+
+    [Parameter]
+    public required UpcomingEntryResponse Entry { get; set; }
+
+    /// <summary>The date as the placement has room for it: "9 Dec" in a month column, the full date under Later.</summary>
+    [Parameter]
+    public required string DateText { get; set; }
+}

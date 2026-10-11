@@ -1,0 +1,39 @@
+@using LnShelf.Shared.Releases
+
+@* "Announced" (design: Upcoming.dc): volumes a source says exist, with no date yet. One line
+   per series. The mockup's "Notify me when dated" is left out until a notifier exists
+   (design.md, Not built). *@
+
+<section class="announced" aria-labelledby="announced-title">
+    <div class="section-head">
+        <h2 id="announced-title" class="title-section">Announced</h2>
+        <span class="section-head__aside">No date yet</span>
+    </div>
+
+    <ul class="lines">
+        @foreach (var entry in Entries)
+        {
+            <li class="line" @key="entry.SeriesId">
+                <span class="line__cover" aria-hidden="true">
+                    @if (entry.CoverObjectKey is { } coverObjectKey)
+                    {
+                        <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
+                    }
+                </span>
+                <span class="line__text">
+                    <a class="line__title" href="@($"/series/{entry.SeriesId}")">@entry.SeriesTitle</a>
+                    <span class="line__volumes tabular">@VolumeNumberText.Describe(entry.VolumeNumbers)</span>
+                </span>
+                <FormatBadge Value="entry.Format" />
+            </li>
+        }
+    </ul>
+</section>
+
+@code {
+    [Inject]
+    public required ApiUrlBuilder ApiUrls { get; set; }
+
+    [Parameter]
+    public required IReadOnlyList<UpcomingEntryResponse> Entries { get; set; }
+}

@@ -1,8 +1,10 @@
+/* The chart sizes to its card, not the window: the spend chart sits in a side column. */
+.frame { container: chart / inline-size; }
+
 .chart {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 6px;
-  max-width: 720px;
+  gap: var(--space-2);
 }
 
 /* The whole column is the hover target, not just the mark — a one-volume month is a
@@ -11,62 +13,51 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
 }
 
 .column__value {
-  height: 14px;
-  font-size: 11px;
+  height: 16px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
 .column__plot {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
   width: 100%;
-  height: 120px;
-
-  /* The baseline: a hairline, recessive, the only axis the chart draws. */
-  border-bottom: 1px solid var(--line-2);
+  height: 180px;
 }
 
-/* Thin marks, anchored to the baseline, rounded only at the data end. */
-.column__stack {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 2px;
-  width: min(100%, 18px);
-  min-height: 0;
+/* Rounded only at the data end, anchored to the baseline. */
+.column__bar {
+  display: block;
+  width: 100%;
   border-radius: 4px 4px 0 0;
-  overflow: hidden;
 }
 
-.segment {
-  flex-basis: 0;
-  flex-shrink: 1;
-  min-height: 3px;
+.column__bar--full { background: var(--read); }
+
+/* The track colour: an empty month is still a column. */
+.column__bar--empty { background: var(--track); }
+
+/* The month still filling: the read colour striped with the owned one. */
+.column__bar--partial {
+  background: repeating-linear-gradient(135deg, var(--read) 0 4px, var(--owned) 4px 7px);
 }
-
-/* The format badges' mapping (design.md, Format badges): LN is the loud one, manga is
-   quiet ink, WN is outlined — a shape as well as a shade, so it survives grayscale. */
-.segment--ln { background: var(--acc); }
-.segment--manga { background: var(--muted); }
-.segment--wn { background: transparent; box-shadow: inset 0 0 0 1.5px var(--acc-soft); }
-
-/* A single-series chart names no format. Neutral ink, the same as manga's, which is
-   safe only because the two never share a chart. */
-.segment--plain { background: var(--muted); }
 
 .column__month {
-  font-size: 10.5px;
+  font-size: var(--fs-small);
   color: var(--faint);
   white-space: nowrap;
 }
 
-@media (max-width: 520px) {
+.column__month--now { color: var(--text); }
+
+@container chart (max-width: 480px) {
   .chart { gap: 3px; }
+  .column__plot { height: 130px; }
   .column__month { font-size: 9px; }
   .column__value { font-size: 10px; }
 }

@@ -25,6 +25,7 @@ public sealed class UpcomingGroupingTests
         var line = upcoming.OutNow.ShouldHaveSingleItem();
         line.SeriesTitle.ShouldBe("Overlord");
         line.VolumeNumbers.ShouldBe([15, 16]);
+        line.VolumeIds.ShouldBe([.. overlord.Volumes.Where(volume => volume.Number >= 15).OrderBy(volume => volume.Number).Select(volume => volume.Id)]);
         line.ReleaseDate.ShouldBeNull();
     }
 

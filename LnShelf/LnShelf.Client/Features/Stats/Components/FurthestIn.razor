@@ -1,0 +1,47 @@
+@using LnShelf.Shared.Stats
+
+@* "Furthest in" (design: Stats.dc): the series read deepest into, each with the shared
+   three-segment bar and its numbers in words order — read · owned · out. A series read to its
+   last released volume carries a check; the bar alone would say it in colour only. *@
+
+<Panel class="furthest" aria-labelledby="furthest-title">
+    <div class="section-head">
+        <h2 id="furthest-title" class="furthest__title">Furthest in</h2>
+        <span class="section-head__aside">read · owned · out</span>
+    </div>
+
+    <ol class="rows">
+        @foreach (var series in Series)
+        {
+            <li class="row" @key="series.SeriesId">
+                <span class="row__cover" aria-hidden="true">
+                    @if (series.CoverObjectKey is { } coverObjectKey)
+                    {
+                        <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
+                    }
+                </span>
+                <a class="row__title" href="@($"/series/{series.SeriesId}")">@series.Title</a>
+                <span class="row__bar"><ThreeSegmentBar Read="series.Read" Owned="series.Owned" Published="series.Out" /></span>
+                <span class="row__numbers tabular">
+                    @series.Read · @series.Owned · @series.Out
+                </span>
+                <span class="row__done">
+                    @if (IsCaughtUp(series))
+                    {
+                        <Icon Name="IconName.Check" Size="14" /><span class="visually-hidden">Read to the latest volume</span>
+                    }
+                </span>
+            </li>
+        }
+    </ol>
+</Panel>
+
+@code {
+    [Inject]
+    public required ApiUrlBuilder ApiUrls { get; set; }
+
+    [Parameter]
+    public required IReadOnlyList<LongestSeriesResponse> Series { get; set; }
+
+    private static bool IsCaughtUp(LongestSeriesResponse series) => series.Out > 0 && series.Read >= series.Out;
+}

@@ -42,23 +42,7 @@ public partial class ImportGroupCard
         _ => "group__status--settled",
     };
 
-    /// <summary>
-    /// Says what is actually uncertain. The format case is the common one for a
-    /// book export and the only one a person can resolve instantly, so it gets the
-    /// plainest sentence.
-    /// </summary>
-    private string? ReasonLine => Group.Reason switch
-    {
-        ImportReviewReason.FormatAmbiguous =>
-            "A light novel and a manga share this title — only you know which you read.",
-        ImportReviewReason.AmbiguousCandidates =>
-            "Two candidates scored the same on title alone.",
-        ImportReviewReason.LowConfidence =>
-            $"Closest title only scored {Group.MatchScore}.",
-        ImportReviewReason.NoCandidate =>
-            "AniList has nothing by this name.",
-        _ => null,
-    };
+    private string? ReasonLine => ImportReasonText.For(Group);
 
     private Task OnCandidateSelectedAsync(int aniListId) =>
         Decided.InvokeAsync(new ImportDecision(Group.GroupId, aniListId, Skip: false, Group.TreatReadAsOwned));

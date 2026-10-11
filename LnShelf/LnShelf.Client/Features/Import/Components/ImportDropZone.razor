@@ -1,0 +1,26 @@
+@* The upload step (design: Import.dc): one large target to drop a CSV export on or click to
+   choose one. The file input covers the whole zone, invisible, so the browser's own drop
+   handling does the work and no script is needed. Choosing a file reads it at once — there is
+   nothing to confirm, since nothing reaches the shelf before Apply. *@
+
+<label class="drop @(IsBusy ? "drop--busy" : null)">
+    <Icon Name="IconName.FileArrowUp" Size="32" />
+    <span class="drop__title">Drop a CSV export here</span>
+    <span class="drop__note">Goodreads or StoryGraph. The file tells us which.</span>
+    <span class="secondary drop__button" aria-hidden="true">Choose file</span>
+    <InputFile class="drop__input"
+               OnChange="OnFileChangedAsync"
+               accept=".csv,text/csv"
+               disabled="@IsBusy"
+               aria-label="Choose a Goodreads or StoryGraph CSV export" />
+</label>
+
+@code {
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<IBrowserFile> Submitted { get; set; }
+
+    private Task OnFileChangedAsync(InputFileChangeEventArgs args) => Submitted.InvokeAsync(args.File);
+}

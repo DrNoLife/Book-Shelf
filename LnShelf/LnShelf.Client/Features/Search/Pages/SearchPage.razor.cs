@@ -1,3 +1,4 @@
+using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
 
 namespace LnShelf.Client.Features.Search.Pages;
@@ -12,6 +13,10 @@ public partial class SearchPage : IDisposable
 
     [Inject]
     public required LibraryState LibraryState { get; set; }
+
+    /// <summary>Only for the Import tab's "N to review"; the sidebar keeps it loaded.</summary>
+    [Inject]
+    public required ImportState ImportState { get; set; }
 
     [Inject]
     public required NavigationTrail NavigationTrail { get; set; }
@@ -80,6 +85,7 @@ public partial class SearchPage : IDisposable
     protected override async Task OnInitializedAsync()
     {
         SearchState.Changed += OnStateChanged;
+        ImportState.Changed += OnStateChanged;
 
         // The state container outlives the page, so results from an earlier visit are still
         // here; their "On shelf" markers may be out of date if a series was deleted since.
@@ -89,7 +95,11 @@ public partial class SearchPage : IDisposable
         }
     }
 
-    public void Dispose() => SearchState.Changed -= OnStateChanged;
+    public void Dispose()
+    {
+        SearchState.Changed -= OnStateChanged;
+        ImportState.Changed -= OnStateChanged;
+    }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 

@@ -1,0 +1,31 @@
+@* Upload · Check the unsure ones · Apply (design: Import.dc). The step the import is on is
+   named for a screen reader with aria-current, and drawn with a light rule above it; the
+   steps behind it keep the rule, the ones ahead are a hairline. *@
+
+<ol class="steps">
+    @foreach (var step in Steps)
+    {
+        <li class="step @(step.Number <= Current ? "step--reached" : null)"
+            aria-current="@(step.Number == Current ? "step" : null)"
+            @key="step.Number">
+            <span class="step__number tabular">@step.Number</span>
+            <span class="step__title">@step.Title</span>
+            <span class="step__note">@step.Note</span>
+        </li>
+    }
+</ol>
+
+@code {
+    /// <summary>1 before a file is read, 2 while series wait for a decision, 3 once it can be applied.</summary>
+    [Parameter]
+    public required int Current { get; set; }
+
+    private static readonly IReadOnlyList<Step> Steps =
+    [
+        new(1, "Upload", "Each series is looked up once on AniList."),
+        new(2, "Check the unsure ones", "Usually light novel vs. manga of the same title."),
+        new(3, "Apply", "Nothing touches your shelf before this step."),
+    ];
+
+    private sealed record Step(int Number, string Title, string Note);
+}

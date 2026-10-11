@@ -84,7 +84,7 @@ public partial class Sidebar : IDisposable
         SyncState.Changed += OnStateChanged;
         ImportState.Changed += OnStateChanged;
 
-        // The shell owns these fetches: the footer and the Import row show on every page,
+        // The shell owns these fetches: the footer and the review count show on every page,
         // including ones that never load a library or an import.
         if (!SyncState.HasLoaded)
         {

@@ -1,29 +1,29 @@
-@* Twelve columns, one per month, oldest on the left. Plain markup rather than a chart
-   library: the whole chart is a flex row of stacked divs, and a library would bring a
-   second visual language into an app whose design is settled.
+@* Twelve columns, one per month, oldest on the left (design: Stats.dc, "Read per month").
+   Plain markup rather than a chart library: the whole chart is a grid of divs, and a library
+   would bring a second visual language into an app whose design is settled.
 
-   Every column prints its own figure above it, so nothing is hover-only (design.md);
-   the title is the hover extra, and the aria-label is the same sentence for a screen
-   reader. *@
+   One series, one fill: the format split the chart used to stack is the By format card's job
+   now. The current month is hatched — a second channel beside the "so far" in its name —
+   because a half-finished month next to whole ones would otherwise read as a slump.
 
-<div class="chart" role="list" aria-label="@AriaLabel">
-    @foreach (var bar in Bars)
-    {
-        <div class="column" role="listitem" aria-label="@Describe(bar)" title="@Describe(bar)" @key="bar.Month">
-            <span class="column__value tabular" aria-hidden="true">@(bar.Total > 0 ? bar.ValueLabel : "")</span>
+   Every column prints its own figure above it, so nothing is hover-only (design.md); the
+   title is the hover extra, and the aria-label is the same sentence for a screen reader. *@
 
-            <span class="column__plot" aria-hidden="true">
-                <span class="column__stack" style="height: @HeightPercent(bar)">
-                    @foreach (var segment in bar.Segments.Where(segment => segment.Value > 0))
-                    {
-                        <span class="segment @SegmentClass(segment.Kind)" style="flex-grow: @Weight(segment)"></span>
-                    }
+<div class="frame">
+    <div class="chart" role="list" aria-label="@AriaLabel">
+        @foreach (var bar in Bars)
+        {
+            <div class="column" role="listitem" aria-label="@Describe(bar)" title="@Describe(bar)" @key="bar.Month">
+                <span class="column__value tabular" aria-hidden="true">@(bar.Value > 0 ? bar.ValueLabel : "")</span>
+
+                <span class="column__plot" aria-hidden="true">
+                    <span class="column__bar @BarClass(bar)" style="height: @HeightPercent(bar)"></span>
                 </span>
-            </span>
 
-            <span class="column__month" aria-hidden="true">@MonthLabel(bar)</span>
-        </div>
-    }
+                <span class="column__month @(bar.IsPartial ? "column__month--now" : null)" aria-hidden="true">@MonthLabel(bar)</span>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
@@ -33,16 +33,21 @@
     [Parameter]
     public required string AriaLabel { get; set; }
 
-    private decimal Maximum => Bars.Count == 0 ? 0 : Bars.Max(bar => bar.Total);
+    private decimal Maximum => Bars.Count == 0 ? 0 : Bars.Max(bar => bar.Value);
 
     // Scaled to the busiest month rather than to a fixed axis: the chart answers "which
-    // months", and the printed figures carry "how many".
-    private string HeightPercent(MonthBar bar) => Maximum <= 0
-        ? "0%"
-        : (bar.Total / Maximum * 100m).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+    // months", and the printed figures carry "how many". An empty month keeps a sliver of
+    // track, so twelve columns are always visibly twelve.
+    private string HeightPercent(MonthBar bar) => Maximum <= 0 || bar.Value <= 0
+        ? "2%"
+        : Math.Max(bar.Value / Maximum * 100m, 4m).ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
-    private static string Weight(BarSegment segment) =>
-        segment.Value.ToString(CultureInfo.InvariantCulture);
+    private static string BarClass(MonthBar bar) => bar switch
+    {
+        { Value: <= 0 } => "column__bar--empty",
+        { IsPartial: true } => "column__bar--partial",
+        _ => "column__bar--full",
+    };
 
     // January carries the year, so a twelve-month window that crosses one reads without a
     // separate axis title; the first column carries it too, so the window's start is named.
@@ -54,17 +59,8 @@
     private static string Describe(MonthBar bar)
     {
         var month = bar.Month.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-        var parts = bar.Segments.Where(segment => segment.Value > 0).Select(segment => segment.Words).ToList();
+        var soFar = bar.IsPartial ? " so far" : string.Empty;
 
-        return parts.Count == 0 ? $"{month}: none" : $"{month}: {string.Join(", ", parts)}";
+        return bar.Value > 0 ? $"{month}: {bar.Words}{soFar}" : $"{month}: none{soFar}";
     }
-
-    private static string SegmentClass(BarSegmentKind kind) => kind switch
-    {
-        BarSegmentKind.LightNovel => "segment--ln",
-        BarSegmentKind.Manga => "segment--manga",
-        BarSegmentKind.WebNovel => "segment--wn",
-        BarSegmentKind.Plain => "segment--plain",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown segment kind."),
-    };
 }

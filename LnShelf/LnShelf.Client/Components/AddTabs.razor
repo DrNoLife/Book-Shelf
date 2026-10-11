@@ -1,0 +1,32 @@
+@* The two ways to add a series, as tabs under "Add a series" (design: Import.dc): Search and
+   Import a file. They are links between two pages, not a tab widget on one, so this is a
+   nav with aria-current rather than role="tablist". The import tab carries the "N to review"
+   pill the sidebar's Import row used to: the count is what makes a waiting queue findable. *@
+
+<nav class="tabs" aria-label="Add a series by">
+    <a class="tab @(Current == AddTab.Search ? "tab--current" : null)"
+       href="search"
+       aria-current="@(Current == AddTab.Search ? "page" : null)">
+        <Icon Name="IconName.MagnifyingGlass" Size="16" />
+        Search
+    </a>
+    <a class="tab @(Current == AddTab.Import ? "tab--current" : null)"
+       href="search/import"
+       aria-current="@(Current == AddTab.Import ? "page" : null)">
+        <Icon Name="IconName.FileArrowUp" Size="16" />
+        Import a file
+        @if (ReviewCount > 0)
+        {
+            <Pill Tone="PillTone.Attention">@ReviewCount to review</Pill>
+        }
+    </a>
+</nav>
+
+@code {
+    [Parameter]
+    public required AddTab Current { get; set; }
+
+    /// <summary>Imported series still waiting for a decision.</summary>
+    [Parameter]
+    public int ReviewCount { get; set; }
+}

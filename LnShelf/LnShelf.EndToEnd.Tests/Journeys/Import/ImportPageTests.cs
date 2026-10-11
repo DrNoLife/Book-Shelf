@@ -15,10 +15,14 @@ public sealed class ImportPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         string seriesTitle,
         string expectedBooksLine)
     {
-        await Page.GotoAsync("/import");
+        await Page.GotoAsync("/search/import");
 
-        await Page.Locator("input.upload__input").SetInputFilesAsync(ExportPath);
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Read it" }).ClickAsync();
+        // Choosing the file reads it: there is no separate confirm step any more.
+        await Page.Locator("input.drop__input").SetInputFilesAsync(ExportPath);
+
+        var review = Page.Locator("section.review");
+        await Assertions.Expect(review).ToBeVisibleAsync();
+        await OpenEveryCardAsync(review);
 
         var groups = Page.Locator("article.group");
         await Assertions.Expect(groups.First).ToBeVisibleAsync();
@@ -27,5 +31,22 @@ public sealed class ImportPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await Assertions.Expect(group).ToHaveCountAsync(1);
         await Assertions.Expect(group.Locator(".group__title")).ToHaveTextAsync(seriesTitle);
         await Assertions.Expect(group.Locator(".group__books")).ToContainTextAsync(expectedBooksLine);
+    }
+
+    // The matched series are folded under one disclosure and a series with a one-tap answer
+    // shows its full card on "Details"; the books line this journey checks is on the card.
+    private static async Task OpenEveryCardAsync(ILocator review)
+    {
+        var settled = review.Locator("details.review__settled");
+        if (await settled.CountAsync() > 0 && await settled.GetAttributeAsync("open") is null)
+        {
+            await settled.Locator("summary").ClickAsync();
+        }
+
+        var details = review.GetByRole(AriaRole.Button, new() { Name = "Details", Exact = true });
+        for (var count = await details.CountAsync(); count > 0; count = await details.CountAsync())
+        {
+            await details.First.ClickAsync();
+        }
     }
 }

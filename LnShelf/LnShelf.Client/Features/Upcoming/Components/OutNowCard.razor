@@ -1,0 +1,104 @@
+@using LnShelf.Shared.Releases
+
+@* One series with volumes out that are not on the shelf (design: Upcoming.dc, "Out now").
+   The cover is the first volume to buy — the spine to look for on the shop shelf — and the
+   buttons name that volume: where to buy it, then "I bought Vol 13" to say it is done. A card
+   whose series this visit has bought out stays put as "On your shelf now", with the Undo. *@
+
+<article class="card" aria-labelledby="@TitleId">
+    <a class="card__cover" href="@SeriesHref" tabindex="-1" aria-hidden="true">
+        @if (Entry.CoverObjectKey is { } coverObjectKey)
+        {
+            <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
+        }
+    </a>
+
+    <div class="card__body">
+        <h3 class="title-card card__title" id="@TitleId"><a href="@SeriesHref">@Entry.SeriesTitle</a></h3>
+        <p class="card__range tabular">@RangeText</p>
+
+        @if (IsDone)
+        {
+            <div class="card__actions">
+                <span class="card__done"><Icon Name="IconName.Check" Size="14" /> On your shelf now</span>
+                <button type="button" class="ghost card__undo" disabled="@IsBusy" @onclick="UndoRequested">
+                    Undo<span class="visually-hidden"> buying @BoughtText of @Entry.SeriesTitle</span>
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="card__actions">
+                <a class="secondary"
+                   href="@SaxoSearch.UrlFor(Entry.SeriesTitle, NextNumber)"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    Vol @NextNumber on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+                </a>
+                <a class="ghost"
+                   href="@FaraosSearch.UrlFor(Entry.SeriesTitle, Entry.Format)"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="@($"{Entry.SeriesTitle} at Faraos Cigarer")">
+                    Faraos <Icon Name="IconName.ArrowUpRight" Size="12" />
+                </a>
+                <button type="button" class="tertiary card__bought" disabled="@IsBusy" @onclick="BuyRequested">
+                    I bought Vol @NextNumber
+                </button>
+            </div>
+
+            @* A slip of the thumb on the last tap is put right here, not on the series page. *@
+            @if (Bought is not null)
+            {
+                <p class="card__receipt fine">
+                    @BoughtText marked owned ·
+                    <button type="button" class="card__receipt-undo" disabled="@IsBusy" @onclick="UndoRequested">
+                        Undo<span class="visually-hidden"> buying @BoughtText of @Entry.SeriesTitle</span>
+                    </button>
+                </p>
+            }
+        }
+    </div>
+</article>
+
+@code {
+    [Inject]
+    public required ApiUrlBuilder ApiUrls { get; set; }
+
+    /// <summary>The out-now line, or — when <see cref="IsDone"/> — the line as it was first bought from.</summary>
+    [Parameter]
+    public required UpcomingEntryResponse Entry { get; set; }
+
+    /// <summary>What this visit has bought from the series; null when nothing.</summary>
+    [Parameter]
+    public BoughtSeries? Bought { get; set; }
+
+    /// <summary>Every volume the line asked for has been bought here.</summary>
+    [Parameter]
+    public bool IsDone { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback BuyRequested { get; set; }
+
+    [Parameter]
+    public EventCallback UndoRequested { get; set; }
+
+    private string SeriesHref => $"/series/{Entry.SeriesId}";
+
+    private string TitleId => $"out-now-{Entry.SeriesId}";
+
+    private int NextNumber => Entry.VolumeNumbers[0];
+
+    // "Vols 13–14 are out" — the volumes still to buy, which is what the line is about.
+    // VolumeNumberText collapses runs and keeps gaps honest ("Vols 3, 5–7").
+    private string RangeText => IsDone
+        ? $"{VolumeNumberText.Describe(Entry.VolumeNumbers)} bought"
+        : $"{VolumeNumberText.Describe(Entry.VolumeNumbers)} {(Entry.VolumeNumbers.Count == 1 ? "is" : "are")} out";
+
+    private string BoughtText => Bought is { } bought
+        ? VolumeNumberText.Describe([.. bought.Volumes.Select(volume => volume.Number)])
+        : string.Empty;
+}

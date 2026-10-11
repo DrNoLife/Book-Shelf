@@ -1,0 +1,35 @@
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--line-2);
+}
+
+.step--reached { border-top-color: var(--read); }
+
+.step__number {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.step__title { font-weight: 600; }
+
+.step__note {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* A phone has room for the titles only; the notes repeat what the page already says. */
+@media (max-width: 720px) {
+  .steps { gap: var(--space-3); }
+  .step__note { display: none; }
+}

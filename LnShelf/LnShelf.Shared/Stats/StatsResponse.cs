@@ -100,4 +100,13 @@ public sealed record LongestSeriesResponse
     public required Format Format { get; init; }
     public required int Read { get; init; }
     public required int Tracked { get; init; }
+
+    /// <summary>Owned volumes, read or not — the bar's middle segment.</summary>
+    public required int Owned { get; init; }
+
+    /// <summary>Volumes out now, by the same rule the volume tile uses — the bar's span.</summary>
+    public required int Out { get; init; }
+
+    /// <summary>Key for <c>/api/covers/{objectKey}</c>. Null renders the placeholder.</summary>
+    public string? CoverObjectKey { get; init; }
 }

@@ -1,0 +1,109 @@
+.coming {
+  container: coming / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Six columns in one bordered box, a hairline between them (design: Upcoming.dc). */
+.months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf-low);
+  overflow: hidden;
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 210px;
+  padding: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.month:first-child { border-left: 0; }
+
+.month__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--sans);
+  font-weight: 500;
+}
+
+.month__name {
+  font-size: var(--fs-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* This month is named in --text: where "now" is on the timeline, without the accent. */
+.month--now .month__name { color: var(--text); }
+
+.month__year {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.month__none {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.month__entries,
+.later__entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.later {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.later__entries { max-width: 420px; }
+
+/* Too narrow for six columns: a row per month, its name on the left (MUpcoming.dc). */
+@container coming (max-width: 760px) {
+  .months {
+    grid-template-columns: minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .month {
+    flex-direction: row;
+    gap: 14px;
+    min-height: 0;
+    padding: 10px 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .month:first-child { border-top: 1px solid var(--line); }
+
+  .month__head {
+    flex: 0 0 48px;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 2px;
+  }
+
+  .month__none { padding-top: 2px; }
+
+  .month__entries { flex: 1 1 auto; min-width: 0; }
+}

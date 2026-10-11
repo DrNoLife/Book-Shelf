@@ -22,6 +22,11 @@ public sealed record UpcomingEntryResponse
     public required IReadOnlyList<int> VolumeNumbers { get; init; }
 
     /// <summary>
+    /// The same volumes' ids, in the same order — what "I bought Vol 13" marks owned.
+    /// </summary>
+    public required IReadOnlyList<Guid> VolumeIds { get; init; }
+
+    /// <summary>
     /// The volume's own subtitle, on a dated single-volume line when a source named it.
     /// </summary>
     public string? VolumeTitle { get; init; }

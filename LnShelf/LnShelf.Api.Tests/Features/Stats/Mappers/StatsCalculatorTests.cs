@@ -154,6 +154,8 @@ public sealed class StatsCalculatorTests
         longest.Select(entry => entry.Title).ShouldBe(["That Time I Got Reincarnated as a Slime", "Overlord"]);
         longest[0].Read.ShouldBe(5);
         longest[0].Tracked.ShouldBe(6);
+        longest[0].Owned.ShouldBe(5);
+        longest[0].Out.ShouldBe(6);
     }
 
     [Fact]

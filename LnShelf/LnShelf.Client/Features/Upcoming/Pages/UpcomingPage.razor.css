@@ -1,56 +1,46 @@
-/* The h1 exists for structure and for narrow viewports; the desktop shell names the
-   page in the sidebar instead — the library page's arrangement. */
-.upcoming__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-}
+/* design (Upcoming.dc / MUpcoming.dc): the title and its count line beside the format tabs,
+   then Out now, Coming and Announced, 44px apart. */
 
 .upcoming {
-  display: flex;
-  flex-direction: column;
+  --page-width: 1180px;
+  --page-gap: 44px;
 }
 
-.upcoming__top {
+.upcoming__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.upcoming__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The mockup's 44px, which is the scale's --fs-stat: the page's one big serif line. */
+.upcoming__title {
+  font-size: var(--fs-stat);
+  line-height: 1;
+}
+
+.out-now {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 22px 26px 18px;
-  border-bottom: 1px solid var(--line);
 }
 
-.upcoming__body { padding: 22px 26px 26px; }
-
-/* The type and the colour are global (app.css); only the padding is this page's. */
-.notice { padding: 8px 0; }
-
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  max-width: 820px;
+/* Two cards a row where there is room; min() keeps one card from overflowing a phone. */
+.out-now__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  gap: var(--space-4);
 }
 
-.upcoming__footer { margin-top: 26px; }
+@media (max-width: 720px) {
+  .upcoming { --page-gap: 30px; }
 
-@media (max-width: 860px) {
-  .upcoming__title {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip-path: none;
-    padding: 18px 16px 0;
-    font-size: 30px;
-  }
-
-  .upcoming__top { padding: 14px 16px; }
-  .upcoming__body { padding: 16px 16px 22px; }
+  .upcoming__title { font-size: var(--fs-stat-medium); }
 }

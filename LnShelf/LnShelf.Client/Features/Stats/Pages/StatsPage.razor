@@ -1,42 +1,20 @@
 @page "/stats"
 @using LnShelf.Client.Features.Stats.Components
 
-@* The StoryGraph wrap-up, but yours (ui-spec §5). Numbers first; the charts are what
-   the numbers look like over a year. No backlog-over-time chart on purpose — see
-   StatsResponse for why a trend line would be drawn from data the shelf does not have. *@
+@* The StoryGraph wrap-up, but yours (design: Stats.dc / MStats.dc). The totals first; then
+   the months and the pace they add up to; then the series furthest in, beside the formats and
+   the spend. No backlog-over-time chart on purpose — see StatsResponse for why a trend line
+   would be drawn from data the shelf does not have. The mockup's period switch (12 months ·
+   this year · all time) and "Add dates" are left out until the API can answer them
+   (design.md, Not built). *@
 
-<h1 class="stats__title">Stats</h1>
+<div class="page stats">
+    <div class="page__stack">
 
-<div class="stats">
+        <header class="stats__head">
+            <h1 class="stats__title">Stats</h1>
+        </header>
 
-    <div class="stats__top">
-        <p class="eyebrow">Stats@(State.Response is { } loaded ? $" · {SeriesCount(loaded)} series" : "")</p>
-
-        @if (State.Response is { } response)
-        {
-            <div class="figures">
-                <p class="figure">
-                    <span class="figure__value figure__value--accent tabular">@response.Formats.Sum(format => format.Read)</span>
-                    <span class="figure__label">read</span>
-                </p>
-                <p class="figure">
-                    <span class="figure__value tabular">@response.Formats.Sum(format => format.Owned)</span>
-                    <span class="figure__label">owned</span>
-                </p>
-                <p class="figure">
-                    <span class="figure__value tabular">@response.CompletedSeries</span>
-                    <span class="figure__label">of @response.StartedSeries started series completed</span>
-                </p>
-            </div>
-
-            <p class="stats__prose">
-                @response.Formats.Sum(format => format.Backlog) bought and unread.
-                @response.Formats.Sum(format => format.ToBuy) out there you haven't bought.
-            </p>
-        }
-    </div>
-
-    <div class="stats__body">
         @if (State.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>
@@ -51,98 +29,53 @@
         }
         else
         {
-            <section class="section" aria-labelledby="stats-read">
-                <h2 class="section__heading" id="stats-read">Read per month</h2>
-
-                <MonthBarChart Bars="ReadBars(stats)" AriaLabel="Volumes read per month, last twelve months" />
-
-                <Legend>
-                    <LegendItem Words="Light novel"><Mark><span class="mark mark--ln"></span></Mark></LegendItem>
-                    <LegendItem Words="Manga"><Mark><span class="mark mark--manga"></span></Mark></LegendItem>
-                    <LegendItem Words="Web novel"><Mark><span class="mark mark--wn"></span></Mark></LegendItem>
-                </Legend>
-
-                @if (stats.ReadWithoutDate > 0)
-                {
-                    <p class="notice notice--quiet">
-                        @stats.ReadWithoutDate read @(stats.ReadWithoutDate == 1 ? "volume carries" : "volumes carry") no read date and
-                        @(stats.ReadWithoutDate == 1 ? "is" : "are") counted above but charted nowhere.
-                    </p>
-                }
+            <section class="totals" aria-label="Totals">
+                <div class="totals__cell"><StatFigure Value="@Count(Read(stats))" Label="volumes read" Stacked="true" /></div>
+                <div class="totals__cell"><StatFigure Value="@Count(Owned(stats))" Label="on your shelf" Stacked="true" /></div>
+                <div class="totals__cell"><StatFigure Value="@Count(Waiting(stats))" Label="bought, waiting" Stacked="true" /></div>
+                <div class="totals__cell">
+                    <StatFigure Value="@($"{Count(stats.CompletedSeries)} / {Count(SeriesCount(stats))}")" Label="series finished" Stacked="true" />
+                </div>
             </section>
 
-            <section class="section" aria-labelledby="stats-formats">
-                <h2 class="section__heading" id="stats-formats">By format</h2>
+            <div class="stats__row">
+                <Panel class="stats__wide" aria-labelledby="stats-read">
+                    <div class="section-head">
+                        <h2 id="stats-read" class="stats__panel-title">Read per month</h2>
+                        <span class="section-head__aside">@ChartNote(stats)</span>
+                    </div>
 
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="eyebrow">Format</th>
-                            <th scope="col" class="eyebrow">Series</th>
-                            <th scope="col" class="eyebrow">Read</th>
-                            <th scope="col" class="eyebrow">Owned</th>
-                            <th scope="col" class="eyebrow">Backlog</th>
-                            <th scope="col" class="eyebrow">To buy</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var format in stats.Formats)
-                        {
-                            <tr @key="format.Format">
-                                <th scope="row"><FormatBadge Value="format.Format" /></th>
-                                <td class="tabular">@format.SeriesCount</td>
-                                <td class="tabular">@format.Read</td>
-                                <td class="tabular">@format.Owned</td>
-                                <td class="tabular">@format.Backlog</td>
-                                <td class="tabular">@format.ToBuy</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </section>
+                    <MonthBarChart Bars="ReadBars(stats)" AriaLabel="Volumes read per month, last twelve months" />
 
-            <section class="section" aria-labelledby="stats-spend">
-                <h2 class="section__heading" id="stats-spend">Spend</h2>
-
-                @if (stats.Spend is { } spend)
-                {
-                    <p class="section__line tabular">
-                        @spend.PricedCount priced @(spend.PricedCount == 1 ? "volume" : "volumes") · @Money(spend.Total) · avg @Money(spend.Average)
-                    </p>
-
-                    @if (stats.SpendPerMonth.Any(month => month.Total > 0))
+                    @if (stats.ReadWithoutDate > 0)
                     {
-                        <MonthBarChart Bars="SpendBars(stats)" AriaLabel="Money spent per month, last twelve months" />
+                        <p class="stats__undated">
+                            <SignalDot Tone="SignalTone.Attention" />
+                            <span>
+                                @stats.ReadWithoutDate read @(stats.ReadWithoutDate == 1 ? "volume has" : "volumes have") no date,
+                                so @(stats.ReadWithoutDate == 1 ? "it is" : "they are") counted but not charted.
+                            </span>
+                        </p>
                     }
-                    else
-                    {
-                        <p class="notice notice--quiet">None of it carries a purchase date from the last twelve months.</p>
-                    }
-                }
-                else
+                </Panel>
+
+                <PaceCard Pace="ReadingPace.From(stats.ReadPerMonth)" Waiting="Waiting(stats)" />
+            </div>
+
+            <div class="stats__row stats__row--top">
+                @if (stats.LongestSeries.Count > 0)
                 {
-                    <p class="notice notice--quiet">No volume carries a price. Add one from a volume's menu and it lands here.</p>
+                    <div class="stats__wide">
+                        <FurthestIn Series="stats.LongestSeries" />
+                    </div>
                 }
-            </section>
 
-            @if (stats.LongestSeries.Count > 0)
-            {
-                <section class="section" aria-labelledby="stats-longest">
-                    <h2 class="section__heading" id="stats-longest">Furthest read</h2>
-
-                    <ol class="longest">
-                        @foreach (var series in stats.LongestSeries)
-                        {
-                            <li class="longest__row" @key="series.SeriesId">
-                                <span class="longest__badge"><FormatBadge Value="series.Format" /></span>
-                                <a class="longest__title" href="@($"/series/{series.SeriesId}")">@series.Title</a>
-                                <span class="longest__count tabular">@series.Read of @series.Tracked read</span>
-                            </li>
-                        }
-                    </ol>
-                </section>
-            }
+                <div class="stats__side">
+                    <FormatCard Formats="stats.Formats" />
+                    <SpendCard Stats="stats" />
+                </div>
+            </div>
         }
-    </div>
 
+    </div>
 </div>

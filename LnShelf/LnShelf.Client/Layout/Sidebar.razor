@@ -14,9 +14,16 @@
             <span class="nav__label">Library</span>
         </NavLink>
 
+        @* Import is the second tab of Search & add (/search/import), so this row is lit there
+           too, and it carries the import queue's count: the count is what makes series the
+           matcher could not place findable without opening the page. *@
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="search">
             <Icon Name="IconName.MagnifyingGlass" Size="16" />
             <span class="nav__label">Search &amp; add</span>
+            @if (ReviewCount > 0)
+            {
+                <Pill Tone="PillTone.Attention">@ReviewCount to review</Pill>
+            }
         </NavLink>
 
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="upcoming">
@@ -27,17 +34,6 @@
         <NavLink class="nav__row" ActiveClass="nav__row--active" href="stats">
             <Icon Name="IconName.ChartBar" Size="16" />
             <span class="nav__label">Stats</span>
-        </NavLink>
-
-        <NavLink class="nav__row" ActiveClass="nav__row--active" href="import">
-            <Icon Name="IconName.FileArrowUp" Size="16" />
-            <span class="nav__label">Import</span>
-            @* Series the matcher could not place by itself; the count is what makes the
-               queue findable without opening the page. *@
-            @if (ReviewCount > 0)
-            {
-                <Pill Tone="PillTone.Attention">@ReviewCount to review</Pill>
-            }
         </NavLink>
     </nav>
 

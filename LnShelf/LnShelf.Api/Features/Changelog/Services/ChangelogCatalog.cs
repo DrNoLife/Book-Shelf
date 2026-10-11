@@ -20,6 +20,22 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.25.0", new DateOnly(2026, 10, 11), "Upcoming, Stats and Import, redrawn",
+            Features: [
+                "Upcoming has an \"I bought Vol 13\" button on every series with volumes out that you don't own: one " +
+                    "tap marks it owned, and Undo puts it back.",
+                "Upcoming shows the next six months as a timeline, one column per month, so you can see what lands when.",
+            ],
+            Improvements: [
+                "Stats is redesigned: your totals up top, volumes read per month with the current month marked as " +
+                    "\"so far\", your reading pace and how long the books waiting on your shelf will last at it, and " +
+                    "the series you are furthest into with how much of each you own.",
+                "Import now lives under Search & add as \"Import a file\". Drop a Goodreads or StoryGraph export on " +
+                    "the page and it is read straight away; a light novel or manga question is one tap, and everything " +
+                    "already matched is folded away until you want to check it.",
+            ],
+            Fixes: []
+        ),
         new("0.24.1", new DateOnly(2026, 10, 10), "A better way to add",
             Features: [
                 "Search & add is redesigned: results are grouped by work, so a series' parts and side stories sit " +

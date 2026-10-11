@@ -1,0 +1,81 @@
+@* One series waiting for a decision (design: Import.dc's "to check" rows). Where the format
+   alone tells the candidates apart, the answer is one tap — "Light novel · Manga · Skip" —
+   and "Details" opens the full card with covers, the books and a search. Where it does not,
+   the full card is the row: a format button cannot choose between two light novels. *@
+
+<li class="row">
+    <div class="row__line">
+        <span class="row__text">
+            <span class="row__title">@Group.SeriesTitle</span>
+            <span class="row__why">@Why</span>
+        </span>
+
+        @if (QuickChoices.Count > 0)
+        {
+            <span class="row__answers">
+                <SegmentedControl TValue="string"
+                                  Options="Options"
+                                  Value="@string.Empty"
+                                  ValueChanged="OnAnsweredAsync"
+                                  AriaLabel="@($"Match for {Group.SeriesTitle}")"
+                                  Disabled="IsBusy"
+                                  Inset="true" />
+                <button type="button"
+                        class="ghost row__details"
+                        aria-expanded="@IsOpen.ToAriaState()"
+                        @onclick="() => IsOpen = !IsOpen">
+                    @(IsOpen ? "Hide details" : "Details")
+                </button>
+            </span>
+        }
+    </div>
+
+    @if (IsOpen || QuickChoices.Count == 0)
+    {
+        <ImportGroupCard Group="Group" IsBusy="IsBusy" Decided="Decided" />
+    }
+</li>
+
+@code {
+    [Parameter]
+    public required ImportGroupResponse Group { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<ImportDecision> Decided { get; set; }
+
+    private const string SkipKey = "skip";
+
+    private bool IsOpen { get; set; }
+
+    private IReadOnlyList<ImportQuickChoice> QuickChoices => ImportQuickChoices.For(Group);
+
+    private List<SegmentedOption<string>> Options =>
+    [
+        .. QuickChoices.Select(choice => new SegmentedOption<string>(
+            choice.AniListId.ToString(CultureInfo.InvariantCulture),
+            FormatName(choice.Format),
+            $"It is the {FormatName(choice.Format).ToLowerInvariant()}")),
+        new(SkipKey, "Skip", "Leave it off the shelf"),
+    ];
+
+    /// <summary>"3 books · vols 1–3 · 2 read", then what is unsure.</summary>
+    private string Why => ImportReasonText.For(Group) is { } reason
+        ? $"{Group.RowCount} books · {reason}"
+        : $"{Group.RowCount} books";
+
+    private Task OnAnsweredAsync(string key) => key == SkipKey
+        ? Decided.InvokeAsync(new ImportDecision(Group.GroupId, AniListId: null, Skip: true, Group.TreatReadAsOwned))
+        : Decided.InvokeAsync(new ImportDecision(
+            Group.GroupId, int.Parse(key, CultureInfo.InvariantCulture), Skip: false, Group.TreatReadAsOwned));
+
+    private static string FormatName(Format format) => format switch
+    {
+        Format.LightNovel => "Light novel",
+        Format.Manga => "Manga",
+        Format.WebNovel => "Web novel",
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown format."),
+    };
+}

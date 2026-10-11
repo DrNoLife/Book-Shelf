@@ -1,0 +1,51 @@
+@* The import page's side column (design: Import.dc): where each service hides its export,
+   the earlier uploads — any of which can be reopened, an unapplied one to finish — and the
+   way the other direction, out of the shelf. *@
+
+<aside class="aside" aria-label="About importing">
+    <Panel aria-labelledby="import-where">
+        <h2 id="import-where" class="eyebrow">Where to get the file</h2>
+        <details class="where">
+            <summary class="where__summary">Goodreads</summary>
+            <p class="where__text">My Books → Import and export → Export library.</p>
+        </details>
+        <details class="where">
+            <summary class="where__summary">StoryGraph</summary>
+            <p class="where__text">Manage account → Export StoryGraph library.</p>
+        </details>
+    </Panel>
+
+    @if (Batches.Count > 0)
+    {
+        <Panel aria-labelledby="import-earlier">
+            <h2 id="import-earlier" class="eyebrow">Earlier imports</h2>
+            <ul class="batches">
+                @foreach (var batch in Batches)
+                {
+                    <li class="batch" @key="batch.BatchId">
+                        <button type="button" class="batch__open" disabled="@IsBusy" @onclick="() => Opened.InvokeAsync(batch.BatchId)">
+                            @batch.FileName
+                        </button>
+                        <span class="batch__meta tabular">
+                            @batch.RowCount books · @batch.GroupCount series ·
+                            @(batch.CommittedAt is null ? $"{batch.NeedsReview} to check" : "applied")
+                        </span>
+                    </li>
+                }
+            </ul>
+        </Panel>
+    }
+
+    <p class="fine">Export your own shelf from <a class="text-link" href="profile">Profile</a>.</p>
+</aside>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<ImportBatchResponse> Batches { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> Opened { get; set; }
+}

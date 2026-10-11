@@ -10,6 +10,7 @@ public static class UpcomingClientExtensions
         public IServiceCollection AddUpcoming()
         {
             services.AddScoped<UpcomingState>();
+            services.AddScoped<BuyVolumeState>();
 
             return services;
         }

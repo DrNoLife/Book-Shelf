@@ -1,0 +1,102 @@
+/* design (Upcoming.dc): a card per series, the cover beside the title, the shops and
+   "I bought Vol N" along the bottom. */
+
+.card {
+  display: flex;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surf);
+}
+
+.card__cover {
+  flex: 0 0 76px;
+  align-self: flex-start;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--cover-placeholder);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.card__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.card__title a { color: var(--text); }
+.card__title a:hover { color: var(--text-strong); }
+
+.card__range { color: var(--muted); }
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* The way out of the card is on the right, the shops on the left (the mockup's order). */
+.card__bought { margin-left: auto; }
+
+.card__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.card__undo { min-height: 36px; }
+
+.card__receipt { margin-top: var(--space-1); }
+
+/* A button in a sentence: it reads as the prose link it is. */
+.card__receipt-undo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc-soft);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.card__receipt-undo:hover:not(:disabled) { color: var(--text-strong); }
+
+/* Phones (MUpcoming.dc): the cover a little smaller, and the three actions as a grid under
+   the title — the two shops side by side, "I bought" full width under them. */
+@media (max-width: 720px) {
+  .card {
+    gap: 14px;
+    padding: var(--space-4);
+  }
+
+  .card__cover { flex-basis: 60px; }
+
+  .card__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .card__actions:has(.card__done) { display: flex; justify-content: space-between; }
+
+  .card__bought {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+}

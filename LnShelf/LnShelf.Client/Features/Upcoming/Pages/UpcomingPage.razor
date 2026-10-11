@@ -1,20 +1,31 @@
 @page "/upcoming"
 @using LnShelf.Client.Features.Upcoming.Components
 
-@* "What do I need to buy?" (ui-spec §3). Out now first, because it is the only group
-   something can be done about today; then the dated months; then what is known to exist
-   without a date. The format tabs apply here too — LN and manga are different budgets. *@
+@* "What do I need to buy?" (design: Upcoming.dc / MUpcoming.dc). Out now first, because it is
+   the only group something can be done about today; then the next six months; then what is
+   known to exist without a date. The format tabs apply here too — LN and manga are different
+   budgets. The mockup's "Subscribe in calendar" is left out until there is a feed to
+   subscribe to (design.md, Not built). *@
 
-<h1 class="upcoming__title">Upcoming</h1>
+<div class="page upcoming">
+    <div class="page__stack">
 
-<div class="upcoming">
+        <header class="upcoming__head">
+            <div class="upcoming__heading">
+                <h1 class="upcoming__title">Upcoming</h1>
+                @if (Summary is { } summary)
+                {
+                    <p class="lead">@summary</p>
+                }
+            </div>
+            <FormatTabs Selected="State.SelectedFormat" SelectedChanged="State.SelectFormatAsync" />
+        </header>
 
-    <div class="upcoming__top">
-        <p class="eyebrow">Upcoming@(Summary is { } summary ? $" · {summary}" : "")</p>
-        <FormatTabs Selected="State.SelectedFormat" SelectedChanged="State.SelectFormatAsync" />
-    </div>
+        @if (BuyState.Message is { } message)
+        {
+            <p class="notice notice--message" role="status">@message</p>
+        }
 
-    <div class="upcoming__body">
         @if (State.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>
@@ -29,20 +40,44 @@
         }
         else
         {
-            <div class="groups">
-                <UpcomingGroup Heading="Out now, not owned" Kind="UpcomingGroupKind.OutNow" Entries="upcoming.OutNow" />
-                <UpcomingGroup Heading="This month" Kind="UpcomingGroupKind.Dated" Entries="upcoming.ThisMonth" />
-                <UpcomingGroup Heading="Next 3 months" Kind="UpcomingGroupKind.Dated" Entries="upcoming.NextThreeMonths" />
-                <UpcomingGroup Heading="Later" Kind="UpcomingGroupKind.Dated" Entries="upcoming.Later" />
-                <UpcomingGroup Heading="Announced, no date" Kind="UpcomingGroupKind.Announced" Entries="upcoming.Announced" />
-            </div>
+            <section class="out-now" aria-labelledby="out-now-title">
+                <div class="section-head">
+                    <h2 id="out-now-title" class="title-section">Out now</h2>
+                    <span class="section-head__aside">Released, not on your shelf</span>
+                </div>
 
-            @* The one wry line, and an honest one: dated groups are usually empty because
-               no source this shelf can reach publishes future dates. *@
-            <p class="notice notice--quiet upcoming__footer">
-                Dates only appear where a catalogue has one. Publishers keep the future to themselves.
-            </p>
+                @if (OutNowCards(upcoming) is { Count: > 0 } cards)
+                {
+                    <div class="out-now__grid">
+                        @foreach (var card in cards)
+                        {
+                            <OutNowCard @key="card.Entry.SeriesId"
+                                        Entry="card.Entry"
+                                        Bought="BuyState.BoughtFrom(card.Entry.SeriesId)"
+                                        IsDone="card.IsDone"
+                                        IsBusy="BuyState.IsBusy"
+                                        BuyRequested="() => BuyState.BuyNextAsync(card.Entry)"
+                                        UndoRequested="() => BuyState.UndoAsync(card.Entry.SeriesId)" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="notice">You own everything that's out.</p>
+                }
+            </section>
+
+            <ComingSection Timeline="ComingMonths.Build(upcoming, Today)" />
+
+            @if (upcoming.Announced.Count > 0)
+            {
+                <AnnouncedList Entries="upcoming.Announced" />
+            }
+
+            @* The one wry line, and an honest one: the timeline is usually sparse because few
+               sources this shelf can reach publish future dates. *@
+            <p class="fine">Dates only appear where a catalogue has one. Publishers keep the future to themselves.</p>
         }
-    </div>
 
+    </div>
 </div>

@@ -1,0 +1,8 @@
+.spend__line { color: var(--muted); }
+
+/* The empty state's headline: the serif, at the size of a card title. */
+.spend__empty {
+  font-family: var(--serif);
+  font-size: var(--fs-card-title);
+  line-height: 1.15;
+}

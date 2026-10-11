@@ -10,6 +10,11 @@
     <header class="search__head">
         <h1 class="search__title">Add a series</h1>
 
+        @* On a phone the header is the sticky search bar; Import is reached from Profile there. *@
+        <div class="desktop-only">
+            <AddTabs Current="AddTab.Search" ReviewCount="ImportState.PendingReviewCount" />
+        </div>
+
         <div class="search__bar">
             @* A form so Enter (and a phone keyboard's Search key) runs the search. Searching on
                every keystroke would spend the source's rate limit on half-typed words. *@

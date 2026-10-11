@@ -1,97 +1,45 @@
-/* Same shell as the library: the sidebar names the page on desktop, the h1 takes
-   over below 861px. */
-.import__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-}
+/* design (Import.dc): "Add a series" over its two tabs, then the upload and the review queue
+   beside a side column that drops under them on a narrow screen (design.md, the page frame). */
 
 .import {
-  display: flex;
-  flex-direction: column;
+  --page-width: 1180px;
+  --page-gap: 28px;
 }
 
-.import__top {
+.import__head {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 22px 26px 18px;
-  border-bottom: 1px solid var(--line);
+  gap: var(--space-4);
+}
+
+/* The mockup's 44px, which is the scale's --fs-stat — the same line as the Search tab's. */
+.import__title {
+  font-size: var(--fs-stat);
+  line-height: 1;
 }
 
 .import__body {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px 26px 26px;
-}
-
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.commit {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding-top: 6px;
+  align-items: flex-start;
+  gap: var(--space-6);
 }
 
-.commit__note {
-  font-size: 11px;
-  color: var(--faint);
-}
-
-.batches {
+.import__main {
+  flex: 999 1 560px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: var(--space-5);
 }
 
-.batches__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
+.import__body ::deep .aside {
+  flex: 1 1 300px;
+  max-width: 380px;
 }
 
-.batches__open {
-  color: var(--acc-soft);
-  font-size: 12.5px;
-  font-weight: 500;
-}
+@media (max-width: 720px) {
+  .import__title { font-size: var(--fs-stat-medium); }
 
-.batches__open:hover { color: var(--acc); }
-
-.batches__meta {
-  font-size: 11px;
-  color: var(--faint);
-}
-
-@media (max-width: 860px) {
-  .import__title {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip-path: none;
-    padding: 18px 16px 0;
-    font-size: 30px;
-  }
-
-  .import__top { padding: 14px 16px; }
-  .import__body { padding: 16px 16px 22px; }
+  .import__body ::deep .aside { max-width: none; }
 }

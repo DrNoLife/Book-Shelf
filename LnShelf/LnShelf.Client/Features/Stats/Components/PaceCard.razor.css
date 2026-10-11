@@ -1,0 +1,13 @@
+.pace__basis { color: var(--muted); }
+
+/* The backlog line sits at the foot of the card, under a hairline. */
+.pace__waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.pace__lead { font-size: var(--fs-lead); }

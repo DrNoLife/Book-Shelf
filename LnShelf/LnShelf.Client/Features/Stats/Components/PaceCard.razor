@@ -1,0 +1,38 @@
+@* "Pace" (design: Stats.dc): volumes a month lately, and what that makes of the volumes
+   bought and waiting. Averaged over whole months only — see ReadingPace. *@
+
+<Panel class="pace" aria-labelledby="pace-title">
+    <h2 id="pace-title" class="eyebrow">Pace</h2>
+
+    @if (Pace is { } pace)
+    {
+        <StatFigure Value="@pace.PerMonthText" Label="a month" Size="StatSize.Hero" />
+        <p class="pace__basis">Average over the last three whole months (@pace.MonthsText).</p>
+
+        <p class="pace__waiting">
+            @if (Waiting == 0)
+            {
+                <span class="pace__lead">Nothing bought and waiting.</span>
+            }
+            else
+            {
+                <span class="pace__lead">Your @Waiting waiting @(Waiting == 1 ? "volume" : "volumes")</span>
+                <span class="pace__basis">@(Waiting == 1 ? "is" : "are") @pace.Describe(Waiting).</span>
+            }
+        </p>
+    }
+    else
+    {
+        <p class="pace__basis">No dated reads in the last three whole months, so no pace yet.</p>
+    }
+</Panel>
+
+@code {
+    /// <summary>Null when the last three whole months have no dated read.</summary>
+    [Parameter]
+    public ReadingPace? Pace { get; set; }
+
+    /// <summary>Owned, unread volumes.</summary>
+    [Parameter]
+    public required int Waiting { get; set; }
+}

@@ -1,0 +1,30 @@
+/* An underlined tab row on a hairline (design: Import.dc). The current tab is --text with a
+   --read underline — "you are here" is never the accent (design.md, colour discipline). */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-large);
+  margin-bottom: -1px;
+  padding: 0 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tab:hover { color: var(--text-strong); }
+
+.tab--current {
+  border-bottom-color: var(--read);
+  color: var(--text);
+  font-weight: 500;
+}

@@ -18,31 +18,34 @@ public partial class StatsPage : IDisposable
 
     private static int SeriesCount(StatsResponse stats) => stats.Formats.Sum(format => format.SeriesCount);
 
+    private static int Read(StatsResponse stats) => stats.Formats.Sum(format => format.Read);
+
+    private static int Owned(StatsResponse stats) => stats.Formats.Sum(format => format.Owned);
+
+    /// <summary>Owned and unread: the Backlog, in the words of the card that counts it.</summary>
+    private static int Waiting(StatsResponse stats) => stats.Formats.Sum(format => format.Backlog);
+
+    private static string Count(int count) => count.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>"24 dated in the last 12 months · Oct so far".</summary>
+    private static string ChartNote(StatsResponse stats)
+    {
+        var dated = stats.ReadPerMonth.Sum(month => month.Total);
+        var current = stats.ReadPerMonth[^1].Month.ToString("MMM", CultureInfo.InvariantCulture);
+
+        return $"{dated} dated in the last 12 months · {current} so far";
+    }
+
+    // The last month is the current one (StatsResponse.ReadPerMonth): still filling.
     private static List<MonthBar> ReadBars(StatsResponse stats) =>
     [
-        .. stats.ReadPerMonth.Select(month => new MonthBar(
+        .. stats.ReadPerMonth.Select((month, index) => new MonthBar(
             month.Month,
-            [
-                new BarSegment(month.LightNovel, BarSegmentKind.LightNovel, $"{month.LightNovel} light novel"),
-                new BarSegment(month.Manga, BarSegmentKind.Manga, $"{month.Manga} manga"),
-                new BarSegment(month.WebNovel, BarSegmentKind.WebNovel, $"{month.WebNovel} web novel"),
-            ],
-            month.Total.ToString(CultureInfo.InvariantCulture))),
+            month.Total,
+            Count(month.Total),
+            month.Total == 1 ? "1 volume" : $"{month.Total} volumes",
+            IsPartial: index == stats.ReadPerMonth.Count - 1)),
     ];
-
-    private static List<MonthBar> SpendBars(StatsResponse stats) =>
-    [
-        .. stats.SpendPerMonth.Select(month => new MonthBar(
-            month.Month,
-            [new BarSegment(month.Total, BarSegmentKind.Plain, $"{Money(month.Total)} over {month.VolumeCount} volumes")],
-            Money(month.Total))),
-    ];
-
-    // Kroner, the currency the shelf's prices are entered in, grouped with a space the way
-    // feature-spec §4.7 writes "1 428 kr" — a shelf-wide total runs to thousands where a
-    // series' spend line does not. Whole kroner: øre are noise at this scale.
-    private static string Money(decimal amount) =>
-        amount.ToString("#,0", CultureInfo.InvariantCulture).Replace(',', ' ') + " kr";
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 }

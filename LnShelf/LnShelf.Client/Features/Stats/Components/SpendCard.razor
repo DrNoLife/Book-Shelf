@@ -1,0 +1,52 @@
+@using LnShelf.Shared.Stats
+
+@* "Spend" (design: Stats.dc): what the priced volumes add up to, and by month when they carry
+   a purchase date. Prices come from a volume's menu on the series page. *@
+
+<Panel class="spend" aria-labelledby="spend-title">
+    <h2 id="spend-title" class="eyebrow">Spend</h2>
+
+    @if (Stats.Spend is { } spend)
+    {
+        <StatFigure Value="@Money(spend.Total)" Label="@PricedText(spend.PricedCount)" Size="StatSize.Small" />
+        <p class="spend__line tabular">Average @Money(spend.Average) a volume</p>
+
+        @if (Stats.SpendPerMonth.Any(month => month.Total > 0))
+        {
+            <MonthBarChart Bars="SpendBars" AriaLabel="Money spent per month, last twelve months" />
+        }
+        else
+        {
+            <p class="spend__line">None of it carries a purchase date from the last twelve months.</p>
+        }
+    }
+    else
+    {
+        <p class="spend__empty">Nothing priced yet</p>
+        <p class="spend__line">Add a price from a volume's menu and it lands here, by month and in total.</p>
+    }
+</Panel>
+
+@code {
+    [Parameter]
+    public required StatsResponse Stats { get; set; }
+
+    private static string PricedText(int count) => count == 1 ? "over 1 priced volume" : $"over {count} priced volumes";
+
+    // The last month is the current one (StatsResponse.SpendPerMonth): still filling.
+    private List<MonthBar> SpendBars =>
+    [
+        .. Stats.SpendPerMonth.Select((month, index) => new MonthBar(
+            month.Month,
+            month.Total,
+            Money(month.Total),
+            $"{Money(month.Total)} over {month.VolumeCount} volumes",
+            IsPartial: index == Stats.SpendPerMonth.Count - 1)),
+    ];
+
+    // Kroner, the currency the shelf's prices are entered in, grouped with a space the way
+    // feature-spec §4.7 writes "1 428 kr" — a shelf-wide total runs to thousands where a
+    // series' spend line does not. Whole kroner: øre are noise at this scale.
+    private static string Money(decimal amount) =>
+        amount.ToString("#,0", CultureInfo.InvariantCulture).Replace(',', ' ') + " kr";
+}

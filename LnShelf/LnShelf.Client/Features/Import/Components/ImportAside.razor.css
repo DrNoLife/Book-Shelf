@@ -1,0 +1,58 @@
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.where {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.where__summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.where__text {
+  margin-top: 6px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.batches {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.batch {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+/* A file name that opens its queue: a button that reads as the text it is. */
+.batch__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.batch__open:hover:not(:disabled) { color: var(--text-strong); text-decoration: underline; }
+
+.batch__meta {
+  font-size: var(--fs-caption);
+  color: var(--faint);
+}

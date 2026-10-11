@@ -1,0 +1,61 @@
+@* The review queue for one export (design: Import.dc): what still needs a decision on top,
+   then — folded away — every series that was matched or decided, each with its full card so
+   a match can still be changed, the books checked and "read means owned" switched. The foot
+   counts honestly and holds Apply, which says what is left before it can run. *@
+
+<section class="review" aria-labelledby="review-title">
+    <div class="section-head">
+        <h2 id="review-title" class="review__title">
+            @if (Waiting.Count > 0)
+            {
+                <SignalDot Tone="SignalTone.Attention" Large="true" />
+                <span>@Waiting.Count to check</span>
+            }
+            else if (IsApplied)
+            {
+                <span>Applied</span>
+            }
+            else
+            {
+                <span>Ready to apply</span>
+            }
+        </h2>
+        <span class="section-head__aside">from @Queue.Batch.FileName</span>
+    </div>
+
+    @if (Waiting.Count > 0)
+    {
+        <ul class="review__rows">
+            @foreach (var group in Waiting)
+            {
+                <ImportReviewRow @key="group.GroupId" Group="group" IsBusy="IsBusy" Decided="Decided" />
+            }
+        </ul>
+    }
+
+    @if (Settled.Count > 0)
+    {
+        <details class="review__settled" open="@(Waiting.Count == 0 && !IsApplied)">
+            <summary class="review__summary">@SettledSummary</summary>
+            <div class="review__cards">
+                @foreach (var group in Settled)
+                {
+                    <ImportGroupCard @key="group.GroupId" Group="group" IsBusy="IsBusy" Decided="Decided" />
+                }
+            </div>
+        </details>
+    }
+
+    <div class="review__foot">
+        <span class="review__counts tabular">@CountsLine</span>
+        @if (!IsApplied)
+        {
+            <button type="button"
+                    class="primary button--large"
+                    disabled="@(!Queue.Batch.IsReadyToCommit || IsBusy)"
+                    @onclick="CommitRequested">
+                @ApplyLabel
+            </button>
+        }
+    </div>
+</section>

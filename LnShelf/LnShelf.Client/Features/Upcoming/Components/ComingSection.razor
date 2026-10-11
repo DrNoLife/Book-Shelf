@@ -1,0 +1,71 @@
+@using LnShelf.Shared.Releases
+
+@* "Coming" (design: Upcoming.dc): the next six months as columns, this month first, each
+   holding the volumes due in it. On a narrow column the months stack into rows instead
+   (MUpcoming.dc), and an empty month says so in words rather than as a blank column. Dates
+   past the sixth month follow as a plain list, so a far date is never dropped. *@
+
+<section class="coming" aria-labelledby="coming-title">
+    <div class="section-head">
+        <h2 id="coming-title" class="title-section">Coming</h2>
+        <span class="section-head__aside">Next six months</span>
+    </div>
+
+    @if (Timeline.IsEmpty)
+    {
+        <p class="notice">Nothing dated yet. Dates show up as soon as a catalogue publishes one.</p>
+    }
+    else
+    {
+        <ol class="months">
+            @foreach (var month in Timeline.Months)
+            {
+                <li class="month @(month == Timeline.Months[0] ? "month--now" : null)" @key="month.Month">
+                    <h3 class="month__head">
+                        <span class="month__name">@month.Month.ToString("MMM", CultureInfo.InvariantCulture)</span>
+                        <span class="month__year tabular">@month.Month.Year</span>
+                    </h3>
+
+                    @if (month.Entries.Count == 0)
+                    {
+                        <p class="month__none">Nothing dated</p>
+                    }
+                    else
+                    {
+                        <ul class="month__entries">
+                            @foreach (var entry in month.Entries)
+                            {
+                                <li @key="Key(entry)">
+                                    <ComingEntry Entry="entry" DateText="@entry.ReleaseDate!.Value.Short" />
+                                </li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ol>
+
+        @if (Timeline.Later.Count > 0)
+        {
+            <div class="later">
+                <h3 class="eyebrow">Later</h3>
+                <ul class="later__entries">
+                    @foreach (var entry in Timeline.Later)
+                    {
+                        <li @key="Key(entry)">
+                            <ComingEntry Entry="entry" DateText="@entry.ReleaseDate!.Value.Full" />
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter]
+    public required ComingTimeline Timeline { get; set; }
+
+    // Each dated line is one volume, so the series and its number make the key.
+    private static string Key(UpcomingEntryResponse entry) => $"{entry.SeriesId}-{entry.VolumeNumbers[0]}";
+}

@@ -1,0 +1,30 @@
+@using LnShelf.Shared.Stats
+
+@* "By format" (design: Stats.dc): one line per format — every format, so an empty one reads
+   as a dash rather than as missing. The mockup's share bar is left out: three formats in
+   one bar would need three fills, and the progress colours already mean read, owned, out. *@
+
+<Panel class="formats" aria-labelledby="formats-title">
+    <h2 id="formats-title" class="eyebrow">By format</h2>
+
+    <ul class="lines">
+        @foreach (var format in Enum.GetValues<Format>())
+        {
+            <li class="line @(Of(format) is null ? "line--empty" : null)" @key="format">
+                <FormatBadge Value="format" />
+                <span class="line__figures tabular">@Figures(format)</span>
+            </li>
+        }
+    </ul>
+</Panel>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<FormatStatsResponse> Formats { get; set; }
+
+    private FormatStatsResponse? Of(Format format) => Formats.FirstOrDefault(row => row.Format == format);
+
+    private string Figures(Format format) => Of(format) is { } row
+        ? $"{row.SeriesCount} series · {row.Read} read · {row.ToBuy} to buy"
+        : "—";
+}

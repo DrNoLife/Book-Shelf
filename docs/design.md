@@ -149,8 +149,9 @@ On `--sidebar`, a `--line` hairline on the right. Top to bottom:
 
 1. **Brand:** a 28px `--acc` mark (radius 7) and "LN Shelf" in the serif, 24px.
 2. **Navigation** (`<nav aria-label="Main">`), rows 40px tall, radius 8, icon 16:
-   Library · Search & add · Upcoming · Stats · Import. Idle `--muted`; the
-   current page is `--raise` with `--text` — no accent. Import carries an amber
+   Library · Search & add · Upcoming · Stats. Idle `--muted`; the current page is
+   `--raise` with `--text` — no accent. Import is the second tab of Search & add
+   (`/search/import`), so that row is lit there too, and it carries the amber
    `Pill` "N to review" when imports are waiting for a decision.
 3. **Smart shelves** (eyebrow): Reading · Behind on buying · Backlog (N vols) ·
    Up to date · Completed. A shelf is a library filter, so it is a button with
@@ -415,6 +416,48 @@ cards — **Who can see your shelf** (a two-way segmented control: Private ·
 Public by link, with one line of help under it) and **Account** (signed in with
 Google, the email, Export my data, Sign out, Delete account…).
 
+### Add a series (`/search`, `/search/import`)
+
+"Add a series" at 44 over two tabs — Search · Import a file — drawn as an
+underlined row on a hairline (`AddTabs`; the current tab `--text` with a `--read`
+underline, the import tab carrying the "N to review" pill). They are links between
+two pages, so a `nav` with `aria-current`, not a tab widget. On a phone the Search
+page keeps its sticky search bar without the tabs; Import is reached from Profile.
+**Import a file**: a dashed drop zone ("Drop a CSV export here", Goodreads or
+StoryGraph; choosing a file reads it at once); the three steps Upload · Check the
+unsure ones · Apply, the reached ones ruled in `--read`; the review — "N to check"
+with an amber dot, one row per series waiting, answered in one tap where the format
+alone tells the candidates apart ("Light novel · Manga · Skip" on a segmented
+control, with Details for the full card) and the full card where it does not;
+every matched or decided series folded under one disclosure with its full card;
+and a foot with the counts and the large primary "Add N series to the shelf" ("Check
+N more to apply" while it cannot run). A side column: *Where to get the file*,
+*Earlier imports* (reopenable), and a pointer to the export on Profile.
+
+### Upcoming (`/upcoming`)
+
+The title at 44 with its count line ("3 out that you don't own · 2 dated · 1
+announced") beside the format tabs. **Out now**: a card per series (76px cover, the
+title at 21, "Vols 13–14 are out", a secondary "Vol 13 on Saxo ↗", a ghost "Faraos
+↗", a tertiary "I bought Vol 13" that marks it owned; a series bought out from here
+stays as "✓ On your shelf now" with Undo until the page is left). **Coming**: the
+current month and the five after it as six columns in one bordered box (the current
+month's name in `--text`, "Nothing dated" in an empty one), stacking into rows when
+the column is narrow; anything dated later follows as a list. **Announced**: a
+bordered list — cover, title, "Vols 17–18", the format badge.
+
+### Stats (`/stats`)
+
+The title at 44; a totals strip (volumes read, on your shelf, bought and waiting,
+series finished "1 / 7"), two by two on a phone. **Read per month**: twelve
+columns in `--read`, the current one hatched `--read`/`--owned` and named "so far",
+the figure above each; read volumes without a date are counted beside an amber
+dot. **Pace**: volumes a month over the last three whole months, and how long the
+waiting volumes last at it. **Furthest in**: the five series read deepest, each
+with a `ThreeSegmentBar` and "read · owned · out", a check when read to the latest
+volume. A side column: **By format** (a line per format, a dash when empty) and
+**Spend** (total, average, a month chart when purchases carry dates).
+
 ### Landing (signed out)
 
 A top bar (brand, "How it works", "Changelog", a secondary "Sign in"); a hero
@@ -440,6 +483,11 @@ Owner decisions, recorded so a screen does not "complete" the mockup:
   "Coming later" `Outline` pill; never a working-looking control.
 - **No `@handle` and no bio.** The name and avatar come from the signed-in
   identity.
+- **Upcoming's "Subscribe in calendar" and "Notify me when dated"** wait for a
+  calendar feed and a notifier; **Stats' period switch** (12 months · this year · all
+  time) and **"Add dates"** wait for the API to answer them; the **By format share
+  bar** is left out because three formats in one bar would need three fills, and the
+  progress colours already mean read, owned and out.
 - **"Use MangaUpdates / Use Apple Books" on a conflict** (owner decision
   2026-10-10): a recorded disagreement can be settled by picking a source. It is
   the one sanctioned local override of synced metadata (`SourceChoice`, CLAUDE.md);

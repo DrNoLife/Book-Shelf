@@ -37,12 +37,12 @@ public static class UpcomingGrouping
             {
                 // The line's art is the first volume it asks you to buy: that is the
                 // spine you are looking for on the shop shelf.
-                outNow.Add(ToEntry(entry, toBuy[0].CoverObjectKey, [.. toBuy.Select(volume => volume.Number)]));
+                outNow.Add(ToEntry(entry, toBuy[0].CoverObjectKey, toBuy));
             }
 
             foreach (var volume in volumes.Where(volume => !volume.IsOut && volume.ReleaseDate is not null))
             {
-                dated.Add(ToEntry(entry, volume.CoverObjectKey, [volume.Number]) with
+                dated.Add(ToEntry(entry, volume.CoverObjectKey, [volume]) with
                 {
                     VolumeTitle = volume.Title,
                     ReleaseDate = volume.ReleaseDate,
@@ -52,7 +52,7 @@ public static class UpcomingGrouping
             var undated = volumes.Where(volume => !volume.IsOut && volume.ReleaseDate is null).ToList();
             if (undated.Count > 0)
             {
-                announced.Add(ToEntry(entry, undated[0].CoverObjectKey, [.. undated.Select(volume => volume.Number)]));
+                announced.Add(ToEntry(entry, undated[0].CoverObjectKey, undated));
             }
         }
 
@@ -75,13 +75,14 @@ public static class UpcomingGrouping
         };
     }
 
-    private static UpcomingEntryResponse ToEntry(Series series, string? coverObjectKey, IReadOnlyList<int> volumeNumbers) => new()
+    private static UpcomingEntryResponse ToEntry(Series series, string? coverObjectKey, IReadOnlyList<VolumeResponse> volumes) => new()
     {
         SeriesId = series.Id,
         SeriesTitle = series.TitleEnglish,
         Format = series.Format,
         CoverObjectKey = coverObjectKey,
-        VolumeNumbers = volumeNumbers,
+        VolumeNumbers = [.. volumes.Select(volume => volume.Number)],
+        VolumeIds = [.. volumes.Select(volume => volume.VolumeId)],
     };
 
     private static DateOnly EndOfMonth(DateOnly date) =>
