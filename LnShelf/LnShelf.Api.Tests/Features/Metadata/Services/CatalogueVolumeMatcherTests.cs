@@ -45,6 +45,19 @@ public sealed class CatalogueVolumeMatcherTests
     }
 
     [Fact]
+    public void Match_ABonusVolumeListedBeforeTheRealOne_DoesNotTakeItsPlace()
+    {
+        // The Torture Princess case: Apple carries "Vol. 7.5" beside "Vol. 7", and while the
+        // fraction was read as volume 7 whichever came first won the real volume's cover.
+        var match = Match(
+            Series(7),
+            Record("Overlord, Vol. 7.5 (light Novel)", "bonus"),
+            Record("Overlord, Vol. 7 (light Novel)", "real"));
+
+        match.ByVolumeNumber[7].SourceRecordKey.ShouldBe("real");
+    }
+
+    [Fact]
     public void Match_AVolumeNumberTheShelfDoesNotTrack_IsIgnoredButStillCounted()
     {
         // The release source owns volume counts, so a store listing volume 5 of a series the

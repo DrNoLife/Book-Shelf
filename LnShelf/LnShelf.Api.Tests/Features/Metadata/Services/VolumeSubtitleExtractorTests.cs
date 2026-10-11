@@ -81,6 +81,15 @@ public sealed class VolumeSubtitleExtractorTests
             .ShouldBe("Run Through the Battlefield");
     }
 
+    [Theory]
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)", "Torture Princess: Fremd Torturchen, Vol. 7.5")]
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7. 5", "Torture Princess: Fremd Torturchen, Vol. 7. 5")]
+    public void Extract_ABonusVolumeAskedForAsTheWholeNumber_IsNotCutAtTheFraction(
+        string recordTitle, string expected) =>
+        // "Vol. 7.5" names no volume 7, so there is no marker to cut after. Cut at the 7, the
+        // bonus volume's record captioned volume 7 ".5".
+        VolumeSubtitleExtractor.Extract(recordTitle, 7).ShouldBe(expected);
+
     [Fact]
     public void Extract_ANumberInsideALargerOne_IsNotMistakenForTheMarker()
     {

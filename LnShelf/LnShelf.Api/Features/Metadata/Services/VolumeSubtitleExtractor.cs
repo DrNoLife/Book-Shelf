@@ -120,18 +120,21 @@ public static partial class VolumeSubtitleExtractor
     // Every spelling seen live across both sources. The leading comma is optional because
     // Apple writes "…, Vol. 8 (light novel)" and Open Library writes "… Volume 2: The Dark
     // Warrior"; the word boundary after the number is what stops "Vol. 12" from answering for
-    // volume 1 and taking "2: …" as the subtitle.
+    // volume 1 and taking "2: …" as the subtitle. The lookahead refuses a bonus volume's
+    // "Vol. 7.5" (and Open Library's "Vol. 7. 5") as volume 7, which would leave ".5" as the
+    // subtitle.
     [GeneratedRegex(
-        @"(?:,\s*)?\bvol(?:ume)?\.?\s*0*(?<number>\d{1,4})\b",
+        @"(?:,\s*)?\bvol(?:ume)?\.?\s*0*(?<number>\d{1,4})\b(?!\.\s?\d)",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex VolumeMarkerPattern();
 
     /// <summary>A number standing on its own, with no volume word in front of it.</summary>
     // Refused where a digit or a comma follows, which is what keeps the rule off the
     // thousands separator in "Saving 80,000 Gold in Another World" — a real series on a
-    // shelf like this one, and one whose title would otherwise be cut at "80".
+    // shelf like this one, and one whose title would otherwise be cut at "80". A following
+    // ".5" is refused for the same reason as in the marker pattern: that is a bonus volume.
     [GeneratedRegex(
-        @"(?<![\p{L}\p{N}])0*(?<number>\d{1,4})(?![\p{N},])",
+        @"(?<![\p{L}\p{N}])0*(?<number>\d{1,4})(?![\p{N},]|\.\s?\d)",
         RegexOptions.CultureInvariant)]
     private static partial Regex BareNumberPattern();
 

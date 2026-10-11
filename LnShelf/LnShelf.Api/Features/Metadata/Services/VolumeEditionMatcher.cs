@@ -109,11 +109,20 @@ public static class VolumeEditionMatcher
     {
         volumeNumber = 0;
 
-        foreach (var token in TitleNormalizer.Tokenize(remainder))
+        var tokens = TitleNormalizer.Tokenize(remainder);
+
+        for (var index = 0; index < tokens.Length; index++)
         {
+            var token = tokens[index];
+
             // Whole tokens only. A "16" inside "2016" is a year, not a volume.
             if (int.TryParse(token, CultureInfo.InvariantCulture, out var number))
             {
+                if (IsFractionalPart(tokens, index + 1))
+                {
+                    return false;
+                }
+
                 volumeNumber = number;
                 return true;
             }
@@ -126,6 +135,17 @@ public static class VolumeEditionMatcher
 
         return false;
     }
+
+    /// <summary>
+    /// Whether the token after a volume number is the fraction of a bonus volume.
+    /// </summary>
+    // Normalising turns the point into a space, so Apple's "Torture Princess: Fremd
+    // Torturchen, Vol. 7.5 (light novel)" arrives as "vol 7 5" — and Open Library's "Vol. 7. 5"
+    // the same way. Read as volume 7, the bonus volume's cover, subtitle and blurb landed on
+    // the real volume 7. No genuine title puts a lone digit straight after its volume number,
+    // so a single-digit token there is the fraction, and the record is not volume 7 at all.
+    private static bool IsFractionalPart(string[] tokens, int index) =>
+        index < tokens.Length && tokens[index].Length == 1 && char.IsAsciiDigit(tokens[index][0]);
 
     /// <summary>
     /// Whether the record positively states the medium this series is.

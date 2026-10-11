@@ -20,6 +20,14 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.25.1", new DateOnly(2026, 10, 11), "Bonus volumes keep to themselves",
+            Features: [],
+            Improvements: [],
+            Fixes: [
+                "A bonus volume such as Torture Princess Vol. 7.5 is no longer mistaken for volume 7, so volume 7 " +
+                    "stops picking up the bonus volume's cover, subtitle and description.",
+            ]
+        ),
         new("0.25.0", new DateOnly(2026, 10, 11), "Upcoming, Stats and Import, redrawn",
             Features: [
                 "Upcoming has an \"I bought Vol 13\" button on every series with volumes out that you don't own: one " +

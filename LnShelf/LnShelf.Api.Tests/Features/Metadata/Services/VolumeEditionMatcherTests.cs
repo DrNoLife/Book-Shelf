@@ -47,6 +47,12 @@ public sealed class VolumeEditionMatcherTests
 
     // No volume number at all: not evidence that it is volume 2.
     [InlineData("Torture Princess: Fremd Torturchen", 2, "Torture Princess")]
+
+    // A bonus volume, which normalising reads as "vol 7 5". It sits between 7 and 8 and is
+    // neither; both sources' spellings are real.
+    [InlineData("Torture Princess: Fremd Torturchen", 7,
+        "Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)")]
+    [InlineData("Torture Princess: Fremd Torturchen", 7, "Torture Princess: Fremd Torturchen, Vol. 7. 5")]
     public void Matches_ARecordThatIsNotThisVolume_IsRefused(
         string seriesTitle,
         int volumeNumber,
@@ -188,6 +194,10 @@ public sealed class VolumeEditionMatcherTests
     // A different series entirely, which the store returns for a two-word query.
     [InlineData("86―EIGHTY-SIX",
         "Saving 80,000 Gold in Another World for my Retirement Volume 6 (light novel)")]
+
+    // A bonus volume, which is not volume 7 however its fraction is spelled.
+    [InlineData("Torture Princess: Fremd Torturchen",
+        "Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)")]
     public void TryMatchVolumeNumber_ARecordThatIsNotThisSeriesVolume_ReadsNothing(
         string seriesTitle,
         string recordTitle) =>
