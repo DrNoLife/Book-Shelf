@@ -20,6 +20,20 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.27.0", new DateOnly(2026, 10, 11), "Bonus volumes, and English volume counts",
+            Features: [
+                "Bonus volumes such as Torture Princess Vol. 7.5 now appear on the series page between the main " +
+                    "volumes, with their own cover, date and description, wherever the store lists one.",
+            ],
+            Improvements: [
+                "Volume counts follow the English edition rather than the Japanese one, so a series no longer " +
+                    "shows volumes that are not out in English yet, and adding a series no longer creates a " +
+                    "volume that does not exist.",
+                "Cards and the series page name the latest volume by its number, so a series with a bonus volume " +
+                    "reads \"New · Vol 9\" rather than \"Vol 10\".",
+            ],
+            Fixes: []
+        ),
         new("0.26.0", new DateOnly(2026, 10, 11), "Room for bonus volumes",
             Features: [],
             Improvements: [

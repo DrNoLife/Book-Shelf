@@ -177,7 +177,7 @@ The series/volume tracking domain.
 - **Nightly sync** (`BackgroundService`, default 04:00 local, configurable):
   - refreshes volume lists, dates, publication status for all tracked series
   - per-series failure isolation — one failure logs a warning, run continues
-  - rate-limit aware: batches, honors 429 with backoff, AniList ≤ 90 req/min
+  - rate-limit aware: batches, honors 429 with backoff, AniList ≤ 30 req/min (degraded since 2026-08; `X-RateLimit-Limit` says 30)
   - idempotent upserts keyed on external ids; **never writes user-state
     columns**
   - produces a run summary (series refreshed, dates moved, new volumes,
@@ -372,6 +372,13 @@ Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),
   IsReleased, Isbn (nullable), Title (nullable),
   CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly
+
+  -- Number is numeric (decimal) [added 2026-10-11]: bonus volumes are numbered between
+  -- the main ones by their publishers (Torture Princess Vol. 7.5, Classroom of the
+  -- Elite Vol. 11.5). Main volumes come from the release source's count; a bonus volume
+  -- is created only from the store catalogue (§4.2, CLAUDE.md), never counted as a main
+  -- volume, and never joins a "Vols 5–7" range. Shown through ToVolumeText ("7.5" in
+  -- every culture). volume-merge moves user state off a phantom volume onto the real one.
 
   -- ReleaseDateSource [added 2026-10-09] is provenance for the one field two
   -- per-volume sources compete over. Open Library (by ISBN) may replace any date;
@@ -643,7 +650,7 @@ Caching exists to protect and speed up the *external* edges:
 
 | What | TTL | Why |
 |---|---|---|
-| AniList search results (query+format key) | ~1 h | search-as-you-type must not chew the 90 req/min budget; import matching hits identical queries repeatedly |
+| AniList search results (query+format key) | ~1 h | search-as-you-type must not chew the 30 req/min budget; import matching hits identical queries repeatedly |
 | AniList/MangaUpdates series detail during import | ~1 h | review queue re-renders candidates constantly |
 | Open Library edition by ISBN | ~24 h | an edition record that has existed for years is not about to change, and one run can ask for the same ISBN twice — discovery verifies a candidate that enrichment then reads again |
 | `/api/sync/latest` | until next run | sidebar hits it on every navigation (designed, not yet implemented — the endpoint exists but reads straight from Postgres, uncached) |

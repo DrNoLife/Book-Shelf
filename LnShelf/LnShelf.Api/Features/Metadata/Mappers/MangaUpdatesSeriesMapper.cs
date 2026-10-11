@@ -47,7 +47,8 @@ public static class MangaUpdatesSeriesMapper
             // the same rule, so the two paths cannot disagree about one record.
             IsCompleted = ToPublicationStatus(record.Status) is PublicationStatus.Completed,
             PublicationStatus = ToPublicationStatus(record.Status),
-            VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
+            VolumeCount = VolumeCountOf(record),
+            ExtraVolumeCount = MangaUpdatesVolumeCountParser.ParseEnglishEditionExtras(EnglishPublisherNotes(record)),
             RawStatus = record.Status.NullIfBlank(),
         };
     }
@@ -87,7 +88,7 @@ public static class MangaUpdatesSeriesMapper
             PublicationStatus = ToPublicationStatus(record.Status),
 
             // Null for the same reason: the count lives in the status text.
-            VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
+            VolumeCount = VolumeCountOf(record),
 
             StartYear = ToYear(record.Year),
             CoverImageUrl = record.Image?.Url?.Original.NullIfBlank(),
@@ -129,7 +130,7 @@ public static class MangaUpdatesSeriesMapper
             Author = FindAuthor(record.Authors, "Author"),
             Illustrator = FindAuthor(record.Authors, "Artist"),
             Publisher = FindPublisher(record.Publishers),
-            VolumeCount = MangaUpdatesVolumeCountParser.Parse(record.Status),
+            VolumeCount = VolumeCountOf(record),
             RawStatus = record.Status.NullIfBlank(),
         };
     }
@@ -215,6 +216,21 @@ public static class MangaUpdatesSeriesMapper
             .Select(author => author.Name.NullIfBlank())
             .OfType<string>()
             .FirstOrDefault();
+
+    /// <summary>
+    /// The English edition's count where an English publisher states one, otherwise the
+    /// status line's.
+    /// </summary>
+    // One rule for search, add and refresh, so the count a reader is shown when adding a
+    // series is the count the nightly sync then holds it to.
+    private static int? VolumeCountOf(MangaUpdatesSeriesRecord record) =>
+        MangaUpdatesVolumeCountParser.ParseEnglishEditions(EnglishPublisherNotes(record))
+        ?? MangaUpdatesVolumeCountParser.Parse(record.Status);
+
+    private static IEnumerable<string?> EnglishPublisherNotes(MangaUpdatesSeriesRecord record) =>
+        (record.Publishers ?? [])
+            .Where(publisher => string.Equals(publisher.Type, "English", StringComparison.OrdinalIgnoreCase))
+            .Select(publisher => publisher.Notes);
 
     /// <summary>
     /// The English-language publisher where the record names one, otherwise the first.

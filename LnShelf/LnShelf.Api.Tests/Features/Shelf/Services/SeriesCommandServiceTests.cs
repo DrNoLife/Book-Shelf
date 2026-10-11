@@ -65,6 +65,49 @@ public sealed class SeriesCommandServiceTests
     }
 
     [Fact]
+    public async Task AddAsync_AniList_TheReleaseSourceCountsFewerVolumes_CreatesOnlyItsCount()
+    {
+        // Torture Princess: AniList counts ten (nine plus the bonus Vol. 7.5), the release
+        // source's English edition nine. Created from AniList's ten, volume 10 was a phantom
+        // that sync could never remove.
+        await using var dbContext = CreateDbContext();
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReleaseSourceMatch
+            {
+                Outcome = ReleaseMatchOutcome.Linked,
+                MatchedExternalId = 17992364412,
+                MatchedSeries = new ReleaseSeriesInfo { ExternalId = 17992364412, Title = "Fremd Torturchen", VolumeCount = 9 },
+                Explanation = "Linked in this test.",
+            });
+        var service = CreateService(dbContext, CreateMetadataSource(), releaseSourceMatcher: matcher);
+
+        var response = await service.AddAsync(CreateRequest(), CancellationToken.None);
+
+        var series = await dbContext.Series
+            .Include(candidate => candidate.Volumes)
+            .SingleAsync(candidate => candidate.Id == response!.SeriesId);
+
+        series.MangaUpdatesId.ShouldBe(17992364412);
+        series.Volumes.Select(volume => (int)volume.Number).Order().ShouldBe(Enumerable.Range(1, 9));
+    }
+
+    [Fact]
+    public async Task AddAsync_AniList_TheReleaseSourceIsDown_KeepsAniListsVolumes()
+    {
+        await using var dbContext = CreateDbContext();
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ReleaseSourceMatch>>(_ => throw new MetadataSourceUnavailableException("MangaUpdates", "down in this test", 503));
+        var service = CreateService(dbContext, CreateMetadataSource(), releaseSourceMatcher: matcher);
+
+        var response = await service.AddAsync(CreateRequest(), CancellationToken.None);
+
+        response.ShouldNotBeNull().VolumeCount.ShouldBe(26);
+        (await dbContext.Series.SingleAsync()).MangaUpdatesId.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task AddAsync_AniList_TheSameSeriesTwice_ReturnsTheExistingSeriesAndWritesNothing()
     {
         await using var dbContext = CreateDbContext();
@@ -965,12 +1008,20 @@ public sealed class SeriesCommandServiceTests
         IIsbnBackfill? isbnBackfill = null,
         ISeriesSyncService? seriesSync = null,
         IMangaUpdatesSeriesQueryService? mangaUpdatesSource = null,
-        ICoverStore? coverStore = null) =>
+        ICoverStore? coverStore = null,
+        IReleaseSourceMatcher? releaseSourceMatcher = null) =>
         new(dbContext,
             new AddSeriesPipeline(
                 dbContext,
                 [
-                    new AniListAddSeriesFlow(metadataSource, CreateCoverCache(), TimeProvider.System),
+                    new AniListAddSeriesFlow(
+                        metadataSource,
+                        CreateCoverCache(),
+                        new AddTimeReleaseLink(
+                            releaseSourceMatcher ?? NoReleaseLink(),
+                            dbContext,
+                            NullLogger<AddTimeReleaseLink>.Instance),
+                        TimeProvider.System),
                     new MangaUpdatesAddSeriesFlow(
                         mangaUpdatesSource ?? Substitute.For<IMangaUpdatesSeriesQueryService>(),
                         CreateSeriesCoverCache(),
@@ -983,6 +1034,20 @@ public sealed class SeriesCommandServiceTests
             coverStore ?? Substitute.For<ICoverStore>(),
             TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
+
+    /// <summary>The release source knows nothing of this series, so AniList's volumes stand.</summary>
+    internal static IReleaseSourceMatcher NoReleaseLink()
+    {
+        var matcher = Substitute.For<IReleaseSourceMatcher>();
+        matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReleaseSourceMatch
+            {
+                Outcome = ReleaseMatchOutcome.NoCandidate,
+                Explanation = "Nothing to link in this test.",
+            });
+
+        return matcher;
+    }
 
     /// <summary>Staging holds nothing for this series — the usual case for a new one.</summary>
     private static IIsbnBackfill NoStagedIsbns()

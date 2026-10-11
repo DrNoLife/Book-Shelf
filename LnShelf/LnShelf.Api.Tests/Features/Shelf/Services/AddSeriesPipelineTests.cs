@@ -278,7 +278,16 @@ public sealed class AddSeriesPipelineTests
     {
         return new AddSeriesPipeline(
             dbContext,
-            [new AniListAddSeriesFlow(metadataSource, Substitute.For<ICoverCache>(), TimeProvider.System)],
+            [
+                new AniListAddSeriesFlow(
+                    metadataSource,
+                    Substitute.For<ICoverCache>(),
+                    new AddTimeReleaseLink(
+                        SeriesCommandServiceTests.NoReleaseLink(),
+                        dbContext,
+                        NullLogger<AddTimeReleaseLink>.Instance),
+                    TimeProvider.System),
+            ],
             Substitute.For<IIsbnBackfill>(),
             Substitute.For<ISeriesSyncService>(),
             TestUsers.Limits(dbContext),

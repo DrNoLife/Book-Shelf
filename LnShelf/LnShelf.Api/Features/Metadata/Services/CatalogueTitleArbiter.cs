@@ -24,10 +24,10 @@ public sealed class CatalogueTitleArbiter(
     ILogger<CatalogueTitleArbiter> logger)
 {
     /// <returns>
-    /// The record for each tracked volume the store confirmed, empty when no title was
-    /// recognised.
+    /// The record for each tracked volume the store confirmed and the bonus volumes it lists
+    /// that the shelf does not track yet; both empty when no title was recognised.
     /// </returns>
-    public async Task<IReadOnlyDictionary<decimal, CatalogueVolume>> AskAsync(
+    public async Task<CatalogueMatch> AskAsync(
         Series series,
         SyncRun run,
         LookupBudget budget,
@@ -65,7 +65,8 @@ public sealed class CatalogueTitleArbiter(
 
             rememberedAnswered |= string.Equals(attempts[attempt], remembered, StringComparison.Ordinal);
 
-            var matched = matcher.Match(series, attempts[attempt], catalogue).ByVolumeNumber;
+            var match = matcher.Match(series, attempts[attempt], catalogue);
+            var matched = match.ByVolumeNumber;
 
             logger.LogInformation(
                 "{SourceName} matched {MatchedCount} of {RecordCount} records to {TitleEnglish}'s volumes "
@@ -95,12 +96,17 @@ public sealed class CatalogueTitleArbiter(
                 attempt + 1,
                 attempts.Length);
 
-            return matched;
+            return match;
         }
 
         ForgetCatalogueTitleIfStale(series, tried, attempts.Length, rememberedAnswered);
 
-        return new Dictionary<decimal, CatalogueVolume>();
+        return new CatalogueMatch
+        {
+            ByVolumeNumber = new Dictionary<decimal, CatalogueVolume>(),
+            BonusVolumes = new Dictionary<decimal, CatalogueVolume>(),
+            HighestConfirmedNumber = 0,
+        };
     }
 
     /// <summary>

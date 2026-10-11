@@ -178,6 +178,7 @@ public static class MetadataFeatureExtensions
 
             // Where the conflict rules live. The sync run calls the service per series; the
             // writer is what both of its passes route every write through.
+            services.AddScoped<BonusVolumeWriter>();
             services.AddScoped<VolumeEnrichmentService>();
             services.AddScoped<VolumeFactWriter>();
 
@@ -212,6 +213,7 @@ public static class MetadataFeatureExtensions
                     provider.GetRequiredService<IVolumeCatalogueSource>(),
                     provider.GetRequiredService<CatalogueTitleArbiter>(),
                     isbnEnricher,
+                    provider.GetRequiredService<BonusVolumeWriter>(),
                     factWriter);
             });
 

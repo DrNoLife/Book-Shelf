@@ -15,14 +15,14 @@
         }
         else
         {
-            <span class="cover__label tabular">Vol @CoverVolumeNumber</span>
+            <span class="cover__label tabular">Vol @CardVolumeNumbers.ForCover(Card.VolumeTicks).ToVolumeText()</span>
         }
 
         <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
 
         @if (Card.HasNewVolume)
         {
-            <span class="cover__new"><Pill Tone="PillTone.Attention">New · Vol @Card.Published</Pill></span>
+            <span class="cover__new"><Pill Tone="PillTone.Attention">New · Vol @CardVolumeNumbers.NewestOut(Card.VolumeTicks)?.ToVolumeText()</Pill></span>
         }
 
         <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
@@ -58,10 +58,4 @@
 
 @code {
     [Parameter] public required LibraryCardResponse Card { get; set; }
-
-    /// <summary>
-    /// The card shows the latest volume. Falls back to the newest tracked volume
-    /// for a series with nothing released yet.
-    /// </summary>
-    private int CoverVolumeNumber => Card.Published > 0 ? Card.Published : Math.Max(1, Card.Tracked);
 }

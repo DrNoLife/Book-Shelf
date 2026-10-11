@@ -61,6 +61,12 @@ public sealed record ReleaseSeriesInfo
     public int? VolumeCount { get; init; }
 
     /// <summary>
+    /// Bonus volumes the English edition counts beside <see cref="VolumeCount"/> — the 1 in
+    /// "9 Volumes + 1 Extra". Zero when the source states none.
+    /// </summary>
+    public int ExtraVolumeCount { get; init; }
+
+    /// <summary>
     /// The status text the count came from, kept verbatim so a discrepancy row can
     /// show what the source actually said.
     /// </summary>

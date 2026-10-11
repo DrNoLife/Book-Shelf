@@ -1,3 +1,6 @@
+using LnShelf.Api.Commands;
+using LnShelf.Api.Features.Shelf.Commands;
+
 namespace LnShelf.Api.Features.Shelf;
 
 /// <summary>
@@ -20,6 +23,8 @@ public static class ShelfFeatureExtensions
             services.AddScoped<ILibraryQueryService, LibraryQueryService>();
             services.AddScoped<ITrackedSeriesQueryService, TrackedSeriesQueryService>();
 
+            services.AddScoped<AddTimeReleaseLink>();
+
             // One registration per source the shelf can add from. This is the whole of
             // what a third source costs: a new IAddSeriesFlow and a line here, with no
             // edit to SeriesCommandService or to the controller.
@@ -31,6 +36,8 @@ public static class ShelfFeatureExtensions
             services.AddScoped<ISeriesDetailQueryService, SeriesDetailQueryService>();
             services.AddScoped<IVolumeCommandService, VolumeCommandService>();
             services.AddScoped<IVolumeReadDateCommandService, VolumeReadDateCommandService>();
+            services.AddScoped<IVolumeMergeCommandService, VolumeMergeCommandService>();
+            services.AddScoped<IConsoleCommand, VolumeMergeCommand>();
             services.AddScoped<ShelfSeeder>();
             return services;
         }

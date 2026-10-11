@@ -131,4 +131,10 @@ public sealed class MangaUpdatesPublisher
 
     /// <summary>"Original" (the Japanese imprint) or "English".</summary>
     public string? Type { get; set; }
+
+    /// <summary>
+    /// The publisher's own edition in prose: "9 Volumes + 1 Extra - Complete", "11+3 Volumes;
+    /// Complete", "4 Audiobooks; Ongoing". Empty or absent as often as not.
+    /// </summary>
+    public string? Notes { get; set; }
 }

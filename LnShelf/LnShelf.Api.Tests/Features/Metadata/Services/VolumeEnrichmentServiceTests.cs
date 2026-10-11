@@ -20,7 +20,7 @@ public sealed class VolumeEnrichmentServiceTests
         var run = Run();
 
         await CreateService(Enrichment(releaseDate: new DateOnly(2017, 1, 31))).EnrichAsync(
-            series, run, Today, Budget(10), CancellationToken.None);
+            series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // No conflict: a date in the past agrees with the count and says more than it does.
         series.Volumes.Single().ReleaseDate.ShouldBe(new DateOnly(2017, 1, 31));
@@ -35,7 +35,7 @@ public sealed class VolumeEnrichmentServiceTests
         var run = Run();
 
         await CreateService(Enrichment(releaseDate: new DateOnly(2026, 12, 5))).EnrichAsync(
-            series, run, Today, Budget(10), CancellationToken.None);
+            series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The two sources contradict each other about one volume, and the standing rule is
         // "recorded, never silently picked". Writing the date would leave the shelf
@@ -62,7 +62,7 @@ public sealed class VolumeEnrichmentServiceTests
         var run = Run();
 
         await CreateService(Enrichment(releaseDate: new DateOnly(2026, 12, 5))).EnrichAsync(
-            series, run, Today, Budget(10), CancellationToken.None);
+            series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Nothing to contradict: this is the announced-becomes-dated upgrade, which is the
         // whole point of having per-volume dates at all.
@@ -84,7 +84,7 @@ public sealed class VolumeEnrichmentServiceTests
         await CreateService(
                 Enrichment(title: "Overlord, Volume 3: The Bloody Valkyrie", withCover: true),
                 coverCache)
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var volume = series.Volumes.Single();
 
@@ -104,7 +104,7 @@ public sealed class VolumeEnrichmentServiceTests
         volume.Title = "Overlord, Vol. 3 (light novel)";
 
         await CreateService(Enrichment(title: "Overlord, Volume 3: The Bloody Valkyrie"))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // A change from the one-source rule this pass used to follow, where the source's
         // current answer replaced the last one it gave. There is no per-field provenance
@@ -127,7 +127,7 @@ public sealed class VolumeEnrichmentServiceTests
         var source = EnrichmentSource(Enrichment());
 
         await CreateService(source).EnrichAsync(
-            series, Run(), Today, Budget(10), CancellationToken.None);
+            series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Open Library carried a blurb for none of this shelf's fifteen sampled ISBNs, so
         // asking again is spending a budgeted lookup on a certainty. The catalogue is the
@@ -158,7 +158,7 @@ public sealed class VolumeEnrichmentServiceTests
                 callInfo.Arg<Guid>(), callInfo.ArgAt<string>(1), ".jpg"));
 
         await CreateService(Enrichment(withCover: true), coverCache)
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Synced art lands on its own prefix, so the override survives and still wins on
         // read. Sync cannot even name an override's key (CoverObjectKey).
@@ -180,7 +180,7 @@ public sealed class VolumeEnrichmentServiceTests
         var source = EnrichmentSource(Enrichment(releaseDate: new DateOnly(2017, 1, 31)));
 
         var budget = Budget(10);
-        await CreateService(source).EnrichAsync(series, run, Today, budget, CancellationToken.None);
+        await CreateService(source).EnrichAsync(series, run, Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
         var spent = 10 - budget.Remaining;
 
         // The seam is keyed on ISBN because that is the only key that works. No ISBN is
@@ -199,7 +199,7 @@ public sealed class VolumeEnrichmentServiceTests
         var source = EnrichmentSource(Enrichment(releaseDate: new DateOnly(2014, 6, 6), withCover: true));
 
         var budget = Budget(10);
-        await CreateService(source).EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+        await CreateService(source).EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
         var spent = 10 - budget.Remaining;
 
         // The real Slime volume 1 case. Its record is a French edition stating no language
@@ -220,7 +220,7 @@ public sealed class VolumeEnrichmentServiceTests
                 releaseDate: new DateOnly(2017, 1, 31),
                 title: "Overlord Vol. 3 (Português)",
                 language: EditionLanguage.Other))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // A Brazilian edition sharing a work with the English one. Its date and its art
         // describe a different book.
@@ -237,7 +237,7 @@ public sealed class VolumeEnrichmentServiceTests
         var run = Run();
 
         await CreateService(Enrichment(rawPublishDate: "2022")).EnrichAsync(
-            series, run, Today, Budget(10), CancellationToken.None);
+            series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         series.Volumes.Single().ReleaseDate.ShouldBeNull();
         run.DatesMoved.ShouldBe(0);
@@ -254,7 +254,7 @@ public sealed class VolumeEnrichmentServiceTests
         var volume = series.Volumes.Single();
 
         await CreateService(Enrichment(releaseDate: new DateOnly(2017, 1, 31)))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Empty, not null. The record was found under this volume's own ISBN, so the volume is
         // resolved — it simply has no name to reduce to a subtitle. Left null, the column would
@@ -271,7 +271,7 @@ public sealed class VolumeEnrichmentServiceTests
         var run = Run();
 
         await CreateService(EnrichmentSource(null)).EnrichAsync(
-            series, run, Today, Budget(10), CancellationToken.None);
+            series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // 20% of this shelf's known ISBNs are genuine catalogue gaps. A gap is data, and
         // the run's own line says how many there were.
@@ -295,7 +295,7 @@ public sealed class VolumeEnrichmentServiceTests
         source.GetByIsbnAsync("9780316397605", Arg.Any<CancellationToken>())
             .Returns(Enrichment(releaseDate: new DateOnly(2017, 5, 23)));
 
-        await CreateService(source).EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+        await CreateService(source).EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         run.EnrichmentFailures.ShouldBe(1);
         series.Volumes.Single(volume => volume.Number is 4).ReleaseDate
@@ -318,7 +318,7 @@ public sealed class VolumeEnrichmentServiceTests
         var budget = Budget(10);
         await VolumeEnrichmentPipeline
             .Create(catalogueSource, source, NoCandidates(), VolumeEnrichmentPipeline.Writer())
-            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         var spent = 10 - budget.Remaining;
 
@@ -339,7 +339,7 @@ public sealed class VolumeEnrichmentServiceTests
             Volume(3, EnglishIsbn, isReleased: true));
 
         var budget = Budget(3);
-        await CreateService(Enrichment()).EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+        await CreateService(Enrichment()).EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
         var spent = 3 - budget.Remaining;
 
         // A cap on the run, not a target: the rest wait for tomorrow rather than spending
@@ -361,12 +361,12 @@ public sealed class VolumeEnrichmentServiceTests
         var coverCache = CoverCache();
 
         await CreateService(enrichment, coverCache).EnrichAsync(
-            series, Run(), Today, Budget(10), CancellationToken.None);
+            series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var second = Run();
         var budget = Budget(10);
         await CreateService(enrichment, coverCache).EnrichAsync(
-            series, second, Today, budget, CancellationToken.None);
+            series, second, Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
         var spent = 10 - budget.Remaining;
 
         // The by-ISBN pass has nothing left to learn after the first run, so the second
@@ -394,7 +394,7 @@ public sealed class VolumeEnrichmentServiceTests
 
         await CreateService(Enrichment(
                 releaseDate: new DateOnly(2017, 1, 31), title: "Overlord 3", withCover: true))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Sync never writes user state (CLAUDE.md). Enrichment only ever writes Volume.*.
         volume.UserState.ReadStatus.ShouldBe(ReadStatus.Read);

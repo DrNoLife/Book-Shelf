@@ -28,6 +28,52 @@ public static partial class MangaUpdatesVolumeCountParser
     }
 
     /// <summary>
+    /// The English edition's volume count, from the English publishers' own notes.
+    /// </summary>
+    /// <returns>Null when no English publisher states a count of books.</returns>
+    // Preferred over the status line, which counts the Japanese original: Slime's status says
+    // "23 LN Volumes" while Yen On's note says 22, and 22 is what a reader of the English
+    // edition can actually buy. The note also keeps bonus volumes out of the count —
+    // "9 Volumes + 1 Extra", "11+3 Volumes" — which are tracked from the store catalogue as
+    // Vol. 7.5 and the like, not as volumes 10 to 14.
+    //
+    // The highest count wins when several English publishers state one: a series moves between
+    // licensors, and the older one's note stops where it stopped. Audiobook and chapter counts
+    // ("14 Audiobooks", "146 Chapters") never match, and neither does a qualified count such as
+    // "33 Digital Volumes", which falls back to the status line rather than being guessed at.
+    public static int? ParseEnglishEditions(IEnumerable<string?> englishPublisherNotes)
+    {
+        ArgumentNullException.ThrowIfNull(englishPublisherNotes);
+
+        return englishPublisherNotes
+            .Where(notes => !string.IsNullOrWhiteSpace(notes))
+            .Select(notes => FirstMatch(EnglishEditionVolumesPattern(), notes!))
+            .Max();
+    }
+
+    /// <summary>
+    /// How many bonus volumes the English edition counts beside its main ones: the 1 in
+    /// "9 Volumes + 1 Extra", the 3 in "11+3 Volumes".
+    /// </summary>
+    /// <returns>Zero when no English publisher states any.</returns>
+    // Not a count the shelf creates volumes from — the note never says where a bonus volume
+    // sits, and only the store catalogue's "Vol. 7.5" does. It is the signal that there is
+    // something to look for: a series whose volumes are all enriched is not asked about
+    // again, and without this a bonus volume would never be found on it.
+    public static int ParseEnglishEditionExtras(IEnumerable<string?> englishPublisherNotes)
+    {
+        ArgumentNullException.ThrowIfNull(englishPublisherNotes);
+
+        return englishPublisherNotes
+            .Where(notes => !string.IsNullOrWhiteSpace(notes))
+            .Select(notes => EnglishEditionExtrasPattern().Match(notes!))
+            .Where(match => match.Success)
+            .Select(match => int.Parse(match.Groups["extra"].ValueSpan, CultureInfo.InvariantCulture))
+            .DefaultIfEmpty(0)
+            .Max();
+    }
+
+    /// <summary>
     /// The line of the status the count is read from, so the publication status can be
     /// read from the same line.
     /// </summary>
@@ -76,6 +122,23 @@ public static partial class MangaUpdatesVolumeCountParser
     // "33 Volumes (Complete) … Part 1: 3 Volumes" reads 33 rather than 3.
     [GeneratedRegex(@"(?<count>\d{1,4})\s*Volumes?", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex PlainVolumesPattern();
+
+    /// <summary>
+    /// "9 Volumes + 1 Extra", "9+2 Volume", "13 Volumes - Ongoing" — the main count, with any
+    /// bonus volumes after a plus sign left out of it.
+    /// </summary>
+    // The lookbehind keeps the count a whole token: "6 2-in-1 Volumes" is six omnibuses, and
+    // without it the 1 of "2-in-1" would be read as a count of one.
+    [GeneratedRegex(
+        @"(?<![\w-])(?<count>\d{1,4})\s*(?:\+\s*\d{1,3}\s*)?Volumes?",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex EnglishEditionVolumesPattern();
+
+    /// <summary>"9 Volumes + 1 Extra", "9+2 Volume" — the number after the plus sign.</summary>
+    [GeneratedRegex(
+        @"\d{1,4}\s*(?:Volumes?\s*)?\+\s*(?<extra>\d{1,3})",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex EnglishEditionExtrasPattern();
 
     /// <summary>
     /// "14 WN Volumes (Complete)" — last resort. A web-novel count is better than

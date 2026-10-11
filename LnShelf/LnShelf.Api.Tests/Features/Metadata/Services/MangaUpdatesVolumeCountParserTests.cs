@@ -52,4 +52,46 @@ public sealed class MangaUpdatesVolumeCountParserTests
         // Worse than a light-novel count and better than nothing; the discrepancy row
         // records the status text it came from either way.
         MangaUpdatesVolumeCountParser.Parse("14 WN Volumes (Complete)").ShouldBe(14);
+
+    [Theory]
+    // Every one a real English publisher note (captured 2026-10-11). Bonus volumes after a
+    // plus sign stay out of the count; the catalogue tracks them as Vol. 7.5 and the like.
+    [InlineData("9 Volumes + 1 Extra - Complete", 9)]
+    [InlineData("9+2 Volume; Ongoing", 9)]
+    [InlineData("11+3 Volumes; Complete", 11)]
+    [InlineData("13 Volumes - Ongoing", 13)]
+    [InlineData("22 Volumes; Ongoing", 22)]
+    [InlineData("29 Volumes - Ongoing", 29)]
+    public void ParseEnglishEditions_ARealPublisherNote_ReadsTheMainCount(string notes, int expected) =>
+        MangaUpdatesVolumeCountParser.ParseEnglishEditions([notes]).ShouldBe(expected);
+
+    [Theory]
+    // Not a count of books this shelf tracks, or one qualified in a way the plain rule should
+    // not guess at; the status line answers instead.
+    [InlineData("4 Audiobooks; Ongoing")]
+    [InlineData("146 Chapters - Ongoing; Digital")]
+    [InlineData("33 Digital Volumes; Complete | 26 Physical Volumes; Ongoing")]
+    // Six omnibuses: the 1 of "2-in-1" is not a count of one.
+    [InlineData("6 2-in-1 Volumes; Ongoing")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ParseEnglishEditions_NoCountOfBooks_IsNull(string? notes) =>
+        MangaUpdatesVolumeCountParser.ParseEnglishEditions([notes]).ShouldBeNull();
+
+    [Theory]
+    [InlineData("9 Volumes + 1 Extra - Complete", 1)]
+    [InlineData("9+2 Volume; Ongoing", 2)]
+    [InlineData("11+3 Volumes; Complete", 3)]
+    [InlineData("16 Volumes; Ongoing", 0)]
+    [InlineData("4 Audiobooks; Ongoing", 0)]
+    [InlineData(null, 0)]
+    public void ParseEnglishEditionExtras_ARealPublisherNote_ReadsTheBonusCount(string? notes, int expected) =>
+        MangaUpdatesVolumeCountParser.ParseEnglishEditionExtras([notes]).ShouldBe(expected);
+
+    [Fact]
+    public void ParseEnglishEditions_TwoEnglishPublishers_TakesTheHigherCount() =>
+        // An audiobook imprint beside the print one is the usual pair; a licence that moved
+        // between publishers is the other, and the older note stops where it stopped.
+        MangaUpdatesVolumeCountParser.ParseEnglishEditions(["14 Audiobooks; Ongoing", "16 Volumes; Ongoing", "12 Volumes; Cancelled"])
+            .ShouldBe(16);
 }

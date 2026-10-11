@@ -47,7 +47,11 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
         var normalizedSeriesTitle = NormalizedTitle.From(catalogueTitle);
 
         var tracked = series.Volumes.Select(volume => volume.Number).ToHashSet();
+        var highestTrackedMain = series.Volumes
+            .Where(volume => !volume.Number.IsBonusVolume)
+            .Max(volume => (decimal?)volume.Number) ?? 0;
         var byVolumeNumber = new Dictionary<decimal, CatalogueVolume>();
+        var bonusVolumes = new Dictionary<decimal, CatalogueVolume>();
         var highestConfirmed = 0;
 
         foreach (var record in catalogue)
@@ -67,6 +71,16 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
             if (confirmsMedium && !number.IsBonusVolume && number > highestConfirmed)
             {
                 highestConfirmed = (int)number;
+            }
+
+            if (IsUntrackedBonusVolume(number, tracked, highestTrackedMain))
+            {
+                if (confirmsMedium)
+                {
+                    bonusVolumes.TryAdd(number, record);
+                }
+
+                continue;
             }
 
             if (!tracked.Contains(number) || byVolumeNumber.ContainsKey(number))
@@ -94,9 +108,27 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
         return new CatalogueMatch
         {
             ByVolumeNumber = byVolumeNumber,
+            BonusVolumes = bonusVolumes,
             HighestConfirmedNumber = highestConfirmed,
         };
     }
+
+    /// <summary>
+    /// A bonus volume the store lists and the shelf does not track yet, sitting among the
+    /// main volumes the shelf does track.
+    /// </summary>
+    // The one kind of volume the store may add (CLAUDE.md — conflicting sources). The
+    // release source owns the count of main volumes, but it cannot say where a bonus volume
+    // sits ("9 Volumes + 1 Extra") and the store can ("Vol. 7.5"). Bounded by the highest
+    // main volume tracked, so a store listing "Vol. 25.5" of a series the count says has
+    // 23 is ignored for the same reason its "Vol. 25" is.
+    private static bool IsUntrackedBonusVolume(
+        decimal number,
+        HashSet<decimal> tracked,
+        decimal highestTrackedMain) =>
+        number.IsBonusVolume
+        && !tracked.Contains(number)
+        && decimal.Truncate(number) <= highestTrackedMain;
 }
 
 /// <summary>What one catalogue answer turned out to say about a series.</summary>
@@ -104,6 +136,11 @@ public sealed record CatalogueMatch
 {
     /// <summary>The record for each volume number the shelf tracks and the store confirmed.</summary>
     public required IReadOnlyDictionary<decimal, CatalogueVolume> ByVolumeNumber { get; init; }
+
+    /// <summary>
+    /// Bonus volumes the store confirmed that the shelf does not track yet, by number.
+    /// </summary>
+    public required IReadOnlyDictionary<decimal, CatalogueVolume> BonusVolumes { get; init; }
 
     /// <summary>
     /// The highest main volume number the store positively confirms for this series, tracked or

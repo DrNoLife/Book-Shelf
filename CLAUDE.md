@@ -172,7 +172,7 @@ from writes** — command/query separation at the service boundary.
   still needs a local-override column, flagged first.
 - **Every external call sits behind a seam** (see Architecture principles).
   Nothing outside `Features/Metadata` knows what AniList is.
-- **Be a polite API citizen.** Respect AniList's rate limit (90 req/min);
+- **Be a polite API citizen.** Respect AniList's rate limit (30 req/min while its API is degraded; its responses say so in `X-RateLimit-Limit`);
   MangaUpdates likewise. Sync jobs batch and back off on 429. This is a hobby
   app hitting free community APIs — never hammer them.
 - **Cache covers locally** on first fetch. The shelf must render without the
@@ -186,7 +186,14 @@ from writes** — command/query separation at the service boundary.
     (Open Library, by ISBN) wins *for display*; it never overrules
     `Volume.IsReleased` about whether a volume is out. A **future** date on a
     volume the count says is in print is a conflict: record it, write nothing.
-  - **Volume counts and publication status** — MangaUpdates.
+  - **Volume counts and publication status** — MangaUpdates. The count is the English
+    edition's, read from the English publisher's note ("9 Volumes + 1 Extra"), falling back
+    to the status line (the Japanese count) when no English publisher states one. Adding a
+    series asks MangaUpdates for the count before creating volumes; AniList's count (which
+    folds bonus volumes in) is the last resort.
+  - **Bonus volumes** (Vol. 7.5) — the store catalogue, and only those: it may create a
+    volume with a fractional number between main volumes already tracked, never a whole one.
+    The release source owns the main count but cannot say where a bonus volume sits.
   - **Everything else** — AniList.
   - Record the discrepancy in the sync log rather than silently picking. A
     `SyncDiscrepancy` carries one `(source, value)` pair per disagreeing source,
@@ -416,6 +423,7 @@ dotnet run --project LnShelf/LnShelf.Api -- isbn-discover --out ../../docs/isbn-
 dotnet run --project LnShelf/LnShelf.Api -- isbn-apply    --in  ../../docs/isbn-review.csv
 dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [--format LightNovel]
 dotnet run --project LnShelf/LnShelf.Api -- subtitle-backfill
+dotnet run --project LnShelf/LnShelf.Api -- volume-merge --series "<title>" --from 10 --into 7.5 [--format LightNovel] [--dry-run]
 dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # all shelves; no --user needed
 ```
 

@@ -26,6 +26,7 @@ internal static class VolumeEnrichmentPipeline
                 new IsbnCandidateVerifier(enrichmentSource),
                 factWriter,
                 NullLogger<IsbnVolumeEnricher>.Instance),
+            new BonusVolumeWriter(NullLogger<BonusVolumeWriter>.Instance),
             factWriter);
 
     /// <summary>The usual writer: a cover cache that answers, and nothing observed.</summary>

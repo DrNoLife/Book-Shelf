@@ -37,7 +37,10 @@ public sealed class VerificationEnrichmentRunner(
         var run = new SyncRun { Id = Guid.CreateVersion7(), StartedAt = timeProvider.GetUtcNow() };
         var today = timeProvider.Today();
 
-        await enrichment.EnrichAsync(series, run, today, new LookupBudget(LookupAllowance), cancellationToken);
+        // No bonus volumes are created: the verification report checks the volumes a count
+        // produced, and a bonus volume is not one of them.
+        await enrichment.EnrichAsync(
+            series, run, today, new LookupBudget(LookupAllowance), expectedBonusVolumes: 0, cancellationToken);
 
         logger.LogInformation(
             "{TitleEnglish}: enriched {VolumeCount} volume(s), {Failures} failure(s), {Gaps} gap(s)",

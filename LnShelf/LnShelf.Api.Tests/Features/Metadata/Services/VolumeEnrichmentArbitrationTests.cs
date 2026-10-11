@@ -33,7 +33,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         var run = Run();
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Zero of these were filled before this change, because every one of them hangs off a
         // record the shelf never asked the right question to see.
@@ -50,7 +50,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         var series = Series(ShelfTitle, KonosubaAlternatives, Volume(1));
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The learned link. Without it the next sweep would re-spend every attempt to
         // rediscover an answer this run already has.
@@ -66,7 +66,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         var budget = Budget(10);
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // The whole point of storing it: arbitration is a one-off cost, not a nightly one.
         (10 - budget.Remaining).ShouldBe(1);
@@ -80,7 +80,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         var budget = Budget(10);
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // Four titles, and the winner is the fourth: the shelf's own, then the three
         // alternatives in the source's order. The pass stops the moment one is recognised, so
@@ -94,7 +94,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         var series = Series(ShelfTitle, KonosubaAlternatives, Volume(1));
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // "Recognised" is at least one volume confirmed, not a non-empty response. The store
         // answers 74 results for "Gifting this Wonderful World with Blessings!" and not one of
@@ -114,7 +114,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         series.CatalogueTitle = "Konosuba (the store's old listing)";
 
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The remembered title leads the list but does not end it, which is what makes the
         // stored column self-healing rather than a permanent wrong answer.
@@ -130,7 +130,7 @@ public sealed class VolumeEnrichmentArbitrationTests
 
         // The store answers, and about nothing this series is known by.
         await CreateService(CatalogueAnswering([]))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Cleared rather than kept: a learned link that no longer resolves is worse than none,
         // because it would go on being tried first every night.
@@ -151,7 +151,7 @@ public sealed class VolumeEnrichmentArbitrationTests
             .Returns<Task<IReadOnlyList<CatalogueVolume>>>(_ => throw new HttpRequestException("Apple is down"));
 
         await CreateService(catalogueSource)
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // An outage is not evidence against the title. Forgetting it here would make a night
         // Apple was down cost every series its learned name, and the next run would re-spend
@@ -170,7 +170,7 @@ public sealed class VolumeEnrichmentArbitrationTests
 
         // Enough for the remembered title and one more, and the winner is further down.
         await CreateService(KonosubaCatalogue())
-            .EnrichAsync(series, Run(), Today, Budget(2), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(2), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The remembered title did answer, and with nothing — but the list was never finished,
         // so there is no new title to learn and the old one is the best guess still. Nulling
@@ -188,7 +188,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         await CreateService(CatalogueAnswering(
                 [Record("86--EIGHTY-SIX, Vol. 8 (light novel)", new DateOnly(2021, 8, 24))],
                 "86―EIGHTY-SIX"))
-            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // The AniList-added shelf, which is most of it: one title, one request, and the
         // learned column filled in on the way past.

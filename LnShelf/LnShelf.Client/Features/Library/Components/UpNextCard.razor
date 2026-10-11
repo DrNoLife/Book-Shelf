@@ -21,7 +21,7 @@
         <div class="next__body">
             <span class="next__kicker">
                 <FormatBadge Value="Card.Format" />
-                <span class="eyebrow tabular">Vol @Entry.NextVolumeNumber.ToVolumeText() of @Card.Published</span>
+                <span class="eyebrow tabular">Vol @Entry.NextVolumeNumber.ToVolumeText() of @CardVolumeNumbers.LastMainOut(Card.VolumeTicks).ToVolumeText()</span>
             </span>
             <h3 class="next__title"><a href="@($"/series/{Card.SeriesId}")">@Card.TitleEnglish</a></h3>
             <span class="next__shelf">@ShelfText</span>

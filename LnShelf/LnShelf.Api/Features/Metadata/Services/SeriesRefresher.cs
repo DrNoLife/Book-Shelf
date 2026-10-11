@@ -56,7 +56,7 @@ public sealed class SeriesRefresher(
         // per-volume ISBNs, which have nothing to do with whether this series is linked.
         // Ordered after the count so a volume the count just created can be enriched in
         // the same pass.
-        await EnrichVolumesAsync(series, run, budget, cancellationToken);
+        await EnrichVolumesAsync(series, run, budget, info?.ExtraVolumeCount ?? 0, cancellationToken);
 
         // Also unconditional, and for the same reason: whether this series has a synopsis
         // has nothing to do with whether the release source recognised it.
@@ -80,6 +80,7 @@ public sealed class SeriesRefresher(
         Series series,
         SyncRun run,
         LookupBudget budget,
+        int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
         if (budget.IsExhausted)
@@ -92,7 +93,7 @@ public sealed class SeriesRefresher(
         // The budget is handed over rather than a number: one volume can cost several
         // requests when its own ISBN is not the one that got indexed, and only the
         // enrichment knows how many it actually spent.
-        await volumeEnrichment.EnrichAsync(series, run, today, budget, cancellationToken);
+        await volumeEnrichment.EnrichAsync(series, run, today, budget, expectedBonusVolumes, cancellationToken);
     }
 
     /// <summary>
@@ -105,7 +106,7 @@ public sealed class SeriesRefresher(
     //
     // No budget mechanics, deliberately, unlike the enrichment above. This costs one AniList
     // request per description-less series and is self-extinguishing — the guard stops firing
-    // the moment the column is filled. AniList allows 90 requests a minute and this shelf
+    // the moment the column is filled. AniList allows 30 requests a minute and this shelf
     // holds single digits of series, so the worst case is one sweep spending nine of them,
     // once. A LookupBudget here would be machinery guarding nothing.
     //

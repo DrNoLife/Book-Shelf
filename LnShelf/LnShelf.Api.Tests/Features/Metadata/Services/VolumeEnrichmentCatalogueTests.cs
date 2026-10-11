@@ -25,7 +25,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                     releaseDate: new DateOnly(2021, 8, 24),
                     description: "A path to purpose laid with iron rails.")),
                 coverCache)
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var volume = series.Volumes.Single();
 
@@ -63,7 +63,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                 "86--EIGHTY-SIX, Vol. 8 (light novel)",
                 releaseDate: new DateOnly(2021, 8, 24),
                 description: "A path to purpose laid with iron rails.")))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Fill-if-null everywhere, which is a change from the by-ISBN pass's old title
         // behaviour. With two sources and no per-field provenance, last-writer-wins would
@@ -86,7 +86,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 8 (light novel)", releaseDate: new DateOnly(2026, 12, 8))))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The two sources contradict each other about one volume, and the standing rule is
         // "recorded, never silently picked". Writing the date would leave the shelf
@@ -115,7 +115,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2026, 12, 8))))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Nothing to contradict: this is the announced-becomes-dated upgrade, and a store
         // listing preorders is the only source this shelf has that can supply it.
@@ -133,12 +133,12 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2026, 12, 8))))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var second = Run();
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2027, 2, 2))))
-            .EnrichAsync(series, second, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, second, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var volume = series.Volumes.Single();
         volume.ReleaseDate.ShouldBe(new DateOnly(2027, 2, 2));
@@ -160,7 +160,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2027, 2, 2))))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         volume.ReleaseDate.ShouldBe(new DateOnly(2027, 2, 2));
     }
@@ -176,7 +176,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX, Vol. 8 (light novel)", releaseDate: new DateOnly(2021, 8, 24))))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         volume.ReleaseDate.ShouldBe(new DateOnly(2021, 8, 17));
     }
@@ -194,7 +194,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         var catalogueSource = Catalogue(Record("86--EIGHTY-SIX, Vol. 8 (light novel)"));
 
         await CreateService(catalogueSource).EnrichAsync(
-            series, Run(), Today, Budget(10), CancellationToken.None);
+            series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The three-state title earning its keep. Whole series have no subtitles, and a
         // null-means-unknown column alone would have this shelf re-asking the store about
@@ -226,7 +226,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         });
 
         await CreateService(catalogueSource, enrichmentSource)
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The one direction fill-if-null is allowed to move in, and it cannot flip back: the
         // store is first in precedence and measurably never carries a subtitle, so without
@@ -245,7 +245,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                 Catalogue(Record(
                     "86--EIGHTY-SIX, Vol. 14 (light novel)", releaseDate: new DateOnly(2026, 12, 8))),
                 coverCache)
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Observed on this exact record: the store's art for a volume that is not out is a
         // typographic placeholder, and caching is fill-if-null, so the placeholder would
@@ -271,7 +271,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         await CreateService(Catalogue(
                 Record("86--EIGHTY-SIX, Vol. 1 (light novel)", releaseDate: new DateOnly(2019, 3, 26)),
                 Record("86--EIGHTY-SIX, Vol. 13 (light novel)", releaseDate: new DateOnly(2024, 12, 10))))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The release source owns volume counts (CLAUDE.md), so a store listing a volume
         // the count has never mentioned is not grounds to create one here.
@@ -290,7 +290,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         // shelf with nobody looking, which is the bar that earns the stricter check.
         await CreateService(Catalogue(Record(
                 "86--EIGHTY-SIX: Operation High School", releaseDate: new DateOnly(2024, 11, 5))))
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         series.Volumes.Single().ReleaseDate.ShouldBeNull();
         run.DatesMoved.ShouldBe(0);
@@ -307,7 +307,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                 "86--EIGHTY-SIX, Vol. 1 (manga)",
                 releaseDate: new DateOnly(2020, 12, 15),
                 description: "The manga adaptation.")))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var volume = series.Volumes.Single();
         volume.ReleaseDate.ShouldBeNull();
@@ -322,7 +322,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         await CreateService(Catalogue(
                 Record("86--EIGHTY-SIX, Vol. 1 (light novel)", releaseDate: new DateOnly(2019, 3, 26)),
                 Record("86--EIGHTY-SIX Alter.1 (light novel)", releaseDate: new DateOnly(2024, 9, 24))))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // "Alter.1" is a side story that numbers itself from one, so it matches volume 1 on
         // the same evidence a genuine volume 1 does. What separates them is the store's own
@@ -351,7 +351,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         });
 
         await CreateService(catalogueSource, enrichmentSource)
-            .EnrichAsync(series, run, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // A store being down is not a reason for the series to lose its ISBN lookups too —
         // the same failure philosophy the per-volume loop already applies.
@@ -385,7 +385,7 @@ public sealed class VolumeEnrichmentCatalogueTests
             .Returns((string?)null);
 
         await CreateService(catalogueSource, enrichmentSource, coverCache)
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The edition's own date, by ISBN, wins for display (CLAUDE.md) even though the store
         // spoke first.
@@ -393,7 +393,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         var second = Run();
         await CreateService(catalogueSource, enrichmentSource, coverCache)
-            .EnrichAsync(series, second, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, second, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Both sources answered again and nothing moved: no flip, and no "dates written" for
         // a night that changed none.
@@ -416,7 +416,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                 Record("86--EIGHTY-SIX, Vol. 1 (light novel)", releaseDate: new DateOnly(2019, 3, 26)),
                 Record("86--EIGHTY-SIX, Vol. 2 (light novel)", releaseDate: new DateOnly(2019, 7, 23)),
                 Record("86--EIGHTY-SIX, Vol. 3 (light novel)", releaseDate: new DateOnly(2019, 11, 19))))
-            .EnrichAsync(series, Run(), Today, budget, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // One request for the whole series, which is the reason this seam exists: the
         // by-ISBN source would have cost three, and could only have answered for the
@@ -439,7 +439,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         var budget = Budget(10);
 
         await CreateService(catalogueSource).EnrichAsync(
-            series, Run(), Today, budget, CancellationToken.None);
+            series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // The request covers a whole series, so one volume still missing something is
         // reason enough to make it — and none missing anything is reason not to.
@@ -461,11 +461,11 @@ public sealed class VolumeEnrichmentCatalogueTests
         var coverCache = CoverCache();
 
         await CreateService(catalogueSource, coverCache)
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var second = Run();
         await CreateService(catalogueSource, coverCache)
-            .EnrichAsync(series, second, Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, second, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Re-running a sync is always safe (data-access.md). Everything is filled after the
         // first pass, so the second writes nothing at all.
@@ -493,7 +493,7 @@ public sealed class VolumeEnrichmentCatalogueTests
                 "86--EIGHTY-SIX, Vol. 8 (light novel)",
                 releaseDate: new DateOnly(2021, 8, 24),
                 description: "A path to purpose laid with iron rails.")))
-            .EnrichAsync(series, Run(), Today, Budget(10), CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Sync never writes user state (CLAUDE.md), and the synced art lands on its own key
         // prefix so the override survives and still wins on read.

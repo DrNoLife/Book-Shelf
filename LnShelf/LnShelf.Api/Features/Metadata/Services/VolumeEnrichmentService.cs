@@ -21,6 +21,7 @@ public sealed class VolumeEnrichmentService(
     IVolumeCatalogueSource catalogueSource,
     CatalogueTitleArbiter catalogueTitleArbiter,
     IsbnVolumeEnricher isbnEnricher,
+    BonusVolumeWriter bonusVolumeWriter,
     VolumeFactWriter factWriter)
 {
     /// <param name="today">
@@ -32,18 +33,23 @@ public sealed class VolumeEnrichmentService(
     /// for the whole series, and one volume can cost several when its own ISBN turns out
     /// not to be indexed.
     /// </param>
+    /// <param name="expectedBonusVolumes">
+    /// How many bonus volumes the release source counts beside the main ones. More than the
+    /// shelf tracks is a reason to ask the store even when every volume is already enriched.
+    /// </param>
     public async Task EnrichAsync(
         Series series,
         SyncRun run,
         DateOnly today,
         LookupBudget budget,
+        int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(budget);
 
-        await EnrichFromCatalogueAsync(series, run, today, budget, cancellationToken);
+        await EnrichFromCatalogueAsync(series, run, today, budget, expectedBonusVolumes, cancellationToken);
         await isbnEnricher.EnrichAsync(series, run, today, budget, cancellationToken);
     }
 
@@ -56,18 +62,31 @@ public sealed class VolumeEnrichmentService(
         SyncRun run,
         DateOnly today,
         LookupBudget budget,
+        int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
-        if (budget.IsExhausted || !series.Volumes.Any(VolumeGaps.NeedsAnything))
+        var missesBonusVolumes =
+            series.Volumes.Count(volume => volume.Number.IsBonusVolume) < expectedBonusVolumes;
+
+        if (budget.IsExhausted || (!series.Volumes.Any(VolumeGaps.NeedsAnything) && !missesBonusVolumes))
         {
             return;
         }
 
-        var matched = await catalogueTitleArbiter.AskAsync(series, run, budget, cancellationToken);
+        var match = await catalogueTitleArbiter.AskAsync(series, run, budget, cancellationToken);
+
+        // Only when the release source says the edition has bonus volumes at all: the store is
+        // trusted with where one sits, not with whether there is one. Created before the facts
+        // are written, so a new bonus volume gets its cover, date and subtitle in this pass.
+        if (expectedBonusVolumes > 0)
+        {
+            bonusVolumeWriter.Create(series, match, run);
+        }
 
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
-            if (!matched.TryGetValue(volume.Number, out var record))
+            if (!match.ByVolumeNumber.TryGetValue(volume.Number, out var record)
+                && !match.BonusVolumes.TryGetValue(volume.Number, out record))
             {
                 continue;
             }

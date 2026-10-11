@@ -17,11 +17,14 @@ public sealed class AniListOptions
     [Required]
     public Uri Endpoint { get; set; } = new("https://graphql.anilist.co/");
 
-    /// <summary>AniList's published budget for anonymous clients.</summary>
-    // The ceiling is a typo guard, not a policy: nothing this app talks to publishes a
-    // budget anywhere near ten requests a second, so a larger number is a mistake.
+    /// <summary>AniList's budget for anonymous clients, as its responses state it.</summary>
+    // 30, not the 90 AniList's docs publish: its API has run in a "degraded" state since the
+    // 2026-08-15 outage and every response says X-RateLimit-Limit: 30 (checked 2026-10-11).
+    // Spending to the documented 90 would meet 429s at a third of the way there. The ceiling
+    // is a typo guard, not a policy: nothing this app talks to publishes a budget anywhere
+    // near ten requests a second, so a larger number is a mistake.
     [Range(1, 600)]
-    public int RequestsPerMinute { get; set; } = 90;
+    public int RequestsPerMinute { get; set; } = 30;
 
     /// <summary>Results asked for per search — 50 is AniList's own per-page maximum.</summary>
     [Range(1, 50)]

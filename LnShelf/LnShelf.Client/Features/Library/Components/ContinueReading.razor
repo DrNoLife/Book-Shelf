@@ -30,7 +30,7 @@
                 <div class="entry__body">
                     <span class="entry__kicker">
                         <FormatBadge Value="card.Format" />
-                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber.ToVolumeText() of @card.Published</span>
+                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber.ToVolumeText() of @CardVolumeNumbers.LastMainOut(card.VolumeTicks).ToVolumeText()</span>
                     </span>
                     <h3 class="title-card">@card.TitleEnglish</h3>
                     <span class="entry__unread">@UnreadText(card.Backlog)</span>

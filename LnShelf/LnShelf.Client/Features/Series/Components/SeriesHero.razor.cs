@@ -35,6 +35,14 @@ public partial class SeriesHero
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : [];
 
+    /// <summary>
+    /// The placeholder cover's "Vol N": the highest volume number tracked, 1 with none.
+    /// </summary>
+    // The highest number, not the tracked count: a bonus volume (7.5) makes the count run
+    // one past the last volume.
+    private decimal LatestVolumeNumber =>
+        Series.Volumes.Count == 0 ? 1 : Series.Volumes.Max(volume => volume.Number);
+
     private bool IsDescriptionLong => Series.Description is { Length: > ClampThreshold };
 
     private bool IsDescriptionExpanded => _expandedSeriesId == Series.SeriesId;
