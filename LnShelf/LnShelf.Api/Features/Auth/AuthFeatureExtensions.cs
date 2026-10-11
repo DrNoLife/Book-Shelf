@@ -37,7 +37,11 @@ public static class AuthFeatureExtensions
                 httpClient.Timeout = avatars.FetchTimeout;
                 httpClient.MaxResponseContentBufferSize = avatars.MaximumFetchBytes;
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
-            });
+            })
+            // No redirects: the address comes from the provider's signed token, but a redirect
+            // could still send this server to a host nobody vetted, internal ones included.
+            // The provider serves the picture at the address it names.
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
         }
 
         public IServiceCollection AddAuth(IConfiguration configuration, IHostEnvironment environment)

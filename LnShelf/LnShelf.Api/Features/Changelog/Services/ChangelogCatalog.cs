@@ -20,6 +20,27 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.28.0", new DateOnly(2026, 10, 11), "Your shelf, your way",
+            Features: [
+                "Pick several statuses at once in the shelf's filters, say Behind and Reading together, and filter " +
+                    "on a new Owned status for everything you own.",
+                "The shelf remembers the filters you last used on each device, and you can choose the filters it " +
+                    "opens on from \"Save as default\" in the filter panel or the new Library card on your profile.",
+                "Choose the order of Continue reading, Out now and your shelf on the front page, from the Library card " +
+                    "on your profile.",
+                "Your Google picture is now your avatar, and you can upload a different one from your profile at any " +
+                    "time. Sign out and in once to bring the Google picture over.",
+                "\"Sync now\" under the sync note in the sidebar, and on the phone in your profile, refreshes your " +
+                    "shelf without waiting for the night.",
+            ],
+            Improvements: [
+                "A series moves to Reading when you start it and to Completed when it has finished publishing and " +
+                    "you have read everything that is out. A status you set yourself, like Dropped, is never changed.",
+            ],
+            Fixes: [
+                "Covers show again on a shared shelf.",
+            ]
+        ),
         new("0.27.0", new DateOnly(2026, 10, 11), "Bonus volumes, and English volume counts",
             Features: [
                 "Bonus volumes such as Torture Princess Vol. 7.5 now appear on the series page between the main " +

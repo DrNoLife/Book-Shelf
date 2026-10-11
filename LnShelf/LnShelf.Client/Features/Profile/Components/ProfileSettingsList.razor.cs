@@ -44,10 +44,6 @@ public partial class ProfileSettingsList : IDisposable
         ImportState.Changed += OnStateChanged;
     }
 
-    /// <summary>
-    /// Ends the session, then leaves for the static signed-out page — landing back in the app
-    /// would ask the API for the library, get a 401 and sign straight back in.
-    /// </summary>
     private async Task SyncNowAsync()
     {
         try
@@ -60,6 +56,10 @@ public partial class ProfileSettingsList : IDisposable
         }
     }
 
+    /// <summary>
+    /// Ends the session, then leaves for the static signed-out page — landing back in the app
+    /// would ask the API for the library, get a 401 and sign straight back in.
+    /// </summary>
     private async Task SignOutAsync()
     {
         _isSigningOut = true;

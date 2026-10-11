@@ -115,6 +115,12 @@ public partial class Sidebar : IDisposable
     // A run can add volumes, dates and covers, and the shelf on screen was loaded before it.
     private void OnSyncFinished() => _ = InvokeAsync(async () =>
     {
+        // Nothing on screen to refresh when no page has loaded the shelf yet.
+        if (LibraryState.Library is null)
+        {
+            return;
+        }
+
         try
         {
             await LibraryState.LoadAsync(_refreshCancellation.Token);

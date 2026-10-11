@@ -54,7 +54,9 @@ public sealed class ProfileState(HttpClient httpClient)
 
         if (response.StatusCode is HttpStatusCode.BadRequest)
         {
-            throw new HttpRequestException("That file is not an image the shelf can read.");
+            // The API says which refusal it was — too large, or not an image it can read.
+            throw new HttpRequestException(
+                await response.ReadProblemAsync(cancellationToken) ?? "That file is not an image the shelf can read.");
         }
 
         await ReadUserAsync(response, "Could not change your picture", cancellationToken);

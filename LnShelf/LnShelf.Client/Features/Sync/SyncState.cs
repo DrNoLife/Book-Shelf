@@ -69,7 +69,10 @@ public sealed class SyncState(HttpClient httpClient)
             // A 409 means a run is under way, so it is followed just the same.
             if (response.StatusCode is HttpStatusCode.Accepted or HttpStatusCode.Conflict)
             {
-                await FollowRunAsync(before, requestedAt, cancellationToken);
+                // Not the caller's token: the phone starts a sync from the profile page and the
+                // reader usually leaves it, which would end the follow and with it the shelf
+                // reload. The follow is bounded by FollowLimit and outlives no session.
+                await FollowRunAsync(before, requestedAt, CancellationToken.None);
             }
         }
         catch (HttpRequestException)

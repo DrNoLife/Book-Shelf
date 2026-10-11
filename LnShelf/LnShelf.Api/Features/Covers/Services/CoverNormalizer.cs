@@ -62,7 +62,7 @@ public sealed class CoverNormalizer(IOptions<CoverImageOptions> options, ILogger
             var normalized = await EncodeAsync(image, maximumEdge, cancellationToken);
 
             logger.LogInformation(
-                "Normalized a cover: {SourceBytes} bytes in, {NormalizedBytes} bytes out at {Width}x{Height}",
+                "Normalized an image: {SourceBytes} bytes in, {NormalizedBytes} bytes out at {Width}x{Height}",
                 source.Length, normalized.Length, image.Width, image.Height);
 
             return normalized;

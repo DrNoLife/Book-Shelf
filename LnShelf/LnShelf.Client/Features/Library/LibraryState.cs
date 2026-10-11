@@ -140,6 +140,7 @@ public sealed class LibraryState(
         }
 
         SelectedFormat = format;
+        _hasRestoredFilters = true;
         await RememberFiltersAsync();
         await ReloadAsync(refreshOverview: true, cancellationToken);
     }
@@ -181,6 +182,10 @@ public sealed class LibraryState(
         }
 
         SelectedFilters = normalized;
+
+        // A choice made before the library page first opened (a sidebar shelf on another page)
+        // is the reader's latest word, so the remembered filters must not be restored over it.
+        _hasRestoredFilters = true;
         await RememberFiltersAsync();
         await ReloadAsync(refreshOverview: false, cancellationToken);
     }
@@ -201,6 +206,7 @@ public sealed class LibraryState(
         SelectedFilters = DefaultFilters;
         SelectedFormat = null;
         TextFilter = string.Empty;
+        _hasRestoredFilters = true;
         _visibleCards = null;
         await filterMemory.ForgetAsync();
 

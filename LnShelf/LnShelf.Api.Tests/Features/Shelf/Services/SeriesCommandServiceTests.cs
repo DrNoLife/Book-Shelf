@@ -675,7 +675,7 @@ public sealed class SeriesCommandServiceTests
             [],
             NoStagedIsbns(),
             NoRefresh(),
-            TestUsers.Limits(dbContext), TimeProvider.System,NullLogger<AddSeriesPipeline>.Instance);
+            TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<AddSeriesPipeline>.Instance);
 
         var act = async () => await pipeline.RunAsync(CreateRequest(), CancellationToken.None);
 
@@ -1030,7 +1030,7 @@ public sealed class SeriesCommandServiceTests
                 ],
                 isbnBackfill ?? NoStagedIsbns(),
                 seriesSync ?? NoRefresh(),
-                TestUsers.Limits(dbContext), TimeProvider.System,NullLogger<AddSeriesPipeline>.Instance),
+                TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<AddSeriesPipeline>.Instance),
             coverStore ?? Substitute.For<ICoverStore>(),
             TimeProvider.System,
             NullLogger<SeriesCommandService>.Instance);
