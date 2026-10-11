@@ -466,7 +466,7 @@ public sealed class LibraryCardProjectionTests
         var card = ToCard(series);
 
         card.VolumeTicks.Count.ShouldBe(card.Tracked);
-        card.VolumeTicks.Select(tick => tick.Number).ShouldBe(Enumerable.Range(1, 18));
+        card.VolumeTicks.Select(tick => (int)tick.Number).ShouldBe(Enumerable.Range(1, 18));
 
         card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.Read).ShouldBe(card.Read);
         card.VolumeTicks.Count(tick => tick.Kind is VolumeTickKind.OwnedUnread).ShouldBe(1);

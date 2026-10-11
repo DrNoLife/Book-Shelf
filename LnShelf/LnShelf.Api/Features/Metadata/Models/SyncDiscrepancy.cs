@@ -40,7 +40,7 @@ public sealed class SyncDiscrepancy
     public bool ResolvedByChoice { get; set; }
 
     /// <summary>Set when the disagreement is about one specific volume.</summary>
-    public int? VolumeNumber { get; set; }
+    public decimal? VolumeNumber { get; set; }
 
     /// <summary>One line explaining what was found.</summary>
     public string? Note { get; set; }

@@ -40,7 +40,7 @@ public sealed record VolumeTickStripLayout
         {
             Visible = visible,
             HiddenCount = hidden.Count,
-            HiddenLabel = $"{hidden.Count} more — volumes {hidden[0].Number}–{hidden[^1].Number}",
+            HiddenLabel = $"{hidden.Count} more — volumes {hidden[0].Number.ToVolumeText()}–{hidden[^1].Number.ToVolumeText()}",
         };
     }
 }

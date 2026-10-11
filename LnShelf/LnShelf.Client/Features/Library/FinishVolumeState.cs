@@ -1,7 +1,7 @@
 namespace LnShelf.Client.Features.Library;
 
 /// <summary>A volume the library just marked read, with what it was before — enough to undo it.</summary>
-public sealed record FinishedVolume(Guid VolumeId, int Number, string SeriesTitle, ReadStatus PreviousStatus);
+public sealed record FinishedVolume(Guid VolumeId, decimal Number, string SeriesTitle, ReadStatus PreviousStatus);
 
 /// <summary>
 /// "I finished Vol 18" from the library, and its undo. One click marks the next volume read;

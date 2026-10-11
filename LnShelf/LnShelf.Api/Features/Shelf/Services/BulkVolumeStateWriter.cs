@@ -17,7 +17,7 @@ public static class BulkVolumeStateWriter
     /// </param>
     public static BulkVolumeStateOutcome ApplyThrough(
         Series series,
-        int throughNumber,
+        decimal throughNumber,
         ReadStatus? read,
         bool? owned,
         DateOnly? stampedOn)

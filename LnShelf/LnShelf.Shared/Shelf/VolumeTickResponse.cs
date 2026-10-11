@@ -8,7 +8,7 @@ namespace LnShelf.Shared.Shelf;
 // volume across the whole shelf, and the card query is the hot path (data-access.md).
 public sealed record VolumeTickResponse
 {
-    public required int Number { get; init; }
+    public required decimal Number { get; init; }
 
     /// <summary>Decided by the server, on the same three grounds as the card's Published.</summary>
     public required bool IsOut { get; init; }

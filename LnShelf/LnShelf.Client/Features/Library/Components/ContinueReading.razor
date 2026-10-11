@@ -23,14 +23,14 @@
                     }
                     else
                     {
-                        <span class="entry__label tabular">Vol @entry.NextVolumeNumber</span>
+                        <span class="entry__label tabular">Vol @entry.NextVolumeNumber.ToVolumeText()</span>
                     }
                 </div>
 
                 <div class="entry__body">
                     <span class="entry__kicker">
                         <FormatBadge Value="card.Format" />
-                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber of @card.Published</span>
+                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber.ToVolumeText() of @card.Published</span>
                     </span>
                     <h3 class="title-card">@card.TitleEnglish</h3>
                     <span class="entry__unread">@UnreadText(card.Backlog)</span>
@@ -40,7 +40,7 @@
                                 class="tertiary"
                                 disabled="@IsBusy"
                                 @onclick="() => Finished.InvokeAsync(entry)">
-                            Mark Vol @entry.NextVolumeNumber read<span class="visually-hidden"> of @card.TitleEnglish</span>
+                            Mark Vol @entry.NextVolumeNumber.ToVolumeText() read<span class="visually-hidden"> of @card.TitleEnglish</span>
                         </button>
                         <a class="secondary" href="@($"/series/{card.SeriesId}")">
                             Open <span class="visually-hidden">@card.TitleEnglish</span>

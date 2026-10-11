@@ -34,7 +34,7 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
     public Task<SeriesDetailResponse?> ChooseSourceAsync(
         Guid seriesId,
         SyncDiscrepancyField field,
-        int? volumeNumber,
+        decimal? volumeNumber,
         MetadataSourceName source,
         CancellationToken cancellationToken = default) =>
         WriteAsync(
@@ -47,11 +47,11 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
     public async Task<SeriesDetailResponse?> ResetSourceAsync(
         Guid seriesId,
         SyncDiscrepancyField field,
-        int? volumeNumber,
+        decimal? volumeNumber,
         CancellationToken cancellationToken = default)
     {
         var query = volumeNumber is { } number
-            ? $"field={field}&volumeNumber={number}"
+            ? $"field={field}&volumeNumber={number.ToVolumeText()}"
             : $"field={field}";
 
         using var response = await httpClient.DeleteAsync(
@@ -107,7 +107,7 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
     /// <summary>"Mark 1–N read" / "Mark 1–N owned".</summary>
     public async Task<SeriesDetailResponse?> MarkThroughAsync(
         Guid seriesId,
-        int throughNumber,
+        decimal throughNumber,
         ReadStatus? read,
         bool? owned,
         CancellationToken cancellationToken = default)

@@ -31,10 +31,10 @@ public partial class SeriesActionsSheet
     ];
 
     /// <summary>The run of volumes already read, plus one — the toolbar's own rule.</summary>
-    private int? ReadThrough =>
+    private decimal? ReadThrough =>
         VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.ReadStatus is ReadStatus.Read);
 
-    private int? OwnedThrough => VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.Owned);
+    private decimal? OwnedThrough => VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.Owned);
 
     /// <summary>
     /// Sets this series' override, as the desktop toolbar does; select mode goes when the

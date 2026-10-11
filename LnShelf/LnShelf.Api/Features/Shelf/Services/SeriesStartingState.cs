@@ -78,7 +78,11 @@ public sealed record SeriesStartingState
 
     private void EnsureWithinVolumeCount(Series series)
     {
-        var knownCount = series.Volumes.Max(volume => (int?)volume.Number);
+        // The highest main volume, which is what "own 9" counts to: a bonus Vol. 7.5 rides
+        // along inside it rather than making the series ten long.
+        var knownCount = series.Volumes
+            .Where(volume => !volume.Number.IsBonusVolume)
+            .Max(volume => (int?)volume.Number);
 
         if (knownCount is { } volumeCount && OwnedCount > volumeCount)
         {
@@ -103,6 +107,7 @@ public sealed record SeriesStartingState
     private void AddMissingVolumes(Series series)
     {
         var missingNumbers = Enumerable.Range(1, OwnedCount)
+            .Select(number => (decimal)number)
             .Except(series.Volumes.Select(volume => volume.Number))
             .ToList();
 

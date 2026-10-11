@@ -54,6 +54,6 @@ public sealed class SilentIsbnCandidateSource : IIsbnCandidateSource
 {
     public string SourceName => "EndToEndIsbnCandidates";
 
-    public Task<IsbnCandidates> FindAsync(string seriesTitle, int volumeNumber, CancellationToken cancellationToken) =>
+    public Task<IsbnCandidates> FindAsync(string seriesTitle, decimal volumeNumber, CancellationToken cancellationToken) =>
         Task.FromResult(IsbnCandidates.None);
 }

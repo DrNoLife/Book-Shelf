@@ -233,7 +233,7 @@ public sealed class AddSeriesPipelineTests
     [
         .. series.Volumes
             .Where(volume => volume.UserState?.ReadStatus is ReadStatus.Read)
-            .Select(volume => volume.Number)
+            .Select(volume => (int)volume.Number)
             .Order(),
     ];
 
@@ -241,7 +241,7 @@ public sealed class AddSeriesPipelineTests
     [
         .. series.Volumes
             .Where(volume => volume.UserState?.Owned is true)
-            .Select(volume => volume.Number)
+            .Select(volume => (int)volume.Number)
             .Order(),
     ];
 

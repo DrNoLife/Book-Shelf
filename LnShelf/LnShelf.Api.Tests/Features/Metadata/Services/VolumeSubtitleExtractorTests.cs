@@ -90,6 +90,15 @@ public sealed class VolumeSubtitleExtractorTests
         // bonus volume's record captioned volume 7 ".5".
         VolumeSubtitleExtractor.Extract(recordTitle, 7).ShouldBe(expected);
 
+    [Theory]
+    // The number arrives as text because an attribute cannot carry a decimal.
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)", "7.5", "")]
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7. 5", "7.5", "")]
+    [InlineData("Classroom of the Elite, Vol. 11.5: Short Stories", "11.5", "Short Stories")]
+    public void Extract_ABonusVolume_CutsAfterItsWholeNumber(string recordTitle, string volumeNumber, string expected) =>
+        VolumeSubtitleExtractor.Extract(recordTitle, decimal.Parse(volumeNumber, CultureInfo.InvariantCulture))
+            .ShouldBe(expected);
+
     [Fact]
     public void Extract_ANumberInsideALargerOne_IsNotMistakenForTheMarker()
     {

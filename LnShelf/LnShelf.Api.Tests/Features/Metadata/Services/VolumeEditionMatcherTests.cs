@@ -158,6 +158,32 @@ public sealed class VolumeEditionMatcherTests
         VolumeEditionMatcher.ConfirmsMedium(Format.LightNovel, Edition(null)).ShouldBeFalse();
 
     [Theory]
+    // A bonus volume between 7 and 8. Normalising turns the point into a space ("vol 7 5"),
+    // and read as 7 it handed volume 7 the bonus volume's cover. Both sources' spellings
+    // are real: Apple writes "Vol. 7.5", Open Library "Vol. 7. 5".
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)")]
+    [InlineData("Torture Princess: Fremd Torturchen, Vol. 7. 5")]
+    public void TryMatchVolumeNumber_ABonusVolume_ReadsItsFraction(string recordTitle)
+    {
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber("Torture Princess: Fremd Torturchen", Format.LightNovel, recordTitle, out var number)
+            .ShouldBeTrue();
+
+        number.ShouldBe(7.5m);
+    }
+
+    [Fact]
+    public void Matches_ABonusVolume_IsItsOwnVolumeAndNotTheOneBeforeIt()
+    {
+        const string BonusTitle = "Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)";
+
+        VolumeEditionMatcher.Matches("Torture Princess: Fremd Torturchen", 7.5m, Format.LightNovel, BonusTitle)
+            .ShouldBeTrue();
+        VolumeEditionMatcher.Matches("Torture Princess: Fremd Torturchen", 7m, Format.LightNovel, BonusTitle)
+            .ShouldBeFalse();
+    }
+
+    [Theory]
     // Apple Books' own titles, verbatim from a captured search. The store writes the
     // series name with two hyphens where the shelf holds a horizontal bar, and
     // TitleNormalizer folds both.
@@ -195,9 +221,6 @@ public sealed class VolumeEditionMatcherTests
     [InlineData("86―EIGHTY-SIX",
         "Saving 80,000 Gold in Another World for my Retirement Volume 6 (light novel)")]
 
-    // A bonus volume, which is not volume 7 however its fraction is spelled.
-    [InlineData("Torture Princess: Fremd Torturchen",
-        "Torture Princess: Fremd Torturchen, Vol. 7.5 (light novel)")]
     public void TryMatchVolumeNumber_ARecordThatIsNotThisSeriesVolume_ReadsNothing(
         string seriesTitle,
         string recordTitle) =>

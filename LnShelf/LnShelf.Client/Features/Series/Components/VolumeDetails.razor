@@ -72,7 +72,7 @@
     @if (IsBuyable(Volume))
     {
         <a class="primary button--large" href="@SaxoSearch.UrlFor(SeriesTitle, Volume.Number)" target="_blank" rel="noopener noreferrer">
-            Buy Vol @Volume.Number on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+            Buy Vol @Volume.Number.ToVolumeText() on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
         </a>
     }
 

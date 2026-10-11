@@ -115,7 +115,7 @@ public sealed class VolumeReadDateCommandService(
     {
         if (volume.UserState is not { ReadStatus: ReadStatus.Read })
         {
-            throw new InvalidInputException($"Volume {volume.Number} is not marked read.");
+            throw new InvalidInputException($"Volume {volume.Number.ToVolumeText()} is not marked read.");
         }
     }
 }

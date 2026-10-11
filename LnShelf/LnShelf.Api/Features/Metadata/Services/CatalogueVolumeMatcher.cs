@@ -47,7 +47,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
         var normalizedSeriesTitle = NormalizedTitle.From(catalogueTitle);
 
         var tracked = series.Volumes.Select(volume => volume.Number).ToHashSet();
-        var byVolumeNumber = new Dictionary<int, CatalogueVolume>();
+        var byVolumeNumber = new Dictionary<decimal, CatalogueVolume>();
         var highestConfirmed = 0;
 
         foreach (var record in catalogue)
@@ -62,9 +62,11 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
 
             var confirmsMedium = VolumeEditionMatcher.ConfirmsMedium(series.Format, recordTitle);
 
-            if (confirmsMedium && number > highestConfirmed)
+            // A bonus volume says nothing about how many main volumes there are: Vol. 7.5 sits
+            // inside a nine-volume series, and counting it would make the series ten long.
+            if (confirmsMedium && !number.IsBonusVolume && number > highestConfirmed)
             {
-                highestConfirmed = number;
+                highestConfirmed = (int)number;
             }
 
             if (!tracked.Contains(number) || byVolumeNumber.ContainsKey(number))
@@ -101,10 +103,10 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
 public sealed record CatalogueMatch
 {
     /// <summary>The record for each volume number the shelf tracks and the store confirmed.</summary>
-    public required IReadOnlyDictionary<int, CatalogueVolume> ByVolumeNumber { get; init; }
+    public required IReadOnlyDictionary<decimal, CatalogueVolume> ByVolumeNumber { get; init; }
 
     /// <summary>
-    /// The highest volume number the store positively confirms for this series, tracked or
+    /// The highest main volume number the store positively confirms for this series, tracked or
     /// not. Zero when it confirms none.
     /// </summary>
     public required int HighestConfirmedNumber { get; init; }

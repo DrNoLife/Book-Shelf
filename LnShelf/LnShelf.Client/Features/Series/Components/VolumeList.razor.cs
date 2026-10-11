@@ -48,7 +48,7 @@ public partial class VolumeList
     private static string AccessibleLabel(VolumeResponse volume, VolumeTileState state)
     {
         var edition = volume.Owned ? $", {volume.OwnedFormat?.ToString() ?? "owned"}" : string.Empty;
-        return $"Volume {volume.Number}, {VolumeTileStateMap.NameFor(state).ToLowerInvariant()}{edition}";
+        return $"Volume {volume.Number.ToVolumeText()}, {VolumeTileStateMap.NameFor(state).ToLowerInvariant()}{edition}";
     }
 
     /// <summary>

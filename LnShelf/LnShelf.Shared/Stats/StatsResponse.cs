@@ -50,7 +50,7 @@ public sealed record RecentlyReadResponse
 {
     public required Guid SeriesId { get; init; }
     public required string SeriesTitle { get; init; }
-    public required int VolumeNumber { get; init; }
+    public required decimal VolumeNumber { get; init; }
     public required DateOnly ReadAt { get; init; }
 }
 

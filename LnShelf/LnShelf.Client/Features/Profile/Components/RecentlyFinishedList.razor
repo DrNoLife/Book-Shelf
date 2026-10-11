@@ -15,7 +15,7 @@
                 <li class="row" @key="(read.SeriesId, read.VolumeNumber)">
                     <span class="row__title">
                         <a href="@($"/series/{read.SeriesId}")">@read.SeriesTitle</a>
-                        <span class="row__volume tabular">· Vol @read.VolumeNumber</span>
+                        <span class="row__volume tabular">· Vol @read.VolumeNumber.ToVolumeText()</span>
                     </span>
                     <span class="row__date tabular">@read.ReadAt.Full</span>
                 </li>

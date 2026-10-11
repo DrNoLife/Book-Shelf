@@ -34,7 +34,7 @@ public sealed class SourceChoiceApplier
                 // The shelf's own list is the count: every synced volume is out. Nothing is
                 // deleted or created, and the user's own act raises no badge.
                 ReleaseCountWriter.MarkReleasedThrough(
-                    series, series.Volumes.Max(volume => (int?)volume.Number) ?? 0, run: null, includeLocalOnly: false);
+                    series, series.Volumes.Max(volume => (decimal?)volume.Number) ?? 0, run: null, includeLocalOnly: false);
                 break;
 
             case { Field: SyncDiscrepancyField.Status, Source: MetadataSourceName.MangaUpdates }:

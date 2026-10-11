@@ -12,7 +12,7 @@ namespace LnShelf.Client.Features.Upcoming;
 public sealed record BoughtSeries(UpcomingEntryResponse Entry, IReadOnlyList<BoughtVolume> Volumes);
 
 /// <summary>One volume "I bought Vol 13" marked owned.</summary>
-public sealed record BoughtVolume(Guid VolumeId, int Number);
+public sealed record BoughtVolume(Guid VolumeId, decimal Number);
 
 /// <summary>
 /// "I bought Vol 13" on an out-now card, and its undo. One click marks the line's first

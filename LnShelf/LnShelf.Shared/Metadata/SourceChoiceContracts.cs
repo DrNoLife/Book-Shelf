@@ -9,7 +9,7 @@ public sealed record ChooseSourceRequest
     public required SyncDiscrepancyField Field { get; init; }
 
     /// <summary>Set exactly when the field is per volume (ReleaseDate).</summary>
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
 
     public required MetadataSourceName Source { get; init; }
 }
@@ -18,6 +18,6 @@ public sealed record ChooseSourceRequest
 public sealed record SourceChoiceResponse
 {
     public required SyncDiscrepancyField Field { get; init; }
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
     public required MetadataSourceName Source { get; init; }
 }

@@ -72,7 +72,7 @@ public sealed record SyncDiscrepancyResponse
     /// <summary>True when <see cref="ResolvedWith"/> is the user's pick, not the precedence list's.</summary>
     public bool ResolvedByChoice { get; init; }
 
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
     public string? Note { get; init; }
 
     public bool NeedsReview => ResolvedWith is null;

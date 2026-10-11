@@ -38,7 +38,7 @@ public sealed class SourceChoicesController(
     public async Task<ActionResult<SeriesDetailResponse>> ResetAsync(
         Guid seriesId,
         [FromQuery] SyncDiscrepancyField? field,
-        [FromQuery] int? volumeNumber,
+        [FromQuery] decimal? volumeNumber,
         CancellationToken cancellationToken)
     {
         // A missing field must not bind to the enum's zero value and quietly reset the volume

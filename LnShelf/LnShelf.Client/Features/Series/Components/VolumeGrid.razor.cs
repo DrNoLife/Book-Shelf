@@ -115,7 +115,7 @@ public partial class VolumeGrid
         }
 
         var rect = await JavaScript.InvokeAsync<TileRect?>(
-            "lnshelf.tileRect", _gridElement, volume.Number);
+            "lnshelf.tileRect", _gridElement, volume.Number.ToVolumeText());
 
         if (rect is null)
         {
@@ -141,11 +141,11 @@ public partial class VolumeGrid
         // the arrow keys would stop working.
         if (closing is not null && OpenVolumeNumber(closing.Value) is { } number)
         {
-            await JavaScript.InvokeVoidAsync("lnshelf.focusVolumeTile", _gridElement, number);
+            await JavaScript.InvokeVoidAsync("lnshelf.focusVolumeTile", _gridElement, number.ToVolumeText());
         }
     }
 
-    private int? OpenVolumeNumber(Guid volumeId) =>
+    private decimal? OpenVolumeNumber(Guid volumeId) =>
         Series.Volumes.FirstOrDefault(volume => volume.VolumeId == volumeId)?.Number;
 
     private async Task OnCoverPickRequestedAsync(VolumeResponse volume)
@@ -231,6 +231,6 @@ public partial class VolumeGrid
         }
 
         await JavaScript.InvokeVoidAsync(
-            "lnshelf.focusVolumeTile", _gridElement, ordered[target].Number);
+            "lnshelf.focusVolumeTile", _gridElement, ordered[target].Number.ToVolumeText());
     }
 }

@@ -67,5 +67,5 @@
     public required ComingTimeline Timeline { get; set; }
 
     // Each dated line is one volume, so the series and its number make the key.
-    private static string Key(UpcomingEntryResponse entry) => $"{entry.SeriesId}-{entry.VolumeNumbers[0]}";
+    private static string Key(UpcomingEntryResponse entry) => $"{entry.SeriesId}-{entry.VolumeNumbers[0].ToVolumeText()}";
 }

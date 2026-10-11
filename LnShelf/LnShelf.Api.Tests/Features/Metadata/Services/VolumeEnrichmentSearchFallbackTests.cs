@@ -113,7 +113,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         // The direct lookup is the cheap, unambiguous path. Searching anyway would spend a
         // request to answer a question already answered.
         await candidateSource.DidNotReceive()
-            .FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+            .FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
             .EnrichAsync(series, Run(), Today, new LookupBudget(2), CancellationToken.None);
 
         await candidateSource.DidNotReceive()
-            .FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+            .FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>());
     }
 
     private static VolumeEnrichmentService CreateService(

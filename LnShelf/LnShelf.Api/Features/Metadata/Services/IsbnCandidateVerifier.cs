@@ -43,7 +43,7 @@ public sealed class IsbnCandidateVerifier(IVolumeEnrichmentSource enrichmentSour
     /// </returns>
     public async Task<IsbnCandidateVerification?> VerifyAsync(
         string seriesTitle,
-        int volumeNumber,
+        decimal volumeNumber,
         Format format,
         string candidateIsbn,
         CancellationToken cancellationToken)

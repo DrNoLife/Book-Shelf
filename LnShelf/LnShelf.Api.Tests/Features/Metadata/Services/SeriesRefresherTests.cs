@@ -109,8 +109,23 @@ public sealed class SeriesRefresherTests
 
         var run = await RefreshAsync(series, Info(volumeCount: 10, isCompleted: false));
 
-        series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 10));
+        series.Volumes.Select(volume => (int)volume.Number).Order().ShouldBe(Enumerable.Range(1, 10));
         run.NewVolumes.ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_ABonusVolumeOnTopOfTheCount_IsNeitherADiscrepancyNorLeftUnreleased()
+    {
+        // Torture Princess: MangaUpdates says "9 Volumes + 1 Extra", which reads as nine, and
+        // the shelf tracks 1–9 plus the bonus Vol. 7.5. That is agreement, not a tenth volume.
+        var series = CreateSeries(volumeCount: 9, PublicationStatus.Completed);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m });
+
+        var run = await RefreshAsync(series, Info(volumeCount: 9, isCompleted: true));
+
+        run.Discrepancies.ShouldBeEmpty();
+        run.NewVolumes.ShouldBe(0);
+        series.Volumes.Single(volume => volume.Number == 7.5m).IsReleased.ShouldBeTrue();
     }
 
     [Fact]

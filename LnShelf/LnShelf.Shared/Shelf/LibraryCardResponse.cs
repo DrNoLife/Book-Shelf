@@ -39,7 +39,7 @@ public sealed record LibraryCardResponse
     public required int Tracked { get; init; }
 
     /// <summary>Lowest to-buy volume number — feeds the "Vol 12 on Saxo" CTA. Null when caught up.</summary>
-    public int? NextToBuyNumber { get; init; }
+    public decimal? NextToBuyNumber { get; init; }
 
     /// <summary>
     /// The lowest-numbered volume that is owned and not read — what "Continue reading" offers
@@ -50,7 +50,7 @@ public sealed record LibraryCardResponse
     public Guid? NextToReadVolumeId { get; init; }
 
     /// <summary>The number of <see cref="NextToReadVolumeId"/>'s volume. Null when nothing is waiting.</summary>
-    public int? NextToReadNumber { get; init; }
+    public decimal? NextToReadNumber { get; init; }
 
     /// <summary>
     /// The earliest date a volume that is not out yet carries. Null when no source has

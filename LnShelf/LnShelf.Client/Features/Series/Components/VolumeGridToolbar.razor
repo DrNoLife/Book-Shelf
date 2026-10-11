@@ -79,11 +79,11 @@
            needed volume into "Vol 12 on Saxo". *@
         <button type="button" class="secondary desktop-only" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
                 @onclick="MarkReadThroughAsync">
-            Mark 1–@ReadThrough read
+            Mark 1–@(ReadThrough?.ToVolumeText()) read
         </button>
         <button type="button" class="secondary desktop-only" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
                 @onclick="MarkOwnedThroughAsync">
-            Mark 1–@OwnedThrough owned
+            Mark 1–@(OwnedThrough?.ToVolumeText()) owned
         </button>
     }
 

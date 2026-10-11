@@ -79,10 +79,10 @@ public partial class VolumeGridToolbar
     /// The next sensible "mark 1–N read": the run of volumes already read, plus one.
     /// Null when everything out has been read.
     /// </summary>
-    private int? ReadThrough =>
+    private decimal? ReadThrough =>
         VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.ReadStatus is ReadStatus.Read);
 
-    private int? OwnedThrough => VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.Owned);
+    private decimal? OwnedThrough => VolumeRuns.NextRunEnd(Series.Volumes, volume => volume.Owned);
 
     /// <summary>
     /// Choosing a view on a series sets that series' override, which is the point: the

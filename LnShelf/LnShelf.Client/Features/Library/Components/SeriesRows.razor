@@ -50,7 +50,7 @@
                        does; the volume it points at is named in the tooltip. *@
                     <a class="row__buy"
                        href="@SaxoSearch.UrlFor(card.TitleEnglish, nextToBuy)"
-                       title="@($"Vol {nextToBuy} on Saxo")"
+                       title="@($"Vol {nextToBuy.ToVolumeText()} on Saxo")"
                        target="_blank"
                        rel="noopener noreferrer">
                         Out now <Icon Name="IconName.ArrowUpRight" Size="10" />

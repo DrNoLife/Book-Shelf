@@ -22,7 +22,7 @@ public sealed class SourceChoice
     /// <summary>Set exactly when the field is per volume (ReleaseDate).</summary>
     // A number, not a VolumeId: it is the key SyncDiscrepancy already uses, and (SeriesId,
     // Number) is unique on Volume, so the two join without translation.
-    public int? VolumeNumber { get; set; }
+    public decimal? VolumeNumber { get; set; }
 
     public MetadataSourceName Source { get; set; }
 

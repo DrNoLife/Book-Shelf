@@ -11,7 +11,7 @@ public sealed record IsbnDiscoveryRow
 {
     public required Guid SeriesId { get; init; }
     public required string SeriesTitle { get; init; }
-    public required int VolumeNumber { get; init; }
+    public required decimal VolumeNumber { get; init; }
 
     /// <summary>The proposed ISBN, or null when nothing survived verification.</summary>
     public string? Isbn { get; init; }

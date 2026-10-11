@@ -21,11 +21,11 @@
     <div class="actions__group">
         <button type="button" class="secondary button--large" disabled="@(SeriesState.IsSaving || ReadThrough is null)"
                 @onclick="MarkReadThroughAsync">
-            @(ReadThrough is { } readThrough ? $"Mark 1–{readThrough} read" : "Everything out is read")
+            @(ReadThrough is { } readThrough ? $"Mark 1–{readThrough.ToVolumeText()} read" : "Everything out is read")
         </button>
         <button type="button" class="secondary button--large" disabled="@(SeriesState.IsSaving || OwnedThrough is null)"
                 @onclick="MarkOwnedThroughAsync">
-            @(OwnedThrough is { } ownedThrough ? $"Mark 1–{ownedThrough} owned" : "Everything out is owned")
+            @(OwnedThrough is { } ownedThrough ? $"Mark 1–{ownedThrough.ToVolumeText()} owned" : "Everything out is owned")
         </button>
     </div>
 

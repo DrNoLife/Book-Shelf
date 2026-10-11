@@ -8,7 +8,7 @@ namespace LnShelf.Client;
 // into two different queries. No affiliate plumbing behind it; it is a search URL.
 public static class SaxoSearch
 {
-    public static string UrlFor(string title, int volumeNumber) =>
+    public static string UrlFor(string title, decimal volumeNumber) =>
         "https://www.saxo.com/dk/products/search?query="
-        + Uri.EscapeDataString($"{title} {volumeNumber}");
+        + Uri.EscapeDataString($"{title} {volumeNumber.ToVolumeText()}");
 }

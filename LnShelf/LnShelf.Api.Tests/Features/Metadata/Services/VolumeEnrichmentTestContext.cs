@@ -96,7 +96,7 @@ internal static class VolumeEnrichmentTestContext
     {
         var source = Substitute.For<IIsbnCandidateSource>();
         source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        source.FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>())
             .Returns(IsbnCandidates.None);
 
         return source;
@@ -106,7 +106,7 @@ internal static class VolumeEnrichmentTestContext
     {
         var source = Substitute.For<IIsbnCandidateSource>();
         source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        source.FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>())
             .Returns(new IsbnCandidates { WorksFound = 1, Isbns = isbns });
 
         return source;

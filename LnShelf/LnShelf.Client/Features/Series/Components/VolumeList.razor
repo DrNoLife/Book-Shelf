@@ -25,7 +25,7 @@
                to survive a save, and space must not also fire the native click. *@
             <button type="button"
                     class="row @StateClass(state)"
-                    data-volume="@volume.Number"
+                    data-volume="@volume.Number.ToVolumeText()"
                     aria-haspopup="menu"
                     aria-label="@AccessibleLabel(volume, state)"
                     aria-disabled="@((!IsInteractive).ToAriaState())"
@@ -37,7 +37,7 @@
                    row without keep every other column aligned. Nothing is printed when
                    there is no title — no placeholder, no dash. *@
                 <span class="cell cell--number">
-                    <span class="tabular">Vol @volume.Number</span>
+                    <span class="tabular">Vol @volume.Number.ToVolumeText()</span>
                     @if (ShowTitles && !string.IsNullOrWhiteSpace(volume.Title))
                     {
                         <span class="row__title">@volume.Title</span>

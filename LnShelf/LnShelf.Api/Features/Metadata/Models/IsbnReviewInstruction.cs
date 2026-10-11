@@ -9,6 +9,6 @@ namespace LnShelf.Api.Features.Metadata.Models;
 public sealed record IsbnReviewInstruction
 {
     public required Guid SeriesId { get; init; }
-    public required int VolumeNumber { get; init; }
+    public required decimal VolumeNumber { get; init; }
     public required string Isbn { get; init; }
 }

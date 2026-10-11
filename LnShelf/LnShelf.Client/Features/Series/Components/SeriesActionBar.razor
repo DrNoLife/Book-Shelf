@@ -12,7 +12,7 @@
                     class="tertiary button--thumb action-bar__mark"
                     disabled="@SeriesState.IsSaving"
                     @onclick="() => MarkReadAsync(next)">
-                Mark Vol @next.Number read
+                Mark Vol @next.Number.ToVolumeText() read
             </button>
         }
 
@@ -22,8 +22,8 @@
                href="@SaxoSearch.UrlFor(Series.TitleEnglish, nextToBuy)"
                target="_blank"
                rel="noopener noreferrer"
-               aria-label="@($"Buy Vol {nextToBuy} on Saxo")">
-                Buy @nextToBuy <Icon Name="IconName.ArrowUpRight" Size="12" />
+               aria-label="@($"Buy Vol {nextToBuy.ToVolumeText()} on Saxo")">
+                Buy @nextToBuy.ToVolumeText() <Icon Name="IconName.ArrowUpRight" Size="12" />
             </a>
         }
     </div>

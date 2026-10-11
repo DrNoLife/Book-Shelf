@@ -29,7 +29,7 @@ public sealed record SetVolumeOwnedRequest
 public sealed record BulkVolumeStateRequest
 {
     /// <summary>Volumes 1..N inclusive.</summary>
-    public required int ThroughNumber { get; init; }
+    public required decimal ThroughNumber { get; init; }
 
     /// <summary>Null leaves read status alone.</summary>
     public ReadStatus? Read { get; init; }

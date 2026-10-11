@@ -22,7 +22,7 @@ public sealed record SourceConflictResponse
     public required SyncDiscrepancyField Field { get; init; }
 
     /// <summary>Set when the disagreement is about one volume.</summary>
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
 
     public required IReadOnlyList<SourceOptionResponse> Options { get; init; }
 

@@ -6,7 +6,7 @@ namespace LnShelf.Shared.Shelf;
 public sealed record VolumeResponse
 {
     public required Guid VolumeId { get; init; }
-    public required int Number { get; init; }
+    public required decimal Number { get; init; }
 
     /// <summary>Null when no source knows the date, which is most volumes.</summary>
     public DateOnly? ReleaseDate { get; init; }

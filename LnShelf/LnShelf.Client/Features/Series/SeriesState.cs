@@ -190,7 +190,7 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
 
     /// <summary>"Mark 1–N read" / "Mark 1–N owned".</summary>
     public Task MarkThroughAsync(
-        int throughNumber,
+        decimal throughNumber,
         ReadStatus? read,
         bool? owned,
         CancellationToken cancellationToken = default) =>
@@ -295,7 +295,7 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
             {
                 CoverVersion++;
                 ReplaceSeries(updated);
-                Message = $"Cover set for volume {volume.Number}.";
+                Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
             }
         });
     }

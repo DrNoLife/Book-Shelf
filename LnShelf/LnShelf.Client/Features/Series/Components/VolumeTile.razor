@@ -20,7 +20,7 @@
             aria-haspopup="@(IsSelectMode ? null : "menu")"
             aria-disabled="@((!IsInteractive).ToAriaState())"
             title="@ReadDateText"
-            data-volume="@Volume.Number"
+            data-volume="@Volume.Number.ToVolumeText()"
             @onclick="OnClickAsync"
             @onkeydown="OnKeyDownAsync"
             @onkeyup:preventDefault
@@ -74,7 +74,7 @@
        is true about this volume. Its height is reserved, so tiles with and without a
        state label still line up (design.md — the caption line). *@
     <span class="tile__caption @(Label is null ? null : "tile__caption--stated")">
-        <span class="tabular">Vol @Volume.Number</span>@foreach (var part in CaptionParts)
+        <span class="tabular">Vol @Volume.Number.ToVolumeText()</span>@foreach (var part in CaptionParts)
         {
             <span class="tile__caption-part"> · @part</span>
         }

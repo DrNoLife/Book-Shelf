@@ -18,5 +18,5 @@ public interface ISourceChoiceCommandService
     /// success.
     /// </returns>
     Task<SeriesDetailResponse?> ResetAsync(
-        Guid seriesId, SyncDiscrepancyField field, int? volumeNumber, CancellationToken cancellationToken);
+        Guid seriesId, SyncDiscrepancyField field, decimal? volumeNumber, CancellationToken cancellationToken);
 }

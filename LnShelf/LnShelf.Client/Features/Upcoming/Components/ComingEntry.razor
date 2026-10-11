@@ -12,7 +12,7 @@
     <span class="entry__text">
         <span class="entry__title">@Entry.SeriesTitle</span>
         <span class="entry__when tabular">
-            Vol @Entry.VolumeNumbers[0] · @DateText@if (Entry.VolumeTitle is { } volumeTitle)
+            Vol @Entry.VolumeNumbers[0].ToVolumeText() · @DateText@if (Entry.VolumeTitle is { } volumeTitle)
             {
                 <span class="entry__subtitle"> · @volumeTitle</span>
             }

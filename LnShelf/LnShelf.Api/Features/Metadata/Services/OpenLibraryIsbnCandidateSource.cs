@@ -26,20 +26,20 @@ public sealed class OpenLibraryIsbnCandidateSource(
     // So both working forms are tried and their ISBNs unioned: Open Library titles the
     // English editions "<series> N" and the light-novel editions "<series>, Vol. N", and
     // neither form finds the other. Two requests a volume is the price of that.
-    private static IEnumerable<string> QueriesFor(string seriesTitle, int volumeNumber)
+    private static IEnumerable<string> QueriesFor(string seriesTitle, decimal volumeNumber)
     {
         // Bare number, unquoted. Loose on purpose — every candidate is verified by ISBN
         // afterwards, and VolumeEditionMatcher throws out anything that is not this
         // series' volume N.
-        yield return $"{seriesTitle} {volumeNumber}";
+        yield return $"{seriesTitle} {volumeNumber.ToVolumeText()}";
 
         // Quoted, because "Vol." unquoted matches every volume of everything.
-        yield return $"\"{seriesTitle}, Vol. {volumeNumber}\"";
+        yield return $"\"{seriesTitle}, Vol. {volumeNumber.ToVolumeText()}\"";
     }
 
     public async Task<IsbnCandidates> FindAsync(
         string seriesTitle,
-        int volumeNumber,
+        decimal volumeNumber,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(seriesTitle);

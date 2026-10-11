@@ -30,7 +30,7 @@ public sealed class SourceChoiceCommandService(
 
         if (request.VolumeNumber is { } number && series.Volumes.All(volume => volume.Number != number))
         {
-            throw new InvalidInputException($"This series has no volume {number}.");
+            throw new InvalidInputException($"This series has no volume {number.ToVolumeText()}.");
         }
 
         var recorded = await dbContext.SyncRuns.NewestDisagreementAsync(
@@ -77,7 +77,7 @@ public sealed class SourceChoiceCommandService(
     public async Task<SeriesDetailResponse?> ResetAsync(
         Guid seriesId,
         SyncDiscrepancyField field,
-        int? volumeNumber,
+        decimal? volumeNumber,
         CancellationToken cancellationToken)
     {
         EnsureChoosable(field, volumeNumber);
@@ -105,7 +105,7 @@ public sealed class SourceChoiceCommandService(
         return await seriesDetailQueryService.GetAsync(seriesId, cancellationToken);
     }
 
-    private static void EnsureChoosable(SyncDiscrepancyField field, int? volumeNumber)
+    private static void EnsureChoosable(SyncDiscrepancyField field, decimal? volumeNumber)
     {
         if (!Enum.IsDefined(field) || field is SyncDiscrepancyField.SeriesLink)
         {

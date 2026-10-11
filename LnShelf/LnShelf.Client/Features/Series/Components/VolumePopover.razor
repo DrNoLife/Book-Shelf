@@ -5,13 +5,13 @@
 <div class="panel-popover @(HasDescription ? "panel-popover--described" : null) @(Placement.FlippedVertically ? "panel-popover--above" : null)"
      style="left: @(Placement.Left.ToString("0.##", CultureInfo.InvariantCulture))px; top: @(Placement.Top.ToString("0.##", CultureInfo.InvariantCulture))px;"
      role="dialog"
-     aria-label="@($"Volume {Volume.Number}")"
+     aria-label="@($"Volume {Volume.Number.ToVolumeText()}")"
      @ref="_menuElement"
      @onkeydown="OnKeyDownAsync"
      @onfocusout="OnFocusOutAsync">
 
     <div class="head">
-        <h3 class="head__title">Vol @Volume.Number</h3>
+        <h3 class="head__title">Vol @Volume.Number.ToVolumeText()</h3>
         @if (Volume.ReleaseDate is { } releaseDate)
         {
             <span class="head__date tabular">@releaseDate.Full</span>

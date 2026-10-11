@@ -97,7 +97,7 @@ public static class LibraryCardProjection
                     ((volume.ReleaseDate != null && volume.ReleaseDate <= today) || volume.IsReleased)
                     && (volume.UserState == null || !volume.UserState.Owned))
                 .OrderBy(volume => volume.Number)
-                .Select(volume => (int?)volume.Number)
+                .Select(volume => (decimal?)volume.Number)
                 .FirstOrDefault(),
 
             // The next volume to read: owned and not read, lowest number first — the same
@@ -119,7 +119,7 @@ public static class LibraryCardProjection
                     && volume.UserState.Owned
                     && volume.UserState.ReadStatus != ReadStatus.Read)
                 .OrderBy(volume => volume.Number)
-                .Select(volume => (int?)volume.Number)
+                .Select(volume => (decimal?)volume.Number)
                 .FirstOrDefault(),
 
             // The soonest date still ahead of us — the rows view's next-volume column

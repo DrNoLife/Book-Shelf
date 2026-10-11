@@ -12,7 +12,16 @@ public sealed class Volume
     /// <summary>The owning series. Loaded only where a query needs it; the owner filter reads it.</summary>
     public Series? Series { get; set; }
 
-    public int Number { get; set; }
+    /// <summary>
+    /// The volume's place in the series: 7 for a main volume, 7.5 for a bonus volume
+    /// published between 7 and 8.
+    /// </summary>
+    // A decimal because bonus volumes are numbered that way by their publishers (Torture
+    // Princess Vol. 7.5, Classroom of the Elite Vol. 11.5), and the number is what every
+    // source matches on and what the grid sorts by. An int plus a separate "part" would make
+    // 7 and 7.5 collide silently at every lookup by number. Shown through ToVolumeText,
+    // never interpolated, so a Danish browser does not print "7,5".
+    public decimal Number { get; set; }
 
     /// <summary>Null means the date is unknown — announced, or simply unrecorded.</summary>
     public DateOnly? ReleaseDate { get; set; }

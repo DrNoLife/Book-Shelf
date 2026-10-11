@@ -19,7 +19,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public static class VolumeEditionMatcher
 {
     /// <param name="edition">A record already fetched by ISBN, so it describes one edition.</param>
-    public static bool Matches(string seriesTitle, int volumeNumber, Format format, VolumeEnrichment edition)
+    public static bool Matches(string seriesTitle, decimal volumeNumber, Format format, VolumeEnrichment edition)
     {
         ArgumentNullException.ThrowIfNull(edition);
 
@@ -27,7 +27,7 @@ public static class VolumeEditionMatcher
     }
 
     /// <param name="recordTitle">A record's own title, which is all the evidence there is.</param>
-    public static bool Matches(string seriesTitle, int volumeNumber, Format format, string? recordTitle) =>
+    public static bool Matches(string seriesTitle, decimal volumeNumber, Format format, string? recordTitle) =>
         TryMatchVolumeNumber(seriesTitle, format, recordTitle, out var number) && number == volumeNumber;
 
     /// <summary>
@@ -41,7 +41,7 @@ public static class VolumeEditionMatcher
         string seriesTitle,
         Format format,
         string? recordTitle,
-        out int volumeNumber) =>
+        out decimal volumeNumber) =>
         TryMatchVolumeNumber(
             NormalizedTitle.From(seriesTitle),
             format,
@@ -58,7 +58,7 @@ public static class VolumeEditionMatcher
         NormalizedTitle seriesTitle,
         Format format,
         NormalizedTitle recordTitle,
-        out int volumeNumber)
+        out decimal volumeNumber)
     {
         volumeNumber = 0;
 
@@ -105,7 +105,7 @@ public static class VolumeEditionMatcher
     // three-token allowance used to let a one-word qualifier through (audit 2026-10-09).
     private static readonly HashSet<string> VolumeMarkers = new(StringComparer.Ordinal) { "vol", "volume" };
 
-    private static bool TryReadLeadingVolumeNumber(string remainder, out int volumeNumber)
+    private static bool TryReadLeadingVolumeNumber(string remainder, out decimal volumeNumber)
     {
         volumeNumber = 0;
 
@@ -118,12 +118,7 @@ public static class VolumeEditionMatcher
             // Whole tokens only. A "16" inside "2016" is a year, not a volume.
             if (int.TryParse(token, CultureInfo.InvariantCulture, out var number))
             {
-                if (IsFractionalPart(tokens, index + 1))
-                {
-                    return false;
-                }
-
-                volumeNumber = number;
+                volumeNumber = number + FractionalPart(tokens, index + 1);
                 return true;
             }
 
@@ -137,15 +132,17 @@ public static class VolumeEditionMatcher
     }
 
     /// <summary>
-    /// Whether the token after a volume number is the fraction of a bonus volume.
+    /// The fraction of a bonus volume, when the token after its number is one; otherwise zero.
     /// </summary>
     // Normalising turns the point into a space, so Apple's "Torture Princess: Fremd
     // Torturchen, Vol. 7.5 (light novel)" arrives as "vol 7 5" — and Open Library's "Vol. 7. 5"
     // the same way. Read as volume 7, the bonus volume's cover, subtitle and blurb landed on
     // the real volume 7. No genuine title puts a lone digit straight after its volume number,
-    // so a single-digit token there is the fraction, and the record is not volume 7 at all.
-    private static bool IsFractionalPart(string[] tokens, int index) =>
-        index < tokens.Length && tokens[index].Length == 1 && char.IsAsciiDigit(tokens[index][0]);
+    // so a single-digit token there is the fraction: the record is volume 7.5.
+    private static decimal FractionalPart(string[] tokens, int index) =>
+        index < tokens.Length && tokens[index].Length == 1 && char.IsAsciiDigit(tokens[index][0])
+            ? (tokens[index][0] - '0') / 10m
+            : 0m;
 
     /// <summary>
     /// Whether the record positively states the medium this series is.

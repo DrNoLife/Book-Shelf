@@ -125,7 +125,7 @@ public sealed class SeriesSyncServiceTests
 
         var volumes = await dbContext.Volumes.OrderBy(volume => volume.Number).ToListAsync();
         volumes.Count.ShouldBe(14);
-        volumes.Select(volume => volume.Number).ShouldBe(Enumerable.Range(1, 14));
+        volumes.Select(volume => (int)volume.Number).ShouldBe(Enumerable.Range(1, 14));
 
         // That they exist is a fact from the release source; when they came out is
         // not something it knows, so no date is invented.

@@ -20,12 +20,13 @@ public static class OutNowText
 
         if (toBuy.Count <= 1)
         {
-            return $"Vol {entry.FirstVolumeNumber} is out";
+            return $"Vol {entry.FirstVolumeNumber.ToVolumeText()} is out";
         }
 
-        var isRun = toBuy[^1] - toBuy[0] + 1 == toBuy.Count;
+        // A bonus volume never sits inside a range, as in VolumeNumberText: "Vol 7–8" would hide it.
+        var isRun = !toBuy.Any(number => number.IsBonusVolume) && toBuy[^1] - toBuy[0] + 1 == toBuy.Count;
         return isRun
-            ? $"Vol {toBuy[0]}–{toBuy[^1]} are out"
-            : $"{toBuy.Count} out, from Vol {toBuy[0]}";
+            ? $"Vol {toBuy[0].ToVolumeText()}–{toBuy[^1].ToVolumeText()} are out"
+            : $"{toBuy.Count} out, from Vol {toBuy[0].ToVolumeText()}";
     }
 }

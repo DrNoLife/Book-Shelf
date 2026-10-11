@@ -12,7 +12,7 @@ public static class VolumeRuns
     /// volumes in print would be offering to own something that does not exist.
     /// </summary>
     /// <returns>Null when every volume in print already satisfies it.</returns>
-    public static int? NextRunEnd(
+    public static decimal? NextRunEnd(
         IEnumerable<VolumeResponse> volumes,
         Func<VolumeResponse, bool> satisfied)
     {
@@ -47,7 +47,7 @@ public static class VolumeRuns
     /// Null when the selection is empty or has a gap — selecting 10 and 12 must mark two
     /// volumes, not twelve.
     /// </returns>
-    public static int? SelectionAsLeadingRun(
+    public static decimal? SelectionAsLeadingRun(
         IEnumerable<VolumeResponse> volumes,
         IReadOnlySet<Guid> selectedVolumeIds)
     {

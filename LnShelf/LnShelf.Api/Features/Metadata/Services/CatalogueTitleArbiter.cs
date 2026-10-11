@@ -27,7 +27,7 @@ public sealed class CatalogueTitleArbiter(
     /// The record for each tracked volume the store confirmed, empty when no title was
     /// recognised.
     /// </returns>
-    public async Task<IReadOnlyDictionary<int, CatalogueVolume>> AskAsync(
+    public async Task<IReadOnlyDictionary<decimal, CatalogueVolume>> AskAsync(
         Series series,
         SyncRun run,
         LookupBudget budget,
@@ -100,7 +100,7 @@ public sealed class CatalogueTitleArbiter(
 
         ForgetCatalogueTitleIfStale(series, tried, attempts.Length, rememberedAnswered);
 
-        return new Dictionary<int, CatalogueVolume>();
+        return new Dictionary<decimal, CatalogueVolume>();
     }
 
     /// <summary>

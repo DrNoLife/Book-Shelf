@@ -58,6 +58,23 @@ public sealed class CatalogueVolumeMatcherTests
     }
 
     [Fact]
+    public void Match_ABonusVolume_IsKeyedByItsOwnNumberAndDoesNotRaiseTheCount()
+    {
+        // Vol. 7.5 is a book of its own, but not a tenth volume of a nine-volume series: the
+        // highest confirmed number answers "how many main volumes", which it is not one of.
+        var series = Series(7);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m });
+
+        var match = Match(
+            series,
+            Record("Overlord, Vol. 7 (light Novel)", "real"),
+            Record("Overlord, Vol. 7.5 (light Novel)", "bonus"));
+
+        match.ByVolumeNumber[7.5m].SourceRecordKey.ShouldBe("bonus");
+        match.HighestConfirmedNumber.ShouldBe(7);
+    }
+
+    [Fact]
     public void Match_AVolumeNumberTheShelfDoesNotTrack_IsIgnoredButStillCounted()
     {
         // The release source owns volume counts, so a store listing volume 5 of a series the

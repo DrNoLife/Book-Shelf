@@ -32,7 +32,7 @@
                    href="@SaxoSearch.UrlFor(card.TitleEnglish, entry.FirstVolumeNumber)"
                    target="_blank"
                    rel="noopener noreferrer"
-                   aria-label="@($"Vol {entry.FirstVolumeNumber} of {card.TitleEnglish} on Saxo")">
+                   aria-label="@($"Vol {entry.FirstVolumeNumber.ToVolumeText()} of {card.TitleEnglish} on Saxo")">
                     Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
                 </a>
             </li>

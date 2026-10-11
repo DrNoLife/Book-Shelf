@@ -100,6 +100,6 @@ public partial class SeriesHero
     /// The CTA design.md specifies. The URL itself is built in one shared place, since
     /// the library's rows view now prints the same link.
     /// </summary>
-    private string SaxoSearchUrl(int volumeNumber) =>
+    private string SaxoSearchUrl(decimal volumeNumber) =>
         SaxoSearch.UrlFor(Series.TitleEnglish, volumeNumber);
 }

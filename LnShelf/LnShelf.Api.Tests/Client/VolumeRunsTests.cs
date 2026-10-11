@@ -79,7 +79,7 @@ public sealed class VolumeRunsTests
     {
         var volumes = Shelf(released: 10, read: 0, notOut: 2);
         var selected = volumes
-            .Where(volume => selectedNumbers.Contains(volume.Number))
+            .Where(volume => selectedNumbers.Contains((int)volume.Number))
             .Select(volume => volume.VolumeId)
             .ToHashSet();
 

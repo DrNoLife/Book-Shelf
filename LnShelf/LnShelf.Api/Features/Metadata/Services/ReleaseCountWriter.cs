@@ -30,7 +30,9 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
         // later needs the count as it stood, and nothing else on the shelf records it.
         series.ReleaseSourceVolumeCount = sourceCount;
 
-        var trackedCount = series.Volumes.Count;
+        // Main volumes only. The release source counts "9 Volumes + 1 Extra" as nine, so a
+        // tracked bonus Vol. 7.5 is not a tenth volume to disagree about.
+        var trackedCount = series.Volumes.Count(volume => !volume.Number.IsBonusVolume);
         var countChoice = series.ChoiceFor(SyncDiscrepancyField.VolumeCount);
 
         if (sourceCount != trackedCount)
@@ -44,7 +46,7 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
             // The shelf's own list stands as the count: no volume is created, and every
             // synced one counts as out. A choice is the user's act, so it never raises the
             // new-volume badge either.
-            MarkReleasedThrough(series, series.Volumes.Max(volume => (int?)volume.Number) ?? 0, run, includeLocalOnly: false);
+            MarkReleasedThrough(series, series.Volumes.Max(volume => (decimal?)volume.Number) ?? 0, run, includeLocalOnly: false);
             return;
         }
 
@@ -82,7 +84,7 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
     // A volume whose date the user took from a store or a library is skipped: that date, not
     // the count, decides whether it is out, so marking it would put a future date on a volume
     // the shelf calls published — the contradiction the choice exists to settle.
-    public static int MarkReleasedThrough(Series series, int count, SyncRun? run, bool includeLocalOnly)
+    public static int MarkReleasedThrough(Series series, decimal count, SyncRun? run, bool includeLocalOnly)
     {
         ArgumentNullException.ThrowIfNull(series);
 
@@ -154,6 +156,7 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
     private void CreateMissingVolumes(Series series, SyncRun run, int sourceCount, int trackedCount)
     {
         var missingNumbers = Enumerable.Range(1, sourceCount)
+            .Select(number => (decimal)number)
             .Except(series.Volumes.Select(volume => volume.Number))
             .ToList();
 

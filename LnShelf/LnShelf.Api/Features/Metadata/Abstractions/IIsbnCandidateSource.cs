@@ -18,5 +18,5 @@ public interface IIsbnCandidateSource
     /// </summary>
     // The caller has to verify each one: a catalogue search cannot tell an English
     // edition from a Japanese one, so this returns candidates rather than an answer.
-    Task<IsbnCandidates> FindAsync(string seriesTitle, int volumeNumber, CancellationToken cancellationToken);
+    Task<IsbnCandidates> FindAsync(string seriesTitle, decimal volumeNumber, CancellationToken cancellationToken);
 }

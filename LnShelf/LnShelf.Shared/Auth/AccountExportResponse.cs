@@ -91,7 +91,7 @@ public sealed record AccountExportSeries
 /// <summary>One volume, with the user's read and ownership state.</summary>
 public sealed record AccountExportVolume
 {
-    public required int Number { get; init; }
+    public required decimal Number { get; init; }
     public string? Title { get; init; }
     public string? Isbn { get; init; }
     public DateOnly? ReleaseDate { get; init; }
@@ -139,7 +139,7 @@ public sealed record AccountExportImportRow
     public string? Subtitle { get; init; }
     public string? Author { get; init; }
     public string? Isbn { get; init; }
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
     public required ReadStatus ReadStatus { get; init; }
     public DateOnly? ReadAt { get; init; }
     public required bool OwnedInExport { get; init; }
@@ -173,7 +173,7 @@ public sealed record AccountExportDiscrepancy
 {
     public required string SeriesTitle { get; init; }
     public required SyncDiscrepancyField Field { get; init; }
-    public int? VolumeNumber { get; init; }
+    public decimal? VolumeNumber { get; init; }
     public string? Note { get; init; }
     public MetadataSourceName? ResolvedWith { get; init; }
     public required IReadOnlyList<AccountExportSourceValue> Values { get; init; }

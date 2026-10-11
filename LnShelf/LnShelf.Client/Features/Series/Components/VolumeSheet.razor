@@ -4,7 +4,7 @@
    sheet, with the cover, "Vol 18" and its state in words on top. Choices land while the sheet
    stays open — Done, Escape or the scrim closes it — so the reader sees the tile change. *@
 
-<BottomSheet AriaLabel="@($"Volume {Volume.Number}")" Closed="Closed">
+<BottomSheet AriaLabel="@($"Volume {Volume.Number.ToVolumeText()}")" Closed="Closed">
     <div class="summary">
         <span class="summary__cover" aria-hidden="true">
             @if (VolumeCoverUrl.For(ApiUrl, Volume, CoverVersion) is { } coverUrl)
@@ -13,7 +13,7 @@
             }
         </span>
         <div class="summary__text">
-            <h2 class="summary__title">Vol @Volume.Number</h2>
+            <h2 class="summary__title">Vol @Volume.Number.ToVolumeText()</h2>
             <span class="summary__state">@StateLine</span>
             @if (DateChoice is { } dateChoice)
             {

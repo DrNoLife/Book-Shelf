@@ -220,7 +220,7 @@ public sealed class IsbnDiscoveryService(
         /// <summary>Which medium, so a manga edition cannot be proposed for a light novel.</summary>
         public required Format Format { get; init; }
 
-        public required int VolumeNumber { get; init; }
+        public required decimal VolumeNumber { get; init; }
 
         public IsbnDiscoveryRow ToRow(
             IsbnDiscoveryOutcome outcome,

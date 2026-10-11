@@ -34,7 +34,7 @@ public static class SyncRunQueries
         public async Task<RecordedDisagreement?> NewestDisagreementAsync(
             Guid seriesId,
             SyncDiscrepancyField field,
-            int? volumeNumber,
+            decimal? volumeNumber,
             CancellationToken cancellationToken)
         {
             var run = await runs

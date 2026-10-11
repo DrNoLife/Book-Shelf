@@ -17,5 +17,10 @@ public sealed class VolumeNumberTextTests
     [InlineData(new[] { 4, 4 }, "Vol 4")]
     [InlineData(new int[0], "")]
     public void Describe_VolumeNumbers_CollapsesRuns(int[] numbers, string expected) =>
-        VolumeNumberText.Describe(numbers).ShouldBe(expected);
+        VolumeNumberText.Describe([.. numbers.Select(number => (decimal)number)]).ShouldBe(expected);
+
+    [Fact]
+    public void Describe_ABonusVolume_StandsAloneBetweenTheRuns() =>
+        // "Vols 5–9" would hide that 7.5 is one of the books meant.
+        VolumeNumberText.Describe([5m, 6m, 7m, 7.5m, 8m, 9m]).ShouldBe("Vols 5–7, 7.5, 8–9");
 }

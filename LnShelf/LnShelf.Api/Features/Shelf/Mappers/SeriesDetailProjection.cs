@@ -125,7 +125,7 @@ public static class SeriesDetailProjection
         Tracked = volumes.Count,
         NextToBuyNumber = volumes
             .Where(volume => volume.IsOut && !volume.Owned)
-            .Select(volume => (int?)volume.Number)
+            .Select(volume => (decimal?)volume.Number)
             .FirstOrDefault(),
         NotOut = volumes.Count(volume => !volume.IsOut),
         Dated = volumes.Count(volume => !volume.IsOut && volume.ReleaseDate is not null),

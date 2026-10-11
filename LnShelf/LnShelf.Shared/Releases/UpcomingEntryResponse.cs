@@ -19,7 +19,7 @@ public sealed record UpcomingEntryResponse
     public string? CoverObjectKey { get; init; }
 
     /// <summary>The volumes this line is about, ascending. Never empty.</summary>
-    public required IReadOnlyList<int> VolumeNumbers { get; init; }
+    public required IReadOnlyList<decimal> VolumeNumbers { get; init; }
 
     /// <summary>
     /// The same volumes' ids, in the same order — what "I bought Vol 13" marks owned.

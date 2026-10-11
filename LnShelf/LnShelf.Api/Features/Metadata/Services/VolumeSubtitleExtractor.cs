@@ -24,7 +24,7 @@ public static partial class VolumeSubtitleExtractor
     /// The subtitle to store, which is empty when the record named the volume and it simply
     /// has no subtitle. Empty is an answer rather than a gap — see <see cref="Volume.Title"/>.
     /// </returns>
-    public static string Extract(string? recordTitle, int volumeNumber)
+    public static string Extract(string? recordTitle, decimal volumeNumber)
     {
         if (string.IsNullOrWhiteSpace(recordTitle))
         {
@@ -50,7 +50,7 @@ public static partial class VolumeSubtitleExtractor
     // differently — Apple sends "86--EIGHTY-SIX", the shelf holds "86―EIGHTY-SIX", Open
     // Library has both — so a prefix match would fail on exactly the series that most needs
     // this. Searching for the known number is enough and cannot be tripped by punctuation.
-    private static string? AfterVolumeMarker(string recordTitle, int volumeNumber)
+    private static string? AfterVolumeMarker(string recordTitle, decimal volumeNumber)
     {
         // The bare number is the fallback, never the first thing tried: where a record says
         // "Vol." it is unambiguous, and where it does not the number is all there is. Real:
@@ -63,12 +63,14 @@ public static partial class VolumeSubtitleExtractor
     }
 
     /// <summary>The leftmost match whose captured number is this volume's.</summary>
-    private static Match? FirstMarkerFor(Regex pattern, string recordTitle, int volumeNumber)
+    private static Match? FirstMarkerFor(Regex pattern, string recordTitle, decimal volumeNumber)
     {
         foreach (Match match in pattern.Matches(recordTitle))
         {
-            if (int.TryParse(
-                    match.Groups["number"].ValueSpan, CultureInfo.InvariantCulture, out var number)
+            // Open Library writes a bonus volume "Vol. 7. 5", so the space goes before parsing.
+            var text = match.Groups["number"].Value.Replace(" ", string.Empty, StringComparison.Ordinal);
+
+            if (decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var number)
                 && number == volumeNumber)
             {
                 return match;
@@ -120,21 +122,21 @@ public static partial class VolumeSubtitleExtractor
     // Every spelling seen live across both sources. The leading comma is optional because
     // Apple writes "…, Vol. 8 (light novel)" and Open Library writes "… Volume 2: The Dark
     // Warrior"; the word boundary after the number is what stops "Vol. 12" from answering for
-    // volume 1 and taking "2: …" as the subtitle. The lookahead refuses a bonus volume's
-    // "Vol. 7.5" (and Open Library's "Vol. 7. 5") as volume 7, which would leave ".5" as the
-    // subtitle.
+    // volume 1 and taking "2: …" as the subtitle. A bonus volume's fraction is part of its
+    // number — "Vol. 7.5", and Open Library's "Vol. 7. 5" — and the lookahead stops the
+    // engine settling for the 7 alone, which would leave ".5" as the subtitle.
     [GeneratedRegex(
-        @"(?:,\s*)?\bvol(?:ume)?\.?\s*0*(?<number>\d{1,4})\b(?!\.\s?\d)",
+        @"(?:,\s*)?\bvol(?:ume)?\.?\s*0*(?<number>\d{1,4}(?:\.\s?\d)?)\b(?!\.\s?\d)",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex VolumeMarkerPattern();
 
     /// <summary>A number standing on its own, with no volume word in front of it.</summary>
     // Refused where a digit or a comma follows, which is what keeps the rule off the
     // thousands separator in "Saving 80,000 Gold in Another World" — a real series on a
-    // shelf like this one, and one whose title would otherwise be cut at "80". A following
-    // ".5" is refused for the same reason as in the marker pattern: that is a bonus volume.
+    // shelf like this one, and one whose title would otherwise be cut at "80". A bonus
+    // volume's fraction belongs to the number, as in the marker pattern.
     [GeneratedRegex(
-        @"(?<![\p{L}\p{N}])0*(?<number>\d{1,4})(?![\p{N},]|\.\s?\d)",
+        @"(?<![\p{L}\p{N}])0*(?<number>\d{1,4}(?:\.\s?\d)?)(?![\p{N},]|\.\s?\d)",
         RegexOptions.CultureInvariant)]
     private static partial Regex BareNumberPattern();
 

@@ -20,6 +20,16 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.26.0", new DateOnly(2026, 10, 11), "Room for bonus volumes",
+            Features: [],
+            Improvements: [
+                "The shelf can now hold bonus volumes such as Torture Princess Vol. 7.5 between the main ones. " +
+                    "They are not added yet; that comes in the next release, once this one has settled.",
+                "Volume numbers are written the same way everywhere, so a bonus volume reads \"Vol 7.5\" and never " +
+                    "\"Vol 7,5\", and Upcoming lists it on its own: \"Vols 5–7, 7.5, 8–9\".",
+            ],
+            Fixes: []
+        ),
         new("0.25.1", new DateOnly(2026, 10, 11), "Bonus volumes keep to themselves",
             Features: [],
             Improvements: [],

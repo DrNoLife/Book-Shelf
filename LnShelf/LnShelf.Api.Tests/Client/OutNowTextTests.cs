@@ -7,7 +7,7 @@ namespace LnShelf.Api.Tests.Client;
 /// </summary>
 public sealed class OutNowTextTests
 {
-    public static TheoryData<int[], string> Cases => new()
+    public static TheoryData<decimal[], string> Cases => new()
     {
         { [21], "Vol 21 is out" },
         { [21, 22], "Vol 21–22 are out" },
@@ -15,13 +15,19 @@ public sealed class OutNowTextTests
 
         // Volume 5 is owned, so 4–6 would claim a volume the reader already has.
         { [4, 6], "2 out, from Vol 4" },
+
+        // Bonus volumes never form a range: "Vol 7.5–8.5" reads as if volume 8 were in it.
+        { [7.5m, 8.5m], "2 out, from Vol 7.5" },
     };
 
     [Theory]
     [MemberData(nameof(Cases))]
-    public void For_VolumesToBuy_PrintsARangeOnlyWhenTheyAreContiguous(int[] toBuy, string expected)
+    public void For_VolumesToBuy_PrintsARangeOnlyWhenTheyAreContiguous(decimal[] toBuy, string expected)
     {
         var ticks = Enumerable.Range(1, 22)
+            .Select(number => (decimal)number)
+            .Union(toBuy)
+            .Order()
             .Select(number => new VolumeTickResponse
             {
                 Number = number,

@@ -42,7 +42,7 @@ public static class ConflictText
         public string Heading => conflict switch
         {
             { Field: SyncDiscrepancyField.SeriesLink } => "Not linked to a release source yet",
-            { VolumeNumber: { } volumeNumber } => $"Sources disagree on Vol {volumeNumber}'s {conflict.Field.Noun}",
+            { VolumeNumber: { } volumeNumber } => $"Sources disagree on Vol {volumeNumber.ToVolumeText()}'s {conflict.Field.Noun}",
             _ => $"Sources disagree on {conflict.Field.FieldName}",
         };
 
@@ -71,7 +71,7 @@ public static class ConflictText
     extension(SeriesDetailResponse series)
     {
         /// <returns>The source the user picked for this field (and volume), or null for automatic.</returns>
-        public MetadataSourceName? ChoiceFor(SyncDiscrepancyField field, int? volumeNumber = null) =>
+        public MetadataSourceName? ChoiceFor(SyncDiscrepancyField field, decimal? volumeNumber = null) =>
             series.SourceChoices
                 .FirstOrDefault(choice => choice.Field == field && choice.VolumeNumber == volumeNumber)
                 ?.Source;

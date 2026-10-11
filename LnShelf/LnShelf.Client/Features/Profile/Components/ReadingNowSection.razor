@@ -42,9 +42,9 @@
     {
         var next = card.VolumeTicks
             .Where(tick => tick.IsOut && tick.ReadStatus is not ReadStatus.Read)
-            .Select(tick => (int?)tick.Number)
+            .Select(tick => (decimal?)tick.Number)
             .Min();
 
-        return next is { } number ? $"Vol {number} next" : "Caught up";
+        return next is { } number ? $"Vol {number.ToVolumeText()} next" : "Caught up";
     }
 }

@@ -33,7 +33,7 @@
                    href="@SaxoSearch.UrlFor(Entry.SeriesTitle, NextNumber)"
                    target="_blank"
                    rel="noopener noreferrer">
-                    Vol @NextNumber on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+                    Vol @NextNumber.ToVolumeText() on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
                 </a>
                 <a class="ghost"
                    href="@FaraosSearch.UrlFor(Entry.SeriesTitle, Entry.Format)"
@@ -43,7 +43,7 @@
                     Faraos <Icon Name="IconName.ArrowUpRight" Size="12" />
                 </a>
                 <button type="button" class="tertiary card__bought" disabled="@IsBusy" @onclick="BuyRequested">
-                    I bought Vol @NextNumber
+                    I bought Vol @NextNumber.ToVolumeText()
                 </button>
             </div>
 
@@ -90,7 +90,7 @@
 
     private string TitleId => $"out-now-{Entry.SeriesId}";
 
-    private int NextNumber => Entry.VolumeNumbers[0];
+    private decimal NextNumber => Entry.VolumeNumbers[0];
 
     // "Vols 13–14 are out" — the volumes still to buy, which is what the line is about.
     // VolumeNumberText collapses runs and keeps gaps honest ("Vols 3, 5–7").

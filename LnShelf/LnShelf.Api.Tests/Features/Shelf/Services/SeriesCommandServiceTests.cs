@@ -55,7 +55,7 @@ public sealed class SeriesCommandServiceTests
         series.CoverObjectKey.ShouldBe(CoverObjectKey);
 
         series.Volumes.Count.ShouldBe(26);
-        series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 26));
+        series.Volumes.Select(volume => (int)volume.Number).Order().ShouldBe(Enumerable.Range(1, 26));
         series.Volumes.ShouldAllBe(volume => !volume.IsLocalOnly);
 
         // A just-added series is on the shelf and unread: nothing else would be
@@ -339,7 +339,7 @@ public sealed class SeriesCommandServiceTests
         // Volumes 1..9, all of them in print: that is what a release source's count means,
         // and it is a stronger claim than AniList's volume list supports.
         series.Volumes.Count.ShouldBe(9);
-        series.Volumes.Select(volume => volume.Number).Order().ShouldBe(Enumerable.Range(1, 9));
+        series.Volumes.Select(volume => (int)volume.Number).Order().ShouldBe(Enumerable.Range(1, 9));
         series.Volumes.ShouldAllBe(volume => volume.IsReleased);
         series.Volumes.ShouldAllBe(volume => !volume.IsLocalOnly);
         series.Volumes.ShouldAllBe(volume => volume.ReleaseDate == null);

@@ -32,7 +32,7 @@ public partial class VolumeTickStrip
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown tick kind."),
     };
 
-    private static string TickTitle(VolumeTickResponse tick) => $"Vol {tick.Number} · {KindWords(tick.Kind)}";
+    private static string TickTitle(VolumeTickResponse tick) => $"Vol {tick.Number.ToVolumeText()} · {KindWords(tick.Kind)}";
 
     /// <summary>The fixed terminology, never a synonym (design.md).</summary>
     private static string KindWords(VolumeTickKind kind) => kind switch

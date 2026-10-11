@@ -138,7 +138,7 @@ public sealed class IsbnDiscoveryServiceTests
 
         var candidateSource = Substitute.For<IIsbnCandidateSource>();
         candidateSource.SourceName.Returns("OpenLibrary");
-        candidateSource.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        candidateSource.FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>())
             .Returns(new IsbnCandidates { WorksFound = 3, Isbns = [] });
 
         var rows = await CreateService(dbContext, candidateSource, Enrichments()).RunAsync(CancellationToken.None);
@@ -205,7 +205,7 @@ public sealed class IsbnDiscoveryServiceTests
     {
         var source = Substitute.For<IIsbnCandidateSource>();
         source.SourceName.Returns("OpenLibrary");
-        source.FindAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        source.FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>())
             .Returns(isbns.Length is 0
                 ? IsbnCandidates.None
                 : new IsbnCandidates { WorksFound = 1, Isbns = isbns });

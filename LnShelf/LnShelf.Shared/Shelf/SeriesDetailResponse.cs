@@ -85,7 +85,7 @@ public sealed record SeriesCountsResponse
     public required int Tracked { get; init; }
 
     /// <summary>Feeds the "Vol 12 on Saxo" call to action. Null when caught up.</summary>
-    public int? NextToBuyNumber { get; init; }
+    public decimal? NextToBuyNumber { get; init; }
 
     /// <summary>Volumes the shelf knows of that are not out yet.</summary>
     public required int NotOut { get; init; }

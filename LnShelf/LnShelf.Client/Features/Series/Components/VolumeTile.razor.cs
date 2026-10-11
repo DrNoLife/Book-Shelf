@@ -129,7 +129,7 @@ public partial class VolumeTile
             };
 
             var selection = IsSelectMode ? IsSelected ? ", selected" : ", not selected" : string.Empty;
-            return $"Volume {Volume.Number}, {state}{selection}";
+            return $"Volume {Volume.Number.ToVolumeText()}, {state}{selection}";
         }
     }
 

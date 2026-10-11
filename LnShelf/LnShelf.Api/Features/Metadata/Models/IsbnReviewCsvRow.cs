@@ -11,7 +11,7 @@ public sealed class IsbnReviewCsvRow
 {
     public string SeriesId { get; set; } = string.Empty;
     public string Series { get; set; } = string.Empty;
-    public int Volume { get; set; }
+    public decimal Volume { get; set; }
     public string? Isbn { get; set; }
 
     /// <summary>What Open Library calls the edition — the field to sanity-check against.</summary>

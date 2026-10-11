@@ -8,9 +8,9 @@
     @if (State.LastFinished is { } finished)
     {
         <div class="toast" @key="finished">
-            <span class="toast__text">Vol @finished.Number marked read</span>
+            <span class="toast__text">Vol @finished.Number.ToVolumeText() marked read</span>
             <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="UndoAsync">
-                Undo<span class="visually-hidden"> marking Vol @finished.Number of @finished.SeriesTitle read</span>
+                Undo<span class="visually-hidden"> marking Vol @finished.Number.ToVolumeText() of @finished.SeriesTitle read</span>
             </button>
         </div>
     }

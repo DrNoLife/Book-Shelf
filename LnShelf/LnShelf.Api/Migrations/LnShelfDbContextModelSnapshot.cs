@@ -265,8 +265,8 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<int?>("VolumeNumber")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("VolumeNumber")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -312,8 +312,8 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("SyncRunId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("VolumeNumber")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("VolumeNumber")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -624,8 +624,8 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<int>("Number")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Number")
+                        .HasColumnType("numeric");
 
                     b.Property<DateOnly?>("ReleaseDate")
                         .HasColumnType("date");

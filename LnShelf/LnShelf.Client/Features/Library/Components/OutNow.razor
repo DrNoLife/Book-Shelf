@@ -21,7 +21,7 @@
                        href="@SaxoSearch.UrlFor(card.TitleEnglish, entry.FirstVolumeNumber)"
                        target="_blank"
                        rel="noopener noreferrer">
-                        Vol @entry.FirstVolumeNumber on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
+                        Vol @entry.FirstVolumeNumber.ToVolumeText() on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
                     </a>
                 </li>
             }
@@ -35,5 +35,5 @@
     // Not a range: the missing volumes need not be contiguous, so "Vol 4–9" would
     // claim volumes the user may already own.
     private static string RangeText(OutNowEntry entry, int toBuy) =>
-        toBuy == 1 ? $"Vol {entry.FirstVolumeNumber}" : $"{toBuy} volumes";
+        toBuy == 1 ? $"Vol {entry.FirstVolumeNumber.ToVolumeText()}" : $"{toBuy} volumes";
 }

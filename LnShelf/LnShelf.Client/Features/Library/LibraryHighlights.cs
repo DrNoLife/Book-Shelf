@@ -4,7 +4,7 @@ namespace LnShelf.Client.Features.Library;
 /// A series with something on the shelf to read, and the volume to read next — its id too,
 /// so the card can mark it finished without a trip to the series page.
 /// </summary>
-public sealed record ContinueReadingEntry(LibraryCardResponse Card, int NextVolumeNumber, Guid NextVolumeId)
+public sealed record ContinueReadingEntry(LibraryCardResponse Card, decimal NextVolumeNumber, Guid NextVolumeId)
 {
     /// <summary>
     /// The next volume's read status as it stands now — Unread or Reading — which is what an
@@ -15,7 +15,7 @@ public sealed record ContinueReadingEntry(LibraryCardResponse Card, int NextVolu
 }
 
 /// <summary>A series with volumes out that are not owned, and where the buying starts.</summary>
-public sealed record OutNowEntry(LibraryCardResponse Card, int FirstVolumeNumber);
+public sealed record OutNowEntry(LibraryCardResponse Card, decimal FirstVolumeNumber);
 
 /// <summary>
 /// The two lists above the shelf. Derived from the cards on every call, never stored:
@@ -55,7 +55,7 @@ public static class LibraryHighlights
             .Take(take),
     ];
 
-    private static int FirstToBuy(LibraryCardResponse card) =>
+    private static decimal FirstToBuy(LibraryCardResponse card) =>
         card.VolumeTicks
             .Where(tick => tick.Kind == VolumeTickKind.ToBuy)
             .Select(tick => tick.Number)
