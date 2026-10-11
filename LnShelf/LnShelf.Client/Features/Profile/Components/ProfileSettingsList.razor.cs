@@ -48,6 +48,18 @@ public partial class ProfileSettingsList : IDisposable
     /// Ends the session, then leaves for the static signed-out page — landing back in the app
     /// would ask the API for the library, get a 401 and sign straight back in.
     /// </summary>
+    private async Task SyncNowAsync()
+    {
+        try
+        {
+            await SyncState.StartAsync(_disposal.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Deliberately empty: the page is being left.
+        }
+    }
+
     private async Task SignOutAsync()
     {
         _isSigningOut = true;

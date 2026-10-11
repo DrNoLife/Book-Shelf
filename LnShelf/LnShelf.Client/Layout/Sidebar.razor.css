@@ -146,6 +146,25 @@
 
 .sidebar ::deep .foot__link:hover { color: var(--text); }
 
+/* Under the sync note and indented like it, so the two read as one fact and its action. */
+.sync__now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) 0 calc(var(--space-3) + var(--space-2) + 8px);
+}
+
+.sync__now .foot__button:disabled {
+  cursor: default;
+  color: var(--faint);
+}
+
+.sync__notice {
+  font-size: var(--fs-caption);
+  color: var(--faint);
+}
+
 /* Sign out reads as one more quiet link, not as a control. */
 .foot__button {
   border: 0;
@@ -194,7 +213,8 @@
   }
 
   .shelves,
-  .sync { display: none; }
+  .sync,
+  .sync__now { display: none; }
 
   /* The profile row joins the strip; the quiet links sit after it at the far end. */
   .bottom {

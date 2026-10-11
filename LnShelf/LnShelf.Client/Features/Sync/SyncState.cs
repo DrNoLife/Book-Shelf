@@ -15,7 +15,97 @@ public sealed class SyncState(HttpClient httpClient)
     /// <summary>True once the answer is known, including "never synced".</summary>
     public bool HasLoaded { get; private set; }
 
+    /// <summary>True from the moment a sync is asked for until the run it started has finished.</summary>
+    public bool IsFollowingRun { get; private set; }
+
+    /// <summary>
+    /// One quiet line about the last "Sync now", when there is something to say: the shelf is
+    /// already syncing, or it has synced as often this hour as it may. Null otherwise.
+    /// </summary>
+    public string? Notice { get; private set; }
+
     public event Action? Changed;
+
+    /// <summary>Raised once when a run started from here has finished.</summary>
+    public event Action? RunFinished;
+
+    // Long enough not to hammer the API while a run takes its minutes, short enough that the
+    // sidebar flips from "in progress" to "Synced just now" soon after it ends.
+    private static readonly TimeSpan FollowInterval = TimeSpan.FromSeconds(10);
+
+    // A run that has not finished in this long is left to the sidebar's own five-minute
+    // refresh; following it for ever would leave a loop running the whole session.
+    private static readonly TimeSpan FollowLimit = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Starts a sync of the reader's shelf now — the same run the nightly job makes — and
+    /// follows it until it has finished.
+    /// </summary>
+    public async Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        if (IsFollowingRun)
+        {
+            return;
+        }
+
+        var requestedAt = TimeProvider.System.GetUtcNow();
+        var before = Latest;
+        IsFollowingRun = true;
+        Notice = null;
+        Changed?.Invoke();
+
+        try
+        {
+            using var response = await httpClient.PostAsync("api/sync", content: null, cancellationToken);
+
+            Notice = response.StatusCode switch
+            {
+                HttpStatusCode.Accepted => null,
+                HttpStatusCode.Conflict => "Already syncing",
+                HttpStatusCode.TooManyRequests => "Synced enough for this hour",
+                _ => "Could not start a sync",
+            };
+
+            // A 409 means a run is under way, so it is followed just the same.
+            if (response.StatusCode is HttpStatusCode.Accepted or HttpStatusCode.Conflict)
+            {
+                await FollowRunAsync(before, requestedAt, cancellationToken);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Notice = "Could not start a sync";
+        }
+        finally
+        {
+            IsFollowingRun = false;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task FollowRunAsync(
+        SyncSummaryResponse? before,
+        DateTimeOffset requestedAt,
+        CancellationToken cancellationToken)
+    {
+        var deadline = requestedAt + FollowLimit;
+
+        while (TimeProvider.System.GetUtcNow() < deadline)
+        {
+            await Task.Delay(FollowInterval, cancellationToken);
+            await LoadAsync(cancellationToken);
+
+            // Done when a run other than the finished one shown before has finished — or the one
+            // shown before, if it was still going. Run ids rather than clocks, so a browser
+            // whose clock disagrees with the server's cannot wait for ever or stop early.
+            if (Latest is { FinishedAt: not null } run
+                && (before is null || run.RunId != before.RunId || before.FinishedAt is null))
+            {
+                RunFinished?.Invoke();
+                return;
+            }
+        }
+    }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {

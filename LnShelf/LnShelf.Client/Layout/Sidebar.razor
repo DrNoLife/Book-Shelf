@@ -82,6 +82,19 @@
             </p>
         }
 
+        @* As quiet as the links below it: syncing by hand is the exception, the nightly run the
+           rule. While a run started here is going, the note above already says so. *@
+        <div class="sync__now">
+            <button type="button" class="foot__link foot__button" disabled="@SyncState.IsFollowingRun"
+                    @onclick="OnSyncNowAsync">
+                @(SyncState.IsFollowingRun ? "Syncing…" : "Sync now")
+            </button>
+            @if (SyncState.Notice is { } notice)
+            {
+                <span class="sync__notice" role="status">@notice</span>
+            }
+        </div>
+
         @* Quiet on purpose — real pages with real routes, but not shelf navigation. *@
         <div class="foot">
             <NavLink class="foot__link" href="changelog">Changelog</NavLink>

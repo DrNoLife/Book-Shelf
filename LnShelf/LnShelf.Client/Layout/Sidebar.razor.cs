@@ -82,6 +82,7 @@ public partial class Sidebar : IDisposable
     {
         LibraryState.Changed += OnStateChanged;
         SyncState.Changed += OnStateChanged;
+        SyncState.RunFinished += OnSyncFinished;
         ImportState.Changed += OnStateChanged;
 
         // The shell owns these fetches: the footer and the review count show on every page,
@@ -98,6 +99,31 @@ public partial class Sidebar : IDisposable
 
         _ = RefreshPeriodicallyAsync(_refreshCancellation.Token);
     }
+
+    private async Task OnSyncNowAsync()
+    {
+        try
+        {
+            await SyncState.StartAsync(_refreshCancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Deliberately empty: the sidebar is being disposed.
+        }
+    }
+
+    // A run can add volumes, dates and covers, and the shelf on screen was loaded before it.
+    private void OnSyncFinished() => _ = InvokeAsync(async () =>
+    {
+        try
+        {
+            await LibraryState.LoadAsync(_refreshCancellation.Token);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(exception, "Could not reload the shelf after a sync");
+        }
+    });
 
     // The shell lives for the whole session, so a run that was "in progress" at load would
     // otherwise be shown as stale — and eventually "did not finish" — long after it ended.
@@ -133,6 +159,7 @@ public partial class Sidebar : IDisposable
     {
         LibraryState.Changed -= OnStateChanged;
         SyncState.Changed -= OnStateChanged;
+        SyncState.RunFinished -= OnSyncFinished;
         ImportState.Changed -= OnStateChanged;
         _refreshCancellation.Cancel();
         _refreshCancellation.Dispose();
