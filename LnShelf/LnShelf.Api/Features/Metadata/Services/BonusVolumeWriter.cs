@@ -4,8 +4,8 @@ namespace LnShelf.Api.Features.Metadata.Services;
 /// Creates the bonus volumes a store catalogue lists between a series' main volumes —
 /// Torture Princess Vol. 7.5 — so the facts pass can enrich them like any other volume.
 /// </summary>
-// The one place sync creates a volume from a store rather than from a count, and the
-// exception is narrow on purpose (CLAUDE.md — conflicting sources): only a fractional
+// One of the two places sync creates a volume from a store rather than from a count (the
+// other is WholeExtraVolumeWriter), and the exception is narrow on purpose (CLAUDE.md — conflicting sources): only a fractional
 // number, only one the matcher confirmed as this series and medium, only within the main
 // volumes already tracked. The release source still owns how many main volumes there are.
 public sealed class BonusVolumeWriter(ILogger<BonusVolumeWriter> logger)

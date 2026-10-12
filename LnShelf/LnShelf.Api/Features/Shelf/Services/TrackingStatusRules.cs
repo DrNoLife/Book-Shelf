@@ -39,6 +39,18 @@ public static class TrackingStatusRules
     }
 
     /// <summary>
+    /// The status after the reader records a chapter: a PlanToStart series with a chapter
+    /// above zero has been started, so it moves to Reading. Every other status stays.
+    /// </summary>
+    // Separate from NextStatus on purpose. Recording a chapter is evidence of starting and of
+    // nothing else: running the volume rules from a chapter write would let it complete a
+    // series the reader had set back to Reading by hand, which no chapter can justify.
+    public static TrackingStatus AfterChapterRecorded(TrackingStatus current, decimal? lastChapterRead) =>
+        current is TrackingStatus.PlanToStart && lastChapterRead > 0
+            ? TrackingStatus.Reading
+            : current;
+
+    /// <summary>
     /// Whether a volume counts as published for the reader.
     /// </summary>
     // Mirrors the three grounds of SeriesDetailProjection.ToVolume's IsOut (and the copies

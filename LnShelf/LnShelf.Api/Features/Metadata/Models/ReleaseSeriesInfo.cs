@@ -85,4 +85,10 @@ public sealed record ReleaseSeriesInfo
     /// show what the source actually said.
     /// </summary>
     public string? RawStatus { get; init; }
+
+    /// <summary>
+    /// The latest chapter the source lists. Null when it lists none, which a refresh reads as
+    /// "nothing to say", never as "no chapters".
+    /// </summary>
+    public decimal? LatestChapter { get; init; }
 }

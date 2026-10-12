@@ -54,6 +54,10 @@ public static class MangaUpdatesSeriesMapper
             CountEvidence = Truncate(countReading?.Evidence, Series.VolumeCountEvidenceMaximumLength),
             ExtraVolumeCount = MangaUpdatesVolumeCountParser.ParseEnglishEditionExtras(EnglishPublisherNotes(record)),
             RawStatus = record.Status.NullIfBlank(),
+
+            // A zero is not a chapter count worth showing ("Ch. 12 of 0"), so it reads as no
+            // answer, and a refresh never lets it replace a real number.
+            LatestChapter = record.LatestChapter is > 0 ? record.LatestChapter : null,
         };
     }
 

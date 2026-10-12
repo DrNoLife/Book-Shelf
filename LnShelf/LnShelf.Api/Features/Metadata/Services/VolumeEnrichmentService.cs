@@ -22,6 +22,7 @@ public sealed class VolumeEnrichmentService(
     CatalogueTitleArbiter catalogueTitleArbiter,
     IsbnVolumeEnricher isbnEnricher,
     BonusVolumeWriter bonusVolumeWriter,
+    WholeExtraVolumeWriter wholeExtraVolumeWriter,
     VolumeFactWriter factWriter)
 {
     /// <param name="today">
@@ -34,8 +35,9 @@ public sealed class VolumeEnrichmentService(
     /// not to be indexed.
     /// </param>
     /// <param name="expectedBonusVolumes">
-    /// How many bonus volumes the release source counts beside the main ones. More than the
-    /// shelf tracks is a reason to ask the store even when every volume is already enriched.
+    /// How many extras the release source counts beside the main ones: bonus volumes such as
+    /// Vol. 7.5, or whole volumes past the main count. More than the shelf tracks is a reason
+    /// to ask the store even when every volume is already enriched.
     /// </param>
     public async Task EnrichAsync(
         Series series,
@@ -65,8 +67,7 @@ public sealed class VolumeEnrichmentService(
         int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
-        var missesBonusVolumes =
-            series.Volumes.Count(volume => volume.Number.IsBonusVolume) < expectedBonusVolumes;
+        var missesBonusVolumes = ExtraVolumes.CountTracked(series, expectedBonusVolumes) < expectedBonusVolumes;
 
         if (budget.IsExhausted || (!series.Volumes.Any(VolumeGaps.NeedsAnything) && !missesBonusVolumes))
         {
@@ -75,18 +76,21 @@ public sealed class VolumeEnrichmentService(
 
         var match = await catalogueTitleArbiter.AskAsync(series, run, budget, cancellationToken);
 
-        // Only when the release source says the edition has bonus volumes at all: the store is
-        // trusted with where one sits, not with whether there is one. Created before the facts
-        // are written, so a new bonus volume gets its cover, date and subtitle in this pass.
+        // Only when the release source says the edition has extras at all: the store is trusted
+        // with where one sits, not with whether there is one. Created before the facts are
+        // written, so a new volume gets its cover, date and subtitle in this pass. The bonus
+        // volumes first, so the ones just created count against the same extras.
         if (expectedBonusVolumes > 0)
         {
             bonusVolumeWriter.Create(series, match, run);
+            wholeExtraVolumeWriter.Create(series, match, expectedBonusVolumes, run);
         }
 
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
             if (!match.ByVolumeNumber.TryGetValue(volume.Number, out var record)
-                && !match.BonusVolumes.TryGetValue(volume.Number, out record))
+                && !match.BonusVolumes.TryGetValue(volume.Number, out record)
+                && !match.UntrackedMainVolumes.TryGetValue(volume.Number, out record))
             {
                 continue;
             }

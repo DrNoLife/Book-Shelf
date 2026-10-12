@@ -15,8 +15,8 @@ public static class LibraryClientExtensions
             // The status and format filters, remembered per browser.
             services.AddScoped<LibraryFilterMemory>();
 
-            // "I finished Vol N" and its undo, shared by the desktop card and the phone carousel.
-            services.AddScoped<FinishVolumeState>();
+            // "I finished Vol N", "+1 chapter" and their undo, shared by the desktop card and the phone carousel.
+            services.AddScoped<FinishReadingState>();
 
             return services;
         }

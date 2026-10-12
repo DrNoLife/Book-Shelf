@@ -80,6 +80,15 @@ public sealed record LibraryCardResponse
 
     public DateTimeOffset? LastSyncedAt { get; init; }
 
+    /// <summary>Whether the reader counts this series in volumes or in chapters.</summary>
+    public ProgressUnit ProgressUnit { get; init; } = ProgressUnit.Volumes;
+
+    /// <summary>The last chapter read; shown only on a Chapters series.</summary>
+    public decimal? LastChapterRead { get; init; }
+
+    /// <summary>The latest chapter MangaUpdates knows of. Null without a linked record.</summary>
+    public decimal? LatestChapter { get; init; }
+
     // Derived from the counts, never stored (CLAUDE.md). Computed here rather
     // than in SQL so the projection doesn't repeat both count subqueries a
     // third time; it is still nowhere near the database.

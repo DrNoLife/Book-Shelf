@@ -50,6 +50,11 @@ public sealed class AppleBooksSearchResult
     public string? ArtistName { get; set; }
 
     /// <summary>
+    /// The store's shelving: "Manga", "Light Novels", "Comics &amp; Graphic Novels".
+    /// </summary>
+    public List<string>? Genres { get; set; }
+
+    /// <summary>
     /// "ebook" for the rows the shelf wants.
     /// </summary>
     // Absent rather than different on an audiobook row, which carries `wrapperType`

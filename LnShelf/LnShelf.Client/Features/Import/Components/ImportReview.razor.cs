@@ -9,6 +9,10 @@ public partial class ImportReview
     [Parameter]
     public bool IsBusy { get; set; }
 
+    /// <summary>Apply is running: its button shows the wait.</summary>
+    [Parameter]
+    public bool IsCommitting { get; set; }
+
     [Parameter]
     public EventCallback<ImportDecision> Decided { get; set; }
 

@@ -59,6 +59,24 @@ public sealed record SeriesDetailResponse
     // want tiles.
     public VolumeView? VolumeViewOverride { get; init; }
 
+    /// <summary>Whether the reader counts this series in volumes or in chapters.</summary>
+    // Defaulted rather than required, like the chapter fields below, so a payload from the
+    // release before chapters existed still reads as the Volumes series it was.
+    public ProgressUnit ProgressUnit { get; init; } = ProgressUnit.Volumes;
+
+    /// <summary>
+    /// The last chapter the reader has read. Kept when the unit is switched back to Volumes, so
+    /// it is only shown while <see cref="ProgressUnit"/> is Chapters.
+    /// </summary>
+    public decimal? LastChapterRead { get; init; }
+
+    /// <summary>The latest chapter MangaUpdates knows of. Null without a linked record.</summary>
+    public decimal? LatestChapter { get; init; }
+
+    /// <summary>"90 to read": chapters out that are not read. Null when either side is unknown.</summary>
+    // Derived, never stored (CLAUDE.md), on the same footing as LibraryCardResponse.Behind.
+    public decimal? ChaptersToRead => ChapterProgress.ToRead(LatestChapter, LastChapterRead);
+
     public required SeriesCountsResponse Counts { get; init; }
 
     /// <summary>Where the published count came from, for "How is this counted?".</summary>

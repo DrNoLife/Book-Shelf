@@ -501,6 +501,15 @@ h1[tabindex="-1"]:focus { outline: none; }
 .ghost:disabled,
 .destructive:disabled { opacity: 0.45; cursor: default; }
 
+/* The one button whose call is in flight is disabled like the rest, but not faded with
+   them: it carries the busy indicator and "Adding…", and a 45% wash would make the one
+   thing happening look like the one thing that is not. */
+.primary[aria-busy="true"]:disabled,
+.secondary[aria-busy="true"]:disabled,
+.tertiary[aria-busy="true"]:disabled,
+.ghost[aria-busy="true"]:disabled,
+.destructive[aria-busy="true"]:disabled { opacity: 0.85; cursor: progress; }
+
 .button--large {
   min-height: var(--control-large);
   padding: 0 var(--space-5);

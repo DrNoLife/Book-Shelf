@@ -111,6 +111,7 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
         decimal throughNumber,
         ReadStatus? read,
         bool? owned,
+        OwnedFormat? ownedFormat = null,
         CancellationToken cancellationToken = default)
     {
         var request = new BulkVolumeStateRequest
@@ -118,6 +119,7 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
             ThroughNumber = throughNumber,
             Read = read,
             Owned = owned,
+            Format = ownedFormat,
         };
 
         using var response = await httpClient.PostAsJsonAsync(
@@ -164,6 +166,28 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
             $"api/series/{seriesId}/notifications",
             new SetSeriesNotificationsRequest { Muted = muted },
             "Could not save that",
+            cancellationToken);
+
+    /// <summary>Counts the series in volumes or in chapters. Answers with the refreshed series.</summary>
+    public Task<SeriesDetailResponse?> SetProgressUnitAsync(
+        Guid seriesId,
+        ProgressUnit progressUnit,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/series/{seriesId}/progress-unit",
+            new SetProgressUnitRequest { ProgressUnit = progressUnit },
+            "Could not save that",
+            cancellationToken);
+
+    /// <summary>Records the last chapter read, or clears it with null. Answers with the refreshed series.</summary>
+    public Task<SeriesDetailResponse?> SetLastChapterReadAsync(
+        Guid seriesId,
+        decimal? lastChapterRead,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/series/{seriesId}/chapter",
+            new SetLastChapterReadRequest { LastChapterRead = lastChapterRead },
+            "Could not save that chapter",
             cancellationToken);
 
     /// <summary>

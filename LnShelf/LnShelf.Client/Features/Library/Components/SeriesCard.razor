@@ -52,6 +52,13 @@
         }
     </div>
 
+    @* Desktop only, like the three numbers: a phone's three-across card has no room for a
+       second line of figures, and Up next says it there. *@
+    @if (Card.ProgressUnit is ProgressUnit.Chapters && Card.LastChapterRead is { } lastChapterRead)
+    {
+        <span class="card__chapter fine tabular desktop-only">@ChapterText.Position(lastChapterRead, Card.LatestChapter)</span>
+    }
+
     <h3 class="card__title title-card">@Card.TitleEnglish</h3>
 
 </a>

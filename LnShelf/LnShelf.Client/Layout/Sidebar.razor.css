@@ -170,6 +170,9 @@
   color: var(--faint);
 }
 
+/* Room between the busy indicator and "Syncing…". */
+.sync__now .foot__button { gap: 6px; }
+
 .sync__notice {
   font-size: var(--fs-caption);
   color: var(--faint);

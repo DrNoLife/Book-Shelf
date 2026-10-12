@@ -17,6 +17,11 @@
 
     <CountProvenance Series="Series" />
 
+    @if (SeriesState.CoverUploadNote is { } coverUploadNote)
+    {
+        <p class="notice" role="status"><BusyIndicator /> @coverUploadNote</p>
+    }
+
     @* The measured element for both renderings: the popover placement and the arrow
        keys ask it for a [data-volume] rect, and a row carries that attribute exactly
        as a tile does. *@

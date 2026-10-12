@@ -249,6 +249,88 @@ public sealed class VolumeEditionMatcherTests
         bool expected) =>
         VolumeEditionMatcher.ConfirmsMedium(Format.LightNovel, recordTitle).ShouldBe(expected);
 
+    [Theory]
+    // Seven Seas puts the medium between the title and the number. Both titles are verbatim
+    // from a captured Apple search (apple-books-search-classroom-of-the-elite-light-novel.json).
+    [InlineData("Classroom of the Elite (Light Novel) Vol. 1", 1)]
+    [InlineData("Classroom of the Elite (Light Novel) Vol. 11.5", 11.5)]
+    public void TryMatchVolumeNumber_TheMediumBeforeTheVolumeMarker_ReadsTheNumber(
+        string recordTitle,
+        decimal expected)
+    {
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber("Classroom of the Elite", Format.LightNovel, recordTitle, out var number)
+            .ShouldBeTrue();
+
+        number.ShouldBe(expected);
+    }
+
+    [Theory]
+    // The other medium in the same place, which the series-title test lets through and the
+    // other-medium test must still refuse.
+    [InlineData("Classroom of the Elite", Format.LightNovel, "Classroom of the Elite (Manga) Vol. 1")]
+    [InlineData("Classroom of the Elite", Format.Manga, "Classroom of the Elite (Light Novel) Vol. 1")]
+
+    // A sequel series: its own words still come before the medium.
+    [InlineData("Classroom of the Elite", Format.LightNovel, "Classroom of the Elite: Year 2 (Light Novel) Vol. 1")]
+
+    // The German edition, where skipping the medium leaves "Band", which is not a volume marker
+    // this matcher knows (a real Apple row for Overlord).
+    [InlineData("Overlord", Format.LightNovel, "Overlord – Light Novel, Band 06")]
+
+    // The light novel of a manga series, marked "(novel)" by IZE Press beside its "(comic)".
+    [InlineData("Solo Leveling", Format.LightNovel, "Solo Leveling, Vol. 15 (comic)")]
+    public void TryMatchVolumeNumber_AMediumMarkerThatDoesNotFit_ReadsNothing(
+        string seriesTitle,
+        Format format,
+        string recordTitle) =>
+        VolumeEditionMatcher.TryMatchVolumeNumber(seriesTitle, format, recordTitle, out _).ShouldBeFalse();
+
+    [Theory]
+    // IZE Press marks its Korean titles "(comic)" rather than "(manga)"; both are a manga's
+    // marker. The "(novel)" beside it is not, and neither is the bare title.
+    [InlineData("Solo Leveling, Vol. 15 (comic)", true)]
+    [InlineData("Solo Leveling, Vol. 4 (novel)", false)]
+    [InlineData("Solo Leveling: Ragnarok, Vol. 3 (comic)", true)]
+    public void ConfirmsMedium_AMangaSeries_TakesComicAsItsMarker(string recordTitle, bool expected) =>
+        VolumeEditionMatcher.ConfirmsMedium(Format.Manga, recordTitle).ShouldBe(expected);
+
+    [Fact]
+    public void TryMatchVolumeNumber_AComicMarkedVolume_ReadsItsNumber()
+    {
+        VolumeEditionMatcher
+            .TryMatchVolumeNumber("Solo Leveling", Format.Manga, "Solo Leveling, Vol. 15 (comic)", out var number)
+            .ShouldBeTrue();
+
+        number.ShouldBe(15);
+    }
+
+    [Theory]
+    // Viz titles carry no marker, and Apple's genre is the only evidence (Chainsaw Man, captured).
+    [InlineData(Format.Manga, "Chainsaw Man, Vol. 22", new[] { "Manga", "Books", "Comics & Graphic Novels" }, true)]
+
+    // Never for a light novel: Apple shelves Bookworm's novels under "Manga" too (captured).
+    [InlineData(Format.LightNovel, "Ascendance of a Bookworm: Part 4 Volume 5",
+        new[] { "Fantasy", "Books", "Sci-Fi & Fantasy", "Comics & Graphic Novels", "Manga" }, false)]
+
+    // A title that says novel is not the manga whatever its shelf says.
+    [InlineData(Format.Manga, "Solo Leveling, Vol. 4 (novel)", new[] { "Manga" }, false)]
+
+    // The Japanese edition's shape names no volume, so the genre is not trusted for it.
+    [InlineData(Format.Manga, "OVERLORD (1)", new[] { "Manga" }, false)]
+
+    // A genre that merely contains the word is not Apple's "Manga".
+    [InlineData(Format.Manga, "Chainsaw Man, Vol. 22", new[] { "Fantasy Manga", "Books" }, false)]
+
+    // Without the genre, the unmarked title confirms nothing.
+    [InlineData(Format.Manga, "Chainsaw Man, Vol. 22", new[] { "Books", "Comics & Graphic Novels" }, false)]
+    public void ConfirmsMedium_TheStoresGenre_CountsForMangaOnly(
+        Format format,
+        string recordTitle,
+        string[] genres,
+        bool expected) =>
+        VolumeEditionMatcher.ConfirmsMedium(format, NormalizedTitle.From(recordTitle), genres).ShouldBe(expected);
+
     private static VolumeEnrichment Edition(string? title) => new()
     {
         SourceRecordKey = "/books/OL1M",

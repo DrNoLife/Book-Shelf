@@ -194,6 +194,10 @@ from writes** — command/query separation at the service boundary.
   - **Bonus volumes** (Vol. 7.5) — the store catalogue, and only those: it may create a
     volume with a fractional number between main volumes already tracked, never a whole one.
     The release source owns the main count but cannot say where a bonus volume sits.
+  - **Whole extras** ("13+2 Volumes") — the store catalogue too, within the note's extras:
+    whole volumes contiguous from count + 1, each a dated, medium-confirmed store row; bonus
+    and whole extras together never exceed the note's number, never under a volume-count
+    choice, never released by the count.
   - **Everything else** — AniList.
   - Record the discrepancy in the sync log rather than silently picking. A
     `SyncDiscrepancy` carries one `(source, value)` pair per disagreeing source,

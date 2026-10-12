@@ -1,0 +1,82 @@
+/* A block at the foot of the progress panel, under a hairline, so it reads as part of the
+   series' progress rather than a second panel (a panel does not nest a panel). */
+.chapters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.chapters__unit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.chapters__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+}
+
+/* "Ch. 142 of 232" in the serif, the panel's voice for a figure; "90 to read" beside it in
+   the quiet sans, like the stat figures' labels. */
+.chapters__position {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.chapters__figure {
+  font-family: var(--serif);
+  font-size: var(--fs-stat-small);
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.chapters__to-read {
+  font-size: var(--fs-body);
+  color: var(--muted);
+}
+
+.chapters__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.chapters__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.field__note {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* 16px so a phone does not zoom the page when the input takes focus; on the page colour so
+   the field shows on the --surf panel, as an Inset segmented control does. */
+.chapters__input {
+  inline-size: 6.5em;
+  min-block-size: var(--control);
+  padding: 0 var(--space-2);
+  font-size: 16px;
+  background: var(--bg);
+  border-color: var(--line-2);
+}
+
+.chapters__input:hover { border-color: var(--line-3); }
+
+/* A refused number: its own line, under the input it is about. */
+.chapters__error {
+  flex-basis: 100%;
+  margin: 0;
+}

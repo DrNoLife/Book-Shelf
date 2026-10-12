@@ -103,6 +103,11 @@ public static class VolumeEditionMatcher
     // enough: "Sword Art Online Progressive 3" and "Overlord Gaiden 2" are spin-offs, not
     // volume 3 and volume 2. So nothing but a volume marker may stand before the number. A
     // three-token allowance used to let a one-word qualifier through (audit 2026-10-09).
+    //
+    // The one other thing allowed there is the medium, said once and first: Seven Seas titles
+    // its books "Classroom of the Elite (Light Novel) Vol. 1", with the marker between the
+    // title and the number rather than after it. It names a medium, not a different series,
+    // and whether it is the *right* medium is NamesTheOtherMedium's and ConfirmsMedium's call.
     private static readonly HashSet<string> VolumeMarkers = new(StringComparer.Ordinal) { "vol", "volume" };
 
     private static bool TryReadLeadingVolumeNumber(string remainder, out decimal volumeNumber)
@@ -111,7 +116,7 @@ public static class VolumeEditionMatcher
 
         var tokens = TitleNormalizer.Tokenize(remainder);
 
-        for (var index = 0; index < tokens.Length; index++)
+        for (var index = LeadingMediumMarkerLength(tokens); index < tokens.Length; index++)
         {
             var token = tokens[index];
 
@@ -130,6 +135,25 @@ public static class VolumeEditionMatcher
 
         return false;
     }
+
+    /// <summary>How many tokens a medium marker straight after the title takes up; zero for none.</summary>
+    private static int LeadingMediumMarkerLength(string[] tokens) => tokens switch
+    {
+        ["light", "novel", ..] => 2,
+        [var first, ..] when MangaMarkers.Contains(first) => 1,
+        _ => 0,
+    };
+
+    /// <summary>
+    /// The words a title uses to say it is the manga.
+    /// </summary>
+    // "comic" beside "manga" because that is how Yen Press' IZE Press imprint marks its
+    // Korean titles: "Solo Leveling, Vol. 15 (comic)" next to "Solo Leveling, Vol. 4 (novel)".
+    // Whole tokens only, so "comics" in an unrelated title is not a marker.
+    private static readonly HashSet<string> MangaMarkers = new(StringComparer.Ordinal) { "manga", "comic" };
+
+    /// <summary>Apple's own genre for manga, verbatim — not "Fantasy Manga" or the like.</summary>
+    private const string MangaGenre = "Manga";
 
     /// <summary>
     /// The fraction of a bonus volume, when the token after its number is one; otherwise zero.
@@ -173,9 +197,44 @@ public static class VolumeEditionMatcher
         {
             Format.LightNovel or Format.WebNovel =>
                 recordTitle.Value.Contains("light novel", StringComparison.Ordinal),
-            Format.Manga => TitleNormalizer.Tokenize(recordTitle.Value).Contains("manga"),
+            Format.Manga => TitleNormalizer.Tokenize(recordTitle.Value).Any(MangaMarkers.Contains),
             _ => false,
         };
+
+    /// <summary>
+    /// The same question with a store's own shelving as a second witness, for manga only.
+    /// </summary>
+    /// <param name="storeGenres">The store's genre names for the record, verbatim.</param>
+    // Viz titles its manga "Chainsaw Man, Vol. 22" with no marker at all, and Apple files those
+    // rows under the genre "Manga" — evidence the title cannot give. It counts for a manga
+    // series and never for a light novel: Apple shelves Ascendance of a Bookworm's novels under
+    // "Manga" too, so for a light novel the genre is wrong exactly where it would matter.
+    //
+    // Two guards keep the genre from vouching for what the title itself contradicts. A title
+    // that calls itself a novel ("Solo Leveling, Vol. 4 (novel)") is not the manga whatever its
+    // shelf says. A title that names no volume ("OVERLORD (1)", the Japanese edition's shape)
+    // is not the English edition the genre is being trusted for.
+    public static bool ConfirmsMedium(
+        Format format,
+        NormalizedTitle recordTitle,
+        IReadOnlyCollection<string> storeGenres)
+    {
+        ArgumentNullException.ThrowIfNull(storeGenres);
+
+        if (ConfirmsMedium(format, recordTitle))
+        {
+            return true;
+        }
+
+        if (format is not Format.Manga || !storeGenres.Contains(MangaGenre, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        var tokens = TitleNormalizer.Tokenize(recordTitle.Value);
+
+        return !tokens.Contains("novel") && tokens.Any(VolumeMarkers.Contains);
+    }
 
     /// <summary>
     /// Whether the record is plainly the other medium of the same story.
@@ -188,7 +247,7 @@ public static class VolumeEditionMatcher
     {
         var tokens = TitleNormalizer.Tokenize(normalizedRecordTitle);
 
-        var saysManga = tokens.Contains("manga");
+        var saysManga = tokens.Any(MangaMarkers.Contains);
         var saysLightNovel = normalizedRecordTitle.Contains("light novel", StringComparison.Ordinal);
 
         return format switch

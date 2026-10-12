@@ -28,7 +28,7 @@
         else if (State.User is not { } user || State.Stats is not { } stats)
         {
             <h1 class="visually-hidden">Profile</h1>
-            <p class="notice">Loading your profile…</p>
+            <p class="notice"><BusyIndicator /> Loading your profile…</p>
         }
         else
         {

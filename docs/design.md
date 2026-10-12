@@ -212,7 +212,15 @@ and a filter is not one. `aria-pressed` carries the state to a screen reader.
 `Stretch` makes the segments equal columns (the three-way choices on a panel);
 `Inset` puts the container on `--bg` for use inside a `--surf` panel.
 Used for: format (All · LN · Manga · WN), Rows | Covers, Tiles | List, density
-(icon-only), and a volume's Unread · Reading · Read.
+(icon-only), a volume's Unread · Reading · Read, and select mode's Physical ·
+Digital.
+
+A segmented control can also qualify the one button beside it: select mode's
+Physical · Digital sits just before "Mark 3 owned · Digital", the pair wrapping
+together on a phone. The button repeats the choice in its label, so the press
+says what it writes, and when there is nothing left to write it is disabled and
+says so ("All 3 owned as Digital"). The choice starts at Physical each time select
+mode opens; it is not a preference.
 
 ### Dropdown
 
@@ -343,6 +351,39 @@ Cover art renders from the local cache endpoint, never the AniList CDN.
 Phosphor, regular weight, vendored as paths in `Icon.razor.cs`, 12–16px, paired
 with text except in nav rows and tile marks.
 
+### Busy indicator (`BusyIndicator`)
+
+Three ticks at the tick strip's proportions (narrow, tall, close), lit one after
+the other in a slow rise and settle (1.2s) — volumes being shelved, not a
+spinner. Drawn in `currentColor` and sized in `em`, so it takes the colour and
+size of the button or line it sits in; it has no colour of its own because every
+colour here already means something (the accent is an action; read, owned and
+out are progress). With `prefers-reduced-motion` the ticks stand still and the
+group only breathes in opacity. It is `aria-hidden`: the words beside it carry
+the meaning.
+
+### Busy states
+
+A wait the reader can feel — anything that reaches a metadata source, uploads a
+file or runs a sync — shows where it was asked for, never as an overlay over the
+page:
+
+- **The button that started it** keeps its place and size, shows the indicator
+  and says what it is doing ("Adding…", "Linking…", "Syncing…"), and carries
+  `aria-busy="true"`. It is disabled like the controls that must wait for it, but
+  at 85% rather than the disabled 45% (`app.css`), so the one thing happening
+  does not look like the one thing that is not.
+- **Only that button.** Other controls of the same kind are disabled, quietly;
+  they do not all start ticking.
+- **Say why when it is long.** An add from search that runs past four seconds
+  adds one `fine` line under the button: "Looking up volumes and release dates.
+  This can take a moment." The add really is doing that, against rate-limited
+  sources.
+- **A screen reader hears it start** through a polite `role="status"` line that
+  is always in the page ("Adding Overlord…"), then the usual outcome message.
+- **Page loads** keep their one-line notice ("Loading the shelf…") with the
+  indicator before it. A local toggle that answers at once gets no indicator.
+
 ## Screens
 
 The anatomy each mockup prescribes. Where a mockup control has no backing feature
@@ -387,7 +428,15 @@ read · owned · out."
 A series card: the cover (2:3, radius 8) with the format badge top-left and the
 "New · Vol N" pill top-right; a 6px `ThreeSegmentBar`; the numbers row
 "read · owned · out" in 12px `--muted` with one pill on the right (`Buy` "5 to
-buy", `Neutral` "3 unread", or `Ok` "Up to date"); the title in the serif at 18.
+buy", `Neutral` "3 unread", or `Ok` "Up to date"); on a series counted in chapters a `fine`
+"Ch. 142 of 232" line (desktop only); the title in the serif at 18. A series counted in
+chapters is on Continue reading and the phone's Up next by its chapters, not its volumes
+(owner decision 2026-10-11): while it is Reading and not caught up (no chapter recorded yet,
+no latest chapter known, or the last read below the latest), owned volumes or not. Its card
+swaps the volume parts for chapter ones — eyebrow "Next: Ch. 143", "Ch. 142 of 232 · 90 to
+read" (14px, `--text`; "No chapter recorded yet" before the first) under the title, the
+placeholder cover "Ch. 143" / "Chapter 143", no volume strip on the phone — and its button
+is a tertiary "+1 chapter" with the same "Ch. 143 marked read · Undo" receipt.
 
 ### Series
 
@@ -400,7 +449,18 @@ segmented control, a large primary "Buy Vol 21 on Saxo ↗", and ghost links to
 AniList and MangaUpdates). The **progress panel**: three `StatFigure`s (read,
 owned, out, with "+ N announced"), "Next to read: Vol 18 · 3 unread · 2 to buy",
 a per-volume segment strip (10px, one per volume, radius 2, the four kinds of the
-tick strip), and "Started … · last read …". **Volumes**: the section title, the
+tick strip), and "Started … · last read …". On a manga or web novel the panel ends, under
+a hairline, with the **chapter block** (`ChapterTracking`, owner decision 2026-10-11): an
+eyebrow "Track by" and an `Inset` segmented control **Volumes | Chapters** (Volumes for
+every series until the reader picks; a light novel shows nothing). On Chapters: the
+position in the serif at 30 ("Ch. 142 of 232", or "Ch. 142" when no source knows the
+latest, "No chapter recorded yet" before the first), "90 to read" beside it in `--muted`
+(only when both numbers are known and the difference is positive), a `.tertiary` "+1" (the
+next whole chapter, saved at once — tertiary like "Mark Vol 18 read", because the page's one
+primary is the Buy link), and "Last read" with a text input (`inputmode="decimal"`, 16px,
+on `--bg` with a `--line-2` border) saved on Enter or blur. A refused number is a `fine`
+`role="alert"` line under the input, and the input goes back to the stored number. The
+position is `aria-live="polite"`. **Volumes**: the section title, the
 Covers | List toggle, Select, Bulk actions (on a series kept by hand — no external id, so
 nothing syncs it — a `.secondary` "Add Vol N" for the next whole number, at every width),
 a native **How is this counted?** disclosure under the count line (`CountProvenance`;

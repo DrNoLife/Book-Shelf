@@ -44,4 +44,13 @@ public sealed record VolumeFacts
     public string? RawReleaseDate { get; init; }
 
     public Uri? CoverImageUrl { get; init; }
+
+    /// <summary>
+    /// Whether the source already ruled its placeholder art out, so a cover on a volume that
+    /// is not out yet may be cached.
+    /// </summary>
+    // Data rather than a branch on the source's name, like MayReplaceReleaseDate: a source
+    // that cannot tell a placeholder from a cover leaves this false, and the writer falls back
+    // to caching no art before the release date.
+    public bool CoverScreenedForPlaceholder { get; init; }
 }

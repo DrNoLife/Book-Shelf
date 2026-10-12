@@ -13,6 +13,14 @@ public partial class SearchPreview
     [Parameter]
     public bool IsBusy { get; set; }
 
+    /// <summary>This series is the one being added, from here or from its row.</summary>
+    [Parameter]
+    public bool IsAdding { get; set; }
+
+    /// <summary>The add has run long enough to say why; only read while <see cref="IsAdding"/>.</summary>
+    [Parameter]
+    public bool IsTakingLong { get; set; }
+
     /// <summary>"Add to shelf", with the start the reader set.</summary>
     [Parameter]
     public EventCallback<StartingVolumes> AddRequested { get; set; }

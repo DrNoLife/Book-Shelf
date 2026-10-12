@@ -34,15 +34,31 @@
                 }
                 else if (obstacle is null)
                 {
-                    <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="OnEnableAsync">
-                        Turn on for this device
+                    <button type="button" class="secondary" aria-busy="@_isEnabling.ToAriaState()" disabled="@State.IsBusy" @onclick="OnEnableAsync">
+                        @if (_isEnabling)
+                        {
+                            <BusyIndicator />
+                            <span>Turning on…</span>
+                        }
+                        else
+                        {
+                            <span>Turn on for this device</span>
+                        }
                     </button>
                 }
 
                 @if (settings.Devices.Count > 0)
                 {
-                    <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="() => State.SendTestAsync()">
-                        Send a test
+                    <button type="button" class="secondary" aria-busy="@_isTesting.ToAriaState()" disabled="@State.IsBusy" @onclick="OnSendTestAsync">
+                        @if (_isTesting)
+                        {
+                            <BusyIndicator />
+                            <span>Sending…</span>
+                        }
+                        else
+                        {
+                            <span>Send a test</span>
+                        }
                     </button>
                 }
             </div>

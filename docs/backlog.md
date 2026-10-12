@@ -262,3 +262,86 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
     reference, never stored as a flag (CLAUDE.md, derived states).
   - **Budget.** One lookup per watched volume per night, rate limited like the other
     sources, across every user.
+
+## 9. Community volume covers (a friend's request, 2026-10-11) — future
+
+> "If I upload the Chainsaw Man Vol 1 cover, can [another user] pick the cover I uploaded
+> without finding it themselves? Maybe a setting that by default picks whatever most of the
+> 'community' chose. That way everyone helps keep covers up to date."
+
+Today a cover override is private user data: each shelf is its own copy, and an upload lives
+under that user's cover keys. Open questions before any code:
+
+- **Crossing shelves on purpose.** Like the shared shelf, this reads other users' data, so it
+  needs its own explicit, reviewed read path (never lifting the owner filters). Matching
+  "the same volume" across shelves goes by external id + volume number (AniList or
+  MangaUpdates id, Format, Number), not row ids. Manual series have no external id and stay out.
+- **Consent.** An upload becomes visible to other users only if its uploader opts in (per
+  upload, or one profile switch "Share my cover uploads"). New processing for the privacy
+  page; withdrawing consent or deleting the account removes the shared copies.
+- **Choosing.** Per volume, "Community covers" offers the shared uploads (most-picked first);
+  picking one stores an ordinary override pointing at the shared image (or a copy), so sync
+  still never touches it. Optional per-user default "Use the community's most-picked cover
+  when I have none": the majority is computed in a query, never stored as a flag.
+- **Abuse.** A small circle of friends today, but a wrong or offensive image spreads to
+  others; at least a "Report / hide this cover" and the uploader's name on each candidate.
+- Storage: shared images deduplicated by content hash in the cover store.
+
+## 10. Manga read chapter by chapter (owner, 2026-10-11) — layer 1 DONE (2026-10-11, v0.30.0)
+
+The owner reads some manga by chapter (weekly/simulpub), while the shelf only knew whole
+volumes. Layer 1 is built: each manga or web novel is counted in Volumes or Chapters
+(`SeriesUserState.ProgressUnit`, Volumes by default), the reader records the last chapter read
+(`LastChapterRead`, decimal; "+1" or typed on the series page), and `Series.LatestChapter` comes
+from MangaUpdates' `latest_chapter` on every refresh. "N to read" is derived, never stored. A
+Chapters series that is Reading and not caught up is on Continue reading / Up next by its
+chapters, with "+1 chapter" and Undo there, whether or not any volume is owned. Volume read
+states, To buy, Backlog and Behind stay volume-based. Still open:
+
+- **Layer 2: chapter → volume mapping.** MangaUpdates only gives the latest chapter; AniList
+  gives a chapter total for finished series only. MangaDex's `GET /manga/{id}/aggregate` maps
+  chapters to volumes (unverified for English-edition numbering; scanlation-based). Spike it
+  like §1 before committing; whether reaching a volume's last chapter marks that volume read
+  is a design decision (probably offer, not force).
+- **A global default unit** (a preference for new manga/web novel series), instead of choosing
+  per series.
+
+## 11. Recommendations (researched 2026-10-11, owner approved) — next candidate
+
+Research page: https://claude.ai/artifact/CFUmAsPYGGe8cgZhFhXh5o (private to the owner).
+Source: AniList `Media.recommendations` (reader-voted, stays in format; 1–2 batched
+requests per shelf). MangaUpdates recommendations are too thin; Jikan/MAL, NovelUpdates,
+Open Library subjects rejected. Cross-user collaborative filtering is meaningless at ~5 users.
+
+Owner decisions (2026-10-11): lift "recommendations" from the feature-spec §1 non-goals;
+storing "Not interested" dismissals as user data is fine.
+
+Plan: v0 "Readers of X also liked" strip on the series page (copy of More-by-author: shared
+HybridCache per AniList id, own rate-limit bucket, Add button; votes ≥ 2, same format, no
+adult). v1 "For you" (library section or Discover page): seeds = Completed + Reading with ≥1
+read, weight = status × depth × recency (half-life ~1 year), candidate = Σ weight ×
+log(1+votes)/log(1+seed top votes), drop shelved/other formats, lower Dropped neighbours,
+cap per seed / "Because you read X" rows. v1.1 relations ("the LN is further ahead") +
+"Not interested". Later: tag profile for cold start, optional rating, friends overlay.
+Never crawl second-hop neighbours (AniList terms: no hoarding).
+
+## 12. Apple Books matcher recall + next announced volumes (researched 2026-10-11, owner approved)
+
+Apple Books is already the primary per-volume source (dates, covers, subtitles). It must not
+own the count (MU lagged in 1 of 12 series; 86 Vol 14 is a pre-order, MU's 13 is right).
+1. Matcher fixes: accept a medium marker before "Vol." (COTE); accept Apple genre "Manga"
+   as medium evidence for manga only (Chainsaw Man, Berserk, Kodansha Slime); verify Slime
+   manga 1–8 (likely a spin-off) with `enrichment-verify`; detect placeholder covers by
+   `coverArt.<hash>.png` instead of discarding every future-dated cover. Bookworm stays out.
+   **[done 2026-10-11]** except the Slime manga 1–8 check, which is still open; "(comic)"
+   counts as a manga marker too (IZE Press). Found on the way (Solo Leveling stuck at 13 of 15): an English
+   note's extras ("13+2 Volumes") may now be whole volumes past the count, created from the
+   store like bonus volumes (CLAUDE.md, conflicting sources).
+2. Store may create the next contiguous main volumes past the tracked count when confirmed
+   by number, medium and a date ≤ ~12 months ahead; never sets IsReleased by count, never
+   deletes, stands down under a VolumeCount SourceChoice; use a released-only highest (the
+   current `HighestConfirmedNumber` counts pre-orders); stop skipping Apple when every
+   volume is enriched. Owner: such volumes DO raise HasNewVolume / notifications. One line
+   in CLAUDE.md's precedence list.
+3. Housekeeping: Apple gets its own lookup budget; treat 403 like 429. Owner: keep caching
+   Apple covers as today (no per-volume Apple link required).

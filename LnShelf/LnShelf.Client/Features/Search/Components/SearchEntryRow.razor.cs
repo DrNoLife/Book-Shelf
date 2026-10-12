@@ -24,6 +24,14 @@ public partial class SearchEntryRow
     [Parameter]
     public bool IsBusy { get; set; }
 
+    /// <summary>This row's own series is the one being added: its Add shows the wait.</summary>
+    [Parameter]
+    public bool IsAdding { get; set; }
+
+    /// <summary>The add has run long enough to say why; only read while <see cref="IsAdding"/>.</summary>
+    [Parameter]
+    public bool IsTakingLong { get; set; }
+
     [Parameter]
     public EventCallback<SearchWorkEntry> Selected { get; set; }
 
@@ -41,6 +49,8 @@ public partial class SearchEntryRow
     /// </summary>
     private string AccessibleName =>
         $"{Entry.Result.TitleEnglish}, {SearchWorkText.LongName(Entry.Result.Format).ToLowerInvariant()}";
+
+    private string AddLabel => IsAdding ? $"Adding {AccessibleName}…" : $"Add {AccessibleName}";
 
     /// <summary>AniList publishes no total for most ongoing series; a dash says so quietly.</summary>
     private string VolumeText => Entry.Result.VolumeCount switch

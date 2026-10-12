@@ -22,7 +22,7 @@ public sealed class LibraryHighlightsTests
                 Tick(4, owned: true, ReadStatus.Unread),
             ]);
 
-        var entry = LibraryHighlights.ContinueReading([card], take: 3).ShouldHaveSingleItem();
+        var entry = LibraryHighlights.ContinueReading([card], take: 3).ShouldHaveSingleItem().ShouldBeOfType<NextVolumeEntry>();
 
         entry.NextVolumeNumber.ShouldBe(3);
         entry.NextVolumeId.ShouldBe(card.NextToReadVolumeId!.Value);
@@ -49,6 +49,77 @@ public sealed class LibraryHighlightsTests
         var entries = LibraryHighlights.ContinueReading([older, never, newer], take: 2);
 
         entries.Select(entry => entry.Card.TitleEnglish).ShouldBe(["Newer", "Older"]);
+    }
+
+    // The volume path is the unit's, not the format's: a manga counted in volumes is unchanged.
+    [Fact]
+    public void ContinueReading_AVolumesSeries_StillNeedsAnOwnedUnreadVolume()
+    {
+        var withVolume = Card("With volume", backlog: 1, nextToRead: 4, format: Format.Manga, latestChapter: 232m, lastChapterRead: 10m);
+        var withoutVolume = Card("Without volume", format: Format.Manga, latestChapter: 232m, lastChapterRead: 10m);
+
+        LibraryHighlights.ContinueReading([withVolume, withoutVolume], take: 3)
+            .ShouldHaveSingleItem().ShouldBeOfType<NextVolumeEntry>().Card.TitleEnglish.ShouldBe("With volume");
+    }
+
+    [Theory]
+    // last chapter read, latest chapter: not caught up, or nobody can say
+    [InlineData("142", "232")]
+    [InlineData(null, "232")]
+    [InlineData("142", null)]
+    [InlineData(null, null)]
+    public void ContinueReading_AChaptersSeriesBeingReadAndNotCaughtUp_IsAMemberWithoutOwningAVolume(
+        string? lastChapterRead, string? latestChapter)
+    {
+        var card = Chapters("Chainsaw Man", TrackingStatus.Reading, Parse(lastChapterRead), Parse(latestChapter));
+
+        var entry = LibraryHighlights.ContinueReading([card], take: 3).ShouldHaveSingleItem().ShouldBeOfType<NextChapterEntry>();
+
+        entry.NextChapter.ShouldBe(decimal.Floor(Parse(lastChapterRead) ?? 0) + 1);
+    }
+
+    [Theory]
+    [InlineData("232")]
+    [InlineData("240")]
+    public void ContinueReading_ACaughtUpChaptersSeries_IsNotAMember_EvenWithAnOwnedUnreadVolume(string lastChapterRead)
+    {
+        var card = Chapters("Chainsaw Man", TrackingStatus.Reading, Parse(lastChapterRead), latestChapter: 232m) with
+        {
+            Backlog = 1,
+            NextToReadNumber = 13,
+            NextToReadVolumeId = Guid.NewGuid(),
+        };
+
+        LibraryHighlights.ContinueReading([card], take: 3).ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(TrackingStatus.PlanToStart)]
+    [InlineData(TrackingStatus.Completed)]
+    [InlineData(TrackingStatus.Dropped)]
+    public void ContinueReading_AChaptersSeriesNotBeingRead_IsNotAMember_EvenWithAnOwnedUnreadVolume(TrackingStatus status)
+    {
+        var card = Chapters("Chainsaw Man", status, lastChapterRead: 142m, latestChapter: 232m) with
+        {
+            Backlog = 1,
+            NextToReadNumber = 13,
+            NextToReadVolumeId = Guid.NewGuid(),
+        };
+
+        LibraryHighlights.ContinueReading([card], take: 3).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ContinueReading_ChapterAndVolumeSeries_ShareOneOrderByLastRead()
+    {
+        var volumes = Card("Volumes", backlog: 1, nextToRead: 1, lastReadAt: new DateOnly(2026, 1, 1), ticks: [Tick(1, owned: true, ReadStatus.Unread)]);
+        var chapters = Chapters("Chapters", TrackingStatus.Reading, lastChapterRead: 142m, latestChapter: 232m) with
+        {
+            LastReadAt = new DateOnly(2026, 6, 1),
+        };
+
+        LibraryHighlights.ContinueReading([volumes, chapters], take: 3)
+            .Select(entry => entry.Card.TitleEnglish).ShouldBe(["Chapters", "Volumes"]);
     }
 
     [Fact]
@@ -84,6 +155,19 @@ public sealed class LibraryHighlightsTests
         LibraryHighlights.OutNow([card], take: 8).ShouldHaveSingleItem().FirstVolumeNumber.ShouldBe(4);
     }
 
+    private static decimal? Parse(string? text) =>
+        text is null ? null : decimal.Parse(text, CultureInfo.InvariantCulture);
+
+    private static LibraryCardResponse Chapters(
+        string title, TrackingStatus status, decimal? lastChapterRead, decimal? latestChapter) =>
+        Card(
+            title,
+            status: status,
+            format: Format.Manga,
+            progressUnit: ProgressUnit.Chapters,
+            lastChapterRead: lastChapterRead,
+            latestChapter: latestChapter);
+
     private static VolumeTickResponse Tick(int number, bool owned, ReadStatus readStatus) =>
         new() { Number = number, IsOut = true, Owned = owned, ReadStatus = readStatus };
 
@@ -95,12 +179,16 @@ public sealed class LibraryHighlightsTests
         int? nextToRead = null,
         TrackingStatus status = TrackingStatus.Reading,
         DateOnly? lastReadAt = null,
-        IReadOnlyList<VolumeTickResponse>? ticks = null) =>
+        IReadOnlyList<VolumeTickResponse>? ticks = null,
+        Format format = Format.LightNovel,
+        ProgressUnit progressUnit = ProgressUnit.Volumes,
+        decimal? lastChapterRead = null,
+        decimal? latestChapter = null) =>
         new()
         {
             SeriesId = Guid.NewGuid(),
             TitleEnglish = title,
-            Format = Format.LightNovel,
+            Format = format,
             PublicationStatus = PublicationStatus.Ongoing,
             TrackingStatus = status,
             HasNewVolume = false,
@@ -115,5 +203,8 @@ public sealed class LibraryHighlightsTests
             NextToReadVolumeId = nextToRead is null ? null : Guid.NewGuid(),
             LastReadAt = lastReadAt,
             VolumeTicks = ticks ?? [],
+            ProgressUnit = progressUnit,
+            LastChapterRead = lastChapterRead,
+            LatestChapter = latestChapter,
         };
 }

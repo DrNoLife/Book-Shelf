@@ -46,6 +46,9 @@ public static class SeriesDetailProjection
             HasNewVolume = series.UserState?.HasNewVolume ?? false,
             NotificationsMuted = series.UserState?.NotificationsMuted ?? false,
             VolumeViewOverride = series.UserState?.VolumeViewOverride,
+            ProgressUnit = series.UserState?.ProgressUnit ?? ProgressUnit.Volumes,
+            LastChapterRead = series.UserState?.LastChapterRead,
+            LatestChapter = series.LatestChapter,
             Counts = ToCounts(volumes),
             CountProvenance = new CountProvenanceResponse
             {

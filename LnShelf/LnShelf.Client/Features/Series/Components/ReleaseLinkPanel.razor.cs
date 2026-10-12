@@ -25,10 +25,11 @@ public partial class ReleaseLinkPanel : IDisposable
     private string _query = string.Empty;
     private ReleaseLinkCandidatesResponse? _result;
     private bool _isSearching;
-    private bool _isLinking;
+    // The candidate being linked, so only its button shows the wait.
+    private long? _linkingId;
     private string? _message;
 
-    private bool IsBusy => IsPageBusy || _isSearching || _isLinking;
+    private bool IsBusy => IsPageBusy || _isSearching || _linkingId is not null;
 
     private void OnQueryChanged(string query) => _query = query;
 
@@ -72,7 +73,7 @@ public partial class ReleaseLinkPanel : IDisposable
             return;
         }
 
-        _isLinking = true;
+        _linkingId = candidate.MangaUpdatesId;
         _message = null;
 
         try
@@ -90,7 +91,7 @@ public partial class ReleaseLinkPanel : IDisposable
         }
         finally
         {
-            _isLinking = false;
+            _linkingId = null;
         }
     }
 

@@ -5,6 +5,13 @@
   gap: var(--space-2);
 }
 
+.volumes__owned {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .volumes__hint {
   font-size: var(--fs-small);
   color: var(--faint);
@@ -12,5 +19,12 @@
 }
 
 @media (max-width: 860px) {
-  .volumes__hint { display: none; }
+  .volumes__owned {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.volumes__hint { display: none; }
 }

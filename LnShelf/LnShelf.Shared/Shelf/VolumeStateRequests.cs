@@ -36,6 +36,14 @@ public sealed record BulkVolumeStateRequest
 
     /// <summary>Null leaves ownership alone.</summary>
     public bool? Owned { get; init; }
+
+    /// <summary>
+    /// The edition every volume in the run is owned in, replacing the one an already owned
+    /// volume had — the select mode's "mark these owned, digital". Null keeps an owned
+    /// volume's edition and makes a newly owned one physical, as the single-volume write
+    /// does. Ignored unless <see cref="Owned"/> is true.
+    /// </summary>
+    public OwnedFormat? Format { get; init; }
 }
 
 /// <summary>

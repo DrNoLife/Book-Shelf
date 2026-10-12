@@ -116,6 +116,16 @@ The series/volume tracking domain.
   - *Backlog* = owned ∧ ¬read
   - *Behind* = series with any to-buy or backlog volumes
   - *Up to date* = ¬behind ∧ tracking
+- **Chapter progress [added 2026-10-11]:** a manga or web novel can be counted in
+  `Volumes` (every series' default) or `Chapters`, the reader's choice per series
+  (`SeriesUserState.ProgressUnit`; a light novel is always Volumes, the API refuses
+  Chapters). On Chapters the reader records `LastChapterRead` (0–100,000, at most two
+  decimals); switching either way never clears it and never touches a volume's read or
+  owned state. *Chapters to read* = `Series.LatestChapter` (MangaUpdates'
+  `latest_chapter`) − `LastChapterRead`, computed, only when both are known and the
+  difference is positive. Layer 1 only: no chapter → volume mapping, so To buy / Backlog /
+  Behind stay volume-based. A chapter above 0 on a PlanToStart series moves it to Reading
+  (`TrackingStatusRules.AfterChapterRecorded`); nothing else moves from a chapter.
 - Library query returns everything a card needs in **one round trip**:
   series, counts (read/owned/published), publication status, new-volume flag,
   next-to-buy volume number (feeds the "Vol 12 on Saxo" CTA — a Saxo search
@@ -164,6 +174,15 @@ The series/volume tracking domain.
   - **A future date on a volume the count says is in print is a conflict**, not a
     silent overwrite: it is recorded and the existing value is left alone.
   - **Volume counts and publication status:** MangaUpdates.
+  - **Extras [added 2026-10-11]:** an English publisher's note can count extras
+    beside the main volumes ("9 Volumes + 1 Extra", "13+2 Volumes"). The store
+    catalogue fills those places and nothing more: a bonus volume between the main
+    ones it already tracks (Vol. 7.5), or a whole volume straight past the main
+    count (Solo Leveling's 14 and 15), contiguous from count + 1, each one a dated
+    store row the matcher confirmed as this series and medium. Bonus and whole
+    extras together never exceed the note's number, none are created under a
+    volume-count `SourceChoice`, and nothing is deleted. A whole extra is past the
+    count, so `IsReleased` stays false and its date decides whether it is out.
   - **Everything else:** AniList.
   - **A user's explicit choice of source overrides the precedence for that one
     field** **[amended 2026-10-10]**: the series page shows a recorded
@@ -460,6 +479,9 @@ Series
   -- [amended 2026-10-10] MangaUpdates' last count, written by every refresh. Plain
   -- source metadata, like Volume.IsReleased: a reset of a source choice needs it to
   -- put IsReleased back exactly, and nothing else on the shelf records it.
+  LatestChapter (nullable numeric)
+  -- [added 2026-10-11] MangaUpdates' latest_chapter for the linked record, written by
+  -- every refresh that reads a value; a refresh with none never clears a known one.
 
 Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),
@@ -472,6 +494,8 @@ Volume
   -- is created only from the store catalogue (§4.2, CLAUDE.md), never counted as a main
   -- volume, and never joins a "Vols 5–7" range. Shown through ToVolumeText ("7.5" in
   -- every culture). volume-merge moves user state off a phantom volume onto the real one.
+  -- The store may also create a whole volume past the count when the English note
+  -- counts it as an extra ("13+2 Volumes") [added 2026-10-11]; see the conflict rule.
 
   -- ReleaseDateSource [added 2026-10-09] is provenance for the one field two
   -- per-volume sources compete over. Open Library (by ISBN) may replace any date;
@@ -506,7 +530,12 @@ Volume
 SeriesUserState
   SeriesId (PK/FK), TrackingStatus (Reading|PlanToStart|Completed|Dropped),
   Notes, StartedAt, LastReadAt, VolumeViewOverride (nullable),
-  NotificationsMuted, HasNewVolume
+  NotificationsMuted, HasNewVolume,
+  ProgressUnit (Volumes|Chapters, NOT NULL, database default Volumes),
+  LastChapterRead (nullable numeric)
+  -- [added 2026-10-11] Chapter progress (§4.1): a choice and a reading position, user
+  -- state like the rest of this row, never written by sync. The default makes every row
+  -- that existed before, and any row the previous release inserts, a Volumes series.
   -- [amended 2026-09-06] TitleLanguageOverride and CoverSourceOverride were
   -- dropped: neither was ever read or written, and a column nothing fills is
   -- a promise the UI does not keep. Re-add them with the setting that needs them.
@@ -614,6 +643,10 @@ POST   /api/series/manual   { titleEnglish, format, author?, volumeCount? }
                                                    IsLocalOnly, VolumeCountBasis Manual; 200 +
                                                    alreadyTracked for the same title and format
 PUT    /api/series/{id}/state  { trackingStatus?, notes? }  partial: null = leave alone
+PUT    /api/series/{id}/progress-unit  { progressUnit }     Volumes | Chapters (400 for Chapters on
+                                                   a light novel); keeps the chapter; answers with the series
+PUT    /api/series/{id}/chapter  { lastChapterRead }        null clears; 0–100,000, ≤ 2 decimals; 400
+                                                   for a light novel; answers with the series
 POST   /api/series/{id}/seen                       204; clears HasNewVolume
 DELETE /api/series/{id}
 
@@ -675,6 +708,7 @@ Query/command service split behind each controller per CLAUDE.md.
 
 Every series-scoped write answers with the whole `SeriesDetailResponse`, not with
 the one thing it changed — `PUT /api/series/{id}/state`, `PUT /api/series/{id}/volume-view`,
+`PUT /api/series/{id}/progress-unit`, `PUT /api/series/{id}/chapter`,
 `POST /api/series/{id}/volumes/bulk` and the four single-volume writes
 (`PUT /api/volumes/{id}/read`, `PUT /api/volumes/{id}/owned`, `PUT|DELETE
 /api/volumes/{id}/cover`). One volume's read status moves the series' derived

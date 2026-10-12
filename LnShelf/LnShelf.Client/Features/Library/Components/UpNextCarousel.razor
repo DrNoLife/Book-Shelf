@@ -1,8 +1,9 @@
-@* The phone's "Up next": one card per series with an owned, unread volume, swiped sideways
+@* The phone's "Up next": one card per series with an owned, unread volume (or a chapter to
+   read, on a series counted in chapters), swiped sideways
    and snapping card by card. The cards are the same entries the desktop's "Continue reading"
    draws, so the two cannot disagree about what is next. *@
 
-<section class="carousel" aria-label="Next volume per series">
+<section class="carousel" aria-label="Next to read per series">
     @foreach (var entry in Entries)
     {
         <UpNextCard Entry="entry" IsBusy="IsBusy" Finished="Finished" @key="entry.Card.SeriesId" />

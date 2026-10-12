@@ -20,6 +20,23 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.30.0", new DateOnly(2026, 10, 12), "Chapter by chapter",
+            Features: [
+                "Track a manga or web novel by chapter: choose Volumes or Chapters on its page, then press +1 " +
+                    "after each chapter or type the one you are on. Continue reading and Up next show where you " +
+                    "are (\"Ch. 142 of 232 · 90 to read\") with a +1 chapter button, even if you own none of its volumes.",
+                "Select mode on a series page can mark volumes owned as Digital or Physical, and switch volumes you " +
+                    "already own from one to the other.",
+            ],
+            Improvements: [
+                "Adding a series and other slow actions now show that they are working: the button says " +
+                    "\"Adding…\", a small indicator turns, and a note appears when it takes a while.",
+                "More manga volumes get their release dates and covers from Apple Books.",
+            ],
+            Fixes: [
+                "Series whose English edition lists extra volumes, like Solo Leveling's 13+2, now get all of them.",
+            ]
+        ),
         new("0.29.1", new DateOnly(2026, 10, 11), "Stay signed in",
             Features: [],
             Improvements: [],

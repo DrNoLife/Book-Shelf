@@ -1,3 +1,5 @@
+using LnShelf.Api.Tests.Features.Metadata.Fixtures;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -123,6 +125,62 @@ public sealed class CatalogueVolumeMatcherTests
         match.ByVolumeNumber.Keys.ShouldBe([3]);
     }
 
+    [Fact]
+    public void Match_ComicMarkedVolumes_AreTheMangasAndThoseNotTrackedAreKeptAside()
+    {
+        // The captured Solo Leveling answer against the shelf the owner has: thirteen volumes,
+        // because MangaUpdates counts "13+2".
+        var series = Series("Solo Leveling", Format.Manga, Enumerable.Range(1, 13).ToArray());
+
+        var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.SoloLevelingSearch)]);
+
+        match.ByVolumeNumber.Keys.Order().ShouldBe(Enumerable.Range(1, 13).Select(number => (decimal)number));
+
+        // 14 and 15 are confirmed but not tracked: candidates, not volumes. The Ragnarok sequel
+        // and the "(novel)" light novel are neither.
+        match.UntrackedMainVolumes.Keys.Order().ShouldBe([14m, 15m]);
+        match.UntrackedMainVolumes[15].Title.ShouldBe("Solo Leveling, Vol. 15 (comic)");
+        match.HighestConfirmedNumber.ShouldBe(15);
+    }
+
+    [Fact]
+    public void Match_UnmarkedVizTitles_AreConfirmedByTheStoresMangaGenre()
+    {
+        var series = Series("Chainsaw Man", Format.Manga, Enumerable.Range(1, 22).ToArray());
+
+        var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.ChainsawManSearch)]);
+
+        match.ByVolumeNumber.Keys.Order().ShouldBe([1m, 22m]);
+        match.UntrackedMainVolumes.Keys.ShouldBe([23m]);
+    }
+
+    [Fact]
+    public void Match_LightNovelRowsFiledUnderManga_ConfirmNothingForALightNovel()
+    {
+        // Apple files Bookworm's novels under "Manga". For a light novel the genre is not
+        // evidence at all, and the title says no medium, so the row is refused as before.
+        var series = Series("Ascendance of a Bookworm: Part 4", Format.LightNovel, 5);
+
+        var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.BookwormSearch)]);
+
+        match.ByVolumeNumber.ShouldBeEmpty();
+        match.HighestConfirmedNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Match_TheMediumBeforeTheVolumeMarker_IsMatchedForItsOwnMediumOnly()
+    {
+        var series = Series("Classroom of the Elite", Format.LightNovel, [.. Enumerable.Range(1, 11)]);
+
+        var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.ClassroomOfTheEliteSearch)]);
+
+        // "(Light Novel) Vol. 1" is volume 1; "(Manga) Vol. 1" one row away and the "Year 2"
+        // sequel are not.
+        match.ByVolumeNumber.Keys.ShouldBe([1m]);
+        match.ByVolumeNumber[1].Title.ShouldBe("Classroom of the Elite (Light Novel) Vol. 1");
+        match.BonusVolumes.Keys.ShouldBe([11.5m]);
+    }
+
     private static CatalogueMatch Match(Series series, params CatalogueVolume[] catalogue) =>
         new CatalogueVolumeMatcher(NullLogger<CatalogueVolumeMatcher>.Instance)
             .Match(series, series.TitleEnglish, catalogue);
@@ -133,14 +191,17 @@ public sealed class CatalogueVolumeMatcherTests
         Title = title,
     };
 
-    private static Series Series(params int[] volumeNumbers)
+    private static Series Series(params int[] volumeNumbers) =>
+        Series("Overlord", Format.LightNovel, volumeNumbers);
+
+    private static Series Series(string title, Format format, params int[] volumeNumbers)
     {
         var series = new Series
         {
             Id = Guid.CreateVersion7(),
             AniListId = 85976,
-            TitleEnglish = "Overlord",
-            Format = Format.LightNovel,
+            TitleEnglish = title,
+            Format = format,
             PublicationStatus = PublicationStatus.Ongoing,
         };
 

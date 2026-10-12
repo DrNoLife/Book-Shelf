@@ -20,8 +20,11 @@ public partial class MoreByAuthor : IDisposable
     private AuthorWorksResponse? _works;
     private Guid? _loadedSeriesId;
     private CancellationTokenSource? _loadCancellation;
-    private bool _isAdding;
+    // Which work's add is in flight, so only its tile shows the wait; every Add waits for it.
+    private int? _addingAniListId;
     private string? _message;
+
+    private bool IsAdding => _addingAniListId is not null;
 
     /// <summary>Only a series AniList knows, with an author to name, has anything to ask about.</summary>
     private bool HasAnythingToAsk =>
@@ -79,12 +82,12 @@ public partial class MoreByAuthor : IDisposable
     /// </summary>
     private async Task AddAsync(AuthorWorkResponse work)
     {
-        if (_works is not { } works || _isAdding)
+        if (_works is not { } works || IsAdding)
         {
             return;
         }
 
-        _isAdding = true;
+        _addingAniListId = work.AniListId;
         _message = null;
 
         try
@@ -115,7 +118,7 @@ public partial class MoreByAuthor : IDisposable
         }
         finally
         {
-            _isAdding = false;
+            _addingAniListId = null;
         }
     }
 

@@ -1,0 +1,63 @@
+@* Chapter progress, inside the progress panel of a manga or web novel: the reader chooses
+   whether the series is counted in volumes or chapters, and on Chapters records where they
+   are between volumes. Nothing is forced — every series starts on Volumes — and switching
+   either way touches neither the volumes nor the recorded chapter.
+
+   "+1" is the next action here and is the tertiary button, as "Mark Vol 18 read" is: the
+   page's one primary is the Buy link (design.md, Colour discipline). The number is saved on
+   Enter or when the input loses focus, never per keystroke. *@
+
+<div class="chapters">
+    <div class="chapters__unit">
+        <span class="eyebrow" aria-hidden="true">Track by</span>
+        <SegmentedControl TValue="ProgressUnit"
+                          Options="UnitOptions"
+                          Value="Series.ProgressUnit"
+                          ValueChanged="OnUnitChosenAsync"
+                          Disabled="SeriesState.IsSaving"
+                          Inset="true"
+                          AriaLabel="Track progress by" />
+    </div>
+
+    @if (Series.ProgressUnit is ProgressUnit.Chapters)
+    {
+        <div class="chapters__row">
+            <p class="chapters__position" aria-live="polite">
+                <span class="chapters__figure tabular">@PositionText</span>
+                @if (ToReadText is { } toRead)
+                {
+                    <span class="chapters__to-read tabular">@toRead</span>
+                }
+            </p>
+
+            <div class="chapters__controls">
+                <button type="button"
+                        class="tertiary"
+                        disabled="@SeriesState.IsSaving"
+                        @onclick="AddOneAsync">
+                    +1<span class="visually-hidden"> chapter: mark chapter @NextChapterText read</span>
+                </button>
+
+                <label class="chapters__field">
+                    <span class="field__note">Last read</span>
+                    <input class="chapters__input tabular"
+                           type="text"
+                           inputmode="decimal"
+                           autocomplete="off"
+                           aria-label="Last chapter read"
+                           aria-invalid="@(_error is not null ? "true" : null)"
+                           @ref="_input"
+                           value="@ChapterInput.Format(Series.LastChapterRead)"
+                           @oninput="OnInput"
+                           @onblur="CommitAsync"
+                           @onkeydown="OnKeyDownAsync" />
+                </label>
+            </div>
+
+            @if (_error is not null)
+            {
+                <p class="chapters__error fine" role="alert">@_error</p>
+            }
+        </div>
+    }
+</div>

@@ -14,7 +14,7 @@
 
         @if (!SyncState.HasLoaded)
         {
-            <p class="notice">Loading the last sync…</p>
+            <p class="notice"><BusyIndicator /> Loading the last sync…</p>
         }
         else if (SyncState.Latest is not { } latest)
         {

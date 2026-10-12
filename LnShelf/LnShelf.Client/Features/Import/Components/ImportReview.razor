@@ -52,9 +52,18 @@
         {
             <button type="button"
                     class="primary button--large"
+                    aria-busy="@IsCommitting.ToAriaState()"
                     disabled="@(!Queue.Batch.IsReadyToCommit || IsBusy)"
                     @onclick="CommitRequested">
-                @ApplyLabel
+                @if (IsCommitting)
+                {
+                    <BusyIndicator />
+                    <span>Adding to the shelf…</span>
+                }
+                else
+                {
+                    <span>@ApplyLabel</span>
+                }
             </button>
         }
     </div>

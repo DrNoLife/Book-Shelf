@@ -11,7 +11,7 @@ public partial class LibraryPage : IDisposable
     public required PreferencesState Preferences { get; set; }
 
     [Inject]
-    public required FinishVolumeState Finishing { get; set; }
+    public required FinishReadingState Finishing { get; set; }
 
     /// <summary>Only for the phone header's avatar.</summary>
     [Inject]

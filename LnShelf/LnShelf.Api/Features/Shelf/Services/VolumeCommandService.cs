@@ -125,6 +125,13 @@ public sealed class VolumeCommandService(
             throw new InvalidInputException("A bulk change has to set read status, ownership, or both.");
         }
 
+        // Checked even where it would be ignored: a number outside the enum is a caller bug
+        // worth hearing about, not something to store the next time it is honoured.
+        if (request.Format is { } format && !Enum.IsDefined(format))
+        {
+            throw new InvalidInputException("That is not an edition a volume can be owned in.");
+        }
+
         var series = await dbContext.Series
             .Include(candidate => candidate.UserState)
             .Include(candidate => candidate.SourceChoices)
@@ -137,7 +144,12 @@ public sealed class VolumeCommandService(
         }
 
         var outcome = BulkVolumeStateWriter.ApplyThrough(
-            series, request.ThroughNumber, request.Read, request.Owned, stampedOn: timeProvider.Today());
+            series,
+            request.ThroughNumber,
+            request.Read,
+            request.Owned,
+            stampedOn: timeProvider.Today(),
+            ownedFormat: request.Owned is true ? request.Format : null);
 
         if (outcome.AnyBecameRead)
         {
@@ -154,8 +166,9 @@ public sealed class VolumeCommandService(
 
         logger.LogInformation(
             "Bulk change on {SeriesId}: volumes 1–{ThroughNumber} ({AffectedCount} of {TrackedCount}) "
-            + "read={Read} owned={Owned}",
-            seriesId, request.ThroughNumber, outcome.AffectedCount, series.Volumes.Count, request.Read, request.Owned);
+            + "read={Read} owned={Owned} format={OwnedFormat}",
+            seriesId, request.ThroughNumber, outcome.AffectedCount, series.Volumes.Count, request.Read, request.Owned,
+            request.Format);
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }

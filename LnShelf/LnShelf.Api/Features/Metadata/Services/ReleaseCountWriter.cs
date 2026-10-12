@@ -36,8 +36,11 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
         series.VolumeCountEvidence = info.CountEvidence;
 
         // Main volumes only. The release source counts "9 Volumes + 1 Extra" as nine, so a
-        // tracked bonus Vol. 7.5 is not a tenth volume to disagree about.
-        var trackedCount = series.Volumes.Count(volume => !volume.Number.IsBonusVolume);
+        // tracked bonus Vol. 7.5 is not a tenth volume to disagree about — and "13+2" as
+        // thirteen, so Solo Leveling's whole 14 and 15 are not either. Only as many extras as
+        // the source itself states: a whole volume past them is still a disagreement.
+        var trackedCount = series.Volumes.Count(volume => !volume.Number.IsBonusVolume)
+            - ExtraVolumes.CountWholeExtrasWithin(series, sourceCount, info.ExtraVolumeCount);
         var countChoice = series.ChoiceFor(SyncDiscrepancyField.VolumeCount);
 
         if (sourceCount != trackedCount)

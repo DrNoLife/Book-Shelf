@@ -57,6 +57,13 @@ public sealed class SeriesRefresher(
         {
             releaseCountWriter.Apply(series, info, run, refreshedBefore);
             publicationStatusWriter.Apply(series, info, run);
+
+            // Metadata, never the reader's chapter (that is user state). Only a value is
+            // written: a record that lists no chapter tonight must not erase last night's.
+            if (info.LatestChapter is { } latestChapter)
+            {
+                series.LatestChapter = latestChapter;
+            }
         }
 
         // Enrichment runs whether or not the release source had anything to say: it reads

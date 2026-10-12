@@ -26,6 +26,12 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
     public string? Message { get; private set; }
 
     /// <summary>
+    /// "Uploading the cover for Vol 3…" while a cover is on its way; null otherwise. The
+    /// picker and its popover have closed by then, so the grid says it instead.
+    /// </summary>
+    public string? CoverUploadNote { get; private set; }
+
+    /// <summary>
     /// Incremented on every cover write. The override object key never changes, so
     /// this is what tells the browser the bytes behind it did.
     /// </summary>
@@ -189,14 +195,18 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
     }
 
     /// <summary>"Mark 1–N read" / "Mark 1–N owned".</summary>
+    /// <param name="ownedFormat">
+    /// The edition owned volumes are set to; null keeps an owned volume's and makes a new one physical.
+    /// </param>
     public Task MarkThroughAsync(
         decimal throughNumber,
         ReadStatus? read,
         bool? owned,
+        OwnedFormat? ownedFormat = null,
         CancellationToken cancellationToken = default) =>
         Series is { } series
             ? RunAsync(async () => ReplaceSeries(await client.MarkThroughAsync(
-                series.SeriesId, throughNumber, read, owned, cancellationToken)))
+                series.SeriesId, throughNumber, read, owned, ownedFormat, cancellationToken)))
             : Task.CompletedTask;
 
     /// <summary>
@@ -212,6 +222,7 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
         IReadOnlyList<VolumeResponse> volumes,
         ReadStatus? read,
         bool? owned,
+        OwnedFormat? ownedFormat = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(volumes);
@@ -228,7 +239,7 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
                 if (owned is { } isOwned)
                 {
                     ReplaceSeries(await client.SetOwnedAsync(
-                        volume.VolumeId, isOwned, format: null, cancellationToken));
+                        volume.VolumeId, isOwned, ownedFormat, cancellationToken));
                 }
             }
         });
@@ -252,6 +263,35 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
             ? RunAsync(async () => ReplaceSeries(await client.SetNotificationsMutedAsync(
                 series.SeriesId, muted, cancellationToken)))
             : Task.CompletedTask;
+
+    /// <summary>Counts the series in volumes or in chapters. Neither the volumes nor the chapter change.</summary>
+    public Task SetProgressUnitAsync(ProgressUnit progressUnit, CancellationToken cancellationToken = default) =>
+        Series is { } series
+            ? RunAsync(async () => ReplaceSeries(await client.SetProgressUnitAsync(
+                series.SeriesId, progressUnit, cancellationToken)))
+            : Task.CompletedTask;
+
+    /// <summary>
+    /// Records the last chapter read, or clears it with null. A number the shelf would refuse
+    /// is reported here, before any call, in words.
+    /// </summary>
+    /// <returns>Whether the chapter was saved — a refusal puts the stored number back in the input.</returns>
+    public Task<bool> SetLastChapterReadAsync(decimal? lastChapterRead, CancellationToken cancellationToken = default)
+    {
+        if (Series is not { } series)
+        {
+            return Task.FromResult(false);
+        }
+
+        if (lastChapterRead is { } chapter && ChapterProgress.ProblemWith(chapter) is { } problem)
+        {
+            ReportProblem(problem);
+            return Task.FromResult(false);
+        }
+
+        return RunAsync(async () => ReplaceSeries(await client.SetLastChapterReadAsync(
+            series.SeriesId, lastChapterRead, cancellationToken)));
+    }
 
     /// <summary>How the series is being tracked. The note is left alone.</summary>
     public Task SetTrackingStatusAsync(
@@ -293,16 +333,26 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
             return Task.CompletedTask;
         }
 
+        CoverUploadNote = $"Uploading the cover for Vol {volume.Number.ToVolumeText()}…";
+
         return RunAsync(async () =>
         {
-            var updated = await client.SetCoverAsync(
-                volume.VolumeId, content, fileName, cancellationToken);
-
-            if (updated is not null)
+            try
             {
-                CoverVersion++;
-                ReplaceSeries(updated);
-                Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
+                var updated = await client.SetCoverAsync(
+                    volume.VolumeId, content, fileName, cancellationToken);
+
+                if (updated is not null)
+                {
+                    CoverVersion++;
+                    ReplaceSeries(updated);
+                    Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
+                }
+            }
+            finally
+            {
+                // Cleared inside the operation, so RunAsync's closing notification renders it gone.
+                CoverUploadNote = null;
             }
         });
     }

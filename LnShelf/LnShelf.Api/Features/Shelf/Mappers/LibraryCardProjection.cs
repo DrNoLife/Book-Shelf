@@ -94,6 +94,12 @@ public static class LibraryCardProjection
             LastReadAt = series.UserState != null ? series.UserState.LastReadAt : null,
             LastSyncedAt = series.LastSyncedAt,
 
+            // Shown on the card only for a Chapters series; the "to read" figure is derived
+            // from these two on the client's side of the wire, never stored.
+            ProgressUnit = series.UserState != null ? series.UserState.ProgressUnit : ProgressUnit.Volumes,
+            LastChapterRead = series.UserState != null ? series.UserState.LastChapterRead : null,
+            LatestChapter = series.LatestChapter,
+
             NextToBuyNumber = series.Volumes
                 .Where(volume =>
                     ((volume.ReleaseDate != null && volume.ReleaseDate <= today) || volume.IsReleased)

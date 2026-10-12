@@ -73,7 +73,21 @@ public partial class VolumeGridToolbar
 
     private string MarkSelectedReadLabel => $"Mark {Selection.SelectedVolumeIds.Count} read";
 
-    private string MarkSelectedOwnedLabel => $"Mark {Selection.SelectedVolumeIds.Count} owned";
+    /// <summary>The two editions "Mark N owned" can own the selection in.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<OwnedFormat>> OwnedFormatOptions =
+    [
+        new(OwnedFormat.Physical, "Physical", "Mark them owned, physical edition"),
+        new(OwnedFormat.Digital, "Digital", "Mark them owned, digital edition"),
+    ];
+
+    private IReadOnlyList<VolumeResponse> SelectedVolumes => Series.Volumes
+        .Where(volume => Selection.SelectedVolumeIds.Contains(volume.VolumeId))
+        .ToList();
+
+    private bool IsSelectionOwnedAsChosen => OwnedMarkText.AreAllOwnedAs(SelectedVolumes, Selection.OwnedFormat);
+
+    private string MarkSelectedOwnedLabel =>
+        OwnedMarkText.Label(SelectedCount, IsSelectionOwnedAsChosen, Selection.OwnedFormat);
 
     /// <summary>
     /// The next sensible "mark 1–N read": the run of volumes already read, plus one.
@@ -148,23 +162,27 @@ public partial class VolumeGridToolbar
     /// </summary>
     private Task MarkSelectedReadAsync() => MarkSelectionAsync(ReadStatus.Read, owned: null);
 
-    private Task MarkSelectedOwnedAsync() => MarkSelectionAsync(read: null, owned: true);
+    // The edition is always sent, Physical included: choosing it is how a digital run is
+    // turned back into a physical one.
+    private Task MarkSelectedOwnedAsync() => MarkSelectionAsync(read: null, owned: true, Selection.OwnedFormat);
+
+    private void OnOwnedFormatChosen(OwnedFormat format) => Selection.ChooseOwnedFormat(format);
 
     // A selection that is volumes 1–N goes through the bulk endpoint in one call; anything
     // else is written volume by volume. The bulk endpoint only speaks "through N", and
     // this used to send the highest selected number — so picking 10 and 12 under a
     // "Mark 2 read" label marked twelve volumes.
-    private Task MarkSelectionAsync(ReadStatus? read, bool? owned)
+    private Task MarkSelectionAsync(ReadStatus? read, bool? owned, OwnedFormat? ownedFormat = null)
     {
         if (VolumeRuns.SelectionAsLeadingRun(Series.Volumes, Selection.SelectedVolumeIds) is { } through)
         {
-            return SeriesState.MarkThroughAsync(through, read, owned);
+            return SeriesState.MarkThroughAsync(through, read, owned, ownedFormat);
         }
 
-        var selected = Series.Volumes
-            .Where(volume => Selection.SelectedVolumeIds.Contains(volume.VolumeId))
-            .ToList();
+        var selected = SelectedVolumes;
 
-        return selected.Count == 0 ? Task.CompletedTask : SeriesState.MarkVolumesAsync(selected, read, owned);
+        return selected.Count == 0
+            ? Task.CompletedTask
+            : SeriesState.MarkVolumesAsync(selected, read, owned, ownedFormat);
     }
 }

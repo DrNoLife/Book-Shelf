@@ -10,7 +10,8 @@
             @foreach (var entry in Work.Entries)
             {
                 <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
-                                IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+                                IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" IsAdding="IsAdding(entry)"
+                                IsTakingLong="IsAddTakingLong" Selected="Selected" Added="Added" />
             }
         </ul>
     }
@@ -49,10 +50,15 @@
                     <p class="eyebrow">Main story</p>
                     @if (Offer is { } offer)
                     {
-                        <button type="button" class="ghost work__add-all" disabled="@IsBusy" @onclick="() => OnAddAllAsync(offer)">
+                        <button type="button"
+                                class="ghost work__add-all"
+                                aria-busy="@((BatchProgress is not null).ToAriaState())"
+                                disabled="@IsBusy"
+                                @onclick="() => OnAddAllAsync(offer)">
                             @if (BatchProgress is { } progress)
                             {
-                                @progress
+                                <BusyIndicator />
+                                <span>@progress</span>
                             }
                             else
                             {
@@ -66,7 +72,8 @@
                     @foreach (var entry in Work.MainStory)
                     {
                         <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
-                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" IsAdding="IsAdding(entry)"
+                                IsTakingLong="IsAddTakingLong" Selected="Selected" Added="Added" />
                     }
                 </ul>
             </div>
@@ -82,7 +89,8 @@
                     @foreach (var entry in Work.SideStories)
                     {
                         <SearchEntryRow @key="entry.Result" Entry="entry" ShowFormat="ShowFormat" IsSelected="IsSelected(entry)"
-                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" Selected="Selected" Added="Added" />
+                                        IsOnShelf="IsOnShelf(entry.Result)" IsBusy="IsBusy" IsAdding="IsAdding(entry)"
+                                IsTakingLong="IsAddTakingLong" Selected="Selected" Added="Added" />
                     }
                 </ul>
             </div>

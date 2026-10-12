@@ -26,6 +26,22 @@ public sealed class MangaUpdatesSeriesMapperTests
     }
 
     [Fact]
+    public void ToSeriesInfo_AnEnglishNoteCountingExtras_ReadsTheMainCountAndTheExtrasApart()
+    {
+        var info = MangaUpdatesSeriesMapper.ToSeriesInfo(
+            MangaUpdatesFixtures.LoadSeries(MangaUpdatesFixtures.SoloLevelingSeries));
+
+        // IZE Press notes "13+2 Volumes; Complete", the status line "15 Volumes". The English
+        // note wins (CLAUDE.md), the 2 are the extras the store may fill in, and the chapter
+        // counts of the digital publishers are not volume counts at all.
+        info.ExternalId.ShouldBe(MangaUpdatesFixtures.SoloLevelingSeriesId);
+        info.VolumeCount.ShouldBe(13);
+        info.ExtraVolumeCount.ShouldBe(2);
+        info.CountBasis.ShouldBe(VolumeCountBasis.EnglishPublisherNote);
+        info.CountEvidence.ShouldBe("IZE Press: 13+2 Volumes; Complete");
+    }
+
+    [Fact]
     public void ToSeriesInfo_TheCapturedSeries_CarriesTheTitleTheShelfKnowsItBy()
     {
         var info = MangaUpdatesSeriesMapper.ToSeriesInfo(

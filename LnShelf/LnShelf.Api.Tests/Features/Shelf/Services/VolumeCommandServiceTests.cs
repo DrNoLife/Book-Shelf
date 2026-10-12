@@ -214,6 +214,115 @@ public sealed class VolumeCommandServiceTests
     }
 
     [Fact]
+    public async Task SetBulkAsync_OwnedAsDigital_OwnsTheRunInThatEdition()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 4);
+
+        var detail = await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 3, Owned = true, Format = OwnedFormat.Digital },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.Volumes.Where(volume => volume.Number <= 3)
+            .ShouldAllBe(volume => volume.Owned && volume.OwnedFormat == OwnedFormat.Digital);
+        detail.Volumes.Single(volume => volume.Number == 4).Owned.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The point of the format on a bulk mark: a run already owned as physical becomes
+    /// digital, rather than the bulk write politely keeping what it was told to change.
+    /// </summary>
+    [Fact]
+    public async Task SetBulkAsync_OwnedAsDigital_ReformatsVolumesAlreadyOwned()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 3);
+        var service = CreateService(dbContext);
+
+        await service.SetBulkAsync(
+            series.Id, new BulkVolumeStateRequest { ThroughNumber = 3, Owned = true }, CancellationToken.None);
+
+        var detail = await service.SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 3, Owned = true, Format = OwnedFormat.Digital },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull().Volumes.ShouldAllBe(volume => volume.OwnedFormat == OwnedFormat.Digital);
+    }
+
+    /// <summary>
+    /// Without a format the bulk mark behaves as the single-volume write does: an owned
+    /// volume keeps its edition, a newly owned one is physical.
+    /// </summary>
+    [Fact]
+    public async Task SetBulkAsync_OwnedWithoutAFormat_KeepsEditionsAndDefaultsToPhysical()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 3);
+        var service = CreateService(dbContext);
+
+        await service.SetOwnedAsync(
+            series.Volumes.Single(volume => volume.Number == 1).Id,
+            new SetVolumeOwnedRequest { Owned = true, Format = OwnedFormat.Digital },
+            CancellationToken.None);
+
+        var detail = await service.SetBulkAsync(
+            series.Id, new BulkVolumeStateRequest { ThroughNumber = 3, Owned = true }, CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.Volumes.Single(volume => volume.Number == 1).OwnedFormat.ShouldBe(OwnedFormat.Digital);
+        detail.Volumes.Where(volume => volume.Number > 1)
+            .ShouldAllBe(volume => volume.OwnedFormat == OwnedFormat.Physical);
+    }
+
+    /// <summary>A format only means anything on volumes being marked owned.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(null)]
+    public async Task SetBulkAsync_AFormatWithoutOwning_IsIgnored(bool? owned)
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 2);
+        var service = CreateService(dbContext);
+
+        await service.SetBulkAsync(
+            series.Id, new BulkVolumeStateRequest { ThroughNumber = 2, Owned = true }, CancellationToken.None);
+
+        var detail = await service.SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest
+            {
+                ThroughNumber = 2,
+                Read = ReadStatus.Read,
+                Owned = owned,
+                Format = OwnedFormat.Digital,
+            },
+            CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+
+        // Un-owning clears the edition; leaving ownership alone leaves the physical one.
+        OwnedFormat? expected = owned is false ? null : OwnedFormat.Physical;
+        detail.Volumes.ShouldAllBe(volume => volume.OwnedFormat == expected);
+    }
+
+    [Fact]
+    public async Task SetBulkAsync_AnUnknownFormat_IsRefused()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext, volumeCount: 2);
+
+        var act = async () => await CreateService(dbContext).SetBulkAsync(
+            series.Id,
+            new BulkVolumeStateRequest { ThroughNumber = 2, Owned = true, Format = (OwnedFormat)99 },
+            CancellationToken.None);
+
+        await act.ShouldThrowAsync<InvalidInputException>();
+    }
+
+    [Fact]
     public async Task SetReadAsync_ASeriesWithNoUserStateRow_BecomesReading()
     {
         await using var dbContext = CreateDbContext();

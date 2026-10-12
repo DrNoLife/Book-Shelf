@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using LnShelf.Api.Features.Metadata.Models.AppleBooks;
 
 namespace LnShelf.Api.Features.Metadata.Mappers;
@@ -6,7 +7,8 @@ namespace LnShelf.Api.Features.Metadata.Mappers;
 /// Dirty iTunes search response → clean <see cref="CatalogueVolume"/> records. The
 /// dirty→clean edge for Apple Books (CLAUDE.md — Mapping).
 /// </summary>
-public static class AppleBooksCatalogueMapper
+// Partial only for the generated regex below.
+public static partial class AppleBooksCatalogueMapper
 {
     /// <summary>What Apple calls a book, as opposed to an audiobook or an app.</summary>
     private const string EbookKind = "ebook";
@@ -50,6 +52,8 @@ public static class AppleBooksCatalogueMapper
             return null;
         }
 
+        var (artworkUrl, artworkScreened) = ToArtwork(result.ArtworkUrl100);
+
         return new CatalogueVolume
         {
             SourceRecordKey = ToRecordKey(result),
@@ -64,7 +68,9 @@ public static class AppleBooksCatalogueMapper
             Description = HtmlDescriptionSanitizer.Sanitize(result.Description),
 
             ReleaseDate = ToReleaseDate(result.ReleaseDate),
-            ArtworkUrl = ToArtworkUrl(result.ArtworkUrl100),
+            ArtworkUrl = artworkUrl,
+            ArtworkScreened = artworkScreened,
+            Genres = [.. (result.Genres ?? []).Select(genre => genre.NullIfBlank()).OfType<string>()],
         };
     }
 
@@ -109,21 +115,60 @@ public static class AppleBooksCatalogueMapper
             : null;
     }
 
-    /// <summary>The same artwork at cover size, or exactly what Apple gave when it cannot be.</summary>
-    private static Uri? ToArtworkUrl(string? artworkUrl100)
+    /// <summary>
+    /// The same artwork at cover size, or exactly what Apple gave when it cannot be, or none
+    /// when it is Apple's placeholder — and whether the placeholder was looked for at all.
+    /// </summary>
+    // The placeholder is recognised by its file name. Apple lists a book whose art is not
+    // ready with a typographic stand-in, the title set in type on a plain field, and names
+    // that file "coverArt.<hash>.png" (86 Vol. 14, Chainsaw Man Vol. 23, Solo Leveling:
+    // Ragnarok Vol. 3); a real cover is named for its ISBN or by its publisher. Before this,
+    // every cover on a book not out yet was refused for fear of the placeholder, which also
+    // refused the real art publishers put up months ahead (Ragnarok Vol. 2).
+    //
+    // Only a URL of the usual shape, the file name followed by the size segment, can be read
+    // that way. Any other shape is passed on unscreened, and the old date rule decides.
+    private static (Uri? Url, bool Screened) ToArtwork(string? artworkUrl100)
     {
         if (artworkUrl100.NullIfBlank() is not { } url)
         {
-            return null;
+            return (null, false);
         }
 
-        // Guarded rather than assumed: the swap is a string edit on a URL shape Apple owns,
-        // and a row that does not carry that shape still has usable art at whatever size
-        // it came in.
-        var upgraded = url.Contains(ThumbnailSize, StringComparison.Ordinal)
-            ? url.Replace(ThumbnailSize, CoverSize, StringComparison.Ordinal)
-            : url;
+        if (ArtworkFileName(url) is not { } fileName)
+        {
+            // Guarded rather than assumed: the swap is a string edit on a URL shape Apple owns,
+            // and a row that does not carry that shape still has usable art at whatever size
+            // it came in.
+            return (Uri.TryCreate(url, UriKind.Absolute, out var asGiven) ? asGiven : null, false);
+        }
 
-        return Uri.TryCreate(upgraded, UriKind.Absolute, out var uri) ? uri : null;
+        if (PlaceholderFileNamePattern().IsMatch(fileName))
+        {
+            return (null, true);
+        }
+
+        var upgraded = url.Replace(ThumbnailSize, CoverSize, StringComparison.Ordinal);
+
+        return (Uri.TryCreate(upgraded, UriKind.Absolute, out var uri) ? uri : null, true);
     }
+
+    /// <summary>
+    /// The file name in ".../9781975320775.jpg/100x100bb.jpg": the path segment before the size.
+    /// </summary>
+    /// <returns>Null when the URL is not of that shape.</returns>
+    private static string? ArtworkFileName(string url)
+    {
+        var segments = url.Split('/');
+
+        return segments.Length >= 2 && segments[^1].StartsWith(ThumbnailSize, StringComparison.Ordinal)
+            ? segments[^2].NullIfBlank()
+            : null;
+    }
+
+    /// <summary>"coverArt.faef0f.png": the stand-in Apple lists before a book's art is ready.</summary>
+    // A png on purpose: every measured placeholder is one, while "coverArt.ddf028.jpg" turned
+    // up as the real, if plain, cover of a public-domain book from 1912.
+    [GeneratedRegex(@"^coverArt\.[0-9a-f]+\.png$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex PlaceholderFileNamePattern();
 }

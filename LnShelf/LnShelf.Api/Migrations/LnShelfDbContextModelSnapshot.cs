@@ -605,6 +605,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<DateTimeOffset?>("LastSyncedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("LatestChapter")
+                        .HasColumnType("numeric");
+
                     b.Property<long?>("MangaUpdatesId")
                         .HasColumnType("bigint");
 
@@ -669,6 +672,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<bool>("HasNewVolume")
                         .HasColumnType("boolean");
 
+                    b.Property<decimal?>("LastChapterRead")
+                        .HasColumnType("numeric");
+
                     b.Property<DateOnly?>("LastReadAt")
                         .HasColumnType("date");
 
@@ -678,6 +684,13 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<bool>("NotificationsMuted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ProgressUnit")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Volumes");
 
                     b.Property<DateOnly?>("StartedAt")
                         .HasColumnType("date");

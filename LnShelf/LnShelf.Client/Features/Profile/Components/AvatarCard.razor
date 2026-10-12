@@ -11,8 +11,16 @@
     <p class="fine">@HelpText</p>
 
     <div class="picture__actions">
-        <button type="button" class="secondary" disabled="@_busy" @onclick="OpenPickerAsync">
-            @(_uploading ? "Uploading…" : "Change picture")
+        <button type="button" class="secondary" aria-busy="@_uploading.ToAriaState()" disabled="@_busy" @onclick="OpenPickerAsync">
+            @if (_uploading)
+            {
+                <BusyIndicator />
+                <span>Uploading…</span>
+            }
+            else
+            {
+                <span>Change picture</span>
+            }
         </button>
         @if (User.HasUploadedAvatar)
         {

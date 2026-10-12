@@ -1,0 +1,47 @@
+/* design: three ticks at the tick strip's proportions (narrow, tall, close), in the
+   surrounding text colour. No colour of its own: the progress colours mean read, owned and
+   out, and the accent means "do this", so a wait borrows neither. */
+.busy {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 0.15em;
+  height: 0.85em;
+  vertical-align: -0.05em;
+}
+
+.busy__tick {
+  width: 0.2em;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.3;
+  transform-origin: bottom;
+  animation: busy-shelve 1.2s ease-in-out infinite;
+}
+
+.busy__tick:nth-child(2) { animation-delay: 0.16s; }
+.busy__tick:nth-child(3) { animation-delay: 0.32s; }
+
+/* A slow rise and settle rather than a spin: the page is calm, and a wait is not an alarm. */
+@keyframes busy-shelve {
+  0%, 70%, 100% { opacity: 0.3; transform: scaleY(0.7); }
+  35%           { opacity: 1;   transform: none; }
+}
+
+/* No travelling motion: the three stand still and the group only breathes, so a wait is
+   still visibly a wait. */
+@media (prefers-reduced-motion: reduce) {
+  .busy { animation: busy-breathe 2.4s ease-in-out infinite; }
+
+  .busy__tick {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes busy-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}

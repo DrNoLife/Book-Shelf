@@ -27,7 +27,7 @@
 
                 @if (ImportState.IsMatching)
                 {
-                    <p class="notice" role="status">Reading the file and matching every series against AniList — this takes a moment.</p>
+                    <p class="notice" role="status"><BusyIndicator /> Reading the file and matching every series against AniList — this takes a moment.</p>
                 }
 
                 @if (CommitResult is { } commit)
@@ -43,6 +43,7 @@
                 {
                     <ImportReview Queue="Queue"
                                   IsBusy="ImportState.IsBusy"
+                                  IsCommitting="ImportState.IsCommitting"
                                   Decided="OnDecidedAsync"
                                   CommitRequested="OnCommitAsync" />
                 }

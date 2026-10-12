@@ -35,3 +35,24 @@ public sealed record UpdateSeriesStateRequest
     // special sentinel.
     public string? Notes { get; init; }
 }
+
+/// <summary>
+/// Sets the last chapter the reader has read, or clears it with null.
+/// </summary>
+// Null is a value here, as on SetSeriesVolumeViewRequest: the endpoint sets exactly this one
+// number, so there is nothing to leave alone.
+public sealed record SetLastChapterReadRequest
+{
+    /// <summary>0 to 100,000 with at most two decimals (ChapterProgress); null clears it.</summary>
+    public decimal? LastChapterRead { get; init; }
+}
+
+/// <summary>
+/// Chooses whether the series' progress is counted in volumes or in chapters.
+/// </summary>
+// Its own request rather than a field on the chapter one: switching the unit never touches the
+// number, and a reader who switches back to Volumes keeps it for the day they switch again.
+public sealed record SetProgressUnitRequest
+{
+    public required ProgressUnit ProgressUnit { get; init; }
+}

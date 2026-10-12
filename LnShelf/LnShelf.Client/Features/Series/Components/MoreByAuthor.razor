@@ -36,12 +36,22 @@
                     }
                     else
                     {
+                        var isAddingThis = _addingAniListId == work.AniListId;
                         <button type="button"
                                 class="secondary more__action"
-                                disabled="@_isAdding"
-                                aria-label="@($"Add {work.TitleEnglish} to the shelf")"
+                                disabled="@IsAdding"
+                                aria-busy="@isAddingThis.ToAriaState()"
+                                aria-label="@(isAddingThis ? $"Adding {work.TitleEnglish} to the shelf…" : $"Add {work.TitleEnglish} to the shelf")"
                                 @onclick="() => AddAsync(work)">
-                            Add
+                            @if (isAddingThis)
+                            {
+                                <BusyIndicator />
+                                <span>Adding…</span>
+                            }
+                            else
+                            {
+                                <span>Add</span>
+                            }
                         </button>
                     }
                 </li>

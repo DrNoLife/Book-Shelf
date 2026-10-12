@@ -1,5 +1,5 @@
-@* "Vol 18 marked read · Undo": the receipt for a one-click write, with the way back on it.
-   The live region is always in the DOM and only its content comes and goes, which is what
+@* "Vol 18 marked read · Undo" (or "Ch. 143 marked read"): the receipt for a one-click write,
+   with the way back on it. The live region is always in the DOM and only its content comes and goes, which is what
    makes a screen reader announce it; a region inserted together with its text is often
    missed. It withdraws itself after a few seconds — the undo is for the slip of a thumb,
    not a history. *@
@@ -8,9 +8,9 @@
     @if (State.LastFinished is { } finished)
     {
         <div class="toast" @key="finished">
-            <span class="toast__text">Vol @finished.Number.ToVolumeText() marked read</span>
+            <span class="toast__text">@finished.Label marked read</span>
             <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="UndoAsync">
-                Undo<span class="visually-hidden"> marking Vol @finished.Number.ToVolumeText() of @finished.SeriesTitle read</span>
+                Undo<span class="visually-hidden"> marking @finished.Label of @finished.SeriesTitle read</span>
             </button>
         </div>
     }

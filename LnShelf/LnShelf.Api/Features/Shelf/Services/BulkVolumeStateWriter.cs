@@ -15,12 +15,18 @@ public static class BulkVolumeStateWriter
     /// bought. Null when nobody knows that day: no date is written then, and a date already
     /// on a volume is kept.
     /// </param>
+    /// <param name="ownedFormat">
+    /// The edition the volumes are owned in, replacing any they had. Null keeps an owned
+    /// volume's edition and makes a newly owned one physical. Only read when
+    /// <paramref name="owned"/> is true.
+    /// </param>
     public static BulkVolumeStateOutcome ApplyThrough(
         Series series,
         decimal throughNumber,
         ReadStatus? read,
         bool? owned,
-        DateOnly? stampedOn)
+        DateOnly? stampedOn,
+        OwnedFormat? ownedFormat = null)
     {
         ArgumentNullException.ThrowIfNull(series);
 
@@ -45,7 +51,9 @@ public static class BulkVolumeStateWriter
             if (owned is { } isOwned)
             {
                 state.Owned = isOwned;
-                state.OwnedFormat = isOwned ? state.OwnedFormat ?? OwnedFormat.Physical : null;
+                // The same precedence as the single-volume write: the edition asked for, else
+                // the one already recorded, else physical — what a book shelf assumes.
+                state.OwnedFormat = isOwned ? ownedFormat ?? state.OwnedFormat ?? OwnedFormat.Physical : null;
 
                 // The same stamp the single-volume path makes, so a volume bought through
                 // the bulk bar is not the one kind of owned volume with no purchase date.

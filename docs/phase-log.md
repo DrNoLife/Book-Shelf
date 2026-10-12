@@ -6,6 +6,33 @@ session needs to know. Decisions marked **[flagged]** are veto material.
 
 ---
 
+## Chapter by chapter (0.30.0, 2026-10-11)
+
+- **Chapter progress, layer 1** (backlog §10). `ProgressUnit` Volumes|Chapters and
+  `LastChapterRead` on `SeriesUserState`, `Series.LatestChapter` from MangaUpdates (migration
+  `ChapterProgress`); `SeriesProgressCommandService` behind `PUT api/series/{id}/progress-unit`
+  and `/chapter`; `ChapterTracking` in the series page's progress panel. A higher chapter moves
+  `LastReadAt` forward, as a volume marked read does.
+- **Continue reading / Up next for chapter readers.** Membership stays derived on the client
+  (`LibraryHighlights`), now chosen by the unit: a Volumes series needs an owned, unread volume
+  (unchanged); a Chapters series needs Reading and not caught up (no chapter yet, no latest
+  known, or last read below latest), owned volumes or not. Its card offers "+1 chapter" with
+  the same Undo receipt (`FinishReadingState`, renamed from `FinishVolumeState`).
+- **Select mode bulk owned with a format** (`BulkVolumeStateRequest.Format`) and **busy states**
+  (`BusyIndicator`, `SlowOperationWatch`; design.md "Busy states").
+- **Solo Leveling: whole extras.** MangaUpdates' "13+2" extras may be whole volumes past the
+  count, created from the Apple catalogue (`WholeExtraVolumeWriter`, `ExtraVolumes`). The count
+  check treats tracked whole volumes in (N, N+M], up to the M places bonus volumes leave, as
+  agreeing with the source, so "13+2" with 15 tracked records no discrepancy; a whole volume
+  past those places (Torture Princess' old Vol 10 beside 7.5 under "9+1") still records. Apple
+  matcher recall: "(comic)", a marker before "Vol.", genre Manga for manga only, placeholder
+  covers by file name (backlog §12 step 1).
+
+**[flagged] A Chapters series uses the chapter rule only.** A caught-up chapter reader, or one on
+Plan to start / Completed, is off Continue reading even with owned unread volumes.
+
+---
+
 ## Round 3: the shelf tells you (0.29.0, 2026-10-11)
 
 Built by a workflow: one foundation stage (schema, migration `Round3NotificationsCalendarActivity`,

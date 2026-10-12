@@ -1,13 +1,13 @@
 @inject ApiUrlBuilder ApiUrl
 
-@* The next unread volume you already own, per series (design.md, Library). "Mark Vol 18
-   read" writes straight away — the toast's Undo is the way back — and Open goes to the
-   series for anything more. *@
+@* The next unread volume you already own, per series (design.md, Library) — or, on a series
+   counted in chapters, the next chapter. "Mark Vol 18 read" and "+1 chapter" write straight
+   away — the toast's Undo is the way back — and Open goes to the series for anything more. *@
 
 <section class="continue" aria-labelledby="continue-title">
     <div class="section-head">
         <h2 id="continue-title" class="title-section">Continue reading</h2>
-        <span class="section-head__aside">Next unread volume you already own</span>
+        <span class="section-head__aside">Next unread volume you own, or the next chapter</span>
     </div>
 
     <div class="continue__grid">
@@ -23,29 +23,55 @@
                     }
                     else
                     {
-                        <span class="entry__label tabular">Vol @entry.NextVolumeNumber.ToVolumeText()</span>
+                        <span class="entry__label tabular">@CoverLabel(entry)</span>
                     }
                 </div>
 
                 <div class="entry__body">
-                    <span class="entry__kicker">
-                        <FormatBadge Value="card.Format" />
-                        <span class="eyebrow tabular">Vol @entry.NextVolumeNumber.ToVolumeText() of @CardVolumeNumbers.LastMainOut(card.VolumeTicks).ToVolumeText()</span>
-                    </span>
-                    <h3 class="title-card">@card.TitleEnglish</h3>
-                    <span class="entry__unread">@UnreadText(card.Backlog)</span>
+                    @switch (entry)
+                    {
+                        case NextVolumeEntry volume:
+                            <span class="entry__kicker">
+                                <FormatBadge Value="card.Format" />
+                                <span class="eyebrow tabular">Vol @volume.NextVolumeNumber.ToVolumeText() of @CardVolumeNumbers.LastMainOut(card.VolumeTicks).ToVolumeText()</span>
+                            </span>
+                            <h3 class="title-card">@card.TitleEnglish</h3>
+                            <span class="entry__unread">@UnreadText(card.Backlog)</span>
 
-                    <div class="entry__actions">
-                        <button type="button"
-                                class="tertiary"
-                                disabled="@IsBusy"
-                                @onclick="() => Finished.InvokeAsync(entry)">
-                            Mark Vol @entry.NextVolumeNumber.ToVolumeText() read<span class="visually-hidden"> of @card.TitleEnglish</span>
-                        </button>
-                        <a class="secondary" href="@($"/series/{card.SeriesId}")">
-                            Open <span class="visually-hidden">@card.TitleEnglish</span>
-                        </a>
-                    </div>
+                            <div class="entry__actions">
+                                <button type="button"
+                                        class="tertiary"
+                                        disabled="@IsBusy"
+                                        @onclick="() => Finished.InvokeAsync(volume)">
+                                    Mark Vol @volume.NextVolumeNumber.ToVolumeText() read<span class="visually-hidden"> of @card.TitleEnglish</span>
+                                </button>
+                                <a class="secondary" href="@($"/series/{card.SeriesId}")">
+                                    Open <span class="visually-hidden">@card.TitleEnglish</span>
+                                </a>
+                            </div>
+                            break;
+
+                        case NextChapterEntry chapter:
+                            <span class="entry__kicker">
+                                <FormatBadge Value="card.Format" />
+                                <span class="eyebrow tabular">Next: Ch. @chapter.NextChapter.ToVolumeText()</span>
+                            </span>
+                            <h3 class="title-card">@card.TitleEnglish</h3>
+                            <span class="entry__chapter tabular">@(ChapterText.ForCard(card) ?? "No chapter recorded yet")</span>
+
+                            <div class="entry__actions">
+                                <button type="button"
+                                        class="tertiary"
+                                        disabled="@IsBusy"
+                                        @onclick="() => Finished.InvokeAsync(chapter)">
+                                    +1 chapter<span class="visually-hidden">: mark chapter @chapter.NextChapter.ToVolumeText() of @card.TitleEnglish read</span>
+                                </button>
+                                <a class="secondary" href="@($"/series/{card.SeriesId}")">
+                                    Open <span class="visually-hidden">@card.TitleEnglish</span>
+                                </a>
+                            </div>
+                            break;
+                    }
                 </div>
             </article>
         }
@@ -58,6 +84,13 @@
     [Parameter] public bool IsBusy { get; set; }
 
     [Parameter] public EventCallback<ContinueReadingEntry> Finished { get; set; }
+
+    private static string CoverLabel(ContinueReadingEntry entry) => entry switch
+    {
+        NextChapterEntry chapter => $"Ch. {chapter.NextChapter.ToVolumeText()}",
+        NextVolumeEntry volume => $"Vol {volume.NextVolumeNumber.ToVolumeText()}",
+        _ => string.Empty,
+    };
 
     private static string UnreadText(int backlog) =>
         backlog == 1 ? "Last unread volume on your shelf" : $"{backlog} unread volumes on your shelf";

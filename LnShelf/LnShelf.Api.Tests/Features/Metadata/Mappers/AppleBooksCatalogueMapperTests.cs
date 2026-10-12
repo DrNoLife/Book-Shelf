@@ -100,6 +100,48 @@ public sealed class AppleBooksCatalogueMapperTests
 
         mapped.ShouldNotBeNull().ArtworkUrl
             .ShouldBe(new Uri("https://is1-ssl.mzstatic.com/image/thumb/abc.jpg/512x512bb.jpg"));
+
+        // And its file name cannot be read, so whether it is the placeholder is left to the
+        // date rule downstream.
+        mapped.ArtworkScreened.ShouldBeFalse();
+    }
+
+    [Theory]
+    // Apple's stand-in for art that is not ready yet, in three captured responses.
+    [InlineData(AppleBooksFixtures.EightySixSearch, "86--EIGHTY-SIX, Vol. 14 (light novel)")]
+    [InlineData(AppleBooksFixtures.ChainsawManSearch, "Chainsaw Man, Vol. 23")]
+    [InlineData(AppleBooksFixtures.SoloLevelingSearch, "Solo Leveling: Ragnarok, Vol. 3 (comic)")]
+    public void ToCatalogueVolumes_APlaceholderCover_IsDropped(string fixture, string title)
+    {
+        var volume = AppleBooksFixtures.LoadCatalogue(fixture).Single(record => record.Title == title);
+
+        // Not cover art, so not carried: "coverArt.<hash>.png" is the title set in type, and
+        // caching it would make it the shelf's permanent answer for that volume.
+        volume.ArtworkUrl.ShouldBeNull();
+        volume.ArtworkScreened.ShouldBeTrue();
+    }
+
+    [Theory]
+    // Real art on a book not out yet, which the old date rule refused along with the
+    // placeholders: Chainsaw Man Vol. 22 is dated 2026-10-13, Ragnarok Vol. 2 2026-10-20.
+    [InlineData(AppleBooksFixtures.ChainsawManSearch, "Chainsaw Man, Vol. 22", "9781974770588.jpg")]
+    [InlineData(AppleBooksFixtures.SoloLevelingSearch, "Solo Leveling: Ragnarok, Vol. 2 (comic)", "9798400904806.jpg")]
+    [InlineData(AppleBooksFixtures.EightySixSearch, "86--EIGHTY-SIX, Vol. 8 (light novel)", "9781975320775.jpg")]
+    public void ToCatalogueVolumes_RealCoverArt_IsScreenedAndKept(string fixture, string title, string fileName)
+    {
+        var volume = AppleBooksFixtures.LoadCatalogue(fixture).Single(record => record.Title == title);
+
+        volume.ArtworkScreened.ShouldBeTrue();
+        volume.ArtworkUrl.ShouldNotBeNull().AbsoluteUri.ShouldEndWith($"/{fileName}/1000x1500bb.jpg");
+    }
+
+    [Fact]
+    public void ToCatalogueVolumes_TheStoresGenres_AreCarriedVerbatim()
+    {
+        // The only evidence a Viz title is the manga: "Chainsaw Man, Vol. 22" says nothing itself.
+        AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.ChainsawManSearch)
+            .Single(record => record.Title == "Chainsaw Man, Vol. 22")
+            .Genres.ShouldBe(["Manga", "Books", "Comics & Graphic Novels"]);
     }
 
     [Theory]

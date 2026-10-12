@@ -82,6 +82,50 @@ public sealed class SearchPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         await ExpectOnShelfAsync();
     }
 
+    // The add is held at the browser's edge, so the wait is as long as the test needs: past the
+    // four seconds after which the page says why it is slow.
+    [Fact]
+    public async Task SearchPage_SlowAdd_ShowsTheWaitOnTheRowAndPreviewOnly()
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await Page.RouteAsync("**/api/series", async route =>
+        {
+            if (route.Request.Method == "POST")
+            {
+                await release.Task;
+            }
+
+            await route.ContinueAsync();
+        });
+
+        await Page.GotoAsync("/search");
+        await SearchAsync(FixtureSeriesMetadataSource.KnownQuery);
+        await Page.GetByRole(AriaRole.Button, new() { Name = $"Preview {LightNovelRow}", Exact = true }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = $"Add {LightNovelRow}", Exact = true }).ClickAsync();
+
+        var busyRow = Page.GetByRole(AriaRole.Button, new() { Name = $"Adding {LightNovelRow}…", Exact = true });
+        await Assertions.Expect(busyRow).ToBeDisabledAsync();
+        await Assertions.Expect(busyRow).ToHaveAttributeAsync("aria-busy", "true");
+
+        // Another row's Add waits too, without claiming to be the one adding.
+        var otherRow = Page.GetByRole(AriaRole.Button, new() { Name = $"Add {MangaRow}", Exact = true });
+        await Assertions.Expect(otherRow).ToBeDisabledAsync();
+        await Assertions.Expect(otherRow).ToHaveAttributeAsync("aria-busy", "false");
+
+        var preview = Page.GetByRole(AriaRole.Complementary, new() { Name = "Preview" });
+        await Assertions.Expect(preview.GetByRole(AriaRole.Button, new() { Name = "Adding…" })).ToBeDisabledAsync();
+        await Assertions.Expect(Page.Locator("p.visually-hidden[role=status]")).ToHaveTextAsync($"Adding {WorkTitle}…");
+
+        await Assertions.Expect(preview).ToContainTextAsync(
+            "Looking up volumes and release dates. This can take a moment.", new() { Timeout = 10_000 });
+
+        release.SetResult();
+
+        await Assertions.Expect(Page.Locator(".notice--message")).ToContainTextAsync($"Added {WorkTitle}");
+        await Assertions.Expect(preview).Not.ToContainTextAsync("This can take a moment.");
+        await ExpectOnShelfAsync();
+    }
+
     [Fact]
     public async Task SearchPage_PreviewStartWith_SeriesPageHasThoseVolumesReadAndOwned()
     {

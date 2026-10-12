@@ -21,7 +21,7 @@
         }
         else if (State.Response is not { } stats)
         {
-            <p class="notice">Counting…</p>
+            <p class="notice"><BusyIndicator /> Counting…</p>
         }
         else if (stats.Formats.Count == 0)
         {

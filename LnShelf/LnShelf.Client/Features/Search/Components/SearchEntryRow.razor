@@ -3,7 +3,7 @@
    status fold into one line under the name, and Add is a round-cornered key with a plus. *@
 @inject ApiUrlBuilder ApiUrl
 
-<li class="entry @(IsSelected ? "entry--selected" : null)">
+<li class="entry @(IsSelected ? "entry--selected" : null)" aria-busy="@IsAdding.ToAriaState()">
     <button type="button"
             class="entry__open"
             aria-label="Preview @AccessibleName"
@@ -42,9 +42,27 @@
     }
     else
     {
-        <button type="button" class="secondary entry__add" aria-label="Add @AccessibleName" disabled="@IsBusy" @onclick="OnAddedAsync">
-            <Icon Name="IconName.Plus" Size="14" />
-            <span class="entry__add-word">Add</span>
+        <button type="button"
+                class="secondary entry__add"
+                aria-label="@AddLabel"
+                aria-busy="@IsAdding.ToAriaState()"
+                disabled="@IsBusy"
+                @onclick="OnAddedAsync">
+            @if (IsAdding)
+            {
+                <BusyIndicator />
+                <span class="entry__add-word">Adding…</span>
+            }
+            else
+            {
+                <Icon Name="IconName.Plus" Size="14" />
+                <span class="entry__add-word">Add</span>
+            }
         </button>
+    }
+
+    @if (IsAdding && IsTakingLong)
+    {
+        <p class="fine entry__note">@SeriesSearchState.SlowAddNote</p>
     }
 </li>

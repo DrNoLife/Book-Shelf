@@ -118,6 +118,15 @@ public sealed class Series : IOwned
     /// </summary>
     public string? VolumeCountEvidence { get; set; }
 
+    /// <summary>
+    /// The latest chapter MangaUpdates lists for the linked record. Null until a refresh has
+    /// read one.
+    /// </summary>
+    // Plain source metadata, the same class of fact as ReleaseSourceVolumeCount: what the
+    // release source said, which nothing on the shelf can recompute. Written only when the
+    // source gives a value, so one empty answer never erases a known chapter.
+    public decimal? LatestChapter { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
 

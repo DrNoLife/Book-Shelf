@@ -12,7 +12,7 @@ Controller: Thor Christiansen, a private person in Denmark. Supervisory authorit
 | What | Where | Purpose | Basis | Kept |
 |---|---|---|---|---|
 | Account: issuer, subject, email, created, last sign-in | `app_user` | sign-in, keeping a shelf yours | 6(1)(b) | until the user deletes the account |
-| Shelf: series, volumes, tracking and read/owned state, dates, prices, notes, preferences | `series`, `volume`, `*_user_state`, `user_preferences` | the service | 6(1)(b) | until the user deletes it or the account |
+| Shelf: series, volumes, tracking and read/owned state, chapter progress (unit and last chapter read), dates, prices, notes, preferences | `series`, `volume`, `*_user_state`, `user_preferences` | the service | 6(1)(b) | until the user deletes it or the account |
 | Import: batch (file name, time), groups, rows | `import_*` | matching an export to series | 6(1)(b) | account lifetime; the file itself is never stored |
 | Sync runs and discrepancies | `sync_run`, `sync_discrepancy*` | showing what a sync changed | 6(1)(b) | account lifetime |
 | Uploaded covers (EXIF stripped, re-encoded) | covers volume, `override/volume/...` | showing the user's own covers | 6(1)(b) | until replaced, removed, the series or account is deleted |

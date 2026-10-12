@@ -18,7 +18,7 @@ public sealed record BoughtVolume(Guid VolumeId, decimal Number);
 /// "I bought Vol 13" on an out-now card, and its undo. One click marks the line's first
 /// unbought volume owned and re-reads the Upcoming groups.
 /// </summary>
-// Its own container rather than methods on UpcomingState, the way FinishVolumeState sits
+// Its own container rather than methods on UpcomingState, the way FinishReadingState sits
 // beside LibraryState: that one reads, this writes, and the record of what was bought has to
 // outlive the out-now line itself, which leaves the response the moment the series is caught up.
 public sealed class BuyVolumeState(HttpClient httpClient, UpcomingState upcomingState)

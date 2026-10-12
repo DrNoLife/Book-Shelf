@@ -30,8 +30,21 @@ namespace LnShelf.Api.Tests.Features.Metadata.Fixtures;
 // both an Author and an Artist, and two publishers of which only one is the English one.
 // The search response is the same pair's other half, and it is worth having precisely for
 // what it does *not* contain — no status, no completed flag, no authors.
+//
+// 2026-10-11, for whole extra volumes:
+//
+//   mangaupdates-series-15180124327-solo-leveling.json           GET /v1/series/15180124327
+//
+// Solo Leveling (Manhwa) is the specimen for extras that are whole volumes: the status line
+// says "15 Volumes (Complete)", while the one English publisher counting books, IZE Press,
+// notes "13+2 Volumes; Complete" — and the store sells Vols. 1 to 15. Every other English
+// publisher counts chapters, which must not read as a volume count.
 internal static class MangaUpdatesFixtures
 {
+    public const string SoloLevelingSeries = "mangaupdates-series-15180124327-solo-leveling.json";
+
+    public const long SoloLevelingSeriesId = 15180124327;
+
     public const string YoujoSenkiSearch = "mangaupdates-search-youjo-senki.json";
     public const string YoujoSenkiSeries = "mangaupdates-series-24348008396-youjo-senki.json";
 
@@ -43,6 +56,17 @@ internal static class MangaUpdatesFixtures
         "mangaupdates-series-17992364412-fremd-torturchen.json";
 
     public const long FremdTorturchenSeriesId = 17992364412;
+
+    // 2026-10-11, for chapter progress:
+    //
+    //   mangaupdates-series-75336092483-chainsaw-man.json   GET /v1/series/75336092483
+    //
+    // A manga read weekly by plenty of people, and the specimen for `latest_chapter` (232):
+    // the two novel records above carry the field too, but a novel's chapter number is not
+    // one any reader of this shelf follows.
+    public const string ChainsawManSeries = "mangaupdates-series-75336092483-chainsaw-man.json";
+
+    public const long ChainsawManSeriesId = 75336092483;
 
     public static MangaUpdatesSearchResponse LoadSearch(string fileName) =>
         Load<MangaUpdatesSearchResponse>(fileName);

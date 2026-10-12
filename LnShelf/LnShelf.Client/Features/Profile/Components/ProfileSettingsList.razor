@@ -52,7 +52,17 @@
     @* The sidebar's "Sync now", for the phone, where there is no sidebar. *@
     <button type="button" class="settings__row" disabled="@SyncState.IsFollowingRun" @onclick="SyncNowAsync">
         <span>Sync now</span>
-        <span class="settings__aside" role="status">@(SyncState.IsFollowingRun ? "Syncing…" : SyncState.Notice)</span>
+        <span class="settings__aside" role="status">
+            @if (SyncState.IsFollowingRun)
+            {
+                <BusyIndicator />
+                <span>Syncing…</span>
+            }
+            else
+            {
+                @SyncState.Notice
+            }
+        </span>
     </button>
 
     <button type="button" class="settings__row" disabled="@_isSigningOut" @onclick="SignOutAsync">

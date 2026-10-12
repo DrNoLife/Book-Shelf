@@ -121,6 +121,9 @@ public sealed record AccountExportSeries
     public VolumeCountBasis? VolumeCountBasis { get; init; }
     public string? VolumeCountEvidence { get; init; }
 
+    /// <summary>The latest chapter MangaUpdates lists for the series.</summary>
+    public decimal? LatestChapter { get; init; }
+
     public required TrackingStatus TrackingStatus { get; init; }
     public DateOnly? StartedAt { get; init; }
     public DateOnly? LastReadAt { get; init; }
@@ -128,6 +131,12 @@ public sealed record AccountExportSeries
     public required bool NotificationsMuted { get; init; }
     public required bool HasNewVolume { get; init; }
     public VolumeView? VolumeViewOverride { get; init; }
+
+    /// <summary>Whether the user counts this series in volumes or chapters.</summary>
+    public ProgressUnit ProgressUnit { get; init; } = ProgressUnit.Volumes;
+
+    /// <summary>The last chapter the user recorded as read.</summary>
+    public decimal? LastChapterRead { get; init; }
 
     public required IReadOnlyList<AccountExportVolume> Volumes { get; init; }
 

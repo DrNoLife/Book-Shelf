@@ -16,6 +16,12 @@ public sealed class VolumeSelectionState
 
     public IReadOnlySet<Guid> SelectedVolumeIds => _selected;
 
+    /// <summary>
+    /// The edition "Mark N owned" owns the selection in. Physical every time select mode
+    /// opens: it is a choice for this one bulk mark, not a preference.
+    /// </summary>
+    public OwnedFormat OwnedFormat { get; private set; } = OwnedFormat.Physical;
+
     private readonly HashSet<Guid> _selected = [];
 
     public event Action? Changed;
@@ -45,6 +51,7 @@ public sealed class VolumeSelectionState
 
         // A menu belonging to a tile that is about to become a checkbox has to go.
         OpenMenuVolumeId = null;
+        OwnedFormat = OwnedFormat.Physical;
 
         if (!IsSelectMode)
         {
@@ -64,7 +71,14 @@ public sealed class VolumeSelectionState
     {
         OpenMenuVolumeId = null;
         IsSelectMode = false;
+        OwnedFormat = OwnedFormat.Physical;
         _selected.Clear();
+        Changed?.Invoke();
+    }
+
+    public void ChooseOwnedFormat(OwnedFormat format)
+    {
+        OwnedFormat = format;
         Changed?.Invoke();
     }
 

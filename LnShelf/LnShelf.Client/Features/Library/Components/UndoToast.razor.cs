@@ -6,12 +6,12 @@ public partial class UndoToast : IDisposable
     private static readonly TimeSpan OfferDuration = TimeSpan.FromSeconds(8);
 
     [Inject]
-    public required FinishVolumeState State { get; set; }
+    public required FinishReadingState State { get; set; }
 
     private CancellationTokenSource? _offerCancellation;
 
-    /// <summary>The finished volume the running timer belongs to.</summary>
-    private FinishedVolume? _timedVolume;
+    /// <summary>The receipt the running timer belongs to.</summary>
+    private ReadingReceipt? _timedReceipt;
 
     protected override void OnInitialized() => State.Changed += OnStateChanged;
 
@@ -20,16 +20,16 @@ public partial class UndoToast : IDisposable
     private void OnStateChanged()
     {
         // A new receipt restarts the clock: two quick finishes each get their full offer.
-        if (State.LastFinished is { } finished && !ReferenceEquals(finished, _timedVolume))
+        if (State.LastFinished is { } finished && !ReferenceEquals(finished, _timedReceipt))
         {
-            _timedVolume = finished;
+            _timedReceipt = finished;
             RestartTimer(finished);
         }
 
         InvokeAsync(StateHasChanged);
     }
 
-    private void RestartTimer(FinishedVolume finished)
+    private void RestartTimer(ReadingReceipt finished)
     {
         _offerCancellation?.Cancel();
         _offerCancellation?.Dispose();
@@ -38,7 +38,7 @@ public partial class UndoToast : IDisposable
         _ = WithdrawAfterDelayAsync(finished, _offerCancellation.Token);
     }
 
-    private async Task WithdrawAfterDelayAsync(FinishedVolume finished, CancellationToken cancellationToken)
+    private async Task WithdrawAfterDelayAsync(ReadingReceipt finished, CancellationToken cancellationToken)
     {
         try
         {

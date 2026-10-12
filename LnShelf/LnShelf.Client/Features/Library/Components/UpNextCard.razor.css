@@ -79,6 +79,20 @@
 .next__title a { color: var(--text); }
 .next__title a:hover { color: var(--text-strong); }
 
+/* "Ch. 142 of 232" and "90 to read" on a Chapters series: two pieces that wrap between them
+   inside the narrow body of a 390px phone's card rather than pushing the card wider. */
+.next__chapter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.next__chapter-part { white-space: nowrap; }
+
+.next__to-read { color: var(--muted); }
+
 .next__shelf {
   margin-top: auto;
   font-size: var(--fs-caption);

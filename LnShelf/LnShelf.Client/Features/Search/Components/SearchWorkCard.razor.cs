@@ -20,6 +20,14 @@ public partial class SearchWorkCard
     [Parameter]
     public bool IsBusy { get; set; }
 
+    /// <summary>The result whose add is in flight, so only its row shows the wait.</summary>
+    [Parameter]
+    public SeriesSearchResultResponse? AddingResult { get; set; }
+
+    /// <summary>The add in flight has run long enough for its row to say why.</summary>
+    [Parameter]
+    public bool IsAddTakingLong { get; set; }
+
     /// <summary>"Adding 2 of 5…", while this card's add-all runs.</summary>
     [Parameter]
     public string? BatchProgress { get; set; }
@@ -42,6 +50,8 @@ public partial class SearchWorkCard
         Work.Entries.Take(3).Select((entry, depth) => (entry, depth));
 
     private bool IsSelected(SearchWorkEntry entry) => ReferenceEquals(entry.Result, SelectedResult);
+
+    private bool IsAdding(SearchWorkEntry entry) => ReferenceEquals(entry.Result, AddingResult);
 
     private Task OnAddAllAsync(AddAllOffer offer) => AddAllRequested.InvokeAsync(offer.Entries);
 }

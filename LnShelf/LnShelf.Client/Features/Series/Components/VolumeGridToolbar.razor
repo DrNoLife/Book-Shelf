@@ -60,10 +60,23 @@
                 @onclick="MarkSelectedReadAsync">
             @MarkSelectedReadLabel
         </button>
-        <button type="button" class="secondary" disabled="@(!HasSelection || SeriesState.IsSaving)"
-                @onclick="MarkSelectedOwnedAsync">
-            @MarkSelectedOwnedLabel
-        </button>
+        @* The edition sits before the button it qualifies, and the button names it too, so
+           the one press says exactly what it writes. Kept together so a narrow screen
+           wraps them as a pair. Only here: the "Mark 1–N owned" pair stays physical, and a
+           different edition for one volume is its panel's choice. *@
+        <span class="volumes__owned">
+            <SegmentedControl TValue="OwnedFormat"
+                              Options="OwnedFormatOptions"
+                              Value="Selection.OwnedFormat"
+                              ValueChanged="OnOwnedFormatChosen"
+                              Disabled="SeriesState.IsSaving"
+                              AriaLabel="Owned as" />
+            <button type="button" class="secondary"
+                    disabled="@(!HasSelection || IsSelectionOwnedAsChosen || SeriesState.IsSaving)"
+                    @onclick="MarkSelectedOwnedAsync">
+                @MarkSelectedOwnedLabel
+            </button>
+        </span>
 
         @* Only for volumes already read: a date on an unread volume would be a lie the
            stats page believed. *@

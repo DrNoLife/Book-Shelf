@@ -266,7 +266,11 @@ public sealed class VolumeFactWriter(
         //
         // The record's own date decides, not the volume's: the volume may well have no date
         // at all, precisely because the conflict rule above refused to write this one.
-        if (facts.ReleaseDate is { } releaseDate && releaseDate > today)
+        //
+        // The fallback now, not the rule: a source that recognises its placeholder by name has
+        // already withheld it (AppleBooksCatalogueMapper), and the real art a publisher puts up
+        // months ahead is worth caching. Only art nobody screened waits for the date.
+        if (!facts.CoverScreenedForPlaceholder && facts.ReleaseDate is { } releaseDate && releaseDate > today)
         {
             logger.LogInformation(
                 "{RecordKey} from {SourceName} dates volume {VolumeNumber} as {ReleaseDate}, which is not "

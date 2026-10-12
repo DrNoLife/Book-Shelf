@@ -27,6 +27,9 @@ public sealed class ImportState(HttpClient httpClient)
     /// <summary>Set while a long upload is running, so the page can say so.</summary>
     public bool IsMatching { get; private set; }
 
+    /// <summary>Set while Apply runs, so its button shows the wait rather than just going inert.</summary>
+    public bool IsCommitting { get; private set; }
+
     public event Action? Changed;
 
     /// <summary>
@@ -174,25 +177,38 @@ public sealed class ImportState(HttpClient httpClient)
             }
         });
 
-    public Task CommitAsync(CancellationToken cancellationToken = default) =>
-        RunAsync(async () =>
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        IsCommitting = true;
+
+        // In a finally for the reason UploadAsync gives.
+        try
         {
-            if (Queue is null)
+            await RunAsync(async () =>
             {
-                return;
-            }
+                if (Queue is null)
+                {
+                    return;
+                }
 
-            var batchId = Queue.Batch.BatchId;
-            using var response = await httpClient.PostAsync($"api/import/{batchId}/commit", null, cancellationToken);
+                var batchId = Queue.Batch.BatchId;
+                using var response = await httpClient.PostAsync($"api/import/{batchId}/commit", null, cancellationToken);
 
-            if (!await SucceededAsync(response, cancellationToken))
-            {
-                return;
-            }
+                if (!await SucceededAsync(response, cancellationToken))
+                {
+                    return;
+                }
 
-            CommitResult = await response.Content.ReadFromJsonAsync<ImportCommitResponse>(cancellationToken);
-            await OpenBatchInternalAsync(batchId, cancellationToken);
-        });
+                CommitResult = await response.Content.ReadFromJsonAsync<ImportCommitResponse>(cancellationToken);
+                await OpenBatchInternalAsync(batchId, cancellationToken);
+            });
+        }
+        finally
+        {
+            IsCommitting = false;
+            Changed?.Invoke();
+        }
+    }
 
     /// <summary>The review queue's manual fallback.</summary>
     public async Task<IReadOnlyList<ImportCandidateResponse>> SearchCandidatesAsync(

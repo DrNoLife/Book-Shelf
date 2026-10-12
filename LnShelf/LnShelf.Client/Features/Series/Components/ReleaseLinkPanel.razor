@@ -20,8 +20,16 @@
     @if (_result is null)
     {
         <div class="release-link__actions">
-            <button type="button" class="secondary" disabled="@IsBusy" @onclick="SearchAsync">
-                @(_isSearching ? "Searching…" : "Find it on MangaUpdates")
+            <button type="button" class="secondary" aria-busy="@_isSearching.ToAriaState()" disabled="@IsBusy" @onclick="SearchAsync">
+                @if (_isSearching)
+                {
+                    <BusyIndicator />
+                    <span>Searching…</span>
+                }
+                else
+                {
+                    <span>Find it on MangaUpdates</span>
+                }
             </button>
         </div>
     }
@@ -33,8 +41,16 @@
                          ValueChanged="OnQueryChanged"
                          AriaLabel="Search MangaUpdates by title"
                          Placeholder="Search MangaUpdates by title" />
-            <button type="submit" class="secondary" disabled="@IsBusy">
-                @(_isSearching ? "Searching…" : "Search")
+            <button type="submit" class="secondary" aria-busy="@_isSearching.ToAriaState()" disabled="@IsBusy">
+                @if (_isSearching)
+                {
+                    <BusyIndicator />
+                    <span>Searching…</span>
+                }
+                else
+                {
+                    <span>Search</span>
+                }
             </button>
         </form>
 
@@ -68,12 +84,22 @@
                             </a>
                             @if (candidate.LinkedSeriesId is null)
                             {
+                                var isLinkingThis = _linkingId == candidate.MangaUpdatesId;
                                 <button type="button"
                                         class="secondary"
                                         disabled="@IsBusy"
-                                        aria-label="@($"Link to {candidate.Title}")"
+                                        aria-busy="@isLinkingThis.ToAriaState()"
+                                        aria-label="@(isLinkingThis ? $"Linking to {candidate.Title}…" : $"Link to {candidate.Title}")"
                                         @onclick="() => LinkAsync(candidate)">
-                                    Link
+                                    @if (isLinkingThis)
+                                    {
+                                        <BusyIndicator />
+                                        <span>Linking…</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Link</span>
+                                    }
                                 </button>
                             }
                         </div>

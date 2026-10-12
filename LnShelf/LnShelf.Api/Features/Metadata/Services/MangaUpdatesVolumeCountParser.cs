@@ -98,10 +98,12 @@ public static partial class MangaUpdatesVolumeCountParser
     /// "9 Volumes + 1 Extra", the 3 in "11+3 Volumes".
     /// </summary>
     /// <returns>Zero when no English publisher states any.</returns>
-    // Not a count the shelf creates volumes from — the note never says where a bonus volume
-    // sits, and only the store catalogue's "Vol. 7.5" does. It is the signal that there is
-    // something to look for: a series whose volumes are all enriched is not asked about
-    // again, and without this a bonus volume would never be found on it.
+    // Not a count the shelf creates volumes from on its own — the note never says where an
+    // extra sits, whether between the main volumes ("Vol. 7.5") or after them (Solo Leveling's
+    // "13+2", sold as Vols. 14 and 15), and only the store catalogue does. It is the signal
+    // that there is something to look for, and the cap on how much the store may add: a series
+    // whose volumes are all enriched is not asked about again, and without this an extra would
+    // never be found on it.
     public static int ParseEnglishEditionExtras(IEnumerable<string?> englishPublisherNotes)
     {
         ArgumentNullException.ThrowIfNull(englishPublisherNotes);

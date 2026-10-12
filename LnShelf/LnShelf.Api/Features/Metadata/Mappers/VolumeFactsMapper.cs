@@ -34,6 +34,7 @@ public static class VolumeFactsMapper
             // there is no coarse-but-real string of the "2022" kind to report.
             RawReleaseDate = null,
             CoverImageUrl = record.ArtworkUrl,
+            CoverScreenedForPlaceholder = record.ArtworkScreened,
         };
     }
 
@@ -59,6 +60,9 @@ public static class VolumeFactsMapper
 
             RawReleaseDate = enrichment.RawPublishDate,
             CoverImageUrl = enrichment.CoverImageUrl,
+
+            // Open Library has no placeholder of its own to recognise, so the date rule stands.
+            CoverScreenedForPlaceholder = false,
         };
     }
 }

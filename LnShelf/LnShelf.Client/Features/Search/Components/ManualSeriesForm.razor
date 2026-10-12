@@ -76,8 +76,19 @@
                 <p class="notice notice--message" role="status">@message</p>
             }
 
-            <button type="submit" class="primary button--large" disabled="@(_isSaving || !CanSubmit)">
-                Add to shelf
+            <button type="submit"
+                    class="primary button--large"
+                    aria-busy="@_isSaving.ToAriaState()"
+                    disabled="@(_isSaving || !CanSubmit)">
+                @if (_isSaving)
+                {
+                    <BusyIndicator />
+                    <span>Adding…</span>
+                }
+                else
+                {
+                    <span>Add to shelf</span>
+                }
             </button>
         </form>
     }

@@ -33,6 +33,25 @@ public sealed record CatalogueVolume
     // written from it.
     public DateOnly? ReleaseDate { get; init; }
 
-    /// <summary>The store's cover art at the largest size it serves. Null when it has none.</summary>
+    /// <summary>
+    /// The store's cover art at the largest size it serves. Null when it has none, which
+    /// includes the placeholder a store shows for a book whose art is not ready yet.
+    /// </summary>
     public Uri? ArtworkUrl { get; init; }
+
+    /// <summary>
+    /// Whether the source looked for its placeholder art and ruled it out, so
+    /// <see cref="ArtworkUrl"/> is the real cover even on a book that is not out yet.
+    /// </summary>
+    // False when the source cannot tell — an artwork URL of a shape it does not recognise —
+    // which leaves VolumeFactWriter's older rule to decide: no art cached before the release date.
+    public bool ArtworkScreened { get; init; }
+
+    /// <summary>
+    /// The store's own genre names for the record, verbatim ("Manga", "Comics &amp; Graphic
+    /// Novels"). Empty when it states none.
+    /// </summary>
+    // Read only as medium evidence for manga (VolumeEditionMatcher.ConfirmsMedium), where Viz
+    // titles carry no marker of their own.
+    public IReadOnlyList<string> Genres { get; init; } = [];
 }

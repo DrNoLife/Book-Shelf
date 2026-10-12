@@ -3,7 +3,7 @@
    sits in the desktop's side panel and in the phone's bottom sheet. *@
 @inject ApiUrlBuilder ApiUrl
 
-<div class="preview">
+<div class="preview" aria-busy="@IsAdding.ToAriaState()">
     <div class="preview__head">
         <span class="preview__cover">
             @if (Result.CoverObjectKey is { } coverObjectKey)
@@ -50,8 +50,25 @@
             <p class="preview__hint">@_start.Hint</p>
         </div>
 
-        <button type="button" class="primary button--large preview__action" disabled="@IsBusy" @onclick="OnAddAsync">
-            Add to shelf
+        <button type="button"
+                class="primary button--large preview__action"
+                aria-busy="@IsAdding.ToAriaState()"
+                disabled="@IsBusy"
+                @onclick="OnAddAsync">
+            @if (IsAdding)
+            {
+                <BusyIndicator />
+                <span>Adding…</span>
+            }
+            else
+            {
+                <span>Add to shelf</span>
+            }
         </button>
+
+        @if (IsAdding && IsTakingLong)
+        {
+            <p class="fine preview__note">@SeriesSearchState.SlowAddNote</p>
+        }
     }
 </div>

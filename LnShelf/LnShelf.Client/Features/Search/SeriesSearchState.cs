@@ -9,7 +9,22 @@ namespace LnShelf.Client.Features.Search;
 // replaced could be deleted without touching a line of it.
 public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient addClient)
 {
+    /// <summary>
+    /// How long an add runs before the page says why it is slow. A typical add answers well
+    /// inside this; one that queues behind the metadata sources' rate limits takes far longer.
+    /// </summary>
+    public static readonly TimeSpan SlowAddAfter = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// The line beside a slow add. Honest about the wait: it is the add pipeline's lookups,
+    /// not the app hanging.
+    /// </summary>
+    public const string SlowAddNote = "Looking up volumes and release dates. This can take a moment.";
+
     private readonly TrackedSeriesIndex _tracked = new();
+
+    // Stopped when the add ends, so a fast add never shows the "this can take a moment" line.
+    private readonly SlowOperationWatch _slowAddWatch = new(SlowAddAfter);
 
     public string Query { get; set; } = string.Empty;
 
@@ -45,6 +60,18 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
     /// <summary>True while either call is in flight — what a control is disabled on.</summary>
     public bool IsBusy => IsSearching || IsAdding;
 
+    /// <summary>
+    /// The result whose add is in flight: the row's, the preview's, or the one an add-all has
+    /// reached. Its controls show the busy state; every other add is merely disabled.
+    /// </summary>
+    public SeriesSearchResultResponse? AddingResult { get; private set; }
+
+    /// <summary>True once the add in flight has run past <see cref="SlowAddAfter"/>.</summary>
+    public bool IsAddTakingLong => _slowAddWatch.IsSlow;
+
+    /// <summary>"Adding Overlord…", for the page's status line; null when nothing is being added.</summary>
+    public string? AddingAnnouncement { get; private set; }
+
     /// <summary>"Adding 2 of 5…" while an add-all runs; null otherwise.</summary>
     public string? BatchProgress { get; private set; }
 
@@ -56,6 +83,10 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
     public event Action? Changed;
 
     public bool IsOnShelf(SeriesSearchResultResponse result) => _tracked.SeriesIdOf(result) is not null;
+
+    // By reference, as the page's selection is: two results can be equal as records and
+    // still be two rows.
+    public bool IsAddingResult(SeriesSearchResultResponse result) => ReferenceEquals(AddingResult, result);
 
     /// <summary>The series page a tracked result opens. Null when it is not on the shelf.</summary>
     public Guid? SeriesIdOf(SeriesSearchResultResponse result) => _tracked.SeriesIdOf(result);
@@ -138,8 +169,9 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        IsAdding = true;
+        StartAdding();
         Message = null;
+        MarkAdding(result, $"Adding {result.TitleEnglish}…");
         Changed?.Invoke();
 
         try
@@ -148,7 +180,7 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
         }
         finally
         {
-            IsAdding = false;
+            StopAdding();
             Changed?.Invoke();
         }
     }
@@ -170,7 +202,7 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
         var pending = entries.Where(entry => !IsOnShelf(entry.Result)).ToList();
         var added = 0;
 
-        IsAdding = true;
+        StartAdding();
         Message = null;
 
         try
@@ -178,6 +210,7 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
             foreach (var entry in pending)
             {
                 BatchProgress = $"Adding {added + 1} of {pending.Count}…";
+                MarkAdding(entry.Result, $"Adding {entry.Result.TitleEnglish}, {added + 1} of {pending.Count}…");
                 Changed?.Invoke();
 
                 if (await AddOneAsync(entry.Result, start: null, cancellationToken) is null)
@@ -198,7 +231,7 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
         }
         finally
         {
-            IsAdding = false;
+            StopAdding();
             BatchProgress = null;
             Changed?.Invoke();
         }
@@ -212,6 +245,27 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
     {
         await LoadTrackedIdsAsync(cancellationToken);
         Changed?.Invoke();
+    }
+
+    private void StartAdding()
+    {
+        IsAdding = true;
+        _slowAddWatch.Start(becameSlow: () => Changed?.Invoke());
+    }
+
+    private void MarkAdding(SeriesSearchResultResponse result, string announcement)
+    {
+        AddingResult = result;
+        AddingAnnouncement = announcement;
+    }
+
+    private void StopAdding()
+    {
+        _slowAddWatch.Stop();
+
+        IsAdding = false;
+        AddingResult = null;
+        AddingAnnouncement = null;
     }
 
     private async Task<AddSeriesResponse?> AddOneAsync(

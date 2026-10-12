@@ -83,6 +83,13 @@ public sealed class MangaUpdatesSeriesRecord
 
     /// <inheritdoc cref="Authors"/>
     public List<MangaUpdatesPublisher>? Publishers { get; set; }
+
+    /// <summary>
+    /// The newest chapter MangaUpdates has a release listed for: 232 for Chainsaw Man.
+    /// </summary>
+    // A decimal although every captured record carries a whole number: chapters are numbered
+    // 10.5 often enough that an int here would one day refuse a whole record over one field.
+    public decimal? LatestChapter { get; set; }
 }
 
 /// <inheritdoc cref="MangaUpdatesSeriesRecord"/>

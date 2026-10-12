@@ -99,7 +99,15 @@
         <div class="sync__now">
             <button type="button" class="foot__link foot__button" disabled="@SyncState.IsFollowingRun"
                     @onclick="OnSyncNowAsync">
-                @(SyncState.IsFollowingRun ? "Syncing…" : "Sync now")
+                @if (SyncState.IsFollowingRun)
+                {
+                    <BusyIndicator />
+                    <span>Syncing…</span>
+                }
+                else
+                {
+                    <span>Sync now</span>
+                }
             </button>
             @if (SyncState.Notice is { } notice)
             {

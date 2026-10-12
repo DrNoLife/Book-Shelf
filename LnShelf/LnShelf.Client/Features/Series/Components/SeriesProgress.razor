@@ -37,5 +37,10 @@
         <p class="fine">@footLine</p>
     }
 
+    @if (ChapterProgress.IsOfferedFor(Series.Format))
+    {
+        <ChapterTracking Series="Series" />
+    }
+
 </Panel>
 </div>

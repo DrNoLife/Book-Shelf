@@ -48,6 +48,7 @@ public static class AccountExportMapper
         MangaUpdatesId = series.MangaUpdatesId,
         VolumeCountBasis = series.VolumeCountBasis,
         VolumeCountEvidence = series.VolumeCountEvidence,
+        LatestChapter = series.LatestChapter,
 
         // A series nothing has been recorded on has no state row, and reads as PlanToStart
         // everywhere else (SeriesUserState.Untouched), so the export says the same.
@@ -58,6 +59,8 @@ public static class AccountExportMapper
         NotificationsMuted = series.UserState?.NotificationsMuted ?? false,
         HasNewVolume = series.UserState?.HasNewVolume ?? false,
         VolumeViewOverride = series.UserState?.VolumeViewOverride,
+        ProgressUnit = series.UserState?.ProgressUnit ?? ProgressUnit.Volumes,
+        LastChapterRead = series.UserState?.LastChapterRead,
 
         Volumes = series.Volumes.OrderBy(volume => volume.Number).Select(ToVolume).ToList(),
         Events = events.OrderBy(shelfEvent => shelfEvent.OccurredAt).Select(ToEvent).ToList(),

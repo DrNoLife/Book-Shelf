@@ -1,0 +1,111 @@
+{
+  "resultCount": 3,
+  "results": [
+    {
+      "artistIds": [
+        1457865356
+      ],
+      "trackCensoredName": "Ascendance of a Bookworm (Manga): Part 2 Volume 12",
+      "artistViewUrl": "https://books.apple.com/us/artist/miya-kazuki/1457865356?uo=4",
+      "trackViewUrl": "https://books.apple.com/us/book/ascendance-of-a-bookworm-manga-part-2-volume-12/id6813545736?uo=4",
+      "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/3a/af/84/3aaf845d-5d7d-0929-59fd-6cd2947f8c3c/1203ba11-af65-4d00-9bb1-02c49cd1a26c_cover_image.jpg/60x60bb.jpg",
+      "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/3a/af/84/3aaf845d-5d7d-0929-59fd-6cd2947f8c3c/1203ba11-af65-4d00-9bb1-02c49cd1a26c_cover_image.jpg/100x100bb.jpg",
+      "artistId": 1457865356,
+      "artistName": "Miya Kazuki",
+      "genres": [
+        "Fantasy Manga",
+        "Books",
+        "Comics & Graphic Novels",
+        "Manga"
+      ],
+      "releaseDate": "2026-10-21T07:00:00Z",
+      "trackId": 6813545736,
+      "trackName": "Ascendance of a Bookworm (Manga): Part 2 Volume 12",
+      "genreIds": [
+        "50000074",
+        "38",
+        "9026",
+        "10016"
+      ],
+      "kind": "ebook",
+      "currency": "USD",
+      "description": "After the birth of her little brother, Kamil, Myne’s desire to make picture books burns brighter than ever. She forges ahead with the development of colored ink and new baby toys, only to end up confined at home when she and Damuel witness an unexpected signal for aid. Days pass before Myne is allowed outside again, but when she finally returns to the temple with Damuel as her guard, her enemies’ schemes come into even sharper focus."
+    },
+    {
+      "artistIds": [
+        1457865356
+      ],
+      "trackCensoredName": "Ascendance of a Bookworm: Part 4 Volume 5",
+      "artistViewUrl": "https://books.apple.com/us/artist/miya-kazuki/1457865356?uo=4",
+      "trackViewUrl": "https://books.apple.com/us/book/ascendance-of-a-bookworm-part-4-volume-5/id1599653019?uo=4",
+      "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/10/6b/98/106b980a-b47c-54de-d26c-5994e9f6fb0a/Cover.jpg/60x60bb.jpg",
+      "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/10/6b/98/106b980a-b47c-54de-d26c-5994e9f6fb0a/Cover.jpg/100x100bb.jpg",
+      "artistId": 1457865356,
+      "artistName": "Miya Kazuki",
+      "genres": [
+        "Fantasy",
+        "Books",
+        "Sci-Fi & Fantasy",
+        "Comics & Graphic Novels",
+        "Manga",
+        "Isekai Manga",
+        "Young Adult",
+        "Fiction for Young Adults"
+      ],
+      "price": 7.99,
+      "releaseDate": "2022-02-16T08:00:00Z",
+      "trackId": 1599653019,
+      "trackName": "Ascendance of a Bookworm: Part 4 Volume 5",
+      "genreIds": [
+        "10044",
+        "38",
+        "9020",
+        "9026",
+        "10016",
+        "11345",
+        "11165",
+        "11177"
+      ],
+      "kind": "ebook",
+      "currency": "USD",
+      "description": "After turning the lower city into a true sight to behold, Rozemyne aims to continue her development plan and secure a greater influence over the country’s other duchies. As she needs the assistance of commoners to achieve this, she gets to work dismantling the wall that exists between them and the nobles. She tours the printing workshops in the Central District, holds a dyeing competition to unearth skilled craftspeople, and even fantasizes about designing her own library.\n<br /><br />\nNot everything is quite so straightforward, however—a normal wedding is enshrouded in complex interduchy politics, and as Rozemyne prepares for her second year in the Royal Academy, she finds herself needing to stay on guard against the rebellious former Veronica faction.\n<br /><br />\nThis is the newest volume of this biblio-fantasy, filled to the brim with moving developments! Includes two original short stories and four-panel manga by You Shiina!",
+      "formattedPrice": "$7.99",
+      "averageUserRating": 4.5,
+      "userRatingCount": 168
+    },
+    {
+      "artistIds": [
+        1457865356
+      ],
+      "trackCensoredName": "Ascendance of a Bookworm (Manga) Volume 1",
+      "artistViewUrl": "https://books.apple.com/us/artist/miya-kazuki/1457865356?uo=4",
+      "trackViewUrl": "https://books.apple.com/us/book/ascendance-of-a-bookworm-manga-volume-1/id1463976024?uo=4",
+      "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/ff/6e/eb/ff6eeb2d-8f33-1bab-a98c-00f7af45a916/Bookworm-cover.jpg/60x60bb.jpg",
+      "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/ff/6e/eb/ff6eeb2d-8f33-1bab-a98c-00f7af45a916/Bookworm-cover.jpg/100x100bb.jpg",
+      "artistId": 1457865356,
+      "artistName": "Miya Kazuki",
+      "genres": [
+        "Manga",
+        "Books",
+        "Comics & Graphic Novels",
+        "Manga"
+      ],
+      "price": 8.99,
+      "releaseDate": "2019-06-18T07:00:00Z",
+      "trackId": 1463976024,
+      "trackName": "Ascendance of a Bookworm (Manga) Volume 1",
+      "genreIds": [
+        "11341",
+        "38",
+        "9026",
+        "10016"
+      ],
+      "kind": "ebook",
+      "currency": "USD",
+      "description": "A certain college girl who's loved books ever since she was a little girl dies in an accident and is reborn in another world she knows nothing about. She is now Myne, the sickly five-year-old daughter of a poor soldier. To make things worse, the world she's been reborn in has a very low literacy rate and books mostly don't exist. She'd have to pay an enormous amounts of money to buy one.<br /><br />\nMyne resolves herself: If there aren't any books, she'll just have to make them! Her goal is to become a librarian. This story begins with her quest to make books so she can live surrounded by them! Dive into this biblio-fantasy written for book lovers and bookworms!",
+      "formattedPrice": "$8.99",
+      "averageUserRating": 5.0,
+      "userRatingCount": 21
+    }
+  ]
+}

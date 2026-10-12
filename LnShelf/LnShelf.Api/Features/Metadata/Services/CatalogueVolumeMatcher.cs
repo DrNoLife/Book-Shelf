@@ -7,9 +7,10 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // store search for "Slime light novel" answers with the manga, the German editions, the
 // spin-offs and volumes of unrelated series that happen to share a word; TryMatchVolumeNumber
 // refuses everything whose title does not name this series with a number leading straight
-// after it, and ConfirmsMedium then insists the record say which medium it is rather than
-// merely fail to say it is the other one. The enrichment pass writes to the shelf with
-// nobody looking, which is the bar that earns the stricter of the two.
+// after it, and ConfirmsMedium then insists the record say which medium it is (in its title,
+// or for manga in the store's own genre) rather than merely fail to say it is the other one.
+// The enrichment pass writes to the shelf with nobody looking, which is the bar that earns
+// the stricter of the two.
 //
 // One class rather than two loops: the enrichment pass wants the record for each volume it
 // tracks, and the verification command wants the highest volume number the store confirms.
@@ -52,6 +53,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
             .Max(volume => (decimal?)volume.Number) ?? 0;
         var byVolumeNumber = new Dictionary<decimal, CatalogueVolume>();
         var bonusVolumes = new Dictionary<decimal, CatalogueVolume>();
+        var untrackedMainVolumes = new Dictionary<decimal, CatalogueVolume>();
         var highestConfirmed = 0;
 
         foreach (var record in catalogue)
@@ -64,7 +66,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
                 continue;
             }
 
-            var confirmsMedium = VolumeEditionMatcher.ConfirmsMedium(series.Format, recordTitle);
+            var confirmsMedium = VolumeEditionMatcher.ConfirmsMedium(series.Format, recordTitle, record.Genres);
 
             // A bonus volume says nothing about how many main volumes there are: Vol. 7.5 sits
             // inside a nine-volume series, and counting it would make the series ten long.
@@ -83,7 +85,19 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
                 continue;
             }
 
-            if (!tracked.Contains(number) || byVolumeNumber.ContainsKey(number))
+            if (!tracked.Contains(number))
+            {
+                // Kept aside, not acted on: whether an untracked main volume may be created is
+                // the release source's extras to grant (WholeExtraVolumeWriter), not the store's.
+                if (confirmsMedium && !number.IsBonusVolume)
+                {
+                    untrackedMainVolumes.TryAdd(number, record);
+                }
+
+                continue;
+            }
+
+            if (byVolumeNumber.ContainsKey(number))
             {
                 continue;
             }
@@ -109,6 +123,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
         {
             ByVolumeNumber = byVolumeNumber,
             BonusVolumes = bonusVolumes,
+            UntrackedMainVolumes = untrackedMainVolumes,
             HighestConfirmedNumber = highestConfirmed,
         };
     }
@@ -141,6 +156,15 @@ public sealed record CatalogueMatch
     /// Bonus volumes the store confirmed that the shelf does not track yet, by number.
     /// </summary>
     public required IReadOnlyDictionary<decimal, CatalogueVolume> BonusVolumes { get; init; }
+
+    /// <summary>
+    /// Whole-numbered volumes the store confirmed that the shelf does not track, by number.
+    /// </summary>
+    // Nothing is created from these on the store's word alone. They are the candidates for the
+    // extras the release source counts beside its main volumes ("13+2 Volumes"), which
+    // WholeExtraVolumeWriter may create; every other number here stays ignored.
+    public IReadOnlyDictionary<decimal, CatalogueVolume> UntrackedMainVolumes { get; init; } =
+        new Dictionary<decimal, CatalogueVolume>();
 
     /// <summary>
     /// The highest main volume number the store positively confirms for this series, tracked or
