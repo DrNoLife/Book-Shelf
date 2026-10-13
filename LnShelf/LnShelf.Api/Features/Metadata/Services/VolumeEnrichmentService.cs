@@ -17,12 +17,15 @@ namespace LnShelf.Api.Features.Metadata.Services;
 //
 // The two passes themselves live in CatalogueTitleArbiter and IsbnVolumeEnricher. This is
 // the pipeline: run them in that order, and write what the catalogue pass matched.
+// The volumes the store may create have their own writers: BonusVolumeWriter,
+// WholeExtraVolumeWriter, and NextMainVolumeWriter for the next announced main volumes.
 public sealed class VolumeEnrichmentService(
     IVolumeCatalogueSource catalogueSource,
     CatalogueTitleArbiter catalogueTitleArbiter,
     IsbnVolumeEnricher isbnEnricher,
     BonusVolumeWriter bonusVolumeWriter,
     WholeExtraVolumeWriter wholeExtraVolumeWriter,
+    NextMainVolumeWriter nextMainVolumeWriter,
     VolumeFactWriter factWriter)
 {
     /// <param name="today">
@@ -30,20 +33,25 @@ public sealed class VolumeEnrichmentService(
     /// convention the projections follow.
     /// </param>
     /// <param name="budget">
-    /// Spent down as requests are made, not as volumes are visited: the catalogue costs one
-    /// for the whole series, and one volume can cost several when its own ISBN turns out
-    /// not to be indexed.
+    /// Spent down as requests are made, not as volumes are visited, and per source: the
+    /// catalogue pass draws on <see cref="EnrichmentBudget.Catalogue"/> (one request per title
+    /// attempted), the by-ISBN pass on <see cref="EnrichmentBudget.ByIsbn"/> (one volume can
+    /// cost several when its own ISBN turns out not to be indexed).
     /// </param>
     /// <param name="expectedBonusVolumes">
     /// How many extras the release source counts beside the main ones: bonus volumes such as
     /// Vol. 7.5, or whole volumes past the main count. More than the shelf tracks is a reason
     /// to ask the store even when every volume is already enriched.
     /// </param>
-    public async Task EnrichAsync(
+    /// <returns>
+    /// The next main volumes the store created in this pass, for the caller to decide whether
+    /// they are news.
+    /// </returns>
+    public async Task<IReadOnlyList<Volume>> EnrichAsync(
         Series series,
         SyncRun run,
         DateOnly today,
-        LookupBudget budget,
+        EnrichmentBudget budget,
         int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
@@ -51,30 +59,40 @@ public sealed class VolumeEnrichmentService(
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(budget);
 
-        await EnrichFromCatalogueAsync(series, run, today, budget, expectedBonusVolumes, cancellationToken);
-        await isbnEnricher.EnrichAsync(series, run, today, budget, cancellationToken);
+        var nextVolumes = await EnrichFromCatalogueAsync(
+            series, run, today, budget, expectedBonusVolumes, cancellationToken);
+        await isbnEnricher.EnrichAsync(series, run, today, budget.ByIsbn, cancellationToken);
+
+        return nextVolumes;
     }
 
     /// <summary>
     /// Ask the store, under whichever of this series' names it answers to, and write what
     /// came back onto the volumes it named.
     /// </summary>
-    private async Task EnrichFromCatalogueAsync(
+    private async Task<IReadOnlyList<Volume>> EnrichFromCatalogueAsync(
         Series series,
         SyncRun run,
         DateOnly today,
-        LookupBudget budget,
+        EnrichmentBudget budget,
         int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
         var missesBonusVolumes = ExtraVolumes.CountTracked(series, expectedBonusVolumes) < expectedBonusVolumes;
 
-        if (budget.IsExhausted || (!series.Volumes.Any(VolumeGaps.NeedsAnything) && !missesBonusVolumes))
+        // A series whose every volume is complete is still worth one store request a night,
+        // because the store is where the next volume shows up first (backlog §12; MangaUpdates
+        // lagged 86's Vol. 14). That costs one request per series, cached a day and drawn from
+        // the store's own allowance.
+        var mayGainNextVolumes = NextMainVolumeWriter.MayCreate(series);
+
+        if (budget.Catalogue.IsExhausted
+            || (!series.Volumes.Any(VolumeGaps.NeedsAnything) && !missesBonusVolumes && !mayGainNextVolumes))
         {
-            return;
+            return [];
         }
 
-        var match = await catalogueTitleArbiter.AskAsync(series, run, budget, cancellationToken);
+        var match = await catalogueTitleArbiter.AskAsync(series, run, budget.Catalogue, cancellationToken);
 
         // Only when the release source says the edition has extras at all: the store is trusted
         // with where one sits, not with whether there is one. Created before the facts are
@@ -85,6 +103,11 @@ public sealed class VolumeEnrichmentService(
             bonusVolumeWriter.Create(series, match, run);
             wholeExtraVolumeWriter.Create(series, match, expectedBonusVolumes, run);
         }
+
+        // After the extras, so it starts past whatever they just added; before the facts loop,
+        // so a new volume gets its date and cover in this pass (its record is in
+        // match.UntrackedMainVolumes, which the loop already reads).
+        var nextVolumes = nextMainVolumeWriter.Create(series, match, today, run);
 
         foreach (var volume in series.Volumes.OrderBy(volume => volume.Number))
         {
@@ -103,5 +126,7 @@ public sealed class VolumeEnrichmentService(
                 today,
                 cancellationToken);
         }
+
+        return nextVolumes;
     }
 }

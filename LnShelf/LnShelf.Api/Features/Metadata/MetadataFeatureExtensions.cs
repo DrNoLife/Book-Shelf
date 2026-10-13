@@ -181,6 +181,7 @@ public static class MetadataFeatureExtensions
             // writer is what both of its passes route every write through.
             services.AddScoped<BonusVolumeWriter>();
             services.AddScoped<WholeExtraVolumeWriter>();
+            services.AddScoped<NextMainVolumeWriter>();
             services.AddScoped<VolumeEnrichmentService>();
             services.AddScoped<VolumeFactWriter>();
 
@@ -217,6 +218,7 @@ public static class MetadataFeatureExtensions
                     isbnEnricher,
                     provider.GetRequiredService<BonusVolumeWriter>(),
                     provider.GetRequiredService<WholeExtraVolumeWriter>(),
+                    provider.GetRequiredService<NextMainVolumeWriter>(),
                     factWriter);
             });
 
@@ -277,6 +279,10 @@ public static class MetadataFeatureExtensions
             // What happens to one series, shared by the nightly sweep and the refresh that
             // runs when a series is added (feature-spec §4.2 — "same code path").
             services.AddScoped<SeriesRefresher>();
+            services.AddScoped<SeriesDescriptionHealer>();
+
+            // A singleton because NightlySyncBackgroundService, a hosted singleton, takes it.
+            services.AddSingleton<EnrichmentBudgetSizes>();
             services.AddScoped<ReleaseCountWriter>();
             services.AddScoped<PublicationStatusWriter>();
 

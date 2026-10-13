@@ -72,10 +72,12 @@ public sealed class VolumeEnrichmentWholeExtraVolumeTests
     {
         var series = Series(13);
 
+        // A listing past the announcement horizon is neither an extra nor a next volume,
+        // which isolates the extras rule.
         await CreateService(Catalogue(
                 Record(13, new DateOnly(2025, 8, 19)),
                 Record(14, Volume14Date),
-                Record(15, Volume15Date)))
+                Record(15, Today.AddMonths(13))))
             .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 1, CancellationToken.None);
 
         series.Volumes.Max(volume => volume.Number).ShouldBe(14);
@@ -90,7 +92,9 @@ public sealed class VolumeEnrichmentWholeExtraVolumeTests
         series.ReleaseSourceVolumeCount = 9;
         series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m, IsReleased = true });
 
-        await CreateService(Catalogue(Record(9, new DateOnly(2024, 1, 1)), Record(10, new DateOnly(2025, 1, 1))))
+        // A listing past the announcement horizon is neither an extra nor a next volume,
+        // which isolates the extras rule.
+        await CreateService(Catalogue(Record(9, new DateOnly(2024, 1, 1)), Record(10, Today.AddMonths(13))))
             .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 1, CancellationToken.None);
 
         series.Volumes.ShouldNotContain(volume => volume.Number == 10);
@@ -160,7 +164,9 @@ public sealed class VolumeEnrichmentWholeExtraVolumeTests
         var series = Series(15, enriched: true);
         var run = Run();
 
-        await CreateService(Catalogue(Record(15, Volume15Date), Record(16, new DateOnly(2026, 6, 1))))
+        // A listing past the announcement horizon is neither an extra nor a next volume,
+        // which isolates the extras rule.
+        await CreateService(Catalogue(Record(15, Volume15Date), Record(16, Today.AddMonths(13))))
             .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 2, CancellationToken.None);
 
         series.Volumes.Count.ShouldBe(15);

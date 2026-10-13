@@ -11,14 +11,14 @@ public sealed class SeriesSyncService(
     IReleaseSource releaseSource,
     IVolumeCatalogueSource catalogueSource,
     IVolumeEnrichmentSource enrichmentSource,
-    IOptions<OpenLibraryOptions> enrichmentOptions,
+    EnrichmentBudgetSizes budgetSizes,
     TimeProvider timeProvider,
     ILogger<SeriesSyncService> logger) : ISeriesSyncService
 {
     public Task<SyncRun> RunAsync(CancellationToken cancellationToken) =>
-        RunAsync(new LookupBudget(enrichmentOptions.Value.MaximumLookupsPerRun), cancellationToken);
+        RunAsync(budgetSizes.ForRun(), cancellationToken);
 
-    public async Task<SyncRun> RunAsync(LookupBudget budget, CancellationToken cancellationToken)
+    public async Task<SyncRun> RunAsync(EnrichmentBudget budget, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(budget);
 
@@ -37,7 +37,7 @@ public sealed class SeriesSyncService(
         return await FinishRunAsync(run, $"{run.SeriesRefreshed} series refreshed", cancellationToken);
     }
 
-    private async Task SweepAsync(SyncRun run, LookupBudget budget, CancellationToken cancellationToken)
+    private async Task SweepAsync(SyncRun run, EnrichmentBudget budget, CancellationToken cancellationToken)
     {
         // Sync skips any series without an external id (feature-spec §4.2) — a
         // manual WebNovel entry has nothing to refresh against.
@@ -103,7 +103,7 @@ public sealed class SeriesSyncService(
 
         // A smaller allowance than the nightly sweep's, because somebody is waiting for
         // this one: at twelve lookups a minute a generous budget is a minute-long request.
-        var budget = new LookupBudget(enrichmentOptions.Value.MaximumLookupsOnDemand);
+        var budget = budgetSizes.OnDemand();
 
         // No AniListId check here, unlike the sweep. Being asked about one series by id is
         // not the same as choosing which series to sweep, and a manual WebNovel entry can
@@ -136,7 +136,7 @@ public sealed class SeriesSyncService(
         Series series,
         SyncRun run,
         HashSet<long> linkedExternalIds,
-        LookupBudget budget,
+        EnrichmentBudget budget,
         CancellationToken cancellationToken)
     {
         try

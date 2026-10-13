@@ -510,7 +510,7 @@ public sealed class SeriesSyncServiceTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
-            NoMetadata(),
+            new SeriesDescriptionHealer(NoMetadata(), NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -518,8 +518,7 @@ public sealed class SeriesSyncServiceTests
                 enrichmentSource,
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
 
         return new SeriesSyncService(
             dbContext,
@@ -527,7 +526,7 @@ public sealed class SeriesSyncServiceTests
             releaseSource,
             NoCatalogue(),
             enrichmentSource,
-            enrichmentOptions,
+            new EnrichmentBudgetSizes(enrichmentOptions, Options.Create(new AppleBooksOptions())),
             TimeProvider.System,
             NullLogger<SeriesSyncService>.Instance);
     }

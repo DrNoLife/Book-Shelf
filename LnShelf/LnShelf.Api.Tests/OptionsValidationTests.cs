@@ -77,6 +77,7 @@ public sealed class OptionsValidationTests
     [InlineData("AniList:RequestsPerMinute", "0", "RequestsPerMinute")]
     [InlineData("MangaUpdates:AutoLinkMinimumScore", "101", "AutoLinkMinimumScore")]
     [InlineData("AppleBooks:SearchLimit", "0", "SearchLimit")]
+    [InlineData("AppleBooks:MaximumRequestsOnDemand", "0", "MaximumRequestsOnDemand")]
     [InlineData("OpenLibrary:MaximumLookupsPerRun", "0", "MaximumLookupsPerRun")]
     [InlineData("OpenLibrary:RequestTimeout", "01:00:00", "RequestTimeout")]
     [InlineData("Covers:FileSystem:RootPath", "", "RootPath")]

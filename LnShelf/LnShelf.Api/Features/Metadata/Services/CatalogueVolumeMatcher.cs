@@ -13,7 +13,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // the stricter of the two.
 //
 // One class rather than two loops: the enrichment pass wants the record for each volume it
-// tracks, and the verification command wants the highest volume number the store confirms.
+// tracks, and the verification command wants the highest volume number the store says is out.
 // Those were the same twenty lines twice over, one keeping a dictionary and one a maximum,
 // so this walks the records once and answers both.
 public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logger)
@@ -33,7 +33,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
     // answer. The release source owns volume counts (CLAUDE.md), so a store listing volume
     // 25 of a series the count says has 23 is not grounds to create two volumes; it is a
     // store carrying a spin-off or a future listing under a number this shelf has no
-    // opinion about. They still count towards the highest confirmed number, which is asked
+    // opinion about. They still count towards the highest released number, which is asked
     // precisely when no source has stated a count at all.
     public CatalogueMatch Match(
         Series series,
@@ -54,7 +54,7 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
         var byVolumeNumber = new Dictionary<decimal, CatalogueVolume>();
         var bonusVolumes = new Dictionary<decimal, CatalogueVolume>();
         var untrackedMainVolumes = new Dictionary<decimal, CatalogueVolume>();
-        var highestConfirmed = 0;
+        var confirmedMainVolumeDates = new Dictionary<int, DateOnly?>();
 
         foreach (var record in catalogue)
         {
@@ -70,9 +70,9 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
 
             // A bonus volume says nothing about how many main volumes there are: Vol. 7.5 sits
             // inside a nine-volume series, and counting it would make the series ten long.
-            if (confirmsMedium && !number.IsBonusVolume && number > highestConfirmed)
+            if (confirmsMedium && !number.IsBonusVolume)
             {
-                highestConfirmed = (int)number;
+                RecordEarliestDate(confirmedMainVolumeDates, (int)number, record.ReleaseDate);
             }
 
             if (IsUntrackedBonusVolume(number, tracked, highestTrackedMain))
@@ -124,8 +124,25 @@ public sealed class CatalogueVolumeMatcher(ILogger<CatalogueVolumeMatcher> logge
             ByVolumeNumber = byVolumeNumber,
             BonusVolumes = bonusVolumes,
             UntrackedMainVolumes = untrackedMainVolumes,
-            HighestConfirmedNumber = highestConfirmed,
+            ConfirmedMainVolumeDates = confirmedMainVolumeDates,
         };
+    }
+
+    /// <summary>
+    /// Keeps the earliest date any record of a volume carries, so a re-release listed with a
+    /// later date does not make a volume that is out look like a pre-order.
+    /// </summary>
+    private static void RecordEarliestDate(Dictionary<int, DateOnly?> dates, int number, DateOnly? date)
+    {
+        // Already holding a date no later than this one (or this one has none): keep it.
+        if (dates.TryGetValue(number, out var earliest)
+            && earliest is { } known
+            && (date is null || known <= date))
+        {
+            return;
+        }
+
+        dates[number] = date;
     }
 
     /// <summary>
@@ -167,8 +184,21 @@ public sealed record CatalogueMatch
         new Dictionary<decimal, CatalogueVolume>();
 
     /// <summary>
-    /// The highest main volume number the store positively confirms for this series, tracked or
-    /// not. Zero when it confirms none.
+    /// Every whole-numbered main volume the store confirms as this series and medium, tracked or
+    /// not, with the earliest date any of its records carries (null when none is dated).
     /// </summary>
-    public required int HighestConfirmedNumber { get; init; }
+    public IReadOnlyDictionary<int, DateOnly?> ConfirmedMainVolumeDates { get; init; } =
+        new Dictionary<int, DateOnly?>();
+
+    /// <summary>
+    /// The highest main volume number the store confirms and dates on or before
+    /// <paramref name="today"/>. Zero when there is none.
+    /// </summary>
+    // Released-only on purpose: a store lists pre-orders (86's Vol. 14), and a count cross-check
+    // must not run ahead of the shelves. An undated record is not evidence of a release.
+    public int HighestReleasedNumber(DateOnly today) => ConfirmedMainVolumeDates
+        .Where(entry => entry.Value is { } date && date <= today)
+        .Select(entry => entry.Key)
+        .DefaultIfEmpty(0)
+        .Max();
 }

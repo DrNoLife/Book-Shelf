@@ -36,8 +36,8 @@ public static class MetadataRateLimiting
     }
 
     /// <summary>
-    /// AniList: 90 a minute, and — like every source now — the request timeout lives on the
-    /// handler.
+    /// AniList: 30 a minute while its API is degraded (CLAUDE.md), and — like every source
+    /// now — the request timeout lives on the handler.
     /// </summary>
     public static SourceRateLimitPolicy AniList(IServiceProvider provider)
     {
@@ -109,6 +109,9 @@ public static class MetadataRateLimiting
 
             MaximumRetryDelay = options.MaximumRetryDelay,
             RequestTimeout = options.RequestTimeout,
+
+            // Apple's rate-limit answer is a 403, not a 429.
+            TreatsForbiddenAsRateLimited = true,
         };
     }
 }

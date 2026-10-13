@@ -46,4 +46,30 @@ public sealed class AppleBooksOptions
 
     [Range(typeof(TimeSpan), "00:00:01", "00:10:00")]
     public TimeSpan MaximumRetryDelay { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Store requests one sync run may make, one per title attempted. A cap, not a target.
+    /// </summary>
+    // Sized above any realistic shelf. The store is now asked about every eligible series
+    // every night (one request ordinarily, because it is where the next volume shows up
+    // first), and the sweep runs in title order, so an allowance smaller than a shelf would
+    // starve the same late-alphabet series every night.
+    [Range(1, 10000)]
+    public int MaximumRequestsPerRun { get; set; } = 200;
+
+    /// <summary>
+    /// The store allowance for the whole nightly sweep, shared by every user's run that night.
+    /// </summary>
+    // Shared across users like Open Library's, for the same reason: per-run allowances
+    // multiply with the number of users, and the source's patience does not.
+    [Range(1, 10000)]
+    public int MaximumRequestsPerNight { get; set; } = 600;
+
+    /// <summary>
+    /// Store requests one on-demand refresh may make — adding a series, or a manual sync.
+    /// </summary>
+    // Covers a full title-attempt list for a series just added. Apple's twenty-a-minute
+    // window lets ten go at once, so somebody waiting is not kept waiting by it.
+    [Range(1, 100)]
+    public int MaximumRequestsOnDemand { get; set; } = 10;
 }

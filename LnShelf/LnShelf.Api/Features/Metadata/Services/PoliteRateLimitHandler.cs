@@ -5,7 +5,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
 /// Politeness, not resilience: every request waits for a permit before it leaves, and a 429
-/// is honoured rather than hammered (CLAUDE.md — be a polite API citizen).
+/// (or the source's own equivalent) is honoured rather than hammered (CLAUDE.md — be a polite API citizen).
 /// </summary>
 // One handler where there were four near-identical ones. They differed in the source's name,
 // the options type they read, and whether they bounded the request itself; all three are now
@@ -45,18 +45,19 @@ public sealed class PoliteRateLimitHandler(
         CancellationToken cancellationToken)
     {
         var response = await SendWithPermitAsync(request, cancellationToken);
+        var policy = rateLimiter.Policy;
 
-        if (response.StatusCode is not HttpStatusCode.TooManyRequests)
+        if (!IsRateLimited(response, policy))
         {
             return response;
         }
 
-        var policy = rateLimiter.Policy;
         var retryAfter = RetryDelayFor(response.Headers.RetryAfter, policy.MaximumRetryDelay);
 
         logger.LogWarning(
-            "{SourceName} answered 429; waiting {RetryAfterSeconds}s before a single retry",
+            "{SourceName} answered {StatusCode}; waiting {RetryAfterSeconds}s before a single retry",
             policy.SourceName,
+            (int)response.StatusCode,
             retryAfter.TotalSeconds);
 
         response.Dispose();
@@ -66,6 +67,10 @@ public sealed class PoliteRateLimitHandler(
         // fails loudly beats a request queue that grows silently.
         return await SendWithPermitAsync(request, cancellationToken);
     }
+
+    private static bool IsRateLimited(HttpResponseMessage response, SourceRateLimitPolicy policy) =>
+        response.StatusCode is HttpStatusCode.TooManyRequests
+        || (policy.TreatsForbiddenAsRateLimited && response.StatusCode is HttpStatusCode.Forbidden);
 
     /// <summary>
     /// Waits for a permit, then sends — bounding the request itself when the policy says the

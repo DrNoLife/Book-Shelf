@@ -49,10 +49,9 @@ public sealed class CatalogueTitleArbiter(
                 break;
             }
 
-            // Spent from the same budget the by-ISBN lookups draw on, which is deliberate
-            // for now and is the one thing about it worth knowing: a series with no
-            // remembered title can cost several of a run's allowance before a single ISBN
-            // is looked up. See the note on OpenLibraryOptions.MaximumLookupsPerRun.
+            // Spent from the store's own allowance (EnrichmentBudget.Catalogue): a series with
+            // no remembered title can spend several attempts, and none of them is an ISBN
+            // lookup's.
             budget.Spend(1);
             tried++;
 
@@ -105,7 +104,6 @@ public sealed class CatalogueTitleArbiter(
         {
             ByVolumeNumber = new Dictionary<decimal, CatalogueVolume>(),
             BonusVolumes = new Dictionary<decimal, CatalogueVolume>(),
-            HighestConfirmedNumber = 0,
         };
     }
 

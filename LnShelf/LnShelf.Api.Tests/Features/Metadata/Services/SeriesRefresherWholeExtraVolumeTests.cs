@@ -114,7 +114,7 @@ public sealed class SeriesRefresherWholeExtraVolumeTests
     {
         var run = new SyncRun { Id = Guid.CreateVersion7(), StartedAt = Now };
 
-        var events = await refresher.RefreshAsync(series, run, [], new LookupBudget(8), CancellationToken.None);
+        var events = await refresher.RefreshAsync(series, run, [], new EnrichmentBudget(8, 8), CancellationToken.None);
 
         return (run, events);
     }
@@ -132,7 +132,7 @@ public sealed class SeriesRefresherWholeExtraVolumeTests
         return new SeriesRefresher(
             Substitute.For<IReleaseSourceMatcher>(),
             releaseSource,
-            Substitute.For<ISeriesMetadataSource>(),
+            new SeriesDescriptionHealer(Substitute.For<ISeriesMetadataSource>(), NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -140,8 +140,7 @@ public sealed class SeriesRefresherWholeExtraVolumeTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer(CoverCache())),
-            new FixedTimeProvider(Now),
-            NullLogger<SeriesRefresher>.Instance);
+            new FixedTimeProvider(Now));
     }
 
     /// <summary>

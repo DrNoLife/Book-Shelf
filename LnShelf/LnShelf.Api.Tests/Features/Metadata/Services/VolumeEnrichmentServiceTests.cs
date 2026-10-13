@@ -181,12 +181,12 @@ public sealed class VolumeEnrichmentServiceTests
 
         var budget = Budget(10);
         await CreateService(source).EnrichAsync(series, run, Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
-        var spent = 10 - budget.Remaining;
 
         // The seam is keyed on ISBN because that is the only key that works. No ISBN is
         // nothing to ask about — not an error, and not a request. The one spent is the
         // catalogue's, which needs no ISBN and is exactly why it exists.
-        spent.ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
+        budget.ByIsbn.Remaining.ShouldBe(10);
         run.VolumesEnriched.ShouldBe(0);
         run.EnrichmentGaps.ShouldBe(0);
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -200,12 +200,12 @@ public sealed class VolumeEnrichmentServiceTests
 
         var budget = Budget(10);
         await CreateService(source).EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
-        var spent = 10 - budget.Remaining;
 
         // The real Slime volume 1 case. Its record is a French edition stating no language
         // at all, so the record cannot rule itself out — the ISBN's registration group is
         // the signal, and it costs no request to read. The one spent is the catalogue's.
-        spent.ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
+        budget.ByIsbn.Remaining.ShouldBe(10);
         series.Volumes.Single().ReleaseDate.ShouldBeNull();
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
@@ -320,11 +320,10 @@ public sealed class VolumeEnrichmentServiceTests
             .Create(catalogueSource, source, NoCandidates(), VolumeEnrichmentPipeline.Writer())
             .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
-        var spent = 10 - budget.Remaining;
-
         // Nothing left to learn, so a nightly run asks neither source. Volumes that are
         // still incomplete are re-asked on purpose — both catalogues grow.
-        spent.ShouldBe(0);
+        budget.Catalogue.Remaining.ShouldBe(10);
+        budget.ByIsbn.Remaining.ShouldBe(10);
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await catalogueSource.DidNotReceive().GetVolumesAsync(
             Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
@@ -338,14 +337,14 @@ public sealed class VolumeEnrichmentServiceTests
             Volume(2, "9780316363921", isReleased: true),
             Volume(3, EnglishIsbn, isReleased: true));
 
-        var budget = Budget(3);
+        var budget = new EnrichmentBudget(catalogueRequests: 10, isbnLookups: 2);
         await CreateService(Enrichment()).EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
-        var spent = 3 - budget.Remaining;
 
         // A cap on the run, not a target: the rest wait for tomorrow rather than spending
-        // an hour against somebody else's donated API. One went on the catalogue, so two of
-        // the three volumes were looked up and the third was not.
-        spent.ShouldBe(3);
+        // an hour against somebody else's donated API. Two of the three volumes were looked
+        // up and the third was not; the catalogue's request came from its own allowance.
+        budget.ByIsbn.Remaining.ShouldBe(0);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
     }
 
     [Fact]
@@ -367,12 +366,12 @@ public sealed class VolumeEnrichmentServiceTests
         var budget = Budget(10);
         await CreateService(enrichment, coverCache).EnrichAsync(
             series, second, Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
-        var spent = 10 - budget.Remaining;
 
         // The by-ISBN pass has nothing left to learn after the first run, so the second
         // spends only the catalogue's one request — which it does because the volume still
         // has no blurb, and the catalogue is the only source that carries one (testing.md #3).
-        spent.ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
+        budget.ByIsbn.Remaining.ShouldBe(10);
         second.DatesMoved.ShouldBe(0);
         second.VolumeCoversCached.ShouldBe(0);
         second.DescriptionsWritten.ShouldBe(0);

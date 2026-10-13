@@ -421,7 +421,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         // One request for the whole series, which is the reason this seam exists: the
         // by-ISBN source would have cost three, and could only have answered for the
         // volumes whose ISBN is known.
-        (10 - budget.Remaining).ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
         series.Volumes.ShouldAllBe(volume => volume.ReleaseDate != null);
     }
 
@@ -443,7 +443,7 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         // The request covers a whole series, so one volume still missing something is
         // reason enough to make it — and none missing anything is reason not to.
-        budget.Remaining.ShouldBe(10);
+        budget.Catalogue.Remaining.ShouldBe(10);
         await catalogueSource.DidNotReceive().GetVolumesAsync(
             Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
     }

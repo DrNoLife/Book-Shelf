@@ -105,7 +105,9 @@ public sealed class NightlySyncBackgroundServiceRunTests
             host.ScopeFactory,
             host.Gate,
             Options.Create(new SyncOptions { Enabled = true }),
-            Options.Create(new OpenLibraryOptions()),
+            new EnrichmentBudgetSizes(
+                Options.Create(new OpenLibraryOptions()),
+                Options.Create(new AppleBooksOptions())),
             TimeProvider.System,
             heartbeat ?? Substitute.For<IHeartbeat>(),
             NullLogger<NightlySyncBackgroundService>.Instance);

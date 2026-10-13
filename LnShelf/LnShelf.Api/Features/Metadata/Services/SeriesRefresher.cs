@@ -14,12 +14,11 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class SeriesRefresher(
     IReleaseSourceMatcher releaseSourceMatcher,
     IReleaseSource releaseSource,
-    ISeriesMetadataSource metadataSource,
+    SeriesDescriptionHealer descriptionHealer,
     ReleaseCountWriter releaseCountWriter,
     PublicationStatusWriter publicationStatusWriter,
     VolumeEnrichmentService volumeEnrichment,
-    TimeProvider timeProvider,
-    ILogger<SeriesRefresher> logger)
+    TimeProvider timeProvider)
 {
     /// <param name="linkedExternalIds">
     /// Release-source ids already spoken for, so two series cannot link to one record.
@@ -33,7 +32,7 @@ public sealed class SeriesRefresher(
         Series series,
         SyncRun run,
         HashSet<long> linkedExternalIds,
-        LookupBudget budget,
+        EnrichmentBudget budget,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
@@ -48,6 +47,7 @@ public sealed class SeriesRefresher(
 
         // Taken before anything is written, for the same reason; null on a first refresh.
         var snapshot = ShelfEventDiff.Capture(series, timeProvider.LocalTimeZone);
+        var today = timeProvider.Today();
 
         var info = series.MangaUpdatesId is { } externalId
             ? await releaseSource.GetSeriesAsync(externalId, cancellationToken)
@@ -70,17 +70,23 @@ public sealed class SeriesRefresher(
         // per-volume ISBNs, which have nothing to do with whether this series is linked.
         // Ordered after the count so a volume the count just created can be enriched in
         // the same pass.
-        await EnrichVolumesAsync(series, run, budget, info?.ExtraVolumeCount ?? 0, cancellationToken);
+        var nextVolumes = await EnrichVolumesAsync(
+            series, run, today, budget, info?.ExtraVolumeCount ?? 0, cancellationToken);
 
         // Also unconditional, and for the same reason: whether this series has a synopsis
         // has nothing to do with whether the release source recognised it.
-        await HealDescriptionAsync(series, cancellationToken);
+        await descriptionHealer.HealAsync(series, cancellationToken);
 
         // Before the early return below: enrichment can date a volume of a series whose
         // release-source record came back empty, and that date passing is still news.
         var events = snapshot is null
             ? []
-            : ShelfEventDiff.Compare(snapshot, series, timeProvider.Today(), timeProvider.GetUtcNow());
+            : ShelfEventDiff.Compare(snapshot, series, today, timeProvider.GetUtcNow());
+
+        if (refreshedBefore && IsNewVolumeOut(snapshot, events, nextVolumes, today))
+        {
+            NewVolumeFlag.Raise(series);
+        }
 
         if (info is null)
         {
@@ -88,9 +94,10 @@ public sealed class SeriesRefresher(
         }
 
         // After the enrichment, so it reads the dates as this run left them.
-        ReleaseCountWriter.RecordChosenDateConflicts(series, info, run, timeProvider.Today());
+        ReleaseCountWriter.RecordChosenDateConflicts(series, info, run, today);
 
-        // Metadata. The single exception in this class is HasNewVolume (see ReleaseCountWriter);
+        // Metadata. The single exception in this class is HasNewVolume (ReleaseCountWriter and
+        // the store's next volumes, through NewVolumeFlag);
         // no other SeriesUserState or VolumeUserState field is ever written here, because
         // sync does not own user state (CLAUDE.md).
         series.LastSyncedAt = timeProvider.GetUtcNow();
@@ -98,90 +105,58 @@ public sealed class SeriesRefresher(
         return events;
     }
 
-    private async Task EnrichVolumesAsync(
+    /// <returns>The next main volumes the store created, which <see cref="IsNewVolumeOut"/> weighs.</returns>
+    private Task<IReadOnlyList<Volume>> EnrichVolumesAsync(
         Series series,
         SyncRun run,
-        LookupBudget budget,
+        DateOnly today,
+        EnrichmentBudget budget,
         int expectedBonusVolumes,
         CancellationToken cancellationToken)
     {
-        if (budget.IsExhausted)
-        {
-            return;
-        }
-
-        var today = timeProvider.Today();
-
+        // No early return on an exhausted budget here: each pass checks its own allowance,
+        // and one source running out must not stop the other.
+        //
         // The budget is handed over rather than a number: one volume can cost several
         // requests when its own ISBN is not the one that got indexed, and only the
         // enrichment knows how many it actually spent.
-        await volumeEnrichment.EnrichAsync(series, run, today, budget, expectedBonusVolumes, cancellationToken);
+        return volumeEnrichment.EnrichAsync(series, run, today, budget, expectedBonusVolumes, cancellationToken);
     }
 
     /// <summary>
-    /// Gives a series a synopsis when it has none — the series added before the shelf
-    /// ever asked AniList for one.
+    /// Whether this refresh brought out a volume the badge should announce, beyond the count
+    /// flips ReleaseCountWriter already flags.
     /// </summary>
-    // The description only, never the rest of the metadata. Re-applying every AniList field
-    // here would make a gap-fill indistinguishable from a full re-sync, and the other fields
-    // were already written when the series was added.
-    //
-    // No budget mechanics, deliberately, unlike the enrichment above. This costs one AniList
-    // request per description-less series and is self-extinguishing — the guard stops firing
-    // the moment the column is filled. AniList allows 30 requests a minute and this shelf
-    // holds single digits of series, so the worst case is one sweep spending nine of them,
-    // once. A LookupBudget here would be machinery guarding nothing.
-    //
-    // Self-extinguishing only because an answer of "no synopsis" is written down too, as the
-    // empty string — the same three states Volume.Title uses: null is "never asked", empty is
-    // "asked, and AniList has none". Left null, a series AniList carries no synopsis for would
-    // be asked about every night forever. The cost is that a synopsis somebody adds to AniList
-    // later does not arrive on its own; clearing the column to null asks again. Every reader
-    // treats blank as absent (SeriesDetailProjection's NullIfBlank), so nothing displays it.
-    private async Task HealDescriptionAsync(Series series, CancellationToken cancellationToken)
+    // Owner decision (backlog §12, amended 2026-10-13): the store's next volumes are news,
+    // unlike extras. Two ways in:
+    // - a next volume the store created tonight that is already out;
+    // - a volume the shelf already had that came out tonight (ShelfEventDiff's VolumeReleased),
+    //   so a pre-order raises the badge the night its date passes even when the release
+    //   source's count lags behind it. A count flip lands here too, which changes nothing:
+    //   ReleaseCountWriter has raised it already.
+    // Volumes created tonight other than next volumes (bonus volumes, whole extras, the
+    // count's own new rows) are left to the rules that already govern them. Never on a first
+    // refresh, which the caller checks: a series' whole backlist arriving is not news.
+    private static bool IsNewVolumeOut(
+        ShelfSnapshot? snapshot,
+        IReadOnlyList<ShelfEvent> events,
+        IReadOnlyList<Volume> nextVolumes,
+        DateOnly today)
     {
-        if (series.Description is not null || series.AniListId is not { } aniListId)
+        if (nextVolumes.Any(volume => volume.ReleaseDate <= today))
         {
-            return;
+            return true;
         }
 
-        try
+        if (snapshot is null)
         {
-            var metadata = await metadataSource.GetSeriesAsync(aniListId, cancellationToken);
-
-            if (metadata?.Description is not { } description)
-            {
-                // A failure throws and never reaches here, so this is AniList answering — with
-                // no synopsis, or with no such series — and the answer is final for this row.
-                series.Description = string.Empty;
-                return;
-            }
-
-            series.Description = description;
-
-            logger.LogInformation(
-                "{TitleEnglish}: description filled in from AniList {AniListId}",
-                series.TitleEnglish,
-                aniListId);
+            return false;
         }
-        // The caller's cancellation only: a timed-out request is a cancelled task nobody
-        // asked for, and it is exactly the failure this catch exists to absorb.
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            // This file's failure philosophy, applied one level down: a refresh that got the
-            // volume counts right is not worth failing because a synopsis could not be
-            // fetched. The next run will try again — the column is still null, so the guard is
-            // still true.
-            logger.LogWarning(
-                exception,
-                "Could not fetch a description for {TitleEnglish} (AniList {AniListId}); continuing",
-                series.TitleEnglish,
-                aniListId);
-        }
+
+        var numbersKnownBefore = snapshot.Volumes.Values.Select(volume => volume.Number).ToHashSet();
+
+        return events.Any(shelfEvent => shelfEvent.Kind is ShelfEventKind.VolumeReleased
+                                        && numbersKnownBefore.Contains(shelfEvent.VolumeNumber));
     }
 
     private async Task<ReleaseSeriesInfo?> LinkAsync(
