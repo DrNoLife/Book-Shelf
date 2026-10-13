@@ -56,14 +56,37 @@ public static class ConflictText
                 $"{option.SourceName} says {(option.DisplayValue == "in print" ? "it's in print" : option.DisplayValue)}."));
 
         /// <summary>
-        /// The line a settled disagreement shows where the open one shows its sentence.
+        /// The row's subject in the conflict list, which already says "Sources disagree" once in
+        /// its title: "Vol 15's release date", "Volume count", "Publication status".
         /// </summary>
-        public string SettledLine => conflict.DisplayedSource is { } source
-            ? conflict.Reason is SourceDisplayReason.YourChoice
-                ? ChoiceMarker(source)
-                : $"Using {source.DisplayName} (automatic)"
-            : conflict.Sentence;
+        public string Subject => conflict switch
+        {
+            { Field: SyncDiscrepancyField.SeriesLink } => conflict.Heading,
+            { VolumeNumber: { } volumeNumber } => $"Vol {volumeNumber.ToVolumeText()}'s {conflict.Field.Noun}",
+            _ => Capitalized(conflict.Field.Noun),
+        };
+
+        /// <summary>
+        /// "using AniList (automatic)" or "using Apple Books (your choice)" for a settled
+        /// disagreement; null for one that still waits on the reader.
+        /// </summary>
+        public string? SettledNote => conflict is { NeedsReview: false, DisplayedSource: { } source }
+            ? $"using {source.DisplayName} ({(conflict.Reason is SourceDisplayReason.YourChoice ? "your choice" : "automatic")})"
+            : null;
+
+        /// <summary>
+        /// The row's heading: the subject, and who settled it when it is settled —
+        /// "Volume count · using AniList (automatic)".
+        /// </summary>
+        // The settled state rides on the heading so the sentence under it can keep saying what
+        // each source said, which is what a reader needs before changing a settled answer.
+        public string RowHeading => conflict.SettledNote is { } note
+            ? $"{conflict.Subject} · {note}"
+            : conflict.Subject;
     }
+
+    /// <summary>"Sources disagree · 3" — the title of the one panel that lists them all.</summary>
+    public static string ListTitle(int count) => $"Sources disagree · {count}";
 
     /// <summary>"Using Apple Books (your choice)" — the quiet note beside an overridden value.</summary>
     public static string ChoiceMarker(MetadataSourceName source) => $"Using {source.DisplayName} (your choice)";
@@ -76,4 +99,7 @@ public static class ConflictText
                 .FirstOrDefault(choice => choice.Field == field && choice.VolumeNumber == volumeNumber)
                 ?.Source;
     }
+
+    private static string Capitalized(string phrase) =>
+        phrase.Length == 0 ? phrase : char.ToUpperInvariant(phrase[0]) + phrase[1..];
 }

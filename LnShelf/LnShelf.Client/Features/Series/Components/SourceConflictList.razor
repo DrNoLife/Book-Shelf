@@ -1,0 +1,25 @@
+@* Every disagreement on the series in one panel, one row each (owner ruling 2026-10-13: a
+   panel per disagreement spent a screen on what a list says in a few lines). The panel is
+   amber while any row waits on the reader and quiet once all are settled; each row carries
+   its own dot and words, so the panel's tone is never the only signal. *@
+
+@if (Ordered.Count > 0)
+{
+    <div class="source-conflicts">
+        <Panel Tone="@(Ordered.Any(conflict => conflict.NeedsReview) ? PanelTone.Warning : PanelTone.Default)"
+               aria-labelledby="source-conflicts-title">
+            <h2 id="source-conflicts-title" class="title-panel">@ConflictText.ListTitle(Ordered.Count)</h2>
+
+            <ul class="source-conflicts__rows">
+                @foreach (var conflict in Ordered)
+                {
+                    <SourceConflictRow @key="(conflict.Field, conflict.VolumeNumber)"
+                                       Conflict="conflict"
+                                       IsBusy="IsBusy"
+                                       Chosen="source => Chosen.InvokeAsync((conflict, source))"
+                                       ResetRequested="() => ResetRequested.InvokeAsync(conflict)" />
+                }
+            </ul>
+        </Panel>
+    </div>
+}

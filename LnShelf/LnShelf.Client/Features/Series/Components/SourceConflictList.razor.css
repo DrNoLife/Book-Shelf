@@ -1,0 +1,17 @@
+/* The one conflict panel: tighter than a default panel because it is a list, not a card of
+   prose. The custom properties are Panel's own tuning knobs; the rows bring their own padding
+   and hairlines. */
+.source-conflicts {
+  --panel-padding: var(--space-3) var(--space-5);
+  --panel-gap: var(--space-1);
+}
+
+.source-conflicts__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 560px) {
+  .source-conflicts { --panel-padding: var(--space-3) var(--space-4); }
+}

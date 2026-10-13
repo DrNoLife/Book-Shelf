@@ -11,6 +11,7 @@ public sealed class SourceChoiceTests(EndToEndFixture fixture) : JourneyTest(fix
 {
     private const string SeriesTitle = "The Saga of Tanya the Evil";
     private const string Heading = "Sources disagree on Vol 14's release date";
+    private const string ChosenHeading = "Vol 14's release date · using Apple Books (your choice)";
 
     [Fact]
     public async Task SeriesPage_ChooseAStoreDate_StaysAfterReloadAndResetHandsItBack()
@@ -18,20 +19,30 @@ public sealed class SourceChoiceTests(EndToEndFixture fixture) : JourneyTest(fix
         await SeedDisagreementAsync();
         await OpenSeriesAsync();
 
-        var panel = Page.GetByRole(AriaRole.Region, new() { Name = Heading });
-        await Assertions.Expect(panel).ToBeVisibleAsync();
+        // One panel lists every disagreement; the row is a group named in full, the heading
+        // inside it drops the "Sources disagree on" the panel title already says.
+        var list = Page.GetByRole(AriaRole.Region, new() { Name = "Sources disagree · 1" });
+        await Assertions.Expect(list).ToBeVisibleAsync();
 
-        await panel.GetByRole(AriaRole.Button, new() { Name = "Use Apple Books", Exact = true }).ClickAsync();
+        var row = list.GetByRole(AriaRole.Group, new() { Name = Heading });
+        await Assertions.Expect(row.GetByRole(AriaRole.Heading, new() { Name = "Vol 14's release date", Exact = true }))
+            .ToBeVisibleAsync();
+
+        // The diff waits behind Details until asked for.
+        await row.GetByText("Details").ClickAsync();
+        await Assertions.Expect(row.GetByText("Shown now")).ToBeVisibleAsync();
+
+        await row.GetByRole(AriaRole.Button, new() { Name = "Use Apple Books", Exact = true }).ClickAsync();
 
         // The state is in the words: the chosen source's button now reads "Using", and the
-        // panel says whose word the shelf is taking.
-        await Assertions.Expect(panel.GetByRole(AriaRole.Button, new() { Name = "Using Apple Books", Exact = true }))
+        // row's heading says whose word the shelf is taking.
+        await Assertions.Expect(row.GetByRole(AriaRole.Button, new() { Name = "Using Apple Books", Exact = true }))
             .ToBeDisabledAsync();
-        await Assertions.Expect(panel.GetByText("Using Apple Books (your choice)", new() { Exact = true }))
+        await Assertions.Expect(row.GetByRole(AriaRole.Heading, new() { Name = ChosenHeading, Exact = true }))
             .ToBeVisibleAsync();
 
         await Page.ReloadAsync();
-        await Assertions.Expect(panel.GetByText("Using Apple Books (your choice)", new() { Exact = true }))
+        await Assertions.Expect(row.GetByRole(AriaRole.Heading, new() { Name = ChosenHeading, Exact = true }))
             .ToBeVisibleAsync();
 
         // The volume's own panel carries the quiet note beside the date it changed.
@@ -41,11 +52,11 @@ public sealed class SourceChoiceTests(EndToEndFixture fixture) : JourneyTest(fix
             .ToBeVisibleAsync();
         await Page.Keyboard.PressAsync("Escape");
 
-        await panel.GetByRole(AriaRole.Button, new() { Name = "Reset to automatic" }).ClickAsync();
+        await row.GetByRole(AriaRole.Button, new() { Name = "Reset to automatic" }).ClickAsync();
 
-        await Assertions.Expect(panel.GetByRole(AriaRole.Button, new() { Name = "Use Apple Books", Exact = true }))
+        await Assertions.Expect(row.GetByRole(AriaRole.Button, new() { Name = "Use Apple Books", Exact = true }))
             .ToBeEnabledAsync();
-        await Assertions.Expect(panel.GetByRole(AriaRole.Button, new() { Name = "Reset to automatic" }))
+        await Assertions.Expect(row.GetByRole(AriaRole.Button, new() { Name = "Reset to automatic" }))
             .ToHaveCountAsync(0);
     }
 

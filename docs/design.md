@@ -493,17 +493,23 @@ tile grid
 (a `Panel`: "Vol 18", its date, an inset Unread · Reading · Read control, the
 ownership control, a Buy link when to buy, "Set cover…", and on a volume added by hand
 a `.ghost` "Remove volume" that asks first). The **conflict
-panel** (`SourceConflictPanel`, owner decision 2026-10-10): one per recorded
-disagreement, with the field named in words ("Sources disagree on Vol 23's
-release date", "…on the volume count", "…on publication status") and one line
-saying what each source said. Open ones are `Panel` `Warning` with a large amber
-dot; ones the usual rules or the reader settled are a plain `Panel` with a quiet
-dot and "Using Apple Books (your choice)" or "(automatic)" — amber means "look at
-this". A native **Details** disclosure (summary at least 40px) holds the
-side-by-side diff: one row per source with its name in `--muted`, the value
-(`tabular`) and "Shown now" or "Not used" in words. Under it, a `.secondary`
-"Use Apple Books" button per source (the chosen one reads "Using Apple Books" and
-is disabled) and a `.ghost` "Reset to automatic" when the reader picked. A quiet
+list** (`SourceConflictList` with one `SourceConflictRow` per disagreement; owner decisions
+2026-10-10 and, for the compact list, 2026-10-13): one `Panel` for all of a series'
+disagreements, titled "Sources disagree · N", `Warning` while any row waits on the reader and
+the default tone once all are settled. Panel padding `--space-3` `--space-5`, gap
+`--space-1`. Rows (open ones first, settled after) are separated by `--line` hairlines with
+`--space-3` above and below. Left: a `SignalDot` (attention while open, quiet once settled —
+the panel's tone is never the only signal), the field in words without the title's prefix
+("Vol 23's release date", "Volume count", "Publication status"; a settled row adds
+"· using AniList (automatic)" or "· using Apple Books (your choice)"; the row's
+accessible name is the full "Sources disagree on Vol 23's release date"), one `--muted`
+line saying what each source said, and under it a small native **Details ▾** disclosure
+(caption size, 24px target). Right, right-aligned: a regular-size `.secondary` "Use Apple
+Books" per source (the chosen one reads "Using Apple Books" and is disabled) and a `.ghost`
+"Reset to automatic" when the reader picked. Details opens the side-by-side diff under the
+row at its full width: one line per source with its name in `--muted`, the value (`tabular`)
+and "Shown now" or "Not used" in words, then the explanation in `fine`. At 560px and below
+the buttons wrap under the words, from the left. A quiet
 "Using X (your choice)" note sits beside an overridden value: the volume panel's
 date, the hero's status, the progress panel's "out". A series the sync could not link
 gets the **not linked** panel instead (`ReleaseLinkPanel`, `Panel` `Warning`, large amber

@@ -1,0 +1,130 @@
+/* One row of the conflict list. A grid so the diff behind Details can open under the words
+   and the buttons at the row's full width. Tokens only; the buttons are the global ones,
+   which this sheet only places. */
+.source-conflict {
+  padding: var(--space-3) 0;
+}
+
+.source-conflict + .source-conflict { border-top: 1px solid var(--line); }
+
+.source-conflict__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "dot text    actions"
+    ".   details details";
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: center;
+}
+
+/* As tall as the heading's first line, so the dot sits beside the words rather than
+   centred on the whole block. */
+.source-conflict__dot {
+  grid-area: dot;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  height: calc(var(--fs-body) * 1.3);
+}
+
+.source-conflict__text {
+  grid-area: text;
+  min-width: 0;
+}
+
+.source-conflict__heading {
+  font-family: var(--sans);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.source-conflict__sentence {
+  margin-top: 2px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.source-conflict__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.source-conflict__details {
+  grid-area: details;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A footnote-sized disclosure, like "How is this counted?": the caret turns when open and
+   replaces the browser's own marker. 24px tall, the smallest target WCAG allows. */
+.source-conflict__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  min-height: var(--space-6);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.source-conflict__summary:hover { color: var(--text-strong); }
+
+.source-conflict__summary::-webkit-details-marker { display: none; }
+
+.source-conflict__summary ::deep svg { transition: transform 120ms ease; }
+
+.source-conflict__details[open] .source-conflict__summary ::deep svg { transform: rotate(180deg); }
+
+/* One line per source: the name, then its value and whether the shelf shows it. */
+.source-conflict__diff {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.source-conflict__source-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.source-conflict__source { color: var(--muted); }
+
+.source-conflict__value {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+/* Phone: the buttons wrap below the words, from the left; the diff stacks. */
+@media (max-width: 560px) {
+  .source-conflict__body {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "dot text"
+      ".   actions"
+      ".   details";
+    row-gap: var(--space-2);
+  }
+
+  .source-conflict__actions { justify-content: flex-start; }
+
+  .source-conflict__source-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

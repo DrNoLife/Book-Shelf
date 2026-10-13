@@ -53,14 +53,52 @@ public sealed class ConflictTextTests
         Conflict(SyncDiscrepancyField.SeriesLink, null).Sentence.ShouldBe("Waiting on you.");
 
     [Theory]
-    [InlineData(SourceDisplayReason.YourChoice, "Using Apple Books (your choice)")]
-    [InlineData(SourceDisplayReason.Automatic, "Using Apple Books (automatic)")]
-    public void SettledLine_SaysWhoSettledIt(SourceDisplayReason reason, string expected) =>
-        (Conflict(SyncDiscrepancyField.ReleaseDate, 15) with
-        {
-            Reason = reason,
-            DisplayedSource = MetadataSourceName.AppleBooks,
-        }).SettledLine.ShouldBe(expected);
+    [InlineData(SyncDiscrepancyField.ReleaseDate, 23, "Vol 23's release date")]
+    [InlineData(SyncDiscrepancyField.ReleaseDate, null, "Release date")]
+    [InlineData(SyncDiscrepancyField.VolumeCount, null, "Volume count")]
+    [InlineData(SyncDiscrepancyField.Status, null, "Publication status")]
+    [InlineData(SyncDiscrepancyField.SeriesLink, null, "Not linked to a release source yet")]
+    public void Subject_DropsTheListTitlesPrefix(SyncDiscrepancyField field, int? volumeNumber, string expected) =>
+        Conflict(field, volumeNumber).Subject.ShouldBe(expected);
+
+    [Fact]
+    public void Subject_ABonusVolume_KeepsItsFraction() =>
+        (Conflict(SyncDiscrepancyField.ReleaseDate, null) with { VolumeNumber = 7.5m })
+            .Subject.ShouldBe("Vol 7.5's release date");
+
+    [Theory]
+    [InlineData(SourceDisplayReason.YourChoice, "using Apple Books (your choice)")]
+    [InlineData(SourceDisplayReason.Automatic, "using Apple Books (automatic)")]
+    public void SettledNote_ASettledDisagreement_SaysWhoSettledIt(SourceDisplayReason reason, string expected) =>
+        Settled(SyncDiscrepancyField.ReleaseDate, 15, reason, MetadataSourceName.AppleBooks)
+            .SettledNote.ShouldBe(expected);
+
+    [Fact]
+    public void SettledNote_AnOpenDisagreement_IsNull() =>
+        (Conflict(SyncDiscrepancyField.ReleaseDate, 15) with { DisplayedSource = MetadataSourceName.MangaUpdates })
+            .SettledNote.ShouldBeNull();
+
+    [Fact]
+    public void SettledNote_SettledWithNothingShown_IsNull() =>
+        (Conflict(SyncDiscrepancyField.VolumeCount, null) with { NeedsReview = false })
+            .SettledNote.ShouldBeNull();
+
+    [Fact]
+    public void RowHeading_AnOpenDisagreement_IsTheSubject() =>
+        Conflict(SyncDiscrepancyField.ReleaseDate, 23).RowHeading.ShouldBe("Vol 23's release date");
+
+    [Theory]
+    [InlineData(SourceDisplayReason.Automatic, MetadataSourceName.AniList, "Volume count · using AniList (automatic)")]
+    [InlineData(SourceDisplayReason.YourChoice, MetadataSourceName.MangaUpdates, "Volume count · using MangaUpdates (your choice)")]
+    public void RowHeading_ASettledDisagreement_AddsWhoSettledIt(
+        SourceDisplayReason reason, MetadataSourceName source, string expected) =>
+        Settled(SyncDiscrepancyField.VolumeCount, null, reason, source).RowHeading.ShouldBe(expected);
+
+    [Theory]
+    [InlineData(1, "Sources disagree · 1")]
+    [InlineData(3, "Sources disagree · 3")]
+    public void ListTitle_CountsTheRows(int count, string expected) =>
+        ConflictText.ListTitle(count).ShouldBe(expected);
 
     [Theory]
     [InlineData(MetadataSourceName.AppleBooks, "Using Apple Books (your choice)")]
@@ -102,6 +140,13 @@ public sealed class ConflictTextTests
             NeedsReview = true,
             RecordedAt = DateTimeOffset.UnixEpoch,
         };
+
+    private static SourceConflictResponse Settled(
+        SyncDiscrepancyField field,
+        int? volumeNumber,
+        SourceDisplayReason reason,
+        MetadataSourceName source) =>
+        Conflict(field, volumeNumber) with { NeedsReview = false, Reason = reason, DisplayedSource = source };
 
     private static SourceOptionResponse Option(MetadataSourceName source, string displayValue) => new()
     {

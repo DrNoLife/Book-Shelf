@@ -100,6 +100,14 @@ public partial class SeriesPage : IDisposable
         ? $"Last run {latest.SyncedAtLabel} — {latest.Summary}"
         : "Not synced yet.";
 
+    /// <summary>The disagreements settled by picking a source: everything but the link question.</summary>
+    private IReadOnlyList<SourceConflictResponse> ValueConflicts =>
+        [.. SeriesState.Conflicts.Where(conflict => conflict.Field is not SyncDiscrepancyField.SeriesLink)];
+
+    /// <summary>An unanswered "which series is this" question, which gets the link panel.</summary>
+    private static bool IsOpenLinkQuestion(SourceConflictResponse conflict) =>
+        conflict is { Field: SyncDiscrepancyField.SeriesLink, NeedsReview: true };
+
     /// <summary>
     /// Takes a source's word for a disagreement, then refreshes the sidebar: its "to review"
     /// count is worked out from the choices that stand, so it moves with this one.

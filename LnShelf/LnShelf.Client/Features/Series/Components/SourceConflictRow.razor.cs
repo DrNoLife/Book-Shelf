@@ -1,6 +1,6 @@
 namespace LnShelf.Client.Features.Series.Components;
 
-public partial class SourceConflictPanel
+public partial class SourceConflictRow
 {
     [Parameter]
     public required SourceConflictResponse Conflict { get; set; }

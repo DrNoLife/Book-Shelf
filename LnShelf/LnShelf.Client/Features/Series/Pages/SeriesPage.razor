@@ -60,39 +60,30 @@
 
             <VolumeGrid Series="Series" />
 
-            @* Every disagreement the last sweep recorded for this series, side by side. The open
-               ones are amber; the ones the usual rules or the reader settled are quiet, but they
-               stay here because choosing a source is how a reader changes what a settled one
-               says (design.md, "Series"). *@
+            @* Every disagreement the last sweep recorded for this series, in one list. The open
+               ones put the panel in amber; the ones the usual rules or the reader settled stay
+               in it, quiet, because choosing a source is how a reader changes what a settled
+               one says (design.md, "Series"). *@
             @if (_linkOutcome is { } linkOutcome)
             {
                 <p class="notice" role="status">@linkOutcome</p>
             }
 
-            @foreach (var conflict in SeriesState.Conflicts)
+            @* The link question is answered by finding the record, not by picking a value, so it
+               gets its own panel; once linked there is nothing left to show for it. *@
+            @foreach (var conflict in SeriesState.Conflicts.Where(IsOpenLinkQuestion))
             {
-                @* The link question is answered by finding the record, not by picking a value, so
-                   it gets its own panel; once linked there is nothing left to show for it. *@
-                @if (conflict.Field is SyncDiscrepancyField.SeriesLink)
-                {
-                    @if (conflict.NeedsReview)
-                    {
-                        <ReleaseLinkPanel @key="(conflict.Field, conflict.VolumeNumber)"
-                                          Conflict="conflict"
-                                          SeriesId="Series.SeriesId"
-                                          IsPageBusy="SeriesState.IsSaving"
-                                          Linked="OnLinkedAsync" />
-                    }
-                }
-                else
-                {
-                    <SourceConflictPanel @key="(conflict.Field, conflict.VolumeNumber)"
-                                         Conflict="conflict"
-                                         IsBusy="SeriesState.IsSaving"
-                                         Chosen="source => OnChooseSourceAsync(conflict, source)"
-                                         ResetRequested="() => OnResetSourceAsync(conflict)" />
-                }
+                <ReleaseLinkPanel @key="(conflict.Field, conflict.VolumeNumber)"
+                                  Conflict="conflict"
+                                  SeriesId="Series.SeriesId"
+                                  IsPageBusy="SeriesState.IsSaving"
+                                  Linked="OnLinkedAsync" />
             }
+
+            <SourceConflictList Conflicts="ValueConflicts"
+                                IsBusy="SeriesState.IsSaving"
+                                Chosen="choice => OnChooseSourceAsync(choice.Conflict, choice.Source)"
+                                ResetRequested="OnResetSourceAsync" />
 
             @* Asks AniList after the page has drawn; renders nothing until it has something. *@
             <MoreByAuthor Series="Series" />

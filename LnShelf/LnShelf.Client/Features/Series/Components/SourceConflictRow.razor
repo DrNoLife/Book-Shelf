@@ -1,0 +1,65 @@
+@* One disagreement as one row of the conflict list: the dot and the words on the left, the
+   choice on the right, and the side-by-side diff behind a native <details> under them.
+
+   The dot is amber while the disagreement waits on the reader and quiet once settled, and the
+   heading says which ("· using AniList (automatic)"), so the state is never colour alone. The
+   buttons say "Use X" in words, and the one the reader chose says "Using X" instead. *@
+
+<li class="source-conflict">
+    <div class="source-conflict__body" role="group" aria-label="@Conflict.Heading">
+
+        <span class="source-conflict__dot">
+            <SignalDot Tone="@(Conflict.NeedsReview ? SignalTone.Attention : SignalTone.Quiet)" />
+        </span>
+
+        <div class="source-conflict__text">
+            <h3 class="source-conflict__heading">@Conflict.RowHeading</h3>
+            <p class="source-conflict__sentence">@Conflict.Sentence</p>
+        </div>
+
+        @if (Conflict.CanChoose)
+        {
+            <div class="source-conflict__actions">
+                @foreach (var option in Conflict.Options)
+                {
+                    <button type="button"
+                            class="secondary"
+                            disabled="@(IsBusy || IsChosen(option))"
+                            @onclick="() => Chosen.InvokeAsync(option.Source)"
+                            @key="option.Source">
+                        @(IsChosen(option) ? $"Using {option.SourceName}" : $"Use {option.SourceName}")
+                    </button>
+                }
+
+                @if (Conflict.Reason is SourceDisplayReason.YourChoice)
+                {
+                    <button type="button" class="ghost" disabled="@IsBusy" @onclick="() => ResetRequested.InvokeAsync()">
+                        Reset to automatic
+                    </button>
+                }
+            </div>
+
+            <details class="source-conflict__details">
+                <summary class="source-conflict__summary">
+                    Details <Icon Name="IconName.CaretDown" Size="12" />
+                </summary>
+
+                <dl class="source-conflict__diff">
+                    @foreach (var option in Conflict.Options)
+                    {
+                        <div class="source-conflict__source-row" @key="option.Source">
+                            <dt class="source-conflict__source">@option.SourceName</dt>
+                            <dd class="source-conflict__value">
+                                <span class="tabular">@option.DisplayValue</span>
+                                <span class="fine">@StateWord(option)</span>
+                            </dd>
+                        </div>
+                    }
+                </dl>
+
+                <p class="fine">@Conflict.Explanation</p>
+            </details>
+        }
+
+    </div>
+</li>

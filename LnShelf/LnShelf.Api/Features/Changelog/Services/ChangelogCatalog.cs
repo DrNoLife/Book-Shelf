@@ -43,7 +43,8 @@ public static class ChangelogCatalog
                     "and MangaUpdates links sit with the author and year.",
                 "Publication status reads \"Still publishing\" or \"Finished publishing\", so it is no longer " +
                     "confused with your own Completed.",
-                "The Details link on a source disagreement sits where you expect it instead of across the panel.",
+                "Where sources disagree, a series page now lists them all in one compact panel, one row each, " +
+                    "with the ones waiting on you first.",
             ],
             Fixes: [
                 "A volume whose cached cover went missing showed the series cover instead; the next sync now " +
