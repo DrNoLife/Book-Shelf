@@ -87,5 +87,6 @@ public sealed class AuthControllerExportTests
         Series = [],
         ImportBatches = [],
         SyncRuns = [],
+        RecommendationDismissals = [],
     };
 }

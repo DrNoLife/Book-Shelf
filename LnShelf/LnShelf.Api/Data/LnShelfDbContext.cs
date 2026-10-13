@@ -34,6 +34,9 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     /// <summary>Devices with Web Push turned on (Features/Notifications).</summary>
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
+    /// <summary>"Not interested" (Features/Recommendations).</summary>
+    public DbSet<RecommendationDismissal> RecommendationDismissals => Set<RecommendationDismissal>();
+
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<SyncDiscrepancy> SyncDiscrepancies => Set<SyncDiscrepancy>();
     public DbSet<SyncDiscrepancyValue> SyncDiscrepancyValues => Set<SyncDiscrepancyValue>();
@@ -62,7 +65,7 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     /// </summary>
     // Here rather than in the slices' configurations because a filter that reads the current
     // user has to close over this context. A scope with no user matches nothing: a forgotten
-    // ActAs reads an empty shelf instead of everyone's. The five roots carry OwnerId; the
+    // ActAs reads an empty shelf instead of everyone's. The six roots carry OwnerId; the
     // children that request paths query by their own id are filtered through their root.
     // Children reached only through a root (volume user state, import rows and candidates,
     // discrepancies) are covered by the root's filter; OwnerFiltersTests holds that list.
@@ -75,6 +78,7 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
         modelBuilder.Entity<SyncRun>().HasQueryFilter(OwnerFilter, run => run.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<UserPreferences>().HasQueryFilter(OwnerFilter, preferences => preferences.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<PushSubscription>().HasQueryFilter(OwnerFilter, subscription => subscription.OwnerId == CurrentOwnerId);
+        modelBuilder.Entity<RecommendationDismissal>().HasQueryFilter(OwnerFilter, dismissal => dismissal.OwnerId == CurrentOwnerId);
 
         modelBuilder.Entity<Volume>().HasQueryFilter(OwnerFilter, volume => volume.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SeriesUserState>().HasQueryFilter(OwnerFilter, state => state.Series!.OwnerId == CurrentOwnerId);

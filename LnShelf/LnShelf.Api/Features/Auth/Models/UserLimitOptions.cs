@@ -34,6 +34,14 @@ public sealed class UserLimitOptions
     [Range(1, 10_000)]
     public int AuthorWorksRequestsPerMinute { get; set; } = 60;
 
+    /// <summary>
+    /// "Readers also liked" and For you requests per minute, per user. A bucket of its own
+    /// because most answers come from the cache, and browsing must not use the search and
+    /// add budget above.
+    /// </summary>
+    [Range(1, 10_000)]
+    public int RecommendationsRequestsPerMinute { get; set; } = 60;
+
     /// <summary>Whole-shelf "sync now" runs per hour, per user.</summary>
     [Range(1, 1_000)]
     public int SyncRunsPerHour { get; set; } = 2;

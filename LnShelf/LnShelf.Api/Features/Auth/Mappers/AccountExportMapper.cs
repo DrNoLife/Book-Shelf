@@ -116,6 +116,14 @@ public static class AccountExportMapper
         Discrepancies = run.Discrepancies.Select(ToDiscrepancy).ToList(),
     };
 
+    public static AccountExportRecommendationDismissal ToRecommendationDismissal(RecommendationDismissal dismissal) => new()
+    {
+        AniListId = dismissal.AniListId,
+        Title = dismissal.Title,
+        Format = dismissal.Format,
+        DismissedAt = dismissal.DismissedAt,
+    };
+
     private static AccountExportVolume ToVolume(Volume volume) => new()
     {
         Number = volume.Number,

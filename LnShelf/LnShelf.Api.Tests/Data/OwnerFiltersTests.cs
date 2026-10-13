@@ -1,5 +1,6 @@
 using LnShelf.Api.Features.Calendar.Models;
 using LnShelf.Api.Features.Notifications.Models;
+using LnShelf.Api.Features.Recommendations.Models;
 using LnShelf.Api.Features.Sharing.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,7 @@ public sealed class OwnerFiltersTests
         { typeof(ShelfEvent), typeof(Series) },
         { typeof(CalendarFeed), typeof(User) },
         { typeof(PushSubscription), typeof(User) },
+        { typeof(RecommendationDismissal), typeof(User) },
     };
 
     [Theory]
