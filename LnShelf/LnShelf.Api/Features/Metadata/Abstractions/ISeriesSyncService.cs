@@ -11,9 +11,9 @@ public interface ISeriesSyncService
 
     /// <summary>
     /// Every series of the current user, spending from <paramref name="budget"/>: the night
-    /// shares one allowance across all users' runs.
+    /// shares each per-volume source's allowance across all users' runs.
     /// </summary>
-    Task<SyncRun> RunAsync(LookupBudget budget, CancellationToken cancellationToken);
+    Task<SyncRun> RunAsync(EnrichmentBudget budget, CancellationToken cancellationToken);
 
     /// <summary>
     /// The same refresh, for one series, on demand — feature-spec §4.2's "manual sync

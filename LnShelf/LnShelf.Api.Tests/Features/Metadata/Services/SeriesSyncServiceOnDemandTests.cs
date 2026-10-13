@@ -120,13 +120,37 @@ public sealed class SeriesSyncServiceOnDemandTests
             .GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task RunForSeriesAsync_TheStoresAllowance_IsAppleBooksOnDemandOne()
+    {
+        // More names than the store's on-demand allowance, none of which it recognises: the
+        // title attempts stop at Apple's own allowance, not Open Library's.
+        await using var dbContext = CreateDbContext();
+        var seriesId = await SeedAsync(
+            dbContext,
+            volumeCount: 3,
+            alternativeTitles: ["Youjo Senki", "Saga of Tanya", "Tanya the Evil", "Military Chronicle of a Little Girl"]);
+
+        var catalogueSource = NoCatalogue();
+
+        await CreateService(dbContext, catalogueSource: catalogueSource, catalogueOnDemandBudget: 3)
+            .RunForSeriesAsync(seriesId, CancellationToken.None);
+
+        await catalogueSource.Received(3)
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+    }
+
     private const int OnDemandBudget = 8;
 
     private static SeriesSyncService CreateService(
         LnShelfDbContext dbContext,
         bool alreadyLinked = false,
-        IVolumeEnrichmentSource? enrichmentSource = null)
+        IVolumeEnrichmentSource? enrichmentSource = null,
+        IVolumeCatalogueSource? catalogueSource = null,
+        int catalogueOnDemandBudget = 10)
     {
+        catalogueSource ??= NoCatalogue();
+
         var matcher = Substitute.For<IReleaseSourceMatcher>();
         matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => alreadyLinked
@@ -168,28 +192,29 @@ public sealed class SeriesSyncServiceOnDemandTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
-            NoMetadata(),
+            new SeriesDescriptionHealer(NoMetadata(), NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
-                NoCatalogue(),
+                catalogueSource,
                 enrichmentSource,
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
 
         return new SeriesSyncService(
             dbContext,
             refresher,
             releaseSource,
-            NoCatalogue(),
+            catalogueSource,
             enrichmentSource,
-            Options.Create(new OpenLibraryOptions
-            {
-                MaximumLookupsPerRun = 60,
-                MaximumLookupsOnDemand = OnDemandBudget,
-            }),
+            new EnrichmentBudgetSizes(
+                Options.Create(new OpenLibraryOptions
+                {
+                    MaximumLookupsPerRun = 60,
+                    MaximumLookupsOnDemand = OnDemandBudget,
+                }),
+                Options.Create(new AppleBooksOptions { MaximumRequestsOnDemand = catalogueOnDemandBudget })),
             TimeProvider.System,
             NullLogger<SeriesSyncService>.Instance);
     }
@@ -199,7 +224,8 @@ public sealed class SeriesSyncServiceOnDemandTests
         int volumeCount,
         string titleEnglish = "The Saga of Tanya the Evil",
         int aniListId = 94846,
-        bool withIsbns = false)
+        bool withIsbns = false,
+        string[]? alternativeTitles = null)
     {
         var series = new Series
         {
@@ -207,6 +233,7 @@ public sealed class SeriesSyncServiceOnDemandTests
             AniListId = aniListId,
             TitleEnglish = titleEnglish,
             TitleRomaji = "Youjo Senki",
+            AlternativeTitles = alternativeTitles ?? [],
             Format = Format.LightNovel,
             PublicationStatus = PublicationStatus.Ongoing,
         };

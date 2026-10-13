@@ -248,7 +248,7 @@ public sealed class SeriesRefresherTests
         var run = new SyncRun { Id = Guid.CreateVersion7(), StartedAt = DateTimeOffset.UnixEpoch };
 
         await CreateRefresher(info).RefreshAsync(
-            series, run, [], new LookupBudget(8), CancellationToken.None);
+            series, run, [], new EnrichmentBudget(8, 8), CancellationToken.None);
 
         return run;
     }
@@ -277,7 +277,7 @@ public sealed class SeriesRefresherTests
         return new SeriesRefresher(
             matcher,
             releaseSource,
-            NoMetadata(),
+            new SeriesDescriptionHealer(NoMetadata(), NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -285,8 +285,7 @@ public sealed class SeriesRefresherTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
     }
 
     private static ReleaseSeriesInfo Info(int volumeCount, bool isCompleted, string? rawStatus = null) => new()

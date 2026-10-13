@@ -52,8 +52,12 @@ public sealed class OpenLibraryOptions
     public int CandidateIsbnLimit { get; set; } = 8;
 
     /// <summary>
-    /// Volumes one sync run will look up. A cap, not a target.
+    /// Volumes one sync run will look up by ISBN. A cap, not a target.
     /// </summary>
+    // Funds Open Library only: the store catalogue has its own allowance
+    // (AppleBooksOptions.MaximumRequestsPerRun), so a series' title attempts there no longer
+    // eat into these lookups.
+    //
     // Enrichment retries the volumes it failed on, because Open Library's catalogue
     // grows and today's miss is next month's hit. That makes an uncapped run able to
     // spend an hour on gaps, so the run takes a bite and leaves the rest for
@@ -65,8 +69,11 @@ public sealed class OpenLibraryOptions
     public int MaximumLookupsPerRun { get; set; } = 60;
 
     /// <summary>
-    /// The allowance for the whole nightly sweep, shared by every user's run that night.
+    /// The by-ISBN allowance for the whole nightly sweep, shared by every user's run that night.
     /// </summary>
+    // Open Library only, like the per-run number; the store's is
+    // AppleBooksOptions.MaximumRequestsPerNight.
+    //
     // Separate from the per-run number because the night now runs once per user (feature-spec
     // §7): per-run allowances would multiply with the number of users, and the source's
     // patience does not.
@@ -74,8 +81,10 @@ public sealed class OpenLibraryOptions
     public int MaximumLookupsPerNight { get; set; } = 300;
 
     /// <summary>
-    /// Volumes one on-demand refresh will look up — adding a series, or a manual sync.
+    /// Volumes one on-demand refresh will look up by ISBN — adding a series, or a manual sync.
     /// </summary>
+    // Open Library only; the store's is AppleBooksOptions.MaximumRequestsOnDemand.
+    //
     // Much smaller than the nightly allowance, because somebody is waiting for this one.
     // At twelve lookups a minute, eight is about forty seconds: slow for a click, but
     // inside the browser's default hundred-second request timeout with room to spare.

@@ -5,10 +5,12 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 /// <summary>
 /// Which of a store's records are this series' volumes — the one walk that answers both
 /// questions asked of a catalogue answer: the record per tracked volume, and the highest
-/// volume number the store confirms at all.
+/// volume number the store confirms as out.
 /// </summary>
 public sealed class CatalogueVolumeMatcherTests
 {
+    private static readonly DateOnly Today = new(2026, 10, 13);
+
     [Fact]
     public void Match_AStoreAnswer_KeepsOnlyTheRecordsThatAreThisSeriesVolumes()
     {
@@ -30,7 +32,7 @@ public sealed class CatalogueVolumeMatcherTests
         var match = Match(Series(1), Record("Overlord 1"));
 
         match.ByVolumeNumber.ShouldBeEmpty();
-        match.HighestConfirmedNumber.ShouldBe(0);
+        match.HighestReleasedNumber(Today).ShouldBe(0);
     }
 
     [Fact]
@@ -63,7 +65,7 @@ public sealed class CatalogueVolumeMatcherTests
     public void Match_ABonusVolume_IsKeyedByItsOwnNumberAndDoesNotRaiseTheCount()
     {
         // Vol. 7.5 is a book of its own, but not a tenth volume of a nine-volume series: the
-        // highest confirmed number answers "how many main volumes", which it is not one of.
+        // highest released number answers "how many main volumes", which it is not one of.
         var series = Series(7);
         series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m });
 
@@ -73,7 +75,7 @@ public sealed class CatalogueVolumeMatcherTests
             Record("Overlord, Vol. 7.5 (light Novel)", "bonus"));
 
         match.ByVolumeNumber[7.5m].SourceRecordKey.ShouldBe("bonus");
-        match.HighestConfirmedNumber.ShouldBe(7);
+        match.HighestReleasedNumber(Today).ShouldBe(7);
     }
 
     [Fact]
@@ -89,11 +91,11 @@ public sealed class CatalogueVolumeMatcherTests
             Record("Overlord, Vol. 5 (light Novel)"));
 
         match.ByVolumeNumber.Keys.ShouldBe([2]);
-        match.HighestConfirmedNumber.ShouldBe(5);
+        match.HighestReleasedNumber(Today).ShouldBe(5);
     }
 
     [Fact]
-    public void Match_ASeriesWithNoVolumesYet_StillReportsTheHighestConfirmedNumber()
+    public void Match_ASeriesWithNoVolumesYet_StillReportsTheHighestReleasedNumber()
     {
         // The freshly resolved series the verification command builds: it has no volumes
         // until this number says how many to add.
@@ -104,7 +106,7 @@ public sealed class CatalogueVolumeMatcherTests
             Record("Overlord, Vol. 7 (light Novel)"));
 
         match.ByVolumeNumber.ShouldBeEmpty();
-        match.HighestConfirmedNumber.ShouldBe(7);
+        match.HighestReleasedNumber(Today).ShouldBe(7);
     }
 
     [Fact]
@@ -140,7 +142,7 @@ public sealed class CatalogueVolumeMatcherTests
         // and the "(novel)" light novel are neither.
         match.UntrackedMainVolumes.Keys.Order().ShouldBe([14m, 15m]);
         match.UntrackedMainVolumes[15].Title.ShouldBe("Solo Leveling, Vol. 15 (comic)");
-        match.HighestConfirmedNumber.ShouldBe(15);
+        match.HighestReleasedNumber(Today).ShouldBe(15);
     }
 
     [Fact]
@@ -164,7 +166,7 @@ public sealed class CatalogueVolumeMatcherTests
         var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.BookwormSearch)]);
 
         match.ByVolumeNumber.ShouldBeEmpty();
-        match.HighestConfirmedNumber.ShouldBe(0);
+        match.HighestReleasedNumber(Today).ShouldBe(0);
     }
 
     [Fact]
@@ -181,14 +183,57 @@ public sealed class CatalogueVolumeMatcherTests
         match.BonusVolumes.Keys.ShouldBe([11.5m]);
     }
 
+    [Fact]
+    public void Match_APreOrder_DoesNotRaiseTheHighestReleasedNumber()
+    {
+        // 86's Vol. 14 is listed for 2026-12-08: a candidate for the next volume, but not a
+        // count the verification command may check against.
+        var series = Series("86―EIGHTY-SIX", Format.LightNovel, [.. Enumerable.Range(1, 13)]);
+
+        var match = Match(series, [.. AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.EightySixSearch)]);
+
+        match.HighestReleasedNumber(Today).ShouldBe(8);
+        match.UntrackedMainVolumes.Keys.ShouldContain(14m);
+    }
+
+    [Fact]
+    public void Match_AnUndatedRecord_IsNotCountedAsReleased()
+    {
+        var match = Match(Series(1), Dated("Overlord, Vol. 5 (light Novel)", "undated", releaseDate: null));
+
+        match.HighestReleasedNumber(Today).ShouldBe(0);
+    }
+
+    [Fact]
+    public void Match_AVolumeListedTwice_ReleasedByItsEarliestDate()
+    {
+        // A re-release listed ahead of the original must not turn a volume that is out back
+        // into a pre-order.
+        var match = Match(
+            Series(1),
+            Dated("Overlord, Vol. 5 (light Novel)", "reissue", Today.AddMonths(2)),
+            Dated("Overlord, Vol. 5 (light Novel)", "original", new DateOnly(2019, 5, 1)));
+
+        match.HighestReleasedNumber(Today).ShouldBe(5);
+        match.ConfirmedMainVolumeDates[5].ShouldBe(new DateOnly(2019, 5, 1));
+    }
+
     private static CatalogueMatch Match(Series series, params CatalogueVolume[] catalogue) =>
         new CatalogueVolumeMatcher(NullLogger<CatalogueVolumeMatcher>.Instance)
             .Match(series, series.TitleEnglish, catalogue);
 
-    private static CatalogueVolume Record(string title, string sourceRecordKey = "1560603224") => new()
+    private static readonly DateOnly LongAgo = new(2020, 1, 1);
+
+    // Dated long ago, so a record is out by default and the released-only rule only shows
+    // where a test asks about it.
+    private static CatalogueVolume Record(string title, string sourceRecordKey = "1560603224") =>
+        Dated(title, sourceRecordKey, LongAgo);
+
+    private static CatalogueVolume Dated(string title, string sourceRecordKey, DateOnly? releaseDate) => new()
     {
         SourceRecordKey = sourceRecordKey,
         Title = title,
+        ReleaseDate = releaseDate,
     };
 
     private static Series Series(params int[] volumeNumbers) =>

@@ -72,7 +72,7 @@ public sealed class SeriesRefresherChapterTests
     {
         var run = new SyncRun { Id = Guid.CreateVersion7(), StartedAt = DateTimeOffset.UnixEpoch };
 
-        await CreateRefresher(info).RefreshAsync(series, run, [], new LookupBudget(8), CancellationToken.None);
+        await CreateRefresher(info).RefreshAsync(series, run, [], new EnrichmentBudget(8, 8), CancellationToken.None);
     }
 
     private static SeriesRefresher CreateRefresher(ReleaseSeriesInfo info)
@@ -87,7 +87,7 @@ public sealed class SeriesRefresherChapterTests
         return new SeriesRefresher(
             Substitute.For<IReleaseSourceMatcher>(),
             releaseSource,
-            metadataSource,
+            new SeriesDescriptionHealer(metadataSource, NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -95,8 +95,7 @@ public sealed class SeriesRefresherChapterTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
     }
 
     private static ReleaseSeriesInfo Info(decimal? latestChapter) => new()

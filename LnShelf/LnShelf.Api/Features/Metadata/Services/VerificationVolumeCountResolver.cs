@@ -5,12 +5,13 @@ namespace LnShelf.Api.Features.Metadata.Services;
 /// </summary>
 // The precedence order is the shelf's own (CLAUDE.md gives volume counts to MangaUpdates),
 // with one addition for the case neither series-level source can answer: the store's own
-// highest confirmed volume number. That ground is weaker and is named as such in the report
+// highest released volume number. That ground is weaker and is named as such in the report
 // rather than quietly used.
 public sealed class VerificationVolumeCountResolver(
     IReleaseSourceMatcher releaseSourceMatcher,
     IVolumeCatalogueSource catalogueSource,
-    CatalogueVolumeMatcher catalogueMatcher)
+    CatalogueVolumeMatcher catalogueMatcher,
+    TimeProvider timeProvider)
 {
     public async Task<VerificationVolumeCount> ResolveAsync(
         Series series,
@@ -53,13 +54,13 @@ public sealed class VerificationVolumeCountResolver(
             };
         }
 
-        var catalogueCount = await HighestConfirmedCatalogueNumberAsync(series, cancellationToken);
+        var catalogueCount = await HighestReleasedCatalogueNumberAsync(series, cancellationToken);
 
         return new VerificationVolumeCount(
             catalogueCount,
             catalogueCount is 0
                 ? "none (no source named a volume count)"
-                : $"{catalogueCount} from the store catalogue's highest confirmed volume",
+                : $"{catalogueCount} from the store catalogue's highest released volume",
             FromReleaseSource: false)
         {
             ReleaseSourceNote = note,
@@ -67,21 +68,26 @@ public sealed class VerificationVolumeCountResolver(
     }
 
     /// <summary>
-    /// The highest volume number the store catalogue positively confirms for this series.
+    /// The highest volume number the store catalogue positively confirms for this series and
+    /// dates on or before today.
     /// </summary>
+    // Released only, because the store lists pre-orders: checking a volume that is not out yet
+    // would report every per-volume source as missing it.
+    //
     // The same two filters the enrichment pass applies, through the same matcher, for the
     // same reason: a store search answers with spin-offs, the other medium and unrelated
     // series that share a word. Cheap, because the catalogue source caches its answer for a
     // day — the enrichment pass that follows reads the same response rather than asking
     // again.
-    private async Task<int> HighestConfirmedCatalogueNumberAsync(
+    private async Task<int> HighestReleasedCatalogueNumberAsync(
         Series series,
         CancellationToken cancellationToken)
     {
         var catalogue = await catalogueSource.GetVolumesAsync(
             series.TitleEnglish, series.Format, cancellationToken);
 
-        return catalogueMatcher.Match(series, series.TitleEnglish, catalogue).HighestConfirmedNumber;
+        return catalogueMatcher.Match(series, series.TitleEnglish, catalogue)
+            .HighestReleasedNumber(timeProvider.Today());
     }
 }
 

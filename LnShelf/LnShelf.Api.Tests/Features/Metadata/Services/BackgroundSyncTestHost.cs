@@ -34,7 +34,7 @@ internal sealed class BackgroundSyncTestHost : IAsyncDisposable
             var currentUser = provider.GetRequiredService<ICurrentUser>();
             var sync = Substitute.For<ISeriesSyncService>();
 
-            sync.RunAsync(Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
+            sync.RunAsync(Arg.Any<EnrichmentBudget>(), Arg.Any<CancellationToken>())
                 .Returns(_ => Record(currentUser.Id, failingUserId));
             sync.RunAsync(Arg.Any<CancellationToken>())
                 .Returns(_ => Record(currentUser.Id, failingUserId));

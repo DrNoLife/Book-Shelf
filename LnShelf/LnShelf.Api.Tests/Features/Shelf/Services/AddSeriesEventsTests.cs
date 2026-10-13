@@ -105,12 +105,11 @@ public sealed class AddSeriesEventsTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
-            metadataSource,
+            new SeriesDescriptionHealer(metadataSource, NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(NoCatalogue(), enrichmentSource, NoCandidates(), VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
 
         return new SeriesSyncService(
             dbContext,
@@ -118,7 +117,9 @@ public sealed class AddSeriesEventsTests
             releaseSource,
             NoCatalogue(),
             enrichmentSource,
-            Options.Create(new OpenLibraryOptions { MaximumLookupsPerRun = 60, MaximumLookupsOnDemand = 6 }),
+            new EnrichmentBudgetSizes(
+                Options.Create(new OpenLibraryOptions { MaximumLookupsPerRun = 60, MaximumLookupsOnDemand = 6 }),
+                Options.Create(new AppleBooksOptions())),
             TimeProvider.System,
             NullLogger<SeriesSyncService>.Instance);
     }

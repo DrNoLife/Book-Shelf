@@ -38,9 +38,11 @@ public sealed class VerificationEnrichmentRunner(
         var today = timeProvider.Today();
 
         // No bonus volumes are created: the verification report checks the volumes a count
-        // produced, and a bonus volume is not one of them.
+        // produced, and a bonus volume is not one of them. No next volumes either: the
+        // in-memory series has no release-source count, which NextMainVolumeWriter.MayCreate
+        // requires, so the returned list is always empty and is ignored.
         await enrichment.EnrichAsync(
-            series, run, today, new LookupBudget(LookupAllowance), expectedBonusVolumes: 0, cancellationToken);
+            series, run, today, new EnrichmentBudget(LookupAllowance, LookupAllowance), expectedBonusVolumes: 0, cancellationToken);
 
         logger.LogInformation(
             "{TitleEnglish}: enriched {VolumeCount} volume(s), {Failures} failure(s), {Gaps} gap(s)",

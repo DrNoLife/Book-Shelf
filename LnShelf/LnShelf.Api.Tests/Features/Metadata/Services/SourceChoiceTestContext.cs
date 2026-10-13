@@ -40,7 +40,7 @@ internal static class SourceChoiceTestContext
         var refresher = new SeriesRefresher(
             Substitute.For<IReleaseSourceMatcher>(),
             releaseSource,
-            metadataSource,
+            new SeriesDescriptionHealer(metadataSource, NullLogger<SeriesDescriptionHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -48,10 +48,9 @@ internal static class SourceChoiceTestContext
                 enrichment ?? NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
-            TimeProvider.System,
-            NullLogger<SeriesRefresher>.Instance);
+            TimeProvider.System);
 
-        await refresher.RefreshAsync(series, run, [], new LookupBudget(20), CancellationToken.None);
+        await refresher.RefreshAsync(series, run, [], new EnrichmentBudget(20, 20), CancellationToken.None);
 
         return run;
     }

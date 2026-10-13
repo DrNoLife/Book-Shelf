@@ -8,7 +8,7 @@ public sealed class NightlySyncBackgroundService(
     IServiceScopeFactory scopeFactory,
     SyncRunGate gate,
     IOptions<SyncOptions> options,
-    IOptions<OpenLibraryOptions> lookupOptions,
+    EnrichmentBudgetSizes budgetSizes,
     TimeProvider timeProvider,
     IHeartbeat heartbeat,
     ILogger<NightlySyncBackgroundService> logger) : BackgroundService
@@ -65,7 +65,7 @@ public sealed class NightlySyncBackgroundService(
     {
         try
         {
-            var budget = new LookupBudget(lookupOptions.Value.MaximumLookupsPerNight);
+            var budget = budgetSizes.ForNight();
             int synced = 0, failed = 0;
 
             foreach (var userId in await UserIdsAsync(stoppingToken))
@@ -109,7 +109,7 @@ public sealed class NightlySyncBackgroundService(
     }
 
     /// <returns>False only when the run failed outright; a skipped shelf is not a failure.</returns>
-    private async Task<bool> RunForUserAsync(Guid userId, LookupBudget budget, CancellationToken stoppingToken)
+    private async Task<bool> RunForUserAsync(Guid userId, EnrichmentBudget budget, CancellationToken stoppingToken)
     {
         // Skipped rather than waited for: a "Sync now" already under way is doing tonight's
         // work for this shelf, and a second run straight after it would only repeat it.

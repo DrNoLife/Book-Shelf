@@ -26,7 +26,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
             (IndexedIsbn, Edition("That Time I Got Reincarnated As a Slime, Vol. 4 (light Novel)", new DateOnly(2018, 12, 11))));
 
         await CreateService(enrichmentSource, Candidates(IndexedIsbn))
-            .EnrichAsync(series, run, Today, new LookupBudget(10), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         var volume = series.Volumes.Single();
         volume.ReleaseDate.ShouldBe(new DateOnly(2018, 12, 11));
@@ -56,7 +56,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
             (IndexedIsbn, Edition("That Time I Got Reincarnated As a Slime 5", new DateOnly(2019, 3, 19))));
 
         await CreateService(enrichmentSource, Candidates(IndexedIsbn))
-            .EnrichAsync(series, run, Today, new LookupBudget(10), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         series.Volumes.Single().ReleaseDate.ShouldBeNull();
         run.VolumesResolvedBySearch.ShouldBe(0);
@@ -75,7 +75,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
                 "That Time I Got Reincarnated as a Slime 4 (manga)", new DateOnly(2018, 12, 11))));
 
         await CreateService(enrichmentSource, Candidates(IndexedIsbn))
-            .EnrichAsync(series, run, Today, new LookupBudget(10), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Manga art and a manga date on a light novel is the defect the whole ISBN-first
         // design exists to avoid. Loosening the search must not loosen this.
@@ -91,7 +91,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         var enrichmentSource = EnrichmentSourcePerIsbn((HeldIsbn, null));
 
         await CreateService(enrichmentSource, Candidates(JapaneseIsbn))
-            .EnrichAsync(series, Run(), Today, new LookupBudget(10), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // Judged from the registration group, which costs no request at all.
         await enrichmentSource.DidNotReceive()
@@ -108,7 +108,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
         await CreateService(
                 EnrichmentSourcePerIsbn((HeldIsbn, Edition("Slime, Vol. 4 (light Novel)", new DateOnly(2018, 12, 11)))),
                 candidateSource)
-            .EnrichAsync(series, Run(), Today, new LookupBudget(10), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         // The direct lookup is the cheap, unambiguous path. Searching anyway would spend a
         // request to answer a question already answered.
@@ -120,17 +120,19 @@ public sealed class VolumeEnrichmentSearchFallbackTests
     public async Task EnrichAsync_TheFallback_SpendsTheBudgetItActuallyUses()
     {
         var series = Series(Volume(4, HeldIsbn));
-        var budget = new LookupBudget(10);
+        var budget = Budget(10);
 
         await CreateService(
                 EnrichmentSourcePerIsbn((HeldIsbn, null), (IndexedIsbn, Edition("Slime, Vol. 4 (light Novel)", null))),
                 Candidates(IndexedIsbn))
             .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
-        // One catalogue request for the series, then one direct lookup, one search and one
-        // candidate verified for the volume. Counting a volume as a single lookup would let
-        // one series quietly spend four times its share against somebody else's donated API.
-        budget.Remaining.ShouldBe(6);
+        // One catalogue request for the series, from the store's own allowance; then one direct
+        // lookup, one search and one candidate verified for the volume. Counting a volume as a
+        // single lookup would let one series quietly spend three times its share against
+        // somebody else's donated API.
+        budget.Catalogue.Remaining.ShouldBe(9);
+        budget.ByIsbn.Remaining.ShouldBe(7);
     }
 
     [Fact]
@@ -141,7 +143,7 @@ public sealed class VolumeEnrichmentSearchFallbackTests
 
         // Exactly enough for the catalogue request and the direct lookup, and nothing more.
         await CreateService(EnrichmentSourcePerIsbn((HeldIsbn, null)), candidateSource)
-            .EnrichAsync(series, Run(), Today, new LookupBudget(2), expectedBonusVolumes: 0, CancellationToken.None);
+            .EnrichAsync(series, Run(), Today, new EnrichmentBudget(1, 1), expectedBonusVolumes: 0, CancellationToken.None);
 
         await candidateSource.DidNotReceive()
             .FindAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>());

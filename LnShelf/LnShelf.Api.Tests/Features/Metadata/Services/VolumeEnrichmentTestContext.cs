@@ -13,7 +13,8 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 // its own facts and delegates the shape here.
 internal static class VolumeEnrichmentTestContext
 {
-    public static LookupBudget Budget(int maximum) => new(maximum);
+    /// <summary>The same allowance for the store and for the by-ISBN lookups.</summary>
+    public static EnrichmentBudget Budget(int maximum) => new(maximum, maximum);
 
     public static SyncRun Run(DateOnly today) => new()
     {

@@ -69,7 +69,7 @@ public sealed class VolumeEnrichmentArbitrationTests
             .EnrichAsync(series, Run(), Today, budget, expectedBonusVolumes: 0, CancellationToken.None);
 
         // The whole point of storing it: arbitration is a one-off cost, not a nightly one.
-        (10 - budget.Remaining).ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
         series.Volumes.Single().ReleaseDate.ShouldBe(new DateOnly(2017, 2, 21));
     }
 
@@ -85,7 +85,7 @@ public sealed class VolumeEnrichmentArbitrationTests
         // Four titles, and the winner is the fourth: the shelf's own, then the three
         // alternatives in the source's order. The pass stops the moment one is recognised, so
         // a series whose stored title works still costs exactly one.
-        (10 - budget.Remaining).ShouldBe(4);
+        (10 - budget.Catalogue.Remaining).ShouldBe(4);
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public sealed class VolumeEnrichmentArbitrationTests
 
         // The AniList-added shelf, which is most of it: one title, one request, and the
         // learned column filled in on the way past.
-        (10 - budget.Remaining).ShouldBe(1);
+        (10 - budget.Catalogue.Remaining).ShouldBe(1);
         series.CatalogueTitle.ShouldBe("86―EIGHTY-SIX");
         series.Volumes.Single().ReleaseDate.ShouldBe(new DateOnly(2021, 8, 24));
     }

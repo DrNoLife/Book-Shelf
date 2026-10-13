@@ -28,6 +28,7 @@ internal static class VolumeEnrichmentPipeline
                 NullLogger<IsbnVolumeEnricher>.Instance),
             new BonusVolumeWriter(NullLogger<BonusVolumeWriter>.Instance),
             new WholeExtraVolumeWriter(NullLogger<WholeExtraVolumeWriter>.Instance),
+            new NextMainVolumeWriter(NullLogger<NextMainVolumeWriter>.Instance),
             factWriter);
 
     /// <summary>The usual writer: a cover cache that answers, and nothing observed.</summary>

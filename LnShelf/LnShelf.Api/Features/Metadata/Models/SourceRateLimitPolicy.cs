@@ -33,4 +33,13 @@ public sealed record SourceRateLimitPolicy
     // it and leaves its client's timeout infinite — see PoliteRateLimitHandler for why the
     // two are not the same clock.
     public TimeSpan? RequestTimeout { get; init; }
+
+    /// <summary>
+    /// Whether this source answers a rate limit with 403 Forbidden rather than 429.
+    /// </summary>
+    // Apple's iTunes Search endpoint refuses an over-eager caller with a 403, not a 429, so for
+    // that source a 403 is the same signal and gets the same single, polite retry. Opt-in per
+    // source, because elsewhere a 403 means something else: AniList's 403 is "the API is
+    // disabled", and the search fallback has to see it at once rather than after a minute's wait.
+    public bool TreatsForbiddenAsRateLimited { get; init; }
 }

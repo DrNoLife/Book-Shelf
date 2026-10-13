@@ -99,6 +99,66 @@ public sealed class PoliteRateLimitHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_A403FromASourceThatMeansRateLimited_BacksOffAndRetriesOnce()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.Forbidden, HttpStatusCode.OK);
+        using var client = CreateClient(upstream, treatsForbiddenAsRateLimited: true);
+
+        using var response = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+
+        // Apple Books says "slow down" with a 403, so for it a 403 earns the same retry.
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        upstream.Calls.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SendAsync_A403Twice_StopsAndHandsBackTheSecond()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.Forbidden, HttpStatusCode.Forbidden);
+        using var client = CreateClient(upstream, treatsForbiddenAsRateLimited: true);
+
+        using var response = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        upstream.Calls.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SendAsync_A403FromAnyOtherSource_PassesStraightThrough()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.Forbidden, HttpStatusCode.OK);
+        using var client = CreateClient(upstream);
+
+        using var response = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+
+        // The AniList guarantee: its 403 means "the API is disabled", and the search fallback
+        // has to see it at once rather than after a back-off.
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        upstream.Calls.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_A403AdvertisedRetryAfter_IsWhatItWaitsFor()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.Forbidden, HttpStatusCode.OK)
+        {
+            RetryAfter = "1",
+        };
+
+        using var client = CreateClient(
+            upstream,
+            maximumRetryDelay: TimeSpan.FromSeconds(30),
+            treatsForbiddenAsRateLimited: true);
+
+        var stopwatch = Stopwatch.StartNew();
+        using var response = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+        stopwatch.Stop();
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        stopwatch.Elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(800));
+    }
+
+    [Fact]
     public async Task SendAsync_AnAlreadyCancelledToken_NeverReachesTheSource()
     {
         using var upstream = new StubHandler(HttpStatusCode.OK);
@@ -231,7 +291,8 @@ public sealed class PoliteRateLimitHandlerTests
     private static HttpClient CreateClient(
         HttpMessageHandler upstream,
         TimeSpan? maximumRetryDelay = null,
-        TimeSpan? requestTimeout = null)
+        TimeSpan? requestTimeout = null,
+        bool treatsForbiddenAsRateLimited = false)
     {
         var policy = new SourceRateLimitPolicy
         {
@@ -240,6 +301,7 @@ public sealed class PoliteRateLimitHandlerTests
             QueuedRequestLimit = 16,
             MaximumRetryDelay = maximumRetryDelay ?? TimeSpan.FromMilliseconds(20),
             RequestTimeout = requestTimeout,
+            TreatsForbiddenAsRateLimited = treatsForbiddenAsRateLimited,
         };
 
         var handler = new PoliteRateLimitHandler(
@@ -287,7 +349,7 @@ public sealed class PoliteRateLimitHandlerTests
     {
         public int Calls { get; private set; }
 
-        /// <summary>The <c>Retry-After</c> seconds a 429 advertises, or null for none.</summary>
+        /// <summary>The <c>Retry-After</c> seconds a 429 or 403 advertises, or null for none.</summary>
         public string? RetryAfter { get; init; }
 
         /// <summary>How long each answer takes to arrive — a source that is slow to reply.</summary>
@@ -309,7 +371,7 @@ public sealed class PoliteRateLimitHandlerTests
 
             var response = new HttpResponseMessage(status);
 
-            if (status is HttpStatusCode.TooManyRequests && RetryAfter is not null)
+            if (status is HttpStatusCode.TooManyRequests or HttpStatusCode.Forbidden && RetryAfter is not null)
             {
                 response.Headers.TryAddWithoutValidation("Retry-After", RetryAfter);
             }
