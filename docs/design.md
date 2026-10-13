@@ -611,9 +611,12 @@ Owner decisions, recorded so a screen does not "complete" the mockup:
   "Coming later" `Outline` pill; never a working-looking control.
 - **No `@handle` and no bio.** The name and avatar come from the signed-in
   identity.
-- **Upcoming's "Notify me when dated"** waits for a per-volume notifier
-  ("Subscribe in calendar" is built: a `.secondary` button under the page head that
-  opens a `Panel` with the feed link); **Stats' period switch** (12 months · this year · all
+- **Upcoming's "Notify me when dated"** is built, but only where it changes something:
+  on an Announced line of a *muted* series each undated volume gets a `.tertiary` toggle
+  (`aria-pressed`), the one exception to the mute; on an unmuted series the line says
+  "You'll be told when it's dated" with no control, and nothing extra shows while no
+  device has notifications on. ("Subscribe in calendar" is built too: a `.secondary`
+  button under the page head that opens a `Panel` with the feed link.) **Stats' period switch** (12 months · this year · all
   time) and **"Add dates"** wait for the API to answer them; the **By format share
   bar** is left out because three formats in one bar would need three fills, and the
   progress colours already mean read, owned and out.

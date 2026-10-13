@@ -12,6 +12,18 @@
   gap: var(--space-2);
 }
 
+.volumes__number {
+  inline-size: 5ch;
+  box-sizing: content-box;
+  min-block-size: var(--control);
+  padding: 0 var(--space-2);
+  font-size: 16px;
+  background: var(--bg);
+  border-color: var(--line-2);
+}
+
+.volumes__number:hover { border-color: var(--line-3); }
+
 .volumes__hint {
   font-size: var(--fs-small);
   color: var(--faint);

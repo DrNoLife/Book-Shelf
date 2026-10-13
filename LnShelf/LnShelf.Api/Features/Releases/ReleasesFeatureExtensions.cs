@@ -14,6 +14,7 @@ public static class ReleasesFeatureExtensions
         {
             services.AddScoped<IUpcomingQueryService, UpcomingQueryService>();
             services.AddScoped<ISeriesNotificationCommandService, SeriesNotificationCommandService>();
+            services.AddScoped<IVolumeNotificationCommandService, VolumeNotificationCommandService>();
             return services;
         }
     }

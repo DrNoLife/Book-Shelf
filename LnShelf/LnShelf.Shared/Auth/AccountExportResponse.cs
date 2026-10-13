@@ -172,6 +172,9 @@ public sealed record AccountExportVolume
     public decimal? PurchasePrice { get; init; }
     public DateOnly? PurchasedAt { get; init; }
 
+    /// <summary>Whether the reader asked to be told when this undated volume gets a date.</summary>
+    public bool NotifyWhenDated { get; init; }
+
     /// <summary>The stored key of a cover the user uploaded, if any. The image is not in the export.</summary>
     public string? CoverOverrideObjectKey { get; init; }
 }

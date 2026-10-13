@@ -404,12 +404,27 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
                 ReplaceSeries(await client.RemoveCoverAsync(volume.VolumeId, cancellationToken)));
     }
 
-    /// <summary>"Add volume" on a series kept by hand: the next whole number.</summary>
-    public Task AddVolumeAsync(CancellationToken cancellationToken = default) =>
-        Series is { } series
-            ? RunAsync(async () => ReplaceSeries(
-                await client.AddVolumeAsync(series.SeriesId, number: null, cancellationToken)))
-            : Task.CompletedTask;
+    /// <summary>
+    /// "Add volume" on a series kept by hand: the number given, which may be a bonus like
+    /// 7.5, or the next whole number when none is.
+    /// </summary>
+    public Task AddVolumeAsync(decimal? number = null, CancellationToken cancellationToken = default)
+    {
+        if (Series is not { } series)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (number is { } chosen
+            && VolumeNumberInput.ProblemWith(chosen, series.Volumes.Select(volume => volume.Number)) is { } problem)
+        {
+            ReportProblem(problem);
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(async () => ReplaceSeries(
+            await client.AddVolumeAsync(series.SeriesId, number, cancellationToken)));
+    }
 
     /// <summary>"Remove volume" on a volume added by hand. The caller confirms first.</summary>
     public Task RemoveVolumeAsync(VolumeResponse volume, CancellationToken cancellationToken = default)

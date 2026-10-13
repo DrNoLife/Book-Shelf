@@ -178,6 +178,92 @@ public sealed class ReleaseNotificationDispatcherTests : IDisposable
         (await check.ShelfEvents.SingleAsync(shelfEvent => shelfEvent.SeriesId == otherSeriesId)).NotifiedAt.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task DispatchAsync_AFlaggedVolumeGetsADateOnAMutedSeries_IsPushedAndTheFlagCleared()
+    {
+        var series = await AddSeriesAsync("Overlord", muted: true);
+        await AddVolumeAsync(series, 17, notifyWhenDated: true);
+        await AddEventsAsync(Event(series, 17, Now.AddHours(-1), ShelfEventKind.ReleaseDateChanged));
+
+        await DispatchAsync();
+
+        await _notifier.Received(1).NotifyAsync(Arg.Any<ReleaseNotification>(), Arg.Any<CancellationToken>());
+        (await PendingAsync()).ShouldBeEmpty();
+        (await IsFlaggedAsync(series, 17)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_AnUnflaggedVolumeOnAMutedSeries_IsStillSkipped()
+    {
+        var series = await AddSeriesAsync("Overlord", muted: true);
+        await AddVolumeAsync(series, 17, notifyWhenDated: false);
+        await AddEventsAsync(Event(series, 17, Now.AddHours(-1), ShelfEventKind.ReleaseDateChanged));
+
+        await DispatchAsync();
+
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<ReleaseNotification>(), Arg.Any<CancellationToken>());
+        (await PendingAsync()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_AFlaggedVolumeIsOnlyAnnounced_IsSkippedAndKeepsItsFlag()
+    {
+        var series = await AddSeriesAsync("Overlord", muted: true);
+        await AddVolumeAsync(series, 17, notifyWhenDated: true);
+        await AddEventsAsync(Event(series, 17, Now.AddHours(-1), ShelfEventKind.VolumeAnnounced));
+
+        await DispatchAsync();
+
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<ReleaseNotification>(), Arg.Any<CancellationToken>());
+        (await IsFlaggedAsync(series, 17)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_AFlaggedVolumeWhoseDeliveryShouldRetry_KeepsItsFlagAndItsEvent()
+    {
+        var series = await AddSeriesAsync("Overlord", muted: true);
+        await AddVolumeAsync(series, 17, notifyWhenDated: true);
+        await AddEventsAsync(Event(series, 17, Now.AddHours(-1), ShelfEventKind.ReleaseDateChanged));
+        Delivers(new NotificationDelivery(Devices: 2, Delivered: 0, FailedTransiently: 2, Removed: 0));
+
+        await DispatchAsync();
+
+        (await PendingAsync()).ShouldHaveSingleItem();
+        (await IsFlaggedAsync(series, 17)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_AFlaggedVolumesStaleEvent_IsNotSent()
+    {
+        var series = await AddSeriesAsync("Overlord", muted: true);
+        await AddVolumeAsync(series, 17, notifyWhenDated: true);
+        await AddEventsAsync(Event(
+            series, 17, Now - ReleaseNotificationDispatcher.StaleAfter - TimeSpan.FromHours(1), ShelfEventKind.ReleaseDateChanged));
+
+        await DispatchAsync();
+
+        await _notifier.DidNotReceive().NotifyAsync(Arg.Any<ReleaseNotification>(), Arg.Any<CancellationToken>());
+    }
+
+    private async Task AddVolumeAsync(Series series, decimal number, bool notifyWhenDated)
+    {
+        var volume = new Volume { Id = Guid.CreateVersion7(), SeriesId = series.Id, Number = number };
+        volume.UserState = new VolumeUserState { VolumeId = volume.Id, NotifyWhenDated = notifyWhenDated };
+
+        await using var dbContext = _harness.CreateDbContext();
+        dbContext.Volumes.Add(volume);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<bool> IsFlaggedAsync(Series series, decimal number)
+    {
+        await using var dbContext = _harness.CreateDbContext();
+        var volume = await dbContext.Volumes.Include(candidate => candidate.UserState)
+            .SingleAsync(candidate => candidate.SeriesId == series.Id && candidate.Number == number);
+
+        return volume.UserState!.NotifyWhenDated;
+    }
+
     private void Delivers(NotificationDelivery delivery) =>
         _notifier.NotifyAsync(Arg.Any<ReleaseNotification>(), Arg.Any<CancellationToken>()).Returns(delivery);
 
@@ -218,11 +304,15 @@ public sealed class ReleaseNotificationDispatcherTests : IDisposable
         await dbContext.SaveChangesAsync();
     }
 
-    private static ShelfEvent Event(Series series, decimal number, DateTimeOffset occurredAt) => new()
+    private static ShelfEvent Event(
+        Series series,
+        decimal number,
+        DateTimeOffset occurredAt,
+        ShelfEventKind kind = ShelfEventKind.VolumeReleased) => new()
     {
         Id = Guid.CreateVersion7(),
         SeriesId = series.Id,
-        Kind = ShelfEventKind.VolumeReleased,
+        Kind = kind,
         VolumeNumber = number,
         OccurredAt = occurredAt,
     };

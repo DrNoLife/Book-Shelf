@@ -32,6 +32,16 @@ public sealed class VolumeUserState
     public DateOnly? PurchasedAt { get; set; }
     public decimal? PurchasePrice { get; set; }
 
+    /// <summary>
+    /// Whether the reader asked to be told when this undated volume gets a date, even though
+    /// its series is muted.
+    /// </summary>
+    // Stored, unlike the derived states: it is user intent ("tell me about this one volume"),
+    // the same ground as NotificationsMuted, not something a query could work out.
+    // One-shot: cleared by ReleaseNotificationDispatcher once the date (or release) event has
+    // been handled.
+    public bool NotifyWhenDated { get; set; }
+
     /// <summary>A user-supplied cover always wins over synced art (§4.3).</summary>
     public string? CoverOverrideObjectKey { get; set; }
 }

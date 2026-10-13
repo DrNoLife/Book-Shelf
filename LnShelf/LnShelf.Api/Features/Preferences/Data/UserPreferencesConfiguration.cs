@@ -21,8 +21,6 @@ public sealed class UserPreferencesConfiguration : IEntityTypeConfiguration<User
             .HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(preferences => preferences.VolumeView)
             .HasConversion<string>().HasMaxLength(32).IsRequired();
-        builder.Property(preferences => preferences.DefaultLibraryFilter)
-            .HasConversion<string>().HasMaxLength(32).IsRequired();
 
         // The two ordered sets as comma-separated names in one text column each, rather than a
         // child table or a Postgres array: a handful of values read and written only as a

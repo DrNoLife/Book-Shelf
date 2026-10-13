@@ -79,6 +79,7 @@ public sealed class VolumeMergeCommandService(
             state.OwnedFormat = moved.OwnedFormat;
             state.PurchasedAt = moved.PurchasedAt;
             state.PurchasePrice = moved.PurchasePrice;
+            state.NotifyWhenDated = moved.NotifyWhenDated;
             state.CoverOverrideObjectKey = copiedCoverKey;
 
             dbContext.VolumeUserStates.Remove(moved);
@@ -190,6 +191,7 @@ public sealed class VolumeMergeCommandService(
                 || state.OwnedFormat is not null
                 || state.PurchasedAt is not null
                 || state.PurchasePrice is not null
+                || state.NotifyWhenDated
                 || state.CoverOverrideObjectKey is not null))
         {
             throw new InvalidInputException(

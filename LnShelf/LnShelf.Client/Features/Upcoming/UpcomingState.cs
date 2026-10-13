@@ -28,6 +28,38 @@ public sealed class UpcomingState(HttpClient httpClient) : IDisposable
         return LoadAsync();
     }
 
+    /// <summary>Message of a refused or failed "notify me when dated" write, or null.</summary>
+    public string? Message { get; private set; }
+
+    /// <summary>
+    /// Asks to be told, or not, when one announced volume gets a date, then re-reads the
+    /// groups so the line shows what the server now holds.
+    /// </summary>
+    public async Task SetNotifyWhenDatedAsync(Guid volumeId, bool notifyWhenDated, CancellationToken cancellationToken = default)
+    {
+        Message = null;
+
+        try
+        {
+            using var response = await httpClient.PutAsJsonAsync(
+                $"api/volumes/{volumeId}/notify-when-dated",
+                new SetVolumeNotifyWhenDatedRequest { NotifyWhenDated = notifyWhenDated },
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Message = $"Could not save that: {(int)response.StatusCode} {response.StatusCode}.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Rendering the failure is handling it; nothing was changed.
+            Message = "Could not reach the API. Nothing was changed.";
+        }
+
+        await LoadAsync();
+    }
+
     public async Task LoadAsync()
     {
         // A tab clicked while the previous answer is still in flight must not be overtaken

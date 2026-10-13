@@ -52,7 +52,15 @@ public static class UpcomingGrouping
             var undated = volumes.Where(volume => !volume.IsOut && volume.ReleaseDate is null).ToList();
             if (undated.Count > 0)
             {
-                announced.Add(ToEntry(entry, undated[0].CoverObjectKey, undated));
+                var flaggedIds = entry.Volumes
+                    .Where(volume => volume.UserState?.NotifyWhenDated == true)
+                    .Select(volume => volume.Id)
+                    .ToHashSet();
+
+                announced.Add(ToEntry(entry, undated[0].CoverObjectKey, undated) with
+                {
+                    NotifyWhenDatedVolumeIds = [.. undated.Select(volume => volume.VolumeId).Where(flaggedIds.Contains)],
+                });
             }
         }
 
@@ -83,6 +91,7 @@ public static class UpcomingGrouping
         CoverObjectKey = coverObjectKey,
         VolumeNumbers = [.. volumes.Select(volume => volume.Number)],
         VolumeIds = [.. volumes.Select(volume => volume.VolumeId)],
+        NotificationsMuted = series.UserState?.NotificationsMuted ?? false,
     };
 
     private static DateOnly EndOfMonth(DateOnly date) =>

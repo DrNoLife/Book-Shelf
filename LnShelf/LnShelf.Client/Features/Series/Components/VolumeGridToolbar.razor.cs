@@ -105,7 +105,36 @@ public partial class VolumeGridToolbar
     private decimal NextVolumeNumber =>
         decimal.Truncate(Series.Volumes.Select(volume => volume.Number).DefaultIfEmpty(0m).Max()) + 1;
 
-    private Task AddVolumeAsync() => SeriesState.AddVolumeAsync();
+    private string _numberText = string.Empty;
+
+    private decimal? TypedNumber => VolumeNumberInput.Parse(_numberText);
+
+    private async Task OnNumberKeyDownAsync(KeyboardEventArgs eventArgs)
+    {
+        if (eventArgs.Key == "Enter" && !SeriesState.IsSaving)
+        {
+            await AddVolumeAsync();
+        }
+    }
+
+    private async Task AddVolumeAsync()
+    {
+        // Text that is not a number is refused here rather than quietly adding the next whole
+        // volume, which is not what the reader typed.
+        if (!string.IsNullOrWhiteSpace(_numberText) && TypedNumber is null)
+        {
+            SeriesState.ReportProblem("Enter a number like 7 or 7.5.");
+            return;
+        }
+
+        await SeriesState.AddVolumeAsync(TypedNumber);
+
+        // A refusal keeps the typed number so it can be corrected.
+        if (SeriesState.Message is null)
+        {
+            _numberText = string.Empty;
+        }
+    }
 
     /// <summary>
     /// Choosing a view on a series sets that series' override, which is the point: the

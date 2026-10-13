@@ -93,6 +93,20 @@ public sealed class UpcomingGroupingTests
     }
 
     [Fact]
+    public void Group_AnAnnouncedLine_CarriesTheMuteAndOnlyTheFlaggedUndatedVolumes()
+    {
+        var eightySix = CreateSeries("86—EIGHTY-SIX", volumes: [InPrint(1, owned: true), NotOut(14), NotOut(15)]);
+        eightySix.UserState!.NotificationsMuted = true;
+        var flagged = eightySix.Volumes.Single(volume => volume.Number == 15);
+        flagged.UserState = new VolumeUserState { VolumeId = flagged.Id, NotifyWhenDated = true };
+
+        var line = UpcomingGrouping.Group([eightySix], Today).Announced.ShouldHaveSingleItem();
+
+        line.NotificationsMuted.ShouldBeTrue();
+        line.NotifyWhenDatedVolumeIds.ShouldBe([flagged.Id]);
+    }
+
+    [Fact]
     public void Group_ADatedVolumeInThePast_IsOutNowNotDated()
     {
         var eightySix = CreateSeries("86—EIGHTY-SIX", volumes: [NotOut(13, new DateOnly(2026, 9, 1))]);
