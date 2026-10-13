@@ -1,0 +1,61 @@
+/* A row of small covers that scrolls sideways rather than wrapping. */
+
+.tiles {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.tiles__item {
+  flex: 0 0 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  scroll-snap-align: start;
+}
+
+.tiles__cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surf);
+}
+
+.tiles__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Two lines at most; the full title is in the tooltip. */
+.tiles__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-small);
+  line-height: 1.35;
+}
+
+.tiles__votes {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.tiles__action {
+  align-self: stretch;
+}
+
+/* The first action sits at the foot of the tile, the optional one under it. */
+.tiles__action--first {
+  margin-top: auto;
+}

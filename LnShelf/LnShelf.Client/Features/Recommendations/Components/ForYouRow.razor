@@ -1,0 +1,11 @@
+@* One "Because you read X" row. The series title is a quiet link, never accent (design.md). *@
+
+<section class="row" aria-labelledby="@HeadingId">
+    <div class="section-head">
+        <h2 id="@HeadingId" class="title-section">Because you read <a class="row__link" href="@($"series/{Row.BecauseOfSeriesId}")">@Row.BecauseOfTitle</a></h2>
+    </div>
+
+    <RecommendationTileRow Works="Row.Works"
+                           NotInterested="State.DismissAsync"
+                           IsDismissing="State.IsChangingDismissal" />
+</section>

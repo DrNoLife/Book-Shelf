@@ -6,6 +6,7 @@ using LnShelf.Client.Features.Import;
 using LnShelf.Client.Features.Library;
 using LnShelf.Client.Features.Notifications;
 using LnShelf.Client.Features.Profile;
+using LnShelf.Client.Features.Recommendations;
 using LnShelf.Client.Features.Search;
 using LnShelf.Client.Features.Series;
 using LnShelf.Client.Features.Sharing;
@@ -52,7 +53,8 @@ builder.Services
     .AddSharing()
     .AddNotifications()
     .AddActivity()
-    .AddCalendar();
+    .AddCalendar()
+    .AddRecommendations();
 
 var host = builder.Build();
 

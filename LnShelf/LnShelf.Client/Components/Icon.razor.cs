@@ -26,6 +26,7 @@ public enum IconName
     SlidersHorizontal,
     CaretUp,
     CaretDown,
+    Compass,
 }
 
 public partial class Icon
@@ -48,6 +49,7 @@ public partial class Icon
         IconName.FileArrowUp => FileArrowUpPath,
         IconName.Check => CheckPath,
         IconName.BookOpen => BookOpenPath,
+        IconName.Compass => CompassPath,
         IconName.ArrowUpRight => ArrowUpRightPath,
         IconName.CaretLeft => CaretLeftPath,
         IconName.Plus => PlusPath,
@@ -92,6 +94,11 @@ public partial class Icon
         "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8," +
         "8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-42.34-77.66a8,8,0," +
         "0,1-11.32,11.32L136,139.31V184a8,8,0,0,1-16,0V139.31l-10.34,10.35a8,8,0,0,1-11.32-11.32l24-24a8,8,0,0,1,11.32,0Z";
+
+    private const string CompassPath =
+        "M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM" +
+        "172.42,72.84l-64,32a8.05,8.05,0,0,0-3.58,3.58l-32,64A8,8,0,0,0,80,184a8.1,8.1,0,0,0,3.58-.84l64-32a8.05,8.05," +
+        "0,0,0,3.58-3.58l32-64a8,8,0,0,0-10.74-10.74ZM138,138,97.89,158.11,118,118l40.15-20.07Z";
 
     private const string BookOpenPath =
         "M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8," +
