@@ -31,6 +31,12 @@ public sealed class AniListMedia
     public AniListCoverImage? CoverImage { get; set; }
     public List<string>? Genres { get; set; }
     public AniListStaffConnection? Staff { get; set; }
+
+    /// <summary>Only the recommendations query asks for it; null everywhere else.</summary>
+    public bool? IsAdult { get; set; }
+
+    /// <summary>What readers also liked. Only the recommendations query asks for it.</summary>
+    public AniListRecommendationConnection? Recommendations { get; set; }
 }
 
 /// <inheritdoc cref="AniListMedia"/>
