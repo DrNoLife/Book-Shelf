@@ -39,8 +39,16 @@ public static class ChangelogCatalog
                 "Apple Books has its own nightly allowance, so looking a series up there no longer uses up the " +
                     "Open Library lookups, and when Apple Books asks the app to slow down it now waits and tries " +
                     "once more instead of giving up.",
+                "A series page has one buy button now: Faraos Cigarer is a quiet link beside it, and the AniList " +
+                    "and MangaUpdates links sit with the author and year.",
+                "Publication status reads \"Still publishing\" or \"Finished publishing\", so it is no longer " +
+                    "confused with your own Completed.",
+                "The Details link on a source disagreement sits where you expect it instead of across the panel.",
             ],
-            Fixes: []
+            Fixes: [
+                "A volume whose cached cover went missing showed the series cover instead; the next sync now " +
+                    "fetches its own cover again.",
+            ]
         ),
         new("0.30.0", new DateOnly(2026, 10, 12), "Chapter by chapter",
             Features: [

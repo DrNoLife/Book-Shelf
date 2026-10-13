@@ -20,6 +20,25 @@
   gap: var(--space-2);
 }
 
+/* The disclosure sits at the start like any other quiet control; as a flex child it would
+   otherwise stretch to the panel's width and centre its label. The caret turns when open
+   and replaces the browser's own marker. */
+.source-conflict__summary {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.source-conflict__summary::-webkit-details-marker { display: none; }
+
+.source-conflict__summary ::deep svg { transition: transform 120ms ease; }
+
+.source-conflict__details[open] .source-conflict__summary ::deep svg { transform: rotate(180deg); }
+
 /* One row per source: the name, then its value and whether the shelf shows it. */
 .source-conflict__diff {
   display: flex;

@@ -99,7 +99,11 @@ public sealed class CompositionRootTests
     // A connection string is required by AddLnShelfData and never opened here: registering a
     // DbContext does not touch Postgres, and this test is about the graph rather than the
     // database.
-    private static IServiceCollection BuildServices()
+    //
+    // Internal, and taking overrides, because the sync pipeline tests build on exactly this
+    // graph (SyncPipelineHost): a test of "what the real wiring does" is only worth having if
+    // it is the same wiring.
+    internal static IServiceCollection BuildServices(IReadOnlyDictionary<string, string?>? overrides = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -109,6 +113,7 @@ public sealed class CompositionRootTests
                 ["Auth:ClientId"] = "none",
                 ["Auth:ClientSecret"] = "none",
             })
+            .AddInMemoryCollection(overrides ?? new Dictionary<string, string?>())
             .Build();
 
         IServiceCollection services = new ServiceCollection();

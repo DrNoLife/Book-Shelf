@@ -185,6 +185,7 @@ public static class MetadataFeatureExtensions
             services.AddScoped<NextMainVolumeWriter>();
             services.AddScoped<VolumeEnrichmentService>();
             services.AddScoped<VolumeFactWriter>();
+            services.AddScoped<DanglingVolumeCoverHealer>();
 
             // The two passes the service runs in order, and the two judgements they share:
             // which record is this series' volume N, and whether a guessed ISBN proves it.
@@ -220,7 +221,8 @@ public static class MetadataFeatureExtensions
                     provider.GetRequiredService<BonusVolumeWriter>(),
                     provider.GetRequiredService<WholeExtraVolumeWriter>(),
                     provider.GetRequiredService<NextMainVolumeWriter>(),
-                    factWriter);
+                    factWriter,
+                    provider.GetRequiredService<DanglingVolumeCoverHealer>());
             });
 
             // The one-shots: discovery proposes into a file, apply writes what survives

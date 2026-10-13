@@ -26,7 +26,8 @@ public sealed class VolumeEnrichmentService(
     BonusVolumeWriter bonusVolumeWriter,
     WholeExtraVolumeWriter wholeExtraVolumeWriter,
     NextMainVolumeWriter nextMainVolumeWriter,
-    VolumeFactWriter factWriter)
+    VolumeFactWriter factWriter,
+    DanglingVolumeCoverHealer coverHealer)
 {
     /// <param name="today">
     /// "In the future" is relative to a day, so the caller supplies it — the same
@@ -58,6 +59,10 @@ public sealed class VolumeEnrichmentService(
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(budget);
+
+        // First, because both passes decide from the cover column whether a volume is worth
+        // asking about, and a key naming a file the store lost would have them skip it forever.
+        await coverHealer.HealAsync(series, cancellationToken);
 
         var nextVolumes = await EnrichFromCatalogueAsync(
             series, run, today, budget, expectedBonusVolumes, cancellationToken);

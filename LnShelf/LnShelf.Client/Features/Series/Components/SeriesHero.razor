@@ -44,6 +44,23 @@
             {
                 <span class="fine">@ConflictText.ChoiceMarker(statusChoice)</span>
             }
+            @* The source links are reference, not actions: they sit with the facts they back,
+               so the action row keeps one button (owner, 2026-10-13). On a phone they are in
+               the More sheet (SeriesActionsSheet). *@
+            @if (Series.AniListId is { } aniListId)
+            {
+                <span class="desktop-only" aria-hidden="true">·</span>
+                <a class="hero__source-link desktop-only" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
+                    AniList <Icon Name="IconName.ArrowUpRight" Size="11" />
+                </a>
+            }
+            @if (Series.MangaUpdatesId is { } mangaUpdatesId)
+            {
+                <span class="desktop-only" aria-hidden="true">·</span>
+                <a class="hero__source-link desktop-only" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
+                    MangaUpdates <Icon Name="IconName.ArrowUpRight" Size="11" />
+                </a>
+            }
         </div>
 
         <h1 class="hero__title title-page">@Series.TitleEnglish</h1>
@@ -105,21 +122,11 @@
                 <a class="primary button--large desktop-only" href="@SaxoSearchUrl(nextToBuy)" target="_blank" rel="noopener noreferrer">
                     Buy Vol @nextToBuy.ToVolumeText() on Saxo <Icon Name="IconName.ArrowUpRight" Size="12" />
                 </a>
-                <a class="secondary button--large desktop-only" href="@FaraosSearch.UrlFor(Series.TitleEnglish, Series.Format)" target="_blank" rel="noopener noreferrer">
-                    Faraos Cigarer <Icon Name="IconName.ArrowUpRight" Size="12" />
-                </a>
-            }
-            @if (Series.AniListId is { } aniListId)
-            {
-                <a class="ghost button--large desktop-only" href="@($"https://anilist.co/manga/{aniListId}")" target="_blank" rel="noopener noreferrer">
-                    AniList <Icon Name="IconName.ArrowUpRight" Size="11" />
-                </a>
-            }
-            @if (Series.MangaUpdatesId is { } mangaUpdatesId)
-            {
-                <a class="ghost button--large desktop-only" href="@($"https://www.mangaupdates.com/series.html?id={mangaUpdatesId}")" target="_blank" rel="noopener noreferrer">
-                    MangaUpdates <Icon Name="IconName.ArrowUpRight" Size="11" />
-                </a>
+                @* The second shop is an alternative to the same purchase, so it reads as one,
+                   not as a second button of near-equal weight. *@
+                <span class="hero__alternative desktop-only">
+                    or <a class="hero__source-link" href="@FaraosSearch.UrlFor(Series.TitleEnglish, Series.Format)" target="_blank" rel="noopener noreferrer">Faraos Cigarer <Icon Name="IconName.ArrowUpRight" Size="11" /></a>
+                </span>
             }
         </div>
 

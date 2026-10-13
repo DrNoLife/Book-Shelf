@@ -73,8 +73,30 @@
   color: var(--faint);
 }
 
-/* The status control, the call to action and the two source links, on one line that
-   wraps; the segmented control keeps its own width. */
+/* Quiet links: the source links in the meta line and the second shop after the call to
+   action. */
+.hero__source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.hero__source-link:hover,
+.hero__source-link:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hero__alternative {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+/* The status control and the one call to action, on one line that wraps; the segmented
+   control keeps its own width. */
 .hero__actions {
   display: flex;
   flex-wrap: wrap;

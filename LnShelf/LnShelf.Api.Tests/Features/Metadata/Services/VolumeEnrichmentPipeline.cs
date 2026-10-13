@@ -13,7 +13,8 @@ internal static class VolumeEnrichmentPipeline
         IVolumeCatalogueSource catalogueSource,
         IVolumeEnrichmentSource enrichmentSource,
         IIsbnCandidateSource candidateSource,
-        VolumeFactWriter factWriter) =>
+        VolumeFactWriter factWriter,
+        ICoverStore? coverStore = null) =>
         new(
             catalogueSource,
             new CatalogueTitleArbiter(
@@ -29,7 +30,18 @@ internal static class VolumeEnrichmentPipeline
             new BonusVolumeWriter(NullLogger<BonusVolumeWriter>.Instance),
             new WholeExtraVolumeWriter(NullLogger<WholeExtraVolumeWriter>.Instance),
             new NextMainVolumeWriter(NullLogger<NextMainVolumeWriter>.Instance),
-            factWriter);
+            factWriter,
+            new DanglingVolumeCoverHealer(coverStore ?? EveryCoverPresent(), NullLogger<DanglingVolumeCoverHealer>.Instance));
+
+    /// <summary>
+    /// A store holding every file a key names, so a test that sets a cover key keeps it.
+    /// </summary>
+    public static ICoverStore EveryCoverPresent()
+    {
+        var store = Substitute.For<ICoverStore>();
+        store.ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        return store;
+    }
 
     /// <summary>The usual writer: a cover cache that answers, and nothing observed.</summary>
     public static VolumeFactWriter Writer(IVolumeCoverCache? coverCache = null) =>

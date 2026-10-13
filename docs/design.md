@@ -280,8 +280,9 @@ three-weights treatment is gone. Never restyled per usage site.
 
 A 7px dot with a dark halo so it reads on any cover. Ongoing `--ok` · Completed
 `--dot-completed` · Hiatus hollow (ring) · Cancelled `--dot-cancelled`. Its words
-("Still publishing", …) accompany it wherever there is room; the legend names it
-elsewhere.
+("Still publishing", "Finished publishing", "On hiatus", "Cancelled"; never a bare
+"Completed", which the tracking status uses) accompany it wherever there is room; the
+legend names it elsewhere.
 
 ### Three-segment bar (`ThreeSegmentBar`)
 
@@ -463,8 +464,9 @@ a publication `StatusDot` with "Still publishing"; the author's name is a quiet 
 the library filtered by that name, and the genre tags (desktop) are links to the library
 filtered to that genre; the title at 54; the romaji
 and native title in `--faint`; the description at 15, max 64ch; the status
-segmented control, a large primary "Buy Vol 21 on Saxo ↗", and ghost links to
-AniList and MangaUpdates). The **progress panel**: three `StatFigure`s (read,
+segmented control and one large primary "Buy Vol 21 on Saxo ↗" followed by a quiet
+"or Faraos Cigarer ↗" text link; the AniList and MangaUpdates links are quiet text links at
+the end of the meta line, because they are reference, not actions — owner, 2026-10-13). The **progress panel**: three `StatFigure`s (read,
 owned, out, with "+ N announced"), "Next to read: Vol 18 · 3 unread · 2 to buy",
 a per-volume segment strip (10px, one per volume, radius 2, the four kinds of the
 tick strip), and "Started … · last read …". On a manga or web novel the panel ends, under

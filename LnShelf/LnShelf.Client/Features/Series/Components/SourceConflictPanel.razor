@@ -19,7 +19,9 @@
     @if (Conflict.CanChoose)
     {
         <details class="source-conflict__details">
-            <summary class="ghost">Details</summary>
+            <summary class="ghost source-conflict__summary">
+                Details <Icon Name="IconName.CaretDown" Size="12" />
+            </summary>
 
             <dl class="source-conflict__diff">
                 @foreach (var option in Conflict.Options)
