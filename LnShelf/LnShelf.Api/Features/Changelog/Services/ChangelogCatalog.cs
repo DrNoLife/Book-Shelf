@@ -20,6 +20,28 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.31.0", new DateOnly(2026, 10, 13), "What to read next",
+            Features: [
+                "For you: a new page that suggests what to read next, in rows like \"Because you read " +
+                    "Mushoku Tensei\", worked out from the series you have read or finished and from what other " +
+                    "AniList readers liked. Add a suggestion straight from the row.",
+                "Readers also liked: every series page now ends with the works its readers recommended, " +
+                    "leaving out what is already on your shelf.",
+                "Not interested: hide a suggestion for good. It answers with Undo, and the list at the foot of " +
+                    "For you brings any hidden work back with Show again.",
+                "New volumes show up as soon as Apple Books lists them, up to a year ahead, with a " +
+                    "notification, instead of waiting for MangaUpdates to update its count.",
+                "On Upcoming, \"Notify me when dated\" on an announced volume tells you once when it gets a " +
+                    "date, even if you have muted the series.",
+            ],
+            Improvements: [
+                "Add Vol on a series page accepts a bonus number such as 7.5.",
+                "Apple Books has its own nightly allowance, so looking a series up there no longer uses up the " +
+                    "Open Library lookups, and when Apple Books asks the app to slow down it now waits and tries " +
+                    "once more instead of giving up.",
+            ],
+            Fixes: []
+        ),
         new("0.30.0", new DateOnly(2026, 10, 12), "Chapter by chapter",
             Features: [
                 "Track a manga or web novel by chapter: choose Volumes or Chapters on its page, then press +1 " +
