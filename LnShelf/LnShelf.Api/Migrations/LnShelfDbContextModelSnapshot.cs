@@ -498,11 +498,6 @@ namespace LnShelf.Api.Migrations
                     b.Property<DateTimeOffset?>("ActivitySeenAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DefaultLibraryFilter")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
                     b.Property<string>("DefaultLibraryFilters")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -539,6 +534,38 @@ namespace LnShelf.Api.Migrations
                     b.HasKey("OwnerId");
 
                     b.ToTable("user_preferences", (string)null);
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Recommendations.Models.RecommendationDismissal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AniListId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("DismissedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "AniListId")
+                        .IsUnique();
+
+                    b.ToTable("recommendation_dismissal", (string)null);
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Sharing.Models.ShelfShare", b =>
@@ -807,6 +834,11 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<bool>("NotifyWhenDated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("Owned")
                         .HasColumnType("boolean");
 
@@ -948,6 +980,15 @@ namespace LnShelf.Api.Migrations
                 });
 
             modelBuilder.Entity("LnShelf.Api.Features.Preferences.Models.UserPreferences", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Recommendations.Models.RecommendationDismissal", b =>
                 {
                     b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
                         .WithMany()
