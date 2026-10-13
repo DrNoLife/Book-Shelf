@@ -8,6 +8,7 @@ global using LnShelf.Shared;
 global using LnShelf.Shared.Import;
 global using LnShelf.Shared.Metadata;
 global using LnShelf.Shared.Preferences;
+global using LnShelf.Shared.Recommendations;
 global using LnShelf.Shared.Shelf;
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Forms;

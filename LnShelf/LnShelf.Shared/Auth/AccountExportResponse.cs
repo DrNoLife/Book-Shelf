@@ -36,6 +36,18 @@ public sealed record AccountExportResponse
     public required IReadOnlyList<AccountExportImportBatch> ImportBatches { get; init; }
 
     public required IReadOnlyList<AccountExportSyncRun> SyncRuns { get; init; }
+
+    /// <summary>Works hidden from For you with Not interested.</summary>
+    public required IReadOnlyList<AccountExportRecommendationDismissal> RecommendationDismissals { get; init; }
+}
+
+/// <summary>One work hidden from For you with Not interested.</summary>
+public sealed record AccountExportRecommendationDismissal
+{
+    public required int AniListId { get; init; }
+    public required string Title { get; init; }
+    public required Format Format { get; init; }
+    public required DateTimeOffset DismissedAt { get; init; }
 }
 
 /// <summary>The account row.</summary>

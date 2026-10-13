@@ -2,6 +2,7 @@ using System.Text.Json;
 using LnShelf.Api.Features.Calendar.Models;
 using LnShelf.Api.Features.Notifications.Models;
 using LnShelf.Api.Features.Preferences.Models;
+using LnShelf.Api.Features.Recommendations.Models;
 using LnShelf.Api.Features.Sharing.Models;
 using LnShelf.Shared.Auth;
 using LnShelf.Shared.Preferences;
@@ -44,6 +45,7 @@ public sealed class AccountExportQueryServiceTests
         var device = export.NotificationDevices.ShouldHaveSingleItem();
         device.PushServiceHost.ShouldBe("fcm.googleapis.com");
         device.DeviceLabel.ShouldBe("Device of owner");
+        export.RecommendationDismissals.ShouldHaveSingleItem().Title.ShouldBe("Dismissed by owner");
         export.Preferences.GridDensity.ShouldBe(GridDensity.Compact);
         export.ActivitySeenAt.ShouldBe(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
 
@@ -126,6 +128,7 @@ public sealed class AccountExportQueryServiceTests
         export.Sharing.ShouldBe(new AccountExportSharing { IsPublic = false });
         export.Calendar.ShouldBe(new AccountExportCalendar { IsOn = false });
         export.NotificationDevices.ShouldBeEmpty();
+        export.RecommendationDismissals.ShouldBeEmpty();
         export.Preferences.GridDensity.ShouldBe(GridDensity.Comfortable);
         export.ActivitySeenAt.ShouldBeNull();
         export.Series.ShouldBeEmpty();
@@ -178,6 +181,14 @@ public sealed class AccountExportQueryServiceTests
             Auth = $"auth-{marker}",
             DeviceLabel = $"Device of {marker}",
             CreatedAt = new DateTimeOffset(2026, 10, 4, 13, 0, 0, TimeSpan.Zero),
+        });
+        dbContext.RecommendationDismissals.Add(new RecommendationDismissal
+        {
+            Id = Guid.CreateVersion7(),
+            AniListId = 85737,
+            Title = $"Dismissed by {marker}",
+            Format = Format.LightNovel,
+            DismissedAt = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero),
         });
         dbContext.UserPreferences.Add(new UserPreferences
         {

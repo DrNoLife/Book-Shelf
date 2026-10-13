@@ -8,6 +8,7 @@ using LnShelf.Api.Features.Metadata;
 using LnShelf.Api.Features.Monitoring;
 using LnShelf.Api.Features.Notifications;
 using LnShelf.Api.Features.Preferences;
+using LnShelf.Api.Features.Recommendations;
 using LnShelf.Api.Features.Releases;
 using LnShelf.Api.Features.Sharing;
 using LnShelf.Api.Features.Shelf;
@@ -129,6 +130,7 @@ public sealed class CompositionRootTests
         services.AddCalendar(configuration);
         services.AddStats();
         services.AddActivity();
+        services.AddRecommendations();
         services.AddMonitoring(configuration);
 
         // The real cookie and OpenID Connect registration, as production has it: the

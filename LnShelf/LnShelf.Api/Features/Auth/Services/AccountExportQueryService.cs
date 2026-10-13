@@ -3,7 +3,8 @@ using LnShelf.Api.Features.Preferences.Mappers;
 namespace LnShelf.Api.Features.Auth.Services;
 
 /// <inheritdoc />
-// The shelf and its activity log, imports, sync runs, push devices and preferences are read
+// The shelf and its activity log, imports, sync runs, push devices, dismissed suggestions and
+// preferences are read
 // under the owner filters, with no
 // filtering by hand: what the filters leave is this user's data, which is what makes the
 // export safe by construction. Only the three rows keyed by the user themselves (the account,
@@ -70,6 +71,12 @@ public sealed class AccountExportQueryService(
             .OrderBy(run => run.StartedAt)
             .ToListAsync(cancellationToken);
 
+        var dismissals = await dbContext.RecommendationDismissals
+            .AsNoTracking()
+            .OrderBy(dismissal => dismissal.DismissedAt)
+            .ThenBy(dismissal => dismissal.AniListId)
+            .ToListAsync(cancellationToken);
+
         return new AccountExportResponse
         {
             ExportedAt = timeProvider.GetUtcNow(),
@@ -84,6 +91,7 @@ public sealed class AccountExportQueryService(
             Series = series.Select(candidate => AccountExportMapper.ToSeries(candidate, events[candidate.Id])).ToList(),
             ImportBatches = batches.Select(AccountExportMapper.ToImportBatch).ToList(),
             SyncRuns = runs.Select(AccountExportMapper.ToSyncRun).ToList(),
+            RecommendationDismissals = dismissals.Select(AccountExportMapper.ToRecommendationDismissal).ToList(),
         };
     }
 }
