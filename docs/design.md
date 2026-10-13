@@ -150,7 +150,7 @@ On `--sidebar`, a `--line` hairline on the right. Top to bottom:
 
 1. **Brand:** a 28px `--acc` mark (radius 7) and "LN Shelf" in the serif, 24px.
 2. **Navigation** (`<nav aria-label="Main">`), rows 40px tall, radius 8, icon 16:
-   Library · Search & add · Upcoming · Stats. Idle `--muted`; the current page is
+   Library · Search & add · For you · Upcoming · Stats. Idle `--muted`; the current page is
    `--raise` with `--text` — no accent. Import is the second tab of Search & add
    (`/search/import`), so that row is lit there too, and it carries the amber
    `Pill` "N to review" when imports are waiting for a decision.
@@ -172,6 +172,7 @@ on its own root, not by restating the rules:
 | Screen | `--page-width` | `--page-gap` |
 |---|---|---|
 | Library | 1240px | 48px |
+| For you | 1240px | 40px |
 | Series | 1280px | 40px |
 | Profile | 1200px | 36px |
 
@@ -510,12 +511,28 @@ shelf is linked to it), a `.ghost` "Check ↗" to the record and a `.secondary` 
 the volumes, **More by {author}** (`MoreByAuthor`): the author's other AniList works as
 small cover tiles in a row that scrolls sideways — cover, format badge, title, and a
 `.ghost` "On your shelf →" or a `.secondary` "Add". Nothing renders while it loads, and
-the section is absent when AniList credits no author or has no other works. The foot's **Sync** corner carries the
+the section is absent when AniList credits no author or has no other works. Next comes
+**Readers of {title} also liked** (`ReadersAlsoLiked`): the same sideways row of small
+tiles — cover, format badge, title, a `fine` "N votes", and a `.secondary` "Add" ("On your
+shelf →" once added). Works already on the shelf and works the reader hid are left out;
+nothing renders while it loads, and the section is absent when nothing is left. The foot's **Sync** corner carries the
 per-series mute once some device has notifications on: one fine line and a `.ghost` "Mute
 this series" / "Unmute" (no `aria-pressed`: the label changes, and the fine line says the
 state). Last, the
 **danger zone**: a hairline above, "Remove from library", what it deletes, and a
 `.destructive` "Remove series…" that asks first.
+
+### For you (`/for-you`)
+
+The title at 44, then "From N series you've read" in `lead`. One section per row,
+"Because you read {title}", with the title a quiet link to the series, then the tile row
+with the extra `fine` "+ N more of yours" and a `.ghost` "Not interested". A dismissal
+answers in a `role="status"` line, "{title} won't be suggested again.", with a `.ghost`
+"Undo". At the foot, a native disclosure "Not interested (N)", closed by default, lists
+each hidden work with a `.ghost` "Show again". Empty states: "Nothing to go on yet…" and
+"Readers of your series haven't voted for anything you don't already have." The load
+notice is "Finding suggestions…" with the indicator. On a phone it is reached from
+Profile's settings list ("For you", the first row); the tab bar keeps its five places.
 
 ### Profile (`/profile`)
 

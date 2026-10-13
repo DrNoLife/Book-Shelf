@@ -21,6 +21,7 @@ Controller: Thor Christiansen, a private person in Denmark. Supervisory authorit
 | Push subscriptions: endpoint URL, P256dh and Auth keys, a device label derived from the User-Agent at subscribe time (the UA itself is not stored), created, last success, consecutive failures | `push_subscription` | the user's own release notifications, a feature they switched on | 6(1)(b) | until turned off on that device, removed in Profile, signed out on that browser or the account is deleted; auto-deleted on a 404/410 from the push service or after five refusals in a row |
 | Activity log: series, kind (released / announced / date changed), volume number, previous and new date, when, when notified | `shelf_event` | "Since your last visit" and the notification digest | 6(1)(b) | 120 days, pruned after each user's sync run |
 | How far the user has read "Since your last visit" (`ActivitySeenAt`, the newest event shown when they pressed Got it) | `user_preferences` | not showing dismissed news again | 6(1)(b) | account lifetime |
+| Recommendation dismissals ("Not interested"): AniList id, title, format, when | `recommendation_dismissal` | not suggesting a work again | 6(1)(b) | until Show again / Undo or the account is deleted |
 | Calendar feed token (22 random characters), created | `calendar_feed` | the private calendar link the user turned on | 6(1)(b) | until turned off, regenerated or the account is deleted |
 | Push service worker (`push-worker.js`) | browser service worker registration | showing notifications; re-registering a rotated subscription with the server | 6(1)(b); stores and caches nothing | until the user clears the site's data |
 | Session cookie, login cookies | browser | staying signed in; login protection | 6(1)(b), strictly necessary | until sign-out, at most 30 days idle |
@@ -42,14 +43,14 @@ decisions (Art. 22).
 | Cloudflare (Tunnel, TLS) | processor | all traffic, decrypted at its edge | US, DPF and Standard Contractual Clauses in its DPA |
 | Google (FCM), Mozilla (autopush), Microsoft (WNS), Apple (APNs) | push services, only for users who turn notifications on | the push endpoint, message size and timing; the payload (titles, volume numbers, dates) is RFC 8291-encrypted end to end | possibly third country; Google, Microsoft and Apple DPF-certified |
 | The user's calendar provider (Google Calendar, iCloud, Outlook), only if they subscribe | independent controller, chosen by the user | titles with a format label, volume numbers and release dates of tracked, non-dropped series; no ownership, prices, notes or identity | depends on the provider; the user's own choice |
-| AniList, MangaUpdates, Open Library, Apple Books | none (server-side requests) | titles, catalogue ids, ISBNs, search text; never a user id or email | not personal data |
+| AniList, MangaUpdates, Open Library, Apple Books | none (server-side requests) | titles, catalogue ids, ISBNs, search text, and the AniList ids of series on a user's shelf when For you is opened (no user id); never a user id or email | not personal data |
 
 Hosting (API, Postgres, the covers volume, backups) is the owner's server in Denmark.
 
 ## Rights, and where each is served
 
 Access and portability: `GET /api/auth/account/export` (the profile's "Export my data"; the
-avatar appears as its source URL and object keys; notification devices appear as push-service host, label and dates, never the endpoint or keys; the calendar token, the activity log and `ActivitySeenAt` are included), plus email for logs, uploaded cover images and
+avatar appears as its source URL and object keys; notification devices appear as push-service host, label and dates, never the endpoint or keys; the calendar token, the activity log, the recommendation dismissals and `ActivitySeenAt` are included), plus email for logs, uploaded cover images and
 the avatar image. Erasure: `DELETE /api/auth/account`, immediate, ends every session. Rectification:
 the user edits their own shelf; the email follows the Google account. Restriction and objection:
 by email to the controller. Answer within one month.
@@ -102,3 +103,6 @@ by email to the controller. Answer within one month.
   feed off or making a new link stops further fetches but cannot recall that copy.
 - "More by {author}" answers are cached on the server for 24 hours and shared across users; they
   hold only public AniList data. Whether a work is on the user's shelf is worked out per request.
+- Recommendation answers are cached on the server for 24 hours per AniList id and shared across
+  users; they hold only public AniList data. For you is computed per request from the user's own
+  shelf and not stored; no automated decision with legal or similar effect (Art. 22).

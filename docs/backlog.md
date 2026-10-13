@@ -122,7 +122,7 @@ manual-add or volume endpoint existed before round 3. Now built (D9):
 it, with "Can't find it? Add it by hand" on Search & add, "Add Vol N" in the volume toolbar
 and "Remove volume" in a local volume's menu. Still open:
 
-- A decimal (bonus) number in the "Add volume" UI; the API already accepts one.
+- ~~A decimal (bonus) number in the "Add volume" UI; the API already accepts one.~~ **[done 2026-10-13, v0.31.0]**
 - Manual series have no dates or announced volumes; a volume added by hand is always out.
 
 ## 6. Notification niceties — first notifier DONE (2026-10-11, v0.29.0)
@@ -133,10 +133,12 @@ released volumes and changed release dates ("date moved" included), and a per-se
 mute on the series page. Still open:
 
 - ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.
-- "Notify me when dated" per volume on Upcoming.
-- Remove a device automatically after N refused deliveries in a row. A key rotation leaves
-  old subscriptions answering 403 rather than 410; today they show "the last N deliveries
-  failed" with a Remove button.
+- ~~"Notify me when dated" per volume on Upcoming.~~ **[done 2026-10-13, v0.31.0]**: a
+  per-volume flag (`VolumeUserState.NotifyWhenDated`) that tells you once when that announced
+  volume gets a date, even on a muted series.
+- ~~Remove a device automatically after N refused deliveries in a row.~~ **[done]**
+  `WebPushReleaseNotifier.RemoveAfterRefusals` (5) deletes a device that keeps refusing, so a
+  key rotation that leaves old subscriptions answering 403 cleans itself up.
 - Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
   tap keeps the user gesture through Blazor interop.
 
@@ -144,14 +146,15 @@ mute on the series page. Still open:
 
 - **Search & add keeps saying "Add"** [done, 0.24.1: "On your shelf · Open"] for a series that was just added. The row should
   show it is on the shelf (and not offer Add again).
-- **"Not owned" / "Owned" wording is confusing.** The menu item reads "Not owned", and
-  clicking it makes the volume owned. Reword so the label says what clicking does, or is
-  a clear on/off state.
+- **"Not owned" / "Owned" wording is confusing.** [done in the redesign: the volume panel
+  shows ownership as a two-state segmented control (`VolumeDetails`, Owned / Not owned), so
+  the label is the state, not an action.]
 - **The tracking-status dropdown at the top of the series page does not seem to work.**
-  Reproduce and fix.
+  [done in the redesign: `TrackingStatusControl` in `SeriesHero` is a rebuilt component, not the old dropdown.]
 - **The changelog was not updated** [done: every release since 0.12.0 has an entry] for the audit fixes, e2e, login and multi-user work.
   Add the entry and bump `Version` in Directory.Build.props (ChangelogCatalogTests).
-- **The sync text in the sidebar** is not good. Rework or hide it (and it is now per user).
+- **The sync text in the sidebar** is not good. [done in the redesign: the sync note is a
+  per-user `SyncState` line ("Synced just now", "Synced enough for this hour").]
 - **A real favicon** [done: `favicon.svg`; the 512 and maskable icons followed in 0.29.0]. `wwwroot/favicon.png` and `icon-192.png` are placeholders; make
   one that fits docs/design.md and use it on the static pages too.
 - **A landing page for visitors who are not signed in** [done: `welcome.html`]: what LN Shelf is, why it is
@@ -178,6 +181,12 @@ mute on the series page. Still open:
 
 ## 7. Sundry, when passing by
 
+- **Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.** 0.31.0 stopped
+  mapping the column (`DefaultLibraryFilters` replaced it) and gave it a database default so the
+  0.30.0 image still inserts; with no rollback to 0.30 left, a migration drops it (the contract
+  step of `data-access.md`).
+- **Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
+  real-iPhone test of Home Screen sign-in and the Enable tap (§6).
 - **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
   suppressions are gone; the license key comes from `SixLaborsLicenseKey` (README, Deploy).
 - **Low-severity findings from the 2026-10-09 audit** are listed in
@@ -187,37 +196,26 @@ mute on the series page. Still open:
   big enough to need it.
 - Cover ingest currently one size class; thumbnail generation only on a
   measured grid-render problem (testing.md: measure, don't vibe).
-- `docs/design.md` gained two rulings mid-build (tile focus-visible, the
-  multi-select chip) — fold them into the document properly next time it's
-  open for edits.
 
 Deferred by the 2026-09-06 sweep, each checked against the code as it now stands:
 
 - Neither importer reads Read Count, star rating/review or Date Added — ratings
   are Stats territory (§4.7) and "shelved" is not "read".
-- `ICoverCache` / `AniListCoverCache` still name a metadata source from inside
-  `Features/Covers` — rename source-neutral, or write down why the exception stands.
 - `SeriesRefresher` is 378 lines after the publication-status and discrepancy
-  fixes; past the size signal, so the next edit to it extracts rather than adds.
+  fixes. [done: the description heal is extracted to `SeriesDescriptionHealer`; the class
+  is ~200 lines.]
 - `OpenLibraryOptions.MaximumLookupsPerRun` / `MaximumLookupsOnDemand` also fund
-  Apple Books title attempts: a series with no remembered catalogue title can
-  spend 9 attempts against an on-demand budget of 8 before one ISBN lookup. Split
-  them into their own `EnrichmentOptions` section.
+  Apple Books title attempts. [done: `AppleBooksOptions.MaximumRequests*` and
+  `EnrichmentBudget` split the budgets.]
 - `CoverStoreOptions.AccessKey` / `SecretKey` and `OpenLibraryOptions.ContactEmail`
   are deliberately not `[Required]` — empty is the working dev default. Revisit if
   a production start should ever fail loudly on them instead.
-- The nginx client container still runs as root; non-root needs port and pid-path
-  changes. The API container is already `USER $APP_UID`.
 - The Goodreads importer was built against the documented header and a fixture, not
   against a real export — confirm the column names on the first real one.
 - `ImportSourceResolver` needs a seekable upload stream to sniff the header. True
   for a bound `IFormFile`; a streaming upload path would have to buffer first.
-- `ConsoleCommandLine.Option` returns null for a trailing `--out` with no value, so
-  `isbn-discover` silently writes to its default path instead of complaining.
 - Tests run on EF InMemory, which cannot prove unique indexes, cascade deletes or
   anything else Postgres does — those are covered by configuration review only.
-- Central Package Management (`Directory.Packages.props`) not adopted; four
-  projects still carry their own `PackageReference` versions.
 - **MinIO's image is no longer publicly pullable [done, 0.20.0/0.20.1].** Covers moved to
   `FileSystemCoverStore` (a folder in a Docker volume), copied across by `cover-migrate`,
   and MinIO is gone from the code and the stack. The old `lnshelf_lnshelf-minio` volume
@@ -306,7 +304,11 @@ states, To buy, Backlog and Behind stay volume-based. Still open:
 - **A global default unit** (a preference for new manga/web novel series), instead of choosing
   per series.
 
-## 11. Recommendations (researched 2026-10-11, owner approved) — next candidate
+## 11. Recommendations — v0, v1 and Not interested DONE (2026-10-13, v0.31.0)
+
+Shipped: the series page strip "Readers of X also liked", the `/for-you` page (rows "Because you read X") and Not interested with a hidden list and Undo / Show again (feature-spec §4.11). Still open: v1.1 relations ("the LN is further ahead") and the Later items below.
+
+### Original plan
 
 Research page: https://claude.ai/artifact/CFUmAsPYGGe8cgZhFhXh5o (private to the owner).
 Source: AniList `Media.recommendations` (reader-voted, stays in format; 1–2 batched
@@ -343,5 +345,9 @@ own the count (MU lagged in 1 of 12 series; 86 Vol 14 is a pre-order, MU's 13 is
    current `HighestConfirmedNumber` counts pre-orders); stop skipping Apple when every
    volume is enriched. Owner: such volumes DO raise HasNewVolume / notifications. One line
    in CLAUDE.md's precedence list.
+   **[done 2026-10-13, v0.31.0]** The new-volume badge is raised when a store-created
+   volume is already out on creation, or its date passes on a later refresh; the push goes
+   out either way (an announced volume gets an "announced" entry).
 3. Housekeeping: Apple gets its own lookup budget; treat 403 like 429. Owner: keep caching
    Apple covers as today (no per-volume Apple link required).
+   **[done 2026-10-13, v0.31.0]**

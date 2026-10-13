@@ -26,6 +26,13 @@ public sealed partial class PrivacyPageTests
     [InlineData("within one month")]
     public void Page_CarriesWhatArticle13Asks(string expected) => Page.ShouldContain(expected);
 
+    [Fact]
+    public void Page_NamesTheHiddenSuggestions()
+    {
+        Page.ShouldContain("Not interested");
+        Page.ShouldContain("Show again");
+    }
+
     // The CSP allows no inline script, so an inline one would simply not run, and the page
     // would be broken without anything saying so.
     [Fact]

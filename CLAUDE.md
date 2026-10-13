@@ -173,7 +173,7 @@ from writes** — command/query separation at the service boundary.
 - **Every external call sits behind a seam** (see Architecture principles).
   Nothing outside `Features/Metadata` knows what AniList is.
 - **Be a polite API citizen.** Respect AniList's rate limit (30 req/min while its API is degraded; its responses say so in `X-RateLimit-Limit`);
-  MangaUpdates likewise. Sync jobs batch and back off on 429. This is a hobby
+  MangaUpdates likewise. Sync jobs batch and back off on 429 (Apple Books says it with a 403). This is a hobby
   app hitting free community APIs — never hammer them.
 - **Cache covers locally** on first fetch. The shelf must render without the
   AniList CDN being up.
@@ -198,6 +198,11 @@ from writes** — command/query separation at the service boundary.
     whole volumes contiguous from count + 1, each a dated, medium-confirmed store row; bonus
     and whole extras together never exceed the note's number, never under a volume-count
     choice, never released by the count.
+  - **Next announced volumes** — the store catalogue too, past every volume tracked: whole
+    volumes contiguous from the highest tracked main volume + 1, each a medium-confirmed store
+    row dated no more than twelve months ahead; only once the release source states a count,
+    never under a volume-count choice, never released by the count, never deleted. Unlike
+    extras they are news (activity, push, and the new-volume badge when already out).
   - **Everything else** — AniList.
   - Record the discrepancy in the sync log rather than silently picking. A
     `SyncDiscrepancy` carries one `(source, value)` pair per disagreeing source,
@@ -324,6 +329,7 @@ Features/
   Notifications/    (Web Push devices and the notifier behind IReleaseNotifier)
   Activity/         ("Since your last visit", read from the shelf_event log)
   Calendar/         (the per-user .ics release feed, by secret token)
+  Recommendations/  (Readers also liked, For you, the Not interested list)
 ```
 
 Two exceptions to feature-slice-first, both above `Features/` because every slice
@@ -362,14 +368,18 @@ subfolder; if earlier work put them elsewhere, move them.
   `IIsbnCandidateSource` (the guess that feeds ISBN discovery, kept separate from
   the seam that reads facts), `IShelfImporter` (StoryGraph CSV today,
   Goodreads or MAL export later), `IReleaseNotifier` (ntfy/Discord/email —
-  pick one for v1, seam stays), `IConsoleCommand` (one-shot maintenance jobs, so a
+  pick one for v1, seam stays), `IRecommendationSource` (what readers of a series also liked; AniList today, kept
+  apart from the series-level seam because it answers a different question),
+  `IConsoleCommand` (one-shot maintenance jobs, so a
   backfill never becomes a permanent API endpoint), `IHeartbeat` (tells a monitor a
   scheduled job ran; best effort, never fails the job). Name the seam when you
   introduce it.
 - **Derived states are computed in queries, never stored.** *To buy*, *Backlog*,
   *Behind* fall out of read/owned/released — storing them creates sync bugs.
   The one sanctioned exception: `HasNewVolume`, which is last-visit
-  acknowledgment (an event, not a derivation). The `shelf_event` activity log is
+  acknowledgment (an event, not a derivation); sync raises it when the count
+  releases a new volume, or when a store-created volume is already out on creation
+  or its date passes on a later refresh. The `shelf_event` activity log is
   stored on the same ground: what changed between two syncs is an event, and the
   volume rows only hold the state after it. Any further stored flag needs
   a written justification of the same kind.
@@ -379,8 +389,8 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Many users, separate shelves.** Login is OpenID Connect run by the API
   (`Features/Auth`, Google by default) with the session in a cookie on the
   shared origin — never a token in the client bundle, which is public by
-  nature. Each user owns their own copies of everything: the five roots
-  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`) implement `IOwned`,
+  nature. Each user owns their own copies of everything: the six roots
+  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`, `RecommendationDismissal`) implement `IOwned`,
   `LnShelfDbContext` stamps `OwnerId` on save and filters every query by the
   current user (`ICurrentUser`). **Never filter by owner by hand and never
   call `IgnoreQueryFilters` in request code**; background work and console

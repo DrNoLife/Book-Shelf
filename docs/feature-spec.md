@@ -15,7 +15,7 @@ local Postgres and is never touched by sync. Deployed as Docker containers on
 the home network behind a reverse proxy.
 
 **Non-goals (v1):** shared shelves between users, social features (followers, feeds,
-comparing shelves, recommendations), reviews/ratings sync,
+comparing shelves), reviews/ratings sync,
 in-volume page progress, anime tracking, mobile app (the web UI is
 responsive; that's the mobile story). **Offline mode is explicitly killed**,
 superseding the UI spec's "works offline-read; writes queue" line: a service
@@ -30,6 +30,11 @@ art and how far the owner has read, never what they own, what they paid, their n
 their dropped series or who they are. There are no followers, no profiles to browse, no
 list of public shelves and no way to find a shelf except being given its link. Everything
 else in the social list above stays a non-goal until it is specified on its own.
+
+**[amended 2026-10-13, owner-approved 2026-10-11] Recommendations are in (§4.11):**
+suggestions reader-voted on AniList, worked out per request from the user's own shelf.
+No other user's data is involved and nothing about the result is stored, except the works
+the user hides with Not interested.
 
 ## 2. Architecture & topology
 
@@ -183,6 +188,17 @@ The series/volume tracking domain.
     extras together never exceed the note's number, none are created under a
     volume-count `SourceChoice`, and nothing is deleted. A whole extra is past the
     count, so `IsReleased` stays false and its date decides whether it is out.
+  - **Next announced volumes [added 2026-10-13]:** the release source's count can lag the
+    English edition (86: MangaUpdates 13, Apple Books a Vol. 14 pre-order). The store
+    catalogue may create whole volumes straight past the highest main volume tracked,
+    contiguous and in order, each a store row the matcher confirmed as this series and
+    medium and dated no more than twelve months ahead. Only once the release source states a
+    count, never under a volume-count `SourceChoice`; `IsReleased` stays false (its date
+    decides until the count reaches it), nothing is deleted, and the count disagreement is
+    still recorded each run. Unlike extras they are news: an activity entry and a push
+    (announced, or out), and the new-volume flag when the volume is already out the night
+    it appears, or when its date passes on a later refresh. The store is therefore asked
+    about every counted series nightly, even when every volume is complete.
   - **Everything else:** AniList.
   - **A user's explicit choice of source overrides the precedence for that one
     field** **[amended 2026-10-10]**: the series page shows a recorded
@@ -217,7 +233,8 @@ The series/volume tracking domain.
 - **Nightly sync** (`BackgroundService`, default 04:00 local, configurable):
   - refreshes volume lists, dates, publication status for all tracked series
   - per-series failure isolation — one failure logs a warning, run continues
-  - rate-limit aware: batches, honors 429 with backoff, AniList ≤ 30 req/min (degraded since 2026-08; `X-RateLimit-Limit` says 30)
+  - rate-limit aware: batches, honors 429 with backoff (and Apple Books' 403, its rate-limit answer), AniList ≤ 30 req/min (degraded since 2026-08; `X-RateLimit-Limit` says 30)
+  - per-source lookup allowances per run, per night (shared across users) and on demand: `OpenLibrary:MaximumLookups*` for by-ISBN lookups, `AppleBooks:MaximumRequests*` for store requests **[amended 2026-10-13]**
   - idempotent upserts keyed on external ids; **never writes user-state
     columns**
   - produces a run summary (series refreshed, dates moved, new volumes,
@@ -228,7 +245,8 @@ The series/volume tracking domain.
     refresh that runs when a series is added, or a sweep still in flight, used to
     replace the nightly summary and hide its items to review.
   - sets the per-series *new volume* flag when a previously-unseen released
-    volume appears; flag clears when the user visits the series or marks it
+    volume appears — by the count, or a store-created next volume that is already out, or
+    any volume whose date passes on a non-first refresh **[amended 2026-10-13]**; flag clears when the user visits the series or marks it
     owned.
 - Manual "sync now" per series and global (button in UI, same code path).
 
@@ -461,6 +479,31 @@ mode and no caching service worker**: the only worker is the push worker, so a d
 can never be shadowed by a stale bundle. nginx serves `/manifest.webmanifest` as
 `application/manifest+json` and both it and `/push-worker.js` `no-cache`.
 
+### 4.11 Recommendations **[added 2026-10-13]**
+
+Two views over one question, "what should I read next?", both worked out per request from
+the user's own shelf and the votes of AniList's readers.
+
+- **The source and the seam:** `IRecommendationSource`, with AniList `Media.recommendations`
+  as the first implementation (`Features/Metadata`). The slice `Features/Recommendations`
+  does the ranking and the dismissals; nothing outside `Features/Metadata` knows what
+  AniList is.
+- **The filters:** at least 2 votes, the same format as the series it came from, nothing
+  adult, nothing already on the shelf, nothing dismissed.
+- **v0, the strip "Readers of X also liked"** on the series page: at most 12, by votes.
+- **v1, For you** at `/for-you`: the seeds are the user's series, weighted by status
+  (Completed 1.0; Reading 0.8 when something is read; Dropped -0.5), by depth
+  (`log2(1 + min(read, 15))`; a Dropped seed ignores depth) and by recency (half-life one
+  year). A work's score is the sum over the seeds that recommend it of
+  `weight x ln(1 + votes) / ln(1 + the seed's top votes)`, so a Dropped seed subtracts and a
+  work whose net is not positive disappears. Each work sits in the row of the seed that
+  contributed most: 8 works per row and 6 rows.
+- **Caps:** 40 + 10 seeds, so a cold load is one AniList request. Second-hop neighbours are
+  never crawled (AniList's terms).
+- **Not interested:** hides a work for good. Stored (`RecommendationDismissal`, §5),
+  removable with Undo and with "Show again" in the hidden list at the foot of For you,
+  included in the account export and deleted with the account.
+
 ## 5. Data model
 
 ```
@@ -620,6 +663,11 @@ UserPreferences  (single row)
 
 ShelfShare  (UserId PK → app_user, cascade · Token unique · CreatedAt)
             not owner-filtered: it is what an anonymous request resolves to an owner (§4.8)
+
+RecommendationDismissal  [added 2026-10-13]
+  Id, OwnerId (FK app_user, cascade), AniListId, Title, Format, DismissedAt; unique
+  (OwnerId, AniListId); a root of its own (IOwned): a dismissed work is not on the shelf,
+  so it has no series to hang from.
 ```
 
 Ownership axes are split (`Owned` + `OwnedFormat`) per the UI spec's early
@@ -702,6 +750,12 @@ GET    /api/calendar                               Off/On and the current token
 PUT    /api/calendar         { isOn }              On issues a token, Off deletes it
 POST   /api/calendar/regenerate                    new token, old feed URL dead (409 when Off)
 GET    /api/calendar/{token}.ics                   anonymous, the release calendar (§4.9)
+
+GET    /api/series/{id}/recommendations            "Readers also liked" for one series (§4.11), rate-limited
+GET    /api/recommendations                        For you: rows of picks by seed, hidden works left out
+GET    /api/recommendations/dismissals             what Not interested has hidden, newest first
+PUT    /api/recommendations/dismissals/{aniListId}  { title, format }  204, idempotent
+DELETE /api/recommendations/dismissals/{aniListId}  204; 404 when it was not hidden
 ```
 
 Query/command service split behind each controller per CLAUDE.md.
@@ -739,7 +793,7 @@ bundle holds no token at all:
   first sign-in (`UserSignIn`), and the session carries the user id. Sign-up
   is open unless `Auth:AllowedEmails` lists addresses. Each user has separate
   copies of everything, including metadata: the roots `Series`,
-  `ImportBatch`, `SyncRun`, `UserPreferences` and `PushSubscription` carry `OwnerId`, and EF
+  `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription` and `RecommendationDismissal` carry `OwnerId`, and EF
   global query filters on `LnShelfDbContext` restrict every query to the
   current user (children are filtered through their root). With no current
   user a query sees nothing and a new root cannot be saved, so a forgotten
@@ -753,8 +807,8 @@ bundle holds no token at all:
   The token is never logged. The activity log `shelf_event` is a child of `Series`,
   filtered through it like `Volume`.
 - **Background work acts as each user.** The nightly sync runs once per user,
-  each in its own scope after `ICurrentUser.ActAs`, sharing one lookup
-  allowance for the night (`OpenLibrary:MaximumLookupsPerNight`); console
+  each in its own scope after `ICurrentUser.ActAs`, sharing each source's
+  allowance for the night (`OpenLibrary:MaximumLookupsPerNight`, `AppleBooks:MaximumRequestsPerNight`); console
   commands act as `--user <email>` or the only user.
 - **The library from before users** belongs to a placeholder user the
   migration created; `Auth:InitialOwnerEmail` adopts it in place on first
@@ -820,6 +874,8 @@ Caching exists to protect and speed up the *external* edges:
 | AniList/MangaUpdates series detail during import | ~1 h | review queue re-renders candidates constantly |
 | Open Library edition by ISBN | ~24 h | an edition record that has existed for years is not about to change, and one run can ask for the same ISBN twice — discovery verifies a candidate that enrichment then reads again |
 | `/api/sync/latest` | until next run | sidebar hits it on every navigation (designed, not yet implemented — the endpoint exists but reads straight from Postgres, uncached) |
+| AniList author works (per AniList id) | 24 h | every series page asks |
+| AniList recommendations (per AniList id) | 24 h | strip and For you share it; shelved and dismissed works are removed per request, never cached |
 | Cover existence/headers | ~24 h | avoids a file check per cover on grid render (bytes themselves are client-cached via ETag/Cache-Control) (designed, not yet implemented) |
 
 Invalidation is by key on the obvious writes (sync completion evicts

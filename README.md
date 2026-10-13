@@ -324,6 +324,7 @@ are most likely to change:
 | `Limits__MaximumSeriesPerUser`, `Limits__MaximumCoverOverridesPerUser` | `500`, `300` | Per-user storage limits |
 | `Limits__ExternalRequestsPerMinute`, `Limits__SyncRunsPerHour` | `20`, `2` | Per-user rate limits on calls that reach the metadata sources |
 | `Limits__AuthorWorksRequestsPerMinute` | `60` | Per-user rate limit on a series page's "More by {author}" row |
+| `Limits__RecommendationsRequestsPerMinute` | `60` | Per-user rate limit on "Readers also liked" and For you |
 | `Heartbeat__Monitors__NightlySync` | empty (no beat) | Uptime Kuma push URL the nightly sync reports to |
 | `Auth__Authority`, `Auth__SessionLifetime` | Google, `30.00:00:00` | The provider, and how long an unused session lasts |
 | `Covers__FileSystem__RootPath` | `/data/covers` | The cover folder (the API image mounts its volume there) |

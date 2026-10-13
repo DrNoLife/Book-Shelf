@@ -56,7 +56,7 @@
 
             <article class="privacy__body">
                 <header class="privacy__intro">
-                    <span class="eyebrow">Last updated 11 October 2026</span>
+                    <span class="eyebrow">Last updated 13 October 2026</span>
                     <h1 class="title-page">Privacy</h1>
                     <p class="lead">LN Shelf is a small, self-hosted tracker for light novels, manga and web novels. This page explains, in plain language, what it stores about you, why, who else is involved and what you can do about it. There are no ads, no analytics and no tracking.</p>
                 </header>
@@ -130,6 +130,12 @@
                                     <td data-label="How long">120 days, then deleted automatically by the nightly sync. The &ldquo;seen&rdquo; time until you delete your account.</td>
                                 </tr>
                                 <tr>
+                                    <th scope="row">Hidden suggestions</th>
+                                    <td data-label="Details">The works you mark <em>Not interested</em> in For you: the catalogue ID, title and format, and when you hid it.</td>
+                                    <td data-label="Why">So they are not suggested to you again.</td>
+                                    <td data-label="How long">Until you choose <em>Show again</em> or <em>Undo</em>, or delete your account.</td>
+                                </tr>
+                                <tr>
                                     <th scope="row">Your calendar link</th>
                                     <td data-label="Details">Only if you turn on the release calendar: the random code in its link, and when it was made.</td>
                                     <td data-label="Why">It is the calendar link you asked for.</td>
@@ -163,7 +169,7 @@
                 <section class="privacy__section" id="basis" aria-labelledby="basis-title">
                     <h2 class="title-section" id="basis-title">Legal basis</h2>
                     <ul>
-                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers, your public link, notifications, the activity log and your calendar link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers, your public link, notifications, the activity log, your hidden suggestions and your calendar link: we need this data to provide the service you asked for.</li>
                         <li><strong>Legitimate interests (Article 6(1)(f))</strong> for technical logs, rate limiting and backups: keeping a small public service secure, working and recoverable, and not overloading the free community catalogues it relies on. We keep these to what a web server normally needs, for a short time, and never use them for profiling or marketing. You can object to this; see your rights.</li>
                     </ul>
                     <p>You need a Google account with a verified email address to sign up. Nothing is decided about you automatically.</p>
@@ -175,7 +181,7 @@
                     <ul class="privacy__parties">
                         <li><strong>Google</strong> handles signing in. You sign in on Google&rsquo;s own page, so Google knows you signed in to LN Shelf, under its own privacy policy. We receive your account ID, your email address, whether the address is verified, your name and your profile picture. The name is not kept. The picture is copied to our server, by our server, and shown from there.</li>
                         <li><strong>Cloudflare</strong> carries the traffic between your browser and our server (a &ldquo;Cloudflare Tunnel&rdquo;) and provides the HTTPS connection. Because the encryption ends at Cloudflare, it can technically see the traffic passing through, including your IP address. Cloudflare acts as our processor under its data processing agreement.</li>
-                        <li><strong>Book catalogues</strong> (AniList, MangaUpdates, Open Library and Apple Books) supply series details, release dates and covers. Our server asks them about titles, catalogue IDs, ISBNs and the search text you type. Nothing that identifies you is sent: no email, no account ID, and the requests come from our server, not your browser.</li>
+                        <li><strong>Book catalogues</strong> (AniList, MangaUpdates, Open Library and Apple Books) supply series details, release dates and covers. Our server asks them about titles, catalogue IDs, ISBNs and the search text you type. To suggest series, the server asks AniList about the catalogue IDs of the series on your shelf, without anything that identifies you. Nothing that identifies you is sent: no email, no account ID, and the requests come from our server, not your browser.</li>
                         <li><strong>Push services</strong>, only if you turn notifications on. Each notification goes through your browser maker&rsquo;s push service: Google (Firebase Cloud Messaging) for Chrome and Android, Mozilla for Firefox, Microsoft for Edge on Windows, Apple for Safari, iPhone and iPad. The content (series titles, volume numbers, dates) is encrypted end to end, so the push service sees only the subscription address, the size of the message and when it was sent, not what it says.</li>
                         <li><strong>Your calendar app</strong>, only if you subscribe to the release calendar. Google Calendar, Apple Calendar or Outlook then fetch the feed from their own servers and keep a copy under their own terms. It holds the titles (with Manga or Web novel where that applies), volume numbers and release dates of the series you track, nothing about what you own, paid or noted, and nothing that names you.</li>
                         <li><strong>Saxo, AniList and MangaUpdates links</strong> open those sites only when you click them. Nothing about you or your shelf is passed along, beyond the book title and volume in a Saxo search.</li>
@@ -198,6 +204,7 @@
                         <li><strong>Your calendar link:</strong> until you turn the calendar off, make a new link, or delete your account.</li>
                         <li><strong>Notifications:</strong> a device&rsquo;s subscription until you turn notifications off on it, remove it on your profile, sign out on that browser, or delete your account.</li>
                         <li><strong>Activity log:</strong> 120 days.</li>
+                        <li><strong>Hidden suggestions:</strong> until you show them again or delete your account.</li>
                         <li><strong>Imports and sync records:</strong> as long as your account exists.</li>
                         <li><strong>Technical logs:</strong> rotated automatically by size, so only the most recent entries are kept, and cleared when the service is updated.</li>
                         <li><strong>Rate-limit data:</strong> about a minute, in memory only.</li>
@@ -209,7 +216,7 @@
                     <h2 class="title-section" id="rights-title">Your rights</h2>
                     <p>You have the right to:</p>
                     <ul>
-                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports, your sync records, your activity log, your calendar link and the devices you turned notifications on for (without their encryption keys) as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
+                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports, your sync records, your activity log, your hidden suggestions, your calendar link and the devices you turned notifications on for (without their encryption keys) as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
                         <li><strong>Correct</strong> it. You can edit everything on your shelf yourself. Your email address follows your Google account.</li>
                         <li><strong>Delete</strong> it. <em>Delete account</em> on your profile deletes your account and all its data immediately.</li>
                         <li><strong>Take it with you</strong> (data portability). The export is a standard JSON file.</li>
