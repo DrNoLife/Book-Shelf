@@ -5,7 +5,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 /// <summary>
 /// Downloads one image URL and proves the bytes really are an image.
 /// </summary>
-// Its own plain HttpClient rather than CoverFetcher or either ICoverCache, and that is the
+// Its own plain HttpClient rather than CoverFetcher or either cover cache, and that is the
 // whole reason it exists: those store what they fetch, and the verification command's
 // contract is that it writes nowhere. Nothing here touches ICoverStore.
 //

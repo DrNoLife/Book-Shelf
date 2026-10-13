@@ -12,6 +12,7 @@ WORKDIR /src
 # Restore first (props + csproj only) so the package layer survives source edits.
 # The Api references Shared and nothing else; the Client never enters this image.
 COPY LnShelf/Directory.Build.props           LnShelf/
+COPY LnShelf/Directory.Packages.props        LnShelf/
 COPY LnShelf/LnShelf.Shared/LnShelf.Shared.csproj LnShelf/LnShelf.Shared/
 COPY LnShelf/LnShelf.Api/LnShelf.Api.csproj  LnShelf/LnShelf.Api/
 RUN dotnet restore LnShelf/LnShelf.Api/LnShelf.Api.csproj

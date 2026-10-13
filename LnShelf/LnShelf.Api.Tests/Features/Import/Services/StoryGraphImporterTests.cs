@@ -176,7 +176,7 @@ public sealed class StoryGraphImporterTests
             new ImportBatchBuilder(
                 dbContext,
                 matcher ?? CreateUnmatchingMatcher(),
-                Substitute.For<ICoverCache>(),
+                Substitute.For<ISeriesCoverCache>(),
                 Options.Create(options ?? new ImportOptions()),
                 TimeProvider.System,
                 NullLogger<ImportBatchBuilder>.Instance));

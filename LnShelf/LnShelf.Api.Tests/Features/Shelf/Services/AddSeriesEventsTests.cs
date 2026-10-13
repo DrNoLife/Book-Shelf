@@ -83,7 +83,7 @@ public sealed class AddSeriesEventsTests
             [
                 new AniListAddSeriesFlow(
                     metadataSource,
-                    Substitute.For<ICoverCache>(),
+                    Substitute.For<ISeriesCoverCache>(),
                     new AddTimeReleaseLink(matcher, dbContext, NullLogger<AddTimeReleaseLink>.Instance)),
             ],
             SeriesCommandServiceTests.NoStagedIsbns(),

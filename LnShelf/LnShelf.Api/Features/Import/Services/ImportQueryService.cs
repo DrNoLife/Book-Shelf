@@ -4,7 +4,7 @@ namespace LnShelf.Api.Features.Import.Services;
 public sealed class ImportQueryService(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
-    ICoverCache coverCache,
+    ISeriesCoverCache coverCache,
     IOptions<ImportOptions> options) : IImportQueryService
 {
     public async Task<ImportBatchResponse?> GetBatchAsync(Guid batchId, CancellationToken cancellationToken)
@@ -60,7 +60,7 @@ public sealed class ImportQueryService(
             // is a deliberate submit-driven search over a handful of results — not
             // the general search endpoint, which must stay cheap.
             var coverObjectKey = await coverCache.EnsureCachedAsync(
-                result.AniListId, result.CoverImageUrl, cancellationToken);
+                MetadataSourceName.AniList, result.AniListId, result.CoverImageUrl, cancellationToken);
 
             candidates.Add(new ImportCandidateResponse
             {

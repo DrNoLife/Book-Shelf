@@ -37,7 +37,8 @@ public sealed record ConsoleCommandLine
     }
 
     /// <summary>
-    /// The value of <c>--name value</c>, or null when the switch was not given.
+    /// The value of <c>--name value</c>, or null when the switch was not given. Throws when
+    /// it was given with no value after it.
     /// </summary>
     // Deliberately not a parser library: two commands with one option each do not
     // justify a dependency, and the ceremony would outweigh the feature.
@@ -47,12 +48,18 @@ public sealed record ConsoleCommandLine
 
         var switchName = $"--{name}";
 
-        for (var index = 0; index < Arguments.Count - 1; index++)
+        for (var index = 0; index < Arguments.Count; index++)
         {
-            if (string.Equals(Arguments[index], switchName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(Arguments[index], switchName, StringComparison.OrdinalIgnoreCase))
             {
-                return Arguments[index + 1];
+                continue;
             }
+
+            // Present but nothing after it: refusing beats treating it as "not given", which
+            // every caller reads as "use the default" (isbn-discover would write to the wrong file).
+            return index + 1 < Arguments.Count
+                ? Arguments[index + 1]
+                : throw new InvalidOperationException($"{switchName} needs a value.");
         }
 
         return null;

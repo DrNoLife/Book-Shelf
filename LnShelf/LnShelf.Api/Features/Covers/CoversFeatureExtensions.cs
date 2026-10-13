@@ -43,12 +43,9 @@ public static class CoversFeatureExtensions
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
             });
 
-            // All three caches are key-builders over the one fetcher: a series cover keyed
-            // on its source's id, the AniList-shaped adapter onto that for the callers who
-            // hold a media id and nothing else, and a volume's synced art keyed on the
-            // volume.
+            // Both caches are key-builders over the one fetcher: a series cover keyed on its
+            // source's id, and a volume's synced art keyed on the volume.
             services.AddScoped<ISeriesCoverCache, SeriesCoverCache>();
-            services.AddScoped<ICoverCache, AniListCoverCache>();
             services.AddScoped<IVolumeCoverCache, VolumeCoverCache>();
 
             // The one-shot that deletes uploads whose volume is gone from every shelf, and stray avatars.

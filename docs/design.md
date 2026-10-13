@@ -89,7 +89,8 @@ font size or a fifth corner.
 - **Layout:** `--sidebar-width` 240 · `--page-gutter` `clamp(20px, 4vw, 56px)`.
 - **Focus:** `--focus-ring` (2px `--acc-soft`) and `--focus-offset` (2px). A
   stroke in the soft accent, not the fill colour, so a focused control is never
-  mistaken for a primary button.
+  mistaken for a primary button. The volume tile is the one exception in shape:
+  see the tile's keyboard-focus ruling.
 
 ## Colour discipline
 
@@ -317,12 +318,28 @@ mark. State is **always two channels**:
 | **To buy** | Cover dimmed (opacity .42, grayscale .9), dashed `1px --owned` border, centred "To buy" (12px/600, `--text`) | The dashed edge and the word survive grayscale |
 | **Unreleased, dated** | Hatch fill (`--hatch` 135° stripes), dashed `--line-2` border | The date in the caption (`12 Sep`) |
 | **Announced, no date** | Transparent, dashed `--line-2` border, centred "Announced, date unclear" (12px, `--muted`; short: "No date") | Emptiest of the six |
-| **Selected** (menu/panel open) | `2px --selected-ring` outline, 3px offset | Caption in 600 |
+| **Selected** (menu/panel open, or ticked in select mode) | An inset `2px --selected-ring` ring drawn over the tile (not an outline), so a selected Reading tile still shows its own ring and glow | Caption in 600 |
 
 Interaction: click/tap selects the volume and opens its menu (or cycles read
 state, as the volume grid is wired today) · shift-click / long-press toggles
 owned · arrow keys + space in the grid. Hover raises the ring only and never
 reflows.
+
+**Keyboard focus (ruling):** `.tile:focus-visible` is a 2px `--acc-soft` outline
+at 2px offset, radius 6. It is geometric, not chromatic: the Reading state's
+ring and glow hug the edge and the focus stroke sits 2px clear of them, so focus
+on a Reading tile is unambiguous. Verified in a magnified capture, and it
+survives grayscale. Mouse clicks never show it (`:focus-visible` only). Arrow
+keys move focus by the rendered column count (`lnshelf.js`).
+
+**Select mode chip (ruling):** in select mode every tile carries a 16px circular
+chip at the top-left (5px inset), because the read check and the reading mark
+own the top-right and the two must never collide. Hollow = `1.5px --acc-soft`
+border on `--dot-halo`; ticked = `--acc` fill and border with a `--on-acc`
+check. The chip is the second channel for "selected" beside the inset ring, so
+selection never relies on colour alone, and selecting never reflows the grid.
+Bulk labels ("Mark 1-N") are computed from actual progress and capped at what is
+in print.
 
 **The caption line:** one line under the tile, reserved height so a mixed row
 stays aligned. `Vol N` in 13px — `--text` when the volume is in hand (read or
