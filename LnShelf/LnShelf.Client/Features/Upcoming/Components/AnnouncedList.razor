@@ -19,10 +19,7 @@
         {
             <li class="line" @key="entry.SeriesId">
                 <span class="line__cover" aria-hidden="true">
-                    @if (entry.CoverObjectKey is { } coverObjectKey)
-                    {
-                        <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
-                    }
+                    <CoverImage Sources="ApiUrls.Covers(entry.CoverObjectKey)" loading="lazy" />
                 </span>
                 <span class="line__text">
                     <a class="line__title" href="@($"/series/{entry.SeriesId}")">@entry.SeriesTitle</a>

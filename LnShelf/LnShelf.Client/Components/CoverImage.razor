@@ -1,0 +1,17 @@
+@* Every cover on every page renders through here, so none can show the browser's
+   broken-image icon (design.md — Cover art): an image that fails to load gives way to the
+   next candidate, and when none is left the caller's placeholder shows instead.
+
+   The img's class and other attributes are the caller's, splatted on, so its look is
+   unchanged; the caller's scoped CSS reaches the img only through ::deep, since this
+   component renders it. The error handler names the source it was attached for, so a late
+   error from a source already left behind changes nothing. *@
+
+@if (_candidates.Current is { } source)
+{
+    <img src="@source" alt="" @attributes="AdditionalAttributes" @onerror="() => OnImageFailed(source)" />
+}
+else
+{
+    @ChildContent
+}

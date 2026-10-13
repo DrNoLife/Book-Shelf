@@ -6,10 +6,7 @@
 <div class="preview" aria-busy="@IsAdding.ToAriaState()">
     <div class="preview__head">
         <span class="preview__cover">
-            @if (Result.CoverObjectKey is { } coverObjectKey)
-            {
-                <img class="preview__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" />
-            }
+            <CoverImage class="preview__art" Sources="ApiUrl.Covers(Result.CoverObjectKey)" />
         </span>
         <div class="preview__identity">
             <FormatBadge Value="Result.Format" Spelled />

@@ -601,6 +601,41 @@ public sealed class LibraryCardProjectionTests
         ToCard(series).CoverObjectKey.ShouldBe("anilist/85470.jpg");
     }
 
+    /// <summary>
+    /// The card's cover is an override only when the volume it picks is overridden; then the
+    /// card is also told what it would show with every override ignored, for when the
+    /// override's file cannot load.
+    /// </summary>
+    public static TheoryData<(int Number, string? VolumeCover, string? Override)[], string?, string?> CoverFallbackCases => new()
+    {
+        // The latest volume with art is overridden: fall back to its synced art.
+        { [(1, "volume/apple/a.jpg", null), (2, "volume/apple/b.jpg", "override/volume/b.webp")], "override/volume/b.webp", "volume/apple/b.jpg" },
+
+        // Overridden with no synced art of its own: the next synced art down.
+        { [(1, "volume/apple/a.jpg", null), (2, null, "override/volume/b.webp")], "override/volume/b.webp", "volume/apple/a.jpg" },
+
+        // No synced art anywhere: the series cover.
+        { [(1, null, null), (2, null, "override/volume/b.webp")], "override/volume/b.webp", "anilist/85470.jpg" },
+
+        // An override on an older volume does not touch the card, so there is no fallback.
+        { [(1, "volume/apple/a.jpg", "override/volume/a.webp"), (2, "volume/apple/b.jpg", null)], "volume/apple/b.jpg", null },
+
+        // No override at all.
+        { [(1, "volume/apple/a.jpg", null)], "volume/apple/a.jpg", null },
+        { [(1, null, null)], "anilist/85470.jpg", null },
+    };
+
+    [Theory]
+    [MemberData(nameof(CoverFallbackCases))]
+    public void ToCard_CoverOverride_FallsBackToTheCoverWithoutOverrides(
+        (int Number, string? VolumeCover, string? Override)[] volumes, string? expectedCover, string? expectedFallback)
+    {
+        var card = ToCard(CreateSeriesWithCovers(volumes));
+
+        card.CoverObjectKey.ShouldBe(expectedCover);
+        card.CoverFallbackObjectKey.ShouldBe(expectedFallback);
+    }
+
     [Fact]
     public void ToCard_NoArtAnywhere_HasNoCover()
     {

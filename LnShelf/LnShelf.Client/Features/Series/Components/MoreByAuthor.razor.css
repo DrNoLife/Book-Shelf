@@ -37,7 +37,7 @@
   background: var(--surf);
 }
 
-.more__art {
+::deep .more__art {
   display: block;
   width: 100%;
   height: 100%;

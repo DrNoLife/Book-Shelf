@@ -7,14 +7,9 @@
 
     <div class="hero__cover">
         <div class="cover">
-            @if (Series.CoverObjectKey is { } coverObjectKey)
-            {
-                <img class="cover__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" />
-            }
-            else
-            {
+            <CoverImage class="cover__art" Sources="ApiUrl.Covers(Series.CoverObjectKey)">
                 <span class="cover__label tabular">Vol @LatestVolumeNumber.ToVolumeText()</span>
-            }
+            </CoverImage>
         </div>
         <p class="hero__caption desktop-only">Cover shows latest volume</p>
     </div>

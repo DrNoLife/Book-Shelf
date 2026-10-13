@@ -26,6 +26,14 @@ public sealed record LibraryCardResponse
     /// </summary>
     public string? CoverObjectKey { get; init; }
 
+    /// <summary>
+    /// The cover to try when <see cref="CoverObjectKey"/> cannot load: the card's cover with
+    /// every user override ignored. Null unless <see cref="CoverObjectKey"/> is an override.
+    /// </summary>
+    // Optional with a null default so a client bundle from before it existed still reads the
+    // response; VolumeResponse.CoverFallbackObjectKey says why it exists.
+    public string? CoverFallbackObjectKey { get; init; }
+
     /// <summary>Volumes marked read.</summary>
     public required int Read { get; init; }
 

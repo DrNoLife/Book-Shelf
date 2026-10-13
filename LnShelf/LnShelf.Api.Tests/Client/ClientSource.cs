@@ -20,6 +20,13 @@ public static class ClientSource
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
             .Select(path => (path[..^4], path));
 
+    /// <summary>Every <c>.razor</c> markup file in the client.</summary>
+    public static IEnumerable<string> Markup() =>
+        Directory
+            .EnumerateFiles(ProjectDirectory, "*.razor", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                           && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
+
     public static string ReadAllText(string relativePath) =>
         File.ReadAllText(Path.Combine(ProjectDirectory, relativePath));
 

@@ -30,7 +30,7 @@
   overflow: hidden;
 }
 
-.entry__art {
+::deep .entry__art {
   width: 100%;
   height: 100%;
   object-fit: cover;

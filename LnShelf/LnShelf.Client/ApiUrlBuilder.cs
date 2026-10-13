@@ -14,6 +14,24 @@ public sealed class ApiUrlBuilder(HttpClient httpClient)
         new Uri(httpClient.BaseAddress!, $"api/covers/{objectKey}").ToString();
 
     /// <summary>
+    /// Cover URLs for the keys given, best first, skipping the null ones: a CoverImage's
+    /// candidates, so a key whose file is gone gives way to the next.
+    /// </summary>
+    public IReadOnlyList<string> Covers(params ReadOnlySpan<string?> objectKeys)
+    {
+        var urls = new List<string>(objectKeys.Length);
+        foreach (var objectKey in objectKeys)
+        {
+            if (objectKey is not null)
+            {
+                urls.Add(Cover(objectKey));
+            }
+        }
+
+        return urls;
+    }
+
+    /// <summary>
     /// The signed-in user's avatar. The version (CurrentUserResponse.AvatarVersion) changes with
     /// the picture, so a new one shows at once while an unchanged one stays cached.
     /// </summary>

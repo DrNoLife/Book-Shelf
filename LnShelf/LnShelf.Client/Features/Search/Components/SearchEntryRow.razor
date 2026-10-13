@@ -10,10 +10,7 @@
             aria-current="@(IsSelected ? "true" : null)"
             @onclick="OnSelectedAsync">
         <span class="entry__cover">
-            @if (Entry.Result.CoverObjectKey is { } coverObjectKey)
-            {
-                <img class="entry__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-            }
+            <CoverImage class="entry__art" Sources="ApiUrl.Covers(Entry.Result.CoverObjectKey)" loading="lazy" />
         </span>
 
         <span class="entry__identity">

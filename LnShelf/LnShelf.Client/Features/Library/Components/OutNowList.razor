@@ -17,10 +17,7 @@
 
             <li class="out-now__row" @key="card.SeriesId">
                 <span class="out-now__thumb" aria-hidden="true">
-                    @if (card.CoverObjectKey is { } coverObjectKey)
-                    {
-                        <img class="out-now__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-                    }
+                    <CoverImage class="out-now__art" Sources="ApiUrl.Covers(card.CoverObjectKey, card.CoverFallbackObjectKey)" loading="lazy" />
                 </span>
 
                 <span class="out-now__text">

@@ -7,10 +7,7 @@
 
 <article class="card" aria-labelledby="@TitleId">
     <a class="card__cover" href="@SeriesHref" tabindex="-1" aria-hidden="true">
-        @if (Entry.CoverObjectKey is { } coverObjectKey)
-        {
-            <img src="@ApiUrls.Cover(coverObjectKey)" alt="" loading="lazy" />
-        }
+        <CoverImage Sources="ApiUrls.Covers(Entry.CoverObjectKey)" loading="lazy" />
     </a>
 
     <div class="card__body">

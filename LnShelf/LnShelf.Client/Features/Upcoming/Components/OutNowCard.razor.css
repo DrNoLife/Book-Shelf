@@ -20,7 +20,7 @@
   box-shadow: 0 0 0 1px var(--line);
 }
 
-.card__cover img {
+.card__cover ::deep img {
   display: block;
   width: 100%;
   height: 100%;

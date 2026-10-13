@@ -59,6 +59,24 @@ public static class LibraryCardProjection
                         : volume.CoverObjectKey)
                 .FirstOrDefault() ?? series.CoverObjectKey,
 
+            // The same choice with every override ignored, sent only when the card's cover
+            // is an override: the client falls back to it when the override's file cannot
+            // load. The first subquery asks whether the volume chosen above is overridden;
+            // the second repeats the choice over synced art alone.
+            CoverFallbackObjectKey = series.Volumes
+                .Where(volume =>
+                    (volume.UserState != null && volume.UserState.CoverOverrideObjectKey != null)
+                    || volume.CoverObjectKey != null)
+                .OrderByDescending(volume => volume.Number)
+                .Select(volume => volume.UserState != null && volume.UserState.CoverOverrideObjectKey != null)
+                .FirstOrDefault()
+                ? series.Volumes
+                    .Where(volume => volume.CoverObjectKey != null)
+                    .OrderByDescending(volume => volume.Number)
+                    .Select(volume => volume.CoverObjectKey)
+                    .FirstOrDefault() ?? series.CoverObjectKey
+                : null,
+
             Read = series.Volumes.Count(volume =>
                 volume.UserState != null && volume.UserState.ReadStatus == ReadStatus.Read),
 

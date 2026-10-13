@@ -38,6 +38,8 @@ public sealed class ForYouTests(EndToEndFixture fixture) : JourneyTest(fixture)
         await Page.GetByRole(AriaRole.Button, new() { Name = $"Show {TopTitle} again", Exact = true }).ClickAsync();
 
         await Assertions.Expect(row.GetByText(TopTitle, new() { Exact = true })).ToBeVisibleAsync();
+
+        await BrokenImages.ShouldHaveNoneAsync(Page);
     }
 
     [Fact]
@@ -51,6 +53,8 @@ public sealed class ForYouTests(EndToEndFixture fixture) : JourneyTest(fixture)
         var strip = Page.GetByRole(AriaRole.Region, new() { Name = $"Readers of {SeriesTitle} also liked" });
         await Assertions.Expect(strip.GetByText(TopTitle, new() { Exact = true })).ToBeVisibleAsync();
         await Assertions.Expect(strip.GetByText(SeriesTitle, new() { Exact = true })).ToHaveCountAsync(0);
+
+        await BrokenImages.ShouldHaveNoneAsync(Page);
     }
 
     // A novel the reader has read from: the seed For you needs, reading with something read.

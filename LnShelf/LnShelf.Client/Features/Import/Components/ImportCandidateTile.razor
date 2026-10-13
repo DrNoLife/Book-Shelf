@@ -10,10 +10,7 @@
         @onclick="OnSelected">
 
     <span class="candidate__cover">
-        @if (Candidate.CoverObjectKey is { } coverObjectKey)
-        {
-            <img class="candidate__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-        }
+        <CoverImage class="candidate__art" Sources="ApiUrl.Covers(Candidate.CoverObjectKey)" loading="lazy" />
         <span class="candidate__badge"><FormatBadge Value="Candidate.Format" /></span>
         <span class="candidate__dot"><StatusDot Value="Candidate.PublicationStatus" /></span>
 

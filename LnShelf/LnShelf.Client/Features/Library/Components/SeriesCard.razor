@@ -6,17 +6,12 @@
 <a class="card @(Card.HasNewVolume ? "card--new" : null)" href="@($"/series/{Card.SeriesId}")">
 
     <div class="cover">
-        @if (Card.CoverObjectKey is { } coverObjectKey)
-        {
-            @* Always the local cover route, never the AniList CDN (design.md).
-               alt is empty on purpose: the title sits right below in the DOM, so
-               announcing it twice is noise to a screen reader. *@
-            <img class="cover__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-        }
-        else
-        {
+        @* Always the local cover route, never the AniList CDN (design.md). alt is empty
+           (CoverImage's default) on purpose: the title sits right below in the DOM, so
+           announcing it twice is noise to a screen reader. *@
+        <CoverImage class="cover__art" Sources="ApiUrl.Covers(Card.CoverObjectKey, Card.CoverFallbackObjectKey)" loading="lazy">
             <span class="cover__label tabular">Vol @CardVolumeNumbers.ForCover(Card.VolumeTicks).ToVolumeText()</span>
-        }
+        </CoverImage>
 
         <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
 

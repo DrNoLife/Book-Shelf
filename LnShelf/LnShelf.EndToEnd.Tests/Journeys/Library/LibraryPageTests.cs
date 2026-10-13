@@ -11,5 +11,7 @@ public sealed class LibraryPageTests(EndToEndFixture fixture) : JourneyTest(fixt
 
         await Assertions.Expect(Page.Locator(".card").First).ToBeVisibleAsync();
         (await Page.Locator(".card").CountAsync()).ShouldBeGreaterThan(0);
+
+        await BrokenImages.ShouldHaveNoneAsync(Page);
     }
 }

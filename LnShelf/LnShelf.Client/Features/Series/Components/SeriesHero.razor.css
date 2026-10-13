@@ -24,7 +24,7 @@
   place-items: center;
 }
 
-.cover__art {
+::deep .cover__art {
   width: 100%;
   height: 100%;
   object-fit: cover;

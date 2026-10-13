@@ -364,6 +364,9 @@ Covers do the talking. The coverless placeholder is `--cover-placeholder` with
 `Vol N`; every cover is a drop target (a dropped image becomes a local cover
 override — CLAUDE.md: overrides win over synced art, sync never replaces them).
 Cover art renders from the local cache endpoint, never the AniList CDN.
+A cover that cannot load falls back to the next art (an override to the synced cover
+behind it), then to the coverless placeholder; never a broken image. Every cover renders
+through `CoverImage`, and the end-to-end journeys fail on any broken image.
 
 ### Icons
 

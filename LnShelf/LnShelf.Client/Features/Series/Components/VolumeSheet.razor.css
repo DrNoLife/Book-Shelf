@@ -13,7 +13,7 @@
   box-shadow: 0 0 0 1px var(--line);
 }
 
-.summary__art {
+::deep .summary__art {
   display: block;
   width: 100%;
   height: 100%;

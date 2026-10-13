@@ -8,15 +8,10 @@
 <article class="next">
     <div class="next__top">
         <div class="next__cover" aria-hidden="true">
-            @if (Card.CoverObjectKey is { } coverObjectKey)
-            {
-                <img class="next__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-            }
-            else
-            {
+            <CoverImage class="next__art" Sources="ApiUrl.Covers(Card.CoverObjectKey, Card.CoverFallbackObjectKey)" loading="lazy">
                 <span class="next__word">@CoverWord</span>
                 <span class="next__number tabular">@CoverNumber.ToVolumeText()</span>
-            }
+            </CoverImage>
         </div>
 
         <div class="next__body">

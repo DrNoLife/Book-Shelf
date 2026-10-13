@@ -47,7 +47,7 @@
 
 /* The cover fills the tile; the ring stays on top of it because it is a shadow,
    not a border. */
-.cover__art {
+::deep .cover__art {
   width: 100%;
   height: 100%;
   object-fit: cover;

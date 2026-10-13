@@ -21,4 +21,24 @@ public static class VolumeCoverUrl
         var url = apiUrl.Cover(coverObjectKey);
         return volume.HasCoverOverride ? $"{url}?v={coverVersion}" : url;
     }
+
+    /// <summary>
+    /// What a CoverImage tries for this volume, best first: the cover <see cref="For"/> names,
+    /// then the art behind an override (VolumeResponse.CoverFallbackObjectKey), so an override
+    /// whose file is gone shows the synced cover instead of a broken image.
+    /// </summary>
+    public static IReadOnlyList<string> Candidates(ApiUrlBuilder apiUrl, VolumeResponse volume, int coverVersion)
+    {
+        ArgumentNullException.ThrowIfNull(apiUrl);
+        ArgumentNullException.ThrowIfNull(volume);
+
+        var candidates = new List<string>(2);
+        if (For(apiUrl, volume, coverVersion) is { } url)
+        {
+            candidates.Add(url);
+        }
+
+        candidates.AddRange(apiUrl.Covers(volume.CoverFallbackObjectKey));
+        return candidates;
+    }
 }

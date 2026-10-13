@@ -9,10 +9,7 @@
     {
         <li class="tiles__item" @key="work.AniListId">
             <span class="tiles__cover" aria-hidden="true">
-                @if (work.CoverObjectKey is { } coverObjectKey)
-                {
-                    <img class="tiles__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-                }
+                <CoverImage class="tiles__art" Sources="ApiUrl.Covers(work.CoverObjectKey)" loading="lazy" />
             </span>
             <FormatBadge Value="work.Format" />
             <span class="tiles__title" title="@work.TitleEnglish">@work.TitleEnglish</span>

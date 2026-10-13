@@ -17,14 +17,9 @@
 
             <article class="entry" @key="card.SeriesId">
                 <div class="entry__cover" aria-hidden="true">
-                    @if (card.CoverObjectKey is { } coverObjectKey)
-                    {
-                        <img class="entry__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-                    }
-                    else
-                    {
+                    <CoverImage class="entry__art" Sources="ApiUrl.Covers(card.CoverObjectKey, card.CoverFallbackObjectKey)" loading="lazy">
                         <span class="entry__label tabular">@CoverLabel(entry)</span>
-                    }
+                    </CoverImage>
                 </div>
 
                 <div class="entry__body">

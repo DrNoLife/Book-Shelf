@@ -22,10 +22,7 @@
             {
                 <li class="more__item" @key="work.AniListId">
                     <span class="more__cover" aria-hidden="true">
-                        @if (work.CoverObjectKey is { } coverObjectKey)
-                        {
-                            <img class="more__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-                        }
+                        <CoverImage class="more__art" Sources="ApiUrl.Covers(work.CoverObjectKey)" loading="lazy" />
                     </span>
                     <FormatBadge Value="work.Format" />
                     <span class="more__title" title="@work.TitleEnglish">@work.TitleEnglish</span>

@@ -15,7 +15,7 @@ public sealed class ScopedCssDeepSelectorTests
     /// parent's scope attribute: the framework's, and the shared primitives that take a class
     /// for placement.
     /// </summary>
-    private static readonly string[] ChildComponents = ["NavLink", "InputFile", "Panel", "SearchField"];
+    private static readonly string[] ChildComponents = ["NavLink", "InputFile", "Panel", "SearchField", "CoverImage"];
 
     [Fact]
     public void ClassesOnChildComponentsAreOnlyStyledThroughDeep()

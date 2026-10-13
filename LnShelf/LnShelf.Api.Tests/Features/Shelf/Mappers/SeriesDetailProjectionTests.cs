@@ -67,6 +67,42 @@ public sealed class SeriesDetailProjectionTests
         SeriesDetailProjection.ToVolume(volume, Today).IsOut.ShouldBe(expectedIsOut);
     }
 
+    /// <summary>
+    /// An override's file can go missing while its key stays on the row, and sync may never
+    /// touch the row (CLAUDE.md), so the tile is told what the cover would be without it.
+    /// </summary>
+    public static TheoryData<string?, string?, string?, string?, string?> CoverCases => new()
+    {
+        // override, synced, series -> cover, fallback
+        { "override/volume/a.webp", "volume/apple/a.jpg", "anilist/1.jpg", "override/volume/a.webp", "volume/apple/a.jpg" },
+        { "override/volume/a.webp", null, "anilist/1.jpg", "override/volume/a.webp", "anilist/1.jpg" },
+        { "override/volume/a.webp", null, null, "override/volume/a.webp", null },
+
+        // No override: the cover already is what the fallback would be, so there is none.
+        { null, "volume/apple/a.jpg", "anilist/1.jpg", "volume/apple/a.jpg", null },
+        { null, null, "anilist/1.jpg", "anilist/1.jpg", null },
+        { null, null, null, null, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(CoverCases))]
+    public void ToVolume_CoverOverride_FallsBackToTheCoverWithoutIt(
+        string? overrideKey, string? syncedKey, string? seriesKey, string? expectedCover, string? expectedFallback)
+    {
+        var volume = new Volume
+        {
+            Id = Guid.CreateVersion7(),
+            Number = 1,
+            CoverObjectKey = syncedKey,
+            UserState = overrideKey is null ? null : new VolumeUserState { CoverOverrideObjectKey = overrideKey },
+        };
+
+        var response = SeriesDetailProjection.ToVolume(volume, Today, seriesKey);
+
+        response.CoverObjectKey.ShouldBe(expectedCover);
+        response.CoverFallbackObjectKey.ShouldBe(expectedFallback);
+    }
+
     [Fact]
     public void ToDetail_Counts_MatchTheLibraryCardForTheSameSeries()
     {

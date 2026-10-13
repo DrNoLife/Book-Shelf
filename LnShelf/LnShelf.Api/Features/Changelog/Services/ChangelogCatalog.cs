@@ -48,6 +48,8 @@ public static class ChangelogCatalog
             Fixes: [
                 "A volume whose cached cover went missing showed the series cover instead; the next sync now " +
                     "fetches its own cover again.",
+                "A cover that cannot be loaded no longer shows as a broken image: it falls back to the next " +
+                    "art (the synced volume cover, then the series cover), then to the volume label.",
             ]
         ),
         new("0.30.0", new DateOnly(2026, 10, 12), "Chapter by chapter",

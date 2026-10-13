@@ -33,7 +33,7 @@
   box-shadow: 0 0 0 1px var(--line), 0 10px 24px var(--shadow-lift);
 }
 
-.next__art {
+::deep .next__art {
   position: absolute;
   inset: 0;
   width: 100%;

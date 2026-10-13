@@ -46,6 +46,8 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
 
         await Assertions.Expect(Volume(11).Locator("img.tile__image")).ToBeVisibleAsync();
         Fixture.CoverStore.ObjectKeys.ShouldNotBeEmpty();
+
+        await BrokenImages.ShouldHaveNoneAsync(Page);
     }
 
     // The menu offers "Set cover…" in the list view as well, so it has to work there too

@@ -40,6 +40,8 @@ public sealed class SearchPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
         // Unrelated titles that merely share a word stay out of the work.
         await Assertions.Expect(work).Not.ToContainTextAsync("34-sai Mushoku-san");
         await Assertions.Expect(Page.Locator(".search__count")).ToContainTextAsync("20 results, grouped into");
+
+        await BrokenImages.ShouldHaveNoneAsync(Page);
     }
 
     [Fact]

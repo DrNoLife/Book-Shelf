@@ -58,6 +58,16 @@ public sealed record VolumeResponse
     /// </summary>
     public bool HasCoverOverride { get; init; }
 
+    /// <summary>
+    /// The cover to try when <see cref="CoverObjectKey"/> cannot load: what it would be without
+    /// the user's override (this volume's synced art, else the series'). Null when there is no
+    /// override, or nothing behind it.
+    /// </summary>
+    // Optional with a null default so a client bundle from before it existed still reads the
+    // response. An override's file can go missing from the store while the row keeps its key,
+    // and sync may never touch the row (CLAUDE.md), so the client is told what to fall back to.
+    public string? CoverFallbackObjectKey { get; init; }
+
     /// <summary>Added by hand or by an import, not by a metadata source.</summary>
     public required bool IsLocalOnly { get; init; }
 }

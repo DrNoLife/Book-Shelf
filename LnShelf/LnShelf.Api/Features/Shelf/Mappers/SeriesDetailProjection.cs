@@ -122,6 +122,13 @@ public static class SeriesDetailProjection
             // still what a series with no art at all renders.
             CoverObjectKey = state?.CoverOverrideObjectKey ?? volume.CoverObjectKey ?? seriesCoverObjectKey,
             HasCoverOverride = state?.CoverOverrideObjectKey is not null,
+
+            // What the cover would be without the override, for the client to fall back to
+            // when the override's file cannot load. Only behind an override: with none,
+            // CoverObjectKey already is this.
+            CoverFallbackObjectKey = state?.CoverOverrideObjectKey is not null
+                ? volume.CoverObjectKey ?? seriesCoverObjectKey
+                : null,
             IsLocalOnly = volume.IsLocalOnly,
         };
     }

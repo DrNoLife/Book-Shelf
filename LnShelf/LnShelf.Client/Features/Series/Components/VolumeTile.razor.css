@@ -26,7 +26,7 @@
 .tile:hover:not([aria-disabled="true"]) { box-shadow: 0 0 0 1px var(--line-3); }
 
 .tile__art,
-.tile__image {
+.tile__art ::deep .tile__image {
   position: absolute;
   inset: 0;
   display: block;
@@ -80,7 +80,7 @@
 /* To buy: no strip, plus desaturation and dimming — the state that is literally
    grayscale. */
 .tile--tobuy .tile__art,
-.tile--tobuy .tile__image {
+.tile--tobuy ::deep .tile__image {
   opacity: 0.42;
   filter: grayscale(0.9);
 }

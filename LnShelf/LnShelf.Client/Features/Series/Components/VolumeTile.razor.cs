@@ -93,7 +93,7 @@ public partial class VolumeTile
     private string? ReadDateText =>
         Volume.ReadAt is { } readAt ? $"Read {readAt.Full}" : null;
 
-    private string? CoverUrl => VolumeCoverUrl.For(ApiUrl, Volume, CoverVersion);
+    private IReadOnlyList<string> CoverUrls => VolumeCoverUrl.Candidates(ApiUrl, Volume, CoverVersion);
 
     private string StateClass => State switch
     {

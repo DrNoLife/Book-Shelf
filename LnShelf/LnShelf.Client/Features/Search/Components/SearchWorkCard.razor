@@ -22,10 +22,7 @@
                 @foreach (var (entry, depth) in StackedEntries)
                 {
                     <span class="work__cover work__cover--@depth">
-                        @if (entry.Result.CoverObjectKey is { } coverObjectKey)
-                        {
-                            <img class="work__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
-                        }
+                        <CoverImage class="work__art" Sources="ApiUrl.Covers(entry.Result.CoverObjectKey)" loading="lazy" />
                     </span>
                 }
             </div>

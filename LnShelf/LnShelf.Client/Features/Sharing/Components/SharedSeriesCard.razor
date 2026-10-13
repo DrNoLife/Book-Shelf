@@ -8,16 +8,11 @@
 <article class="card">
 
     <div class="cover">
-        @if (Card.CoverObjectKey is { } coverObjectKey)
-        {
-            @* Through the shared shelf's own cover route, which serves series art of this
-               shelf only. alt is empty: the title is right below. *@
-            <img class="cover__art" src="@ApiUrl.SharedCover(Token, coverObjectKey)" alt="" loading="lazy" />
-        }
-        else
-        {
+        @* Through the shared shelf's own cover route, which serves series art of this
+           shelf only. alt is empty (CoverImage's default): the title is right below. *@
+        <CoverImage class="cover__art" Sources="SharedCoverUrls" loading="lazy">
             <span class="cover__title" aria-hidden="true">@Card.TitleEnglish</span>
-        }
+        </CoverImage>
 
         <span class="cover__badge"><FormatBadge Value="Card.Format" /></span>
         <span class="cover__dot"><StatusDot Value="Card.PublicationStatus" /></span>
@@ -50,6 +45,9 @@
     /// <summary>The link's token, which the cover route needs.</summary>
     [Parameter]
     public required string Token { get; set; }
+
+    private string?[] SharedCoverUrls =>
+        [Card.CoverObjectKey is { } coverObjectKey ? ApiUrl.SharedCover(Token, coverObjectKey) : null];
 
     private int Unread => Math.Max(0, Card.Out - Card.Read);
 

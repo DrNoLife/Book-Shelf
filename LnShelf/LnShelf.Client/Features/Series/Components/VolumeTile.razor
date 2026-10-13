@@ -28,10 +28,9 @@
             @oncontextmenu:preventDefault>
 
         <span class="tile__art">
-            @if (CoverUrl is { } coverUrl)
-            {
-                <img class="tile__image" src="@coverUrl" alt="" loading="lazy" />
-            }
+            @* Nothing in place of art: the empty tile is design.md's coverless tile, and the
+               caption under it already says "Vol N". *@
+            <CoverImage class="tile__image" Sources="CoverUrls" loading="lazy" />
         </span>
 
         @* The hatch is a fill, not a colour: it is what makes "not out" survive
