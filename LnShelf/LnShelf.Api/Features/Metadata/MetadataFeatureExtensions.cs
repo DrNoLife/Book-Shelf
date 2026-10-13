@@ -63,6 +63,7 @@ public static class MetadataFeatureExtensions
 
             services.AddScoped<ISeriesMetadataSource, AniListSeriesQueryService>();
             services.AddScoped<IAuthorWorksQueryService, AniListAuthorWorksQueryService>();
+            services.AddScoped<IRecommendationSource, AniListRecommendationSource>();
 
             return services;
         }

@@ -2,7 +2,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
 /// The GraphQL documents the shelf sends. Kept as literals rather than
-/// generated from a schema: three queries do not justify a codegen step.
+/// generated from a schema: four queries do not justify a codegen step.
 /// </summary>
 internal static class AniListQueries
 {
@@ -110,6 +110,37 @@ internal static class AniListQueries
                         coverImage { large }
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """;
+
+    /// <summary>
+    /// What readers of a series also liked: one document for the series page's strip (one id)
+    /// and For you (a batch).
+    /// </summary>
+    // Page.media(id_in) because a Page of 50 with 10 recommendations each was accepted by
+    // AniList's complexity check (verified 2026-10-13). RATING_DESC puts the strongest votes
+    // first. isAdult is asked so the mapper can drop adult works; type: MANGA is the book side.
+    public const string Recommendations =
+        """
+        query Recommendations($ids: [Int], $perPage: Int!, $recommendationsPerSeries: Int!) {
+          Page(page: 1, perPage: $perPage) {
+            media(id_in: $ids, type: MANGA) {
+              id
+              format
+              recommendations(perPage: $recommendationsPerSeries, sort: [RATING_DESC]) {
+                nodes {
+                  rating
+                  mediaRecommendation {
+                    id
+                    format
+                    isAdult
+                    title { english romaji native }
+                    coverImage { large }
                   }
                 }
               }

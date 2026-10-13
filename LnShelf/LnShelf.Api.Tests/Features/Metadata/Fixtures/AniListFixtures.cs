@@ -16,6 +16,10 @@ namespace LnShelf.Api.Tests.Features.Metadata.Fixtures;
 //   anilist-author-works-85470-mushoku-tensei-novel.json
 //                                                    AuthorWorks, id 85470, perPage 20 —
 //                                                    captured 2026-10-11, verbatim
+//   anilist-recommendations-85470-85564-mushoku-tensei.json
+//                                                    Recommendations, ids 85470 and 85564,
+//                                                    perPage 2, ten recommendations each —
+//                                                    captured 2026-10-13, verbatim
 //
 // Two amendments, flagged rather than hidden, both because a field joined a query after
 // the capture:
@@ -39,6 +43,8 @@ internal static class AniListFixtures
     public const string MushokuTenseiNovel = "anilist-media-85470-mushoku-tensei-novel.json";
     public const string MushokuTenseiNovelAuthorWorks = "anilist-author-works-85470-mushoku-tensei-novel.json";
 
+    public const string MushokuTenseiRecommendations = "anilist-recommendations-85470-85564-mushoku-tensei.json";
+
     /// <summary>AniList's media id for the Mushoku Tensei light novel.</summary>
     public const int MushokuTenseiNovelId = 85470;
 
@@ -46,6 +52,8 @@ internal static class AniListFixtures
     public const int MushokuTenseiMangaId = 85564;
 
     public static AniListSearchData LoadSearch(string fileName) => Load<AniListSearchData>(fileName);
+
+    public static AniListSearchData LoadRecommendations(string fileName) => Load<AniListSearchData>(fileName);
 
     public static AniListMedia LoadMedia(string fileName) =>
         Load<AniListMediaData>(fileName).Media
