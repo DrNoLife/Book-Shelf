@@ -107,7 +107,7 @@ public sealed class ImportBatchBuilderTests
         ImportOptions options) =>
         new(dbContext,
             matcher,
-            Substitute.For<ICoverCache>(),
+            Substitute.For<ISeriesCoverCache>(),
             Options.Create(options),
             TimeProvider.System,
             NullLogger<ImportBatchBuilder>.Instance);

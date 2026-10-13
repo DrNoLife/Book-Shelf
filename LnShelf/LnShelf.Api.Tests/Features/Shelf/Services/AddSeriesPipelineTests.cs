@@ -295,7 +295,7 @@ public sealed class AddSeriesPipelineTests
             [
                 new AniListAddSeriesFlow(
                     metadataSource,
-                    Substitute.For<ICoverCache>(),
+                    Substitute.For<ISeriesCoverCache>(),
                     new AddTimeReleaseLink(
                         SeriesCommandServiceTests.NoReleaseLink(),
                         dbContext,

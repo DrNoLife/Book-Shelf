@@ -5,11 +5,8 @@ namespace LnShelf.Api.Features.Covers.Abstractions;
 /// published it, so the shelf renders without that source's CDN being up
 /// (CLAUDE.md — External metadata).
 /// </summary>
-// A sibling of ICoverCache rather than a widening of it, for the reason IVolumeCoverCache
-// gives about the same interface: ICoverCache's signature is an AniList media id, and a
-// MangaUpdates id is eleven digits and does not fit in an int. The two are not a
-// disagreement — AniListCoverCache is now a six-line adapter onto this one, so the fetch,
-// the URL validation and the key layout all still exist exactly once.
+// Takes a long because a MangaUpdates id is eleven digits and does not fit in an int. The
+// fetch, the URL validation and the key layout all exist exactly once, behind this seam.
 public interface ISeriesCoverCache
 {
     /// <param name="source">

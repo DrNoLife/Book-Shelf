@@ -41,7 +41,7 @@ internal static class ImportPipelineHarness
         ImportOptions? options = null) =>
         new(dbContext,
             matcher ?? CreateUnmatchingMatcher(),
-            Substitute.For<ICoverCache>(),
+            Substitute.For<ISeriesCoverCache>(),
             Options.Create(options ?? new ImportOptions()),
             TimeProvider.System,
             NullLogger<ImportBatchBuilder>.Instance);

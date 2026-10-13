@@ -121,16 +121,25 @@ public sealed class ConsoleCommandLineTests
     }
 
     [Fact]
-    public void Option_ASwitchAtTheEndWithNoValue_ReturnsNull()
+    public void Option_ASwitchAtTheEndWithNoValue_Throws()
     {
         var commandLine = ConsoleCommandLine.Parse(["isbn-discover", "--out"]);
 
-        // Current behaviour, pinned rather than endorsed: the scan stops one short of the
-        // end, so a switch with nothing after it is indistinguishable from one never given —
-        // and IsbnDiscoverCommand then writes to its DefaultPath instead of where the caller
-        // meant. Telling the two apart needs a decision about what to do instead (refuse the
-        // run), which is a change to the commands, not to this parser.
-        commandLine.Option("out").ShouldBeNull();
+        // A switch with nothing after it is a mistake, not "not given": reading it as the
+        // latter made IsbnDiscoverCommand write to its DefaultPath instead of where the
+        // caller meant. The central handler turns this into a logged error and exit code 1.
+        var exception = Should.Throw<InvalidOperationException>(() => commandLine.Option("out"));
+
+        exception.Message.ShouldContain("--out");
+    }
+
+    [Fact]
+    public void Option_ASwitchAtTheEndWithNoValue_OtherSwitchesStillReadable()
+    {
+        var commandLine = ConsoleCommandLine.Parse(["enrichment-verify", "--series", "X", "--format"]);
+
+        commandLine.Option("series").ShouldBe("X");
+        Should.Throw<InvalidOperationException>(() => commandLine.Option("format"));
     }
 
     [Fact]

@@ -1079,10 +1079,14 @@ public sealed class SeriesCommandServiceTests
     }
 
     /// <summary>Pretends the cover was cached, so the stored key can be asserted.</summary>
-    private static ICoverCache CreateCoverCache()
+    private static ISeriesCoverCache CreateCoverCache()
     {
-        var coverCache = Substitute.For<ICoverCache>();
-        coverCache.EnsureCachedAsync(AniListId, Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        var coverCache = Substitute.For<ISeriesCoverCache>();
+        coverCache.EnsureCachedAsync(
+                MetadataSourceName.AniList,
+                AniListId,
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
             .Returns(CoverObjectKey);
 
         return coverCache;

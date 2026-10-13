@@ -326,7 +326,7 @@ public sealed class ImportCommandServiceTests
                 Volumes = [.. Enumerable.Range(1, 18).Select(number => new VolumeMetadata { Number = number })],
             });
 
-        var coverCache = Substitute.For<ICoverCache>();
+        var coverCache = Substitute.For<ISeriesCoverCache>();
 
         return new ImportCommandService(
             dbContext,

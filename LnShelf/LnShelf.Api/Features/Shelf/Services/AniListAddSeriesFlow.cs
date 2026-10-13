@@ -3,7 +3,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 /// <inheritdoc />
 public sealed class AniListAddSeriesFlow(
     ISeriesMetadataSource metadataSource,
-    ICoverCache coverCache,
+    ISeriesCoverCache coverCache,
     AddTimeReleaseLink releaseLink) : IAddSeriesFlow
 {
     public MetadataSourceName Source => MetadataSourceName.AniList;
@@ -50,7 +50,7 @@ public sealed class AniListAddSeriesFlow(
         // Fetched now rather than on first render: the shelf has to work with the
         // AniList CDN down, which means the bytes must already be local.
         var coverObjectKey = await coverCache.EnsureCachedAsync(
-            metadata.ExternalId, metadata.CoverImageUrl, cancellationToken);
+            MetadataSourceName.AniList, metadata.ExternalId, metadata.CoverImageUrl, cancellationToken);
 
         var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey);
 

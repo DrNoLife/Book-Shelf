@@ -12,7 +12,7 @@ namespace LnShelf.Api.Features.Import.Services;
 public sealed class ImportBatchBuilder(
     LnShelfDbContext dbContext,
     ISeriesMatcher seriesMatcher,
-    ICoverCache coverCache,
+    ISeriesCoverCache coverCache,
     IOptions<ImportOptions> options,
     TimeProvider timeProvider,
     ILogger<ImportBatchBuilder> logger)
@@ -172,7 +172,7 @@ public sealed class ImportBatchBuilder(
         // is the AniList id, so this same cover becomes the series' cover the
         // moment this candidate is chosen.
         var coverObjectKey = await coverCache.EnsureCachedAsync(
-            candidate.Result.AniListId, candidate.Result.CoverImageUrl, cancellationToken);
+            MetadataSourceName.AniList, candidate.Result.AniListId, candidate.Result.CoverImageUrl, cancellationToken);
 
         return new ImportCandidate
         {

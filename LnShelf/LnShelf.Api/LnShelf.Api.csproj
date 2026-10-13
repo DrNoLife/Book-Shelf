@@ -10,39 +10,39 @@
          uses EF Core directly, and pinning it here keeps one EF version across the
          solution (Npgsql 10.0.3 would otherwise pull 10.0.4 into the test project
          while Design pulled 10.0.10). -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <!-- HybridCache. 10.8.0 depends on Microsoft.Extensions.* 10.0.10, which is
          the version EF Core already pulls, so the graph stays on one set. -->
-    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
 
     <!-- CsvHelper for the StoryGraph export: quoted fields with embedded commas
          are exactly the thing not to hand-roll. No dependencies of its own. -->
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="CsvHelper" />
 
     <!-- Web Push (feature-spec §4.5): the RFC 8291 payload encryption and VAPID signing,
          which are exactly the thing not to hand-roll. On net5.0 and later it uses the
          framework's own crypto, with Lib.Net.Http.EncryptedContentEncoding as its only
          dependency (no BouncyCastle). -->
-    <PackageReference Include="Lib.Net.Http.WebPush" Version="3.3.1" />
+    <PackageReference Include="Lib.Net.Http.WebPush" />
 
     <!-- Cover normalization (feature-spec §4.3: cap dimensions, re-encode to webp,
          strip metadata). ImageSharp is under the Six Labors Split License, which is
          free for this project's use; it is the only practical option, since
          System.Drawing is Windows-only and the app ships in Linux containers. -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.3" />
+    <PackageReference Include="SixLabors.ImageSharp" />
 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
 
     <!-- Login (feature-spec §7): the API runs the OpenID Connect flow and keeps the session
          in a cookie, so the WASM bundle never holds a token. The data-protection keys that
          sign that cookie live in Postgres, so a container restart does not log anyone out. -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
   </ItemGroup>
 
   <ItemGroup>

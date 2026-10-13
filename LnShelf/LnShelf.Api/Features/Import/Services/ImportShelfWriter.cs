@@ -8,7 +8,7 @@ namespace LnShelf.Api.Features.Import.Services;
 public sealed class ImportShelfWriter(
     LnShelfDbContext dbContext,
     ISeriesMetadataSource metadataSource,
-    ICoverCache coverCache,
+    ISeriesCoverCache coverCache,
     UserLimits userLimits,
     TimeProvider timeProvider,
     ILogger<ImportShelfWriter> logger)
@@ -72,7 +72,7 @@ public sealed class ImportShelfWriter(
                 $"AniList no longer has a series with id {aniListId}; re-run the match for it.");
 
         var coverObjectKey = await coverCache.EnsureCachedAsync(
-            aniListId, metadata.CoverImageUrl, cancellationToken);
+            MetadataSourceName.AniList, aniListId, metadata.CoverImageUrl, cancellationToken);
 
         var series = SeriesMetadataMapper.ToTrackedSeries(metadata, coverObjectKey);
 

@@ -5,7 +5,7 @@ public sealed class ImportCommandService(
     LnShelfDbContext dbContext,
     ImportShelfWriter shelfWriter,
     ISeriesMetadataSource metadataSource,
-    ICoverCache coverCache,
+    ISeriesCoverCache coverCache,
     TimeProvider timeProvider,
     ILogger<ImportCommandService> logger) : IImportCommandService
 {
@@ -179,7 +179,7 @@ public sealed class ImportCommandService(
             ?? throw new InvalidInputException($"AniList has no series with id {aniListId}.");
 
         var coverObjectKey = await coverCache.EnsureCachedAsync(
-            aniListId, metadata.CoverImageUrl, cancellationToken);
+            MetadataSourceName.AniList, aniListId, metadata.CoverImageUrl, cancellationToken);
 
         group.Candidates.Add(new ImportCandidate
         {
