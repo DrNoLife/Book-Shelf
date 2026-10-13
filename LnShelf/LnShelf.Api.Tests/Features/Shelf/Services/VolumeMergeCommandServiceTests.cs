@@ -37,6 +37,7 @@ public sealed class VolumeMergeCommandServiceTests
         moved.OwnedFormat.ShouldBe(OwnedFormat.Physical);
         moved.PurchasedAt.ShouldBe(new DateOnly(2024, 1, 20));
         moved.PurchasePrice.ShouldBe(14.99m);
+        moved.NotifyWhenDated.ShouldBeTrue();
 
         // Re-keyed under the target, or the covers endpoint and the orphan sweep would treat it
         // as belonging to the deleted volume.
@@ -90,6 +91,7 @@ public sealed class VolumeMergeCommandServiceTests
         new VolumeUserState { OwnedFormat = OwnedFormat.Physical },
         new VolumeUserState { PurchasedAt = new DateOnly(2024, 5, 1) },
         new VolumeUserState { PurchasePrice = 9.99m },
+        new VolumeUserState { NotifyWhenDated = true },
         new VolumeUserState { CoverOverrideObjectKey = "override/volume/x/y.jpg" },
     };
 
@@ -244,6 +246,7 @@ public sealed class VolumeMergeCommandServiceTests
         OwnedFormat = OwnedFormat.Physical,
         PurchasedAt = new DateOnly(2024, 1, 20),
         PurchasePrice = 14.99m,
+        NotifyWhenDated = true,
         CoverOverrideObjectKey = coverKey,
     };
 

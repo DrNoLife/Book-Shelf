@@ -354,7 +354,7 @@ of them (the union, taken server-side over the one projected query: `GET
 means Behind, still work). All is exclusive and nothing chosen means All. A new status,
 **Owned** (at least one volume owned), is the "everything I own" view. The
 `DefaultLibraryFilter` single value became `DefaultLibraryFilters`, a set (Behind by
-default), stored as comma-separated names; the old column stays unused for one release.
+default), stored as comma-separated names; the old column is no longer mapped (0.31.0) and carries a database default until a later release drops it.
 `LibrarySectionOrder` orders the three sections under the library header (Continue
 reading, Out now, Shelf; that order by default); unknown names are skipped and missing
 sections appended, so no order can lose one. Both are set on the profile's Library card;

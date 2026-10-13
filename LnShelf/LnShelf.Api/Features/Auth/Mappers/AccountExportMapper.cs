@@ -140,6 +140,7 @@ public static class AccountExportMapper
         OwnedFormat = volume.UserState?.OwnedFormat,
         PurchasePrice = volume.UserState?.PurchasePrice,
         PurchasedAt = volume.UserState?.PurchasedAt,
+        NotifyWhenDated = volume.UserState?.NotifyWhenDated ?? false,
         CoverOverrideObjectKey = volume.UserState?.CoverOverrideObjectKey,
     };
 

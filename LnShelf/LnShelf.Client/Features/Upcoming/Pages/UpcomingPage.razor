@@ -29,6 +29,11 @@
             <p class="notice notice--message" role="status">@message</p>
         }
 
+        @if (State.Message is { } notifyMessage)
+        {
+            <p class="notice notice--message" role="status">@notifyMessage</p>
+        }
+
         @if (State.LoadFailed)
         {
             <p class="notice">Could not reach the API.</p>

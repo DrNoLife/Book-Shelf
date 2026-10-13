@@ -1,8 +1,12 @@
+@using LnShelf.Client.Features.Notifications
 @using LnShelf.Shared.Releases
+@implements IDisposable
 
 @* "Announced" (design: Upcoming.dc): volumes a source says exist, with no date yet. One line
-   per series. The mockup's "Notify me when dated" is left out until a notifier exists
-   (design.md, Not built). *@
+   per series. "Notify me when dated" is only a control where it changes something: the
+   digest already carries a date for an unmuted series, so there the line says so quietly,
+   and a muted series gets a toggle per volume, the one exception to its mute. Nothing extra
+   is shown while no device has notifications on. *@
 
 <section class="announced" aria-labelledby="announced-title">
     <div class="section-head">
@@ -23,6 +27,30 @@
                 <span class="line__text">
                     <a class="line__title" href="@($"/series/{entry.SeriesId}")">@entry.SeriesTitle</a>
                     <span class="line__volumes tabular">@VolumeNumberText.Describe(entry.VolumeNumbers)</span>
+                    @if (Notifications.HasDevices)
+                    {
+                        @if (entry.NotificationsMuted)
+                        {
+                            <span class="line__notify">
+                                @for (var index = 0; index < entry.VolumeIds.Count; index++)
+                                {
+                                    var volumeId = entry.VolumeIds[index];
+                                    var number = entry.VolumeNumbers[index];
+                                    var isOn = entry.NotifyWhenDatedVolumeIds.Contains(volumeId);
+
+                                    <button type="button" class="tertiary" aria-pressed="@(isOn ? "true" : "false")"
+                                            disabled="@(_busyVolumeId == volumeId)"
+                                            @onclick="() => ToggleAsync(volumeId, !isOn)">
+                                        <span class="visually-hidden">Vol @number.ToVolumeText(): </span>@AnnouncedNotifyText.Label(isOn)
+                                    </button>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="fine">@AnnouncedNotifyText.AlreadyToldNote</span>
+                        }
+                    }
                 </span>
                 <FormatBadge Value="entry.Format" />
             </li>
@@ -34,6 +62,43 @@
     [Inject]
     public required ApiUrlBuilder ApiUrls { get; set; }
 
+    [Inject]
+    public required NotificationsState Notifications { get; set; }
+
+    [Inject]
+    public required UpcomingState State { get; set; }
+
     [Parameter]
     public required IReadOnlyList<UpcomingEntryResponse> Entries { get; set; }
+
+    private Guid? _busyVolumeId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Notifications.Changed += OnNotificationsChanged;
+
+        // Once per visit to the app: the devices do not change between pages.
+        if (Notifications.Settings is null)
+        {
+            await Notifications.LoadAsync();
+        }
+    }
+
+    public void Dispose() => Notifications.Changed -= OnNotificationsChanged;
+
+    private void OnNotificationsChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ToggleAsync(Guid volumeId, bool notifyWhenDated)
+    {
+        _busyVolumeId = volumeId;
+
+        try
+        {
+            await State.SetNotifyWhenDatedAsync(volumeId, notifyWhenDated);
+        }
+        finally
+        {
+            _busyVolumeId = null;
+        }
+    }
 }

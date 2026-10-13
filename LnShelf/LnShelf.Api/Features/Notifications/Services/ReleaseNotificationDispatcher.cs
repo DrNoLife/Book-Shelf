@@ -67,11 +67,15 @@ public sealed class ReleaseNotificationDispatcher(
         var now = timeProvider.GetUtcNow();
         var staleBefore = now - StaleAfter;
 
+        var flagged = await LoadFlaggedVolumesAsync(pending, cancellationToken);
+
         // Muted series still record their events, for "Since your last visit"; mute is about
-        // pushes only (D6).
+        // pushes only (D6). The one exception is a volume the reader flagged "notify me when
+        // dated": the event that dates or releases it goes out even from a muted series.
         var toSend = pending
             .Where(shelfEvent => shelfEvent.OccurredAt >= staleBefore
-                                 && shelfEvent.Series?.UserState?.NotificationsMuted is not true)
+                                 && (shelfEvent.Series?.UserState?.NotificationsMuted is not true
+                                     || FlaggedVolume(flagged, shelfEvent) is not null))
             .ToList();
 
         var delivery = toSend.Count > 0 && notifier.IsAvailable
@@ -82,6 +86,13 @@ public sealed class ReleaseNotificationDispatcher(
         foreach (var shelfEvent in pending.Where(shelfEvent => !keepPending.Contains(shelfEvent)))
         {
             shelfEvent.NotifiedAt = now;
+
+            // One-shot: the flag is spent with the event it was waiting for, in the same save,
+            // so a retried event keeps its flag and a handled one cannot fire twice.
+            if (FlaggedVolume(flagged, shelfEvent) is { } volume)
+            {
+                volume.UserState!.NotifyWhenDated = false;
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -95,6 +106,28 @@ public sealed class ReleaseNotificationDispatcher(
             pending.Count - toSend.Count,
             delivery.ShouldRetry ? "; will retry" : string.Empty);
     }
+
+    private async Task<Dictionary<(Guid SeriesId, decimal Number), Volume>> LoadFlaggedVolumesAsync(
+        List<ShelfEvent> pending,
+        CancellationToken cancellationToken)
+    {
+        var seriesIds = pending.Select(shelfEvent => shelfEvent.SeriesId).Distinct().ToList();
+
+        var volumes = await dbContext.Volumes
+            .Include(volume => volume.UserState)
+            .Where(volume => seriesIds.Contains(volume.SeriesId)
+                             && volume.UserState != null && volume.UserState.NotifyWhenDated)
+            .ToListAsync(cancellationToken);
+
+        return volumes.ToDictionary(volume => (volume.SeriesId, volume.Number));
+    }
+
+    // Only an event that dates or releases the volume counts: VolumeAnnounced says the volume
+    // exists, and the flag is about a date arriving.
+    private static Volume? FlaggedVolume(Dictionary<(Guid SeriesId, decimal Number), Volume> flagged, ShelfEvent shelfEvent) =>
+        shelfEvent.Kind is ShelfEventKind.ReleaseDateChanged or ShelfEventKind.VolumeReleased
+            ? flagged.GetValueOrDefault((shelfEvent.SeriesId, shelfEvent.VolumeNumber))
+            : null;
 
     // Loaded and removed rather than ExecuteDelete: the rows are few (one user's 120 days),
     // and this keeps the prune on the same owner-filtered, tracked path the tests can run.

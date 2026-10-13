@@ -103,8 +103,11 @@
            Every width, because on a phone there is no other way to grow one. *@
         @if (ManualSeries.IsKeptByHand(Series))
         {
+            <input class="volumes__number tabular" type="text" inputmode="decimal" autocomplete="off"
+                   aria-label="Volume number to add" placeholder="@NextVolumeNumber.ToVolumeText()"
+                   @bind="_numberText" @bind:event="oninput" @onkeydown="OnNumberKeyDownAsync" />
             <button type="button" class="secondary" disabled="@SeriesState.IsSaving" @onclick="AddVolumeAsync">
-                Add Vol @NextVolumeNumber.ToVolumeText()
+                Add Vol @((TypedNumber ?? NextVolumeNumber).ToVolumeText())
             </button>
         }
     }

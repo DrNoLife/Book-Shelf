@@ -29,14 +29,6 @@ public sealed record PreferencesResponse
     public required bool ShowVolumeTitles { get; init; }
 
     /// <summary>
-    /// The single default the multi-select replaced. Nothing reads it any more.
-    /// </summary>
-    // Still sent for one release: a browser holding the previous client bundle deserializes
-    // this record with the property required, and would fail on its absence. Removed with the
-    // column a release later (data-access.md, expand then contract).
-    public required LibraryFilter DefaultLibraryFilter { get; init; }
-
-    /// <summary>
     /// The status filters the shelf opens on when this browser has none of its own
     /// remembered. Normalised (<see cref="LibraryFilterSet.Normalize"/>); Behind by default.
     /// </summary>

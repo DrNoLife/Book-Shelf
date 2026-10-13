@@ -31,6 +31,15 @@ public sealed record UpcomingEntryResponse
     /// </summary>
     public string? VolumeTitle { get; init; }
 
+    /// <summary>Whether the series is muted, which decides whether "Notify me when dated" is offered.</summary>
+    public bool NotificationsMuted { get; init; }
+
+    /// <summary>
+    /// The volumes of this line the reader asked to be told about once they are dated: a subset
+    /// of <see cref="VolumeIds"/>, filled on the "Announced" group only.
+    /// </summary>
+    public IReadOnlyList<Guid> NotifyWhenDatedVolumeIds { get; init; } = [];
+
     /// <summary>Set on the dated groups; null on "Out now" and "Announced".</summary>
     public DateOnly? ReleaseDate { get; init; }
 }
