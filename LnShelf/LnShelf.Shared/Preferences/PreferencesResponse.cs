@@ -28,6 +28,11 @@ public sealed record PreferencesResponse
     /// </summary>
     public required bool ShowVolumeTitles { get; init; }
 
+    /// <summary>The first of <see cref="DefaultLibraryFilters"/>, as the single value 0.30.0 sent.</summary>
+    // Still sent for one release so a browser holding the 0.30 bundle, which declares this
+    // property required, can read the response. Remove in the release after 0.31.0.
+    public required LibraryFilter DefaultLibraryFilter { get; init; }
+
     /// <summary>
     /// The status filters the shelf opens on when this browser has none of its own
     /// remembered. Normalised (<see cref="LibraryFilterSet.Normalize"/>); Behind by default.

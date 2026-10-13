@@ -63,11 +63,19 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
         // ten-volume series used to get 6 to 10 and never 1 or 4 (audit 2026-10-09).
         CreateMissingVolumes(series, run, sourceCount, trackedCount);
 
+        // Counted before the flip, on the volumes as they stand: one already out by its date
+        // raised the badge in SeriesRefresher.IsNewVolumeOut when that date came, and the
+        // count catching up later must not raise it a second time.
+        var newlyOutByCount = series.Volumes.Count(volume =>
+            volume.Number <= sourceCount
+            && MayMarkReleased(series, volume, includeLocalOnly: true)
+            && !(volume.ReleaseDate <= today));
+
         // Once, and after any new volumes exist, so the ones just created are covered by
         // the same pass rather than by a second identical loop.
-        var newlyReleased = MarkReleasedThrough(series, sourceCount, run, includeLocalOnly: true);
+        MarkReleasedThrough(series, sourceCount, run, includeLocalOnly: true);
 
-        if (refreshedBefore && newlyReleased > 0)
+        if (refreshedBefore && newlyOutByCount > 0)
         {
             NewVolumeFlag.Raise(series);
         }

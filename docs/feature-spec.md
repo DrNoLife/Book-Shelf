@@ -344,9 +344,16 @@ guessed.
   - Subscriptions are accepted only for https endpoints on the known push services
     (FCM, Mozilla, WNS, APNs), unique per (user, endpoint). Off when the server has no
     `WebPush` keys; `vapid-keys` prints a pair.
-- Notification preferences: global on/off + per-series mute. Nothing fancier. On/off is
-  per device (a push subscription, from the profile's Notifications card); mute is
-  `SeriesUserState.NotificationsMuted`, from the series page, and affects pushes only.
+- Notification preferences: global on/off + per-series mute + a per-volume "Notify me
+  when dated". Nothing fancier. On/off is per device (a push subscription, from the
+  profile's Notifications card); mute is `SeriesUserState.NotificationsMuted`, from the
+  series page, and affects pushes only. "Notify me when dated" is a one-shot flag
+  (`VolumeUserState.NotifyWhenDated`) shown on the Announced lines of muted series, for a
+  volume with no date yet: the event that dates or releases it (`ReleaseDateChanged` or
+  `VolumeReleased`) is pushed even though the series is muted, and the dispatcher then
+  clears the flag in the same save as it marks the event handled (a retried event keeps
+  it). It cannot be set on a volume that already has a date or is out (409). The activity
+  log is unaffected: muted series record their events either way.
 
 ### 4.6 Preferences
 
@@ -592,7 +599,11 @@ VolumeUserState
   VolumeId (PK/FK), ReadStatus (Unread|Reading|Read), ReadAt (nullable),
   Owned (bool), OwnedFormat (Physical|Digital, nullable),
   PurchasedAt (nullable), PurchasePrice (nullable),
-  CoverOverrideObjectKey (nullable)
+  CoverOverrideObjectKey (nullable),
+  NotifyWhenDated (bool, default false)
+  -- A stored request, not a derivation: one-shot "push me when this volume is dated" for
+  -- a volume of a muted series. Cleared by ReleaseNotificationDispatcher once the
+  -- date or release event has been handled (§4.5).
 
 User   [added 2026-10-10]
   Id, Issuer, Subject (unique together), Email, CreatedAt, LastSeenAt
@@ -731,6 +742,9 @@ GET    /api/series/{id}/release-link/candidates?q=  MangaUpdates search for a ha
 PUT    /api/series/{id}/release-link   { mangaUpdatesId }  link + refresh; answers { series, refreshed }
 
 GET/PUT /api/preferences
+
+PUT    /api/volumes/{id}/notify-when-dated  { notifyWhenDated }  204; 404 unknown volume, 409 when
+                                                   setting it on a volume that already has a date
 
 GET    /api/activity                               "Since your last visit": shelf_event rows after
                                                    UserPreferences.ActivitySeenAt (never seen = the

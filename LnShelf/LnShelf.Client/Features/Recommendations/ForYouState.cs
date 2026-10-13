@@ -7,6 +7,10 @@ public sealed class ForYouState(RecommendationsClient client) : IDisposable
 {
     private CancellationTokenSource? _loadCancellation;
 
+    // Works hidden while a load is in flight: that load may have read the page before the
+    // dismissal landed, so its answer is corrected with these before it is published.
+    private readonly HashSet<int> _dismissedDuringLoad = [];
+
     /// <summary>Null while loading, and while a failed load has nothing to show.</summary>
     public ForYouResponse? Response { get; private set; }
 
@@ -33,13 +37,20 @@ public sealed class ForYouState(RecommendationsClient client) : IDisposable
         }
 
         var cancellation = _loadCancellation = new CancellationTokenSource();
+        _dismissedDuringLoad.Clear();
         LoadFailed = false;
         Changed?.Invoke();
 
         try
         {
-            Response = await client.GetForYouAsync(cancellation.Token);
+            var loaded = await client.GetForYouAsync(cancellation.Token);
             Dismissals = await client.GetDismissalsAsync(cancellation.Token);
+
+            // Published only now, so a dismissal made while the fetches ran cannot be undone
+            // by an answer that predates it.
+            Response = loaded is null
+                ? null
+                : _dismissedDuringLoad.Aggregate(loaded, ForYouRows.Without);
             LoadFailed = Response is null;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -70,6 +81,7 @@ public sealed class ForYouState(RecommendationsClient client) : IDisposable
         try
         {
             await client.DismissAsync(work, CancellationToken.None);
+            _dismissedDuringLoad.Add(work.AniListId);
 
             if (Response is { } response)
             {

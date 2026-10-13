@@ -152,6 +152,42 @@ public sealed class ReleaseCountWriterTests
         series.Volumes.Single(volume => volume.Number == 14).IsReleased.ShouldBeTrue();
     }
 
+    // The volume came out by its date, which already raised the badge; the count agreeing
+    // later is not a second new volume.
+    [Fact]
+    public void Apply_CountCatchesUpWithAVolumeAlreadyOutByDate_DoesNotRaiseTheBadgeAgain()
+    {
+        var series = CreateSeries(volumeCount: 3, released: false);
+        series.Volumes.Single(volume => volume.Number == 3).ReleaseDate = Today.AddDays(-5);
+        series.Volumes.Single(volume => volume.Number == 2).ReleaseDate = Today;
+        series.Volumes.Single(volume => volume.Number == 1).ReleaseDate = Today.AddDays(-90);
+
+        CreateWriter().Apply(series, Info(volumeCount: 3), NewRun(), refreshedBefore: true, Today);
+
+        series.Volumes.ShouldAllBe(volume => volume.IsReleased);
+        series.UserState!.HasNewVolume.ShouldBeFalse();
+    }
+
+    // A volume the date has not brought out yet, flipped by the count alone, is news as before.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Apply_CountReleasesAVolumeNotYetOutByDate_RaisesTheBadge(bool hasFutureDate)
+    {
+        var series = CreateSeries(volumeCount: 3, released: false);
+        series.Volumes.Single(volume => volume.Number == 1).ReleaseDate = Today.AddDays(-90);
+        series.Volumes.Single(volume => volume.Number == 2).ReleaseDate = Today.AddDays(-30);
+
+        if (hasFutureDate)
+        {
+            series.Volumes.Single(volume => volume.Number == 3).ReleaseDate = Today.AddDays(3);
+        }
+
+        CreateWriter().Apply(series, Info(volumeCount: 3), NewRun(), refreshedBefore: true, Today);
+
+        series.UserState!.HasNewVolume.ShouldBeTrue();
+    }
+
     private static ReleaseCountWriter CreateWriter()
     {
         var releaseSource = Substitute.For<IReleaseSource>();

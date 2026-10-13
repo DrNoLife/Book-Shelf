@@ -184,7 +184,9 @@ mute on the series page. Still open:
 - **Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.** 0.31.0 stopped
   mapping the column (`DefaultLibraryFilters` replaced it) and gave it a database default so the
   0.30.0 image still inserts; with no rollback to 0.30 left, a migration drops it (the contract
-  step of `data-access.md`).
+  step of `data-access.md`). Drop the `DefaultLibraryFilter` property from `PreferencesResponse`
+  in the same release: 0.31.0 still sends it so a browser holding the 0.30 bundle can read the
+  response.
 - **Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
   real-iPhone test of Home Screen sign-in and the Enable tap (§6).
 - **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
