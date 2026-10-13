@@ -1,5 +1,6 @@
 @page "/series/{SeriesId:guid}"
 @using LnShelf.Client.Features.Series.Components
+@using LnShelf.Client.Features.Recommendations.Components
 @using LnShelf.Client.Features.Notifications.Components
 
 <div class="page series">
@@ -95,6 +96,9 @@
 
             @* Asks AniList after the page has drawn; renders nothing until it has something. *@
             <MoreByAuthor Series="Series" />
+
+            @* Likewise: what readers of this series recommend; nothing until it has an answer. *@
+            <ReadersAlsoLiked Series="Series" />
 
             @* NOTES left, SYNC right, as the mockup lays out the foot of the page. *@
             <div class="series__foot">

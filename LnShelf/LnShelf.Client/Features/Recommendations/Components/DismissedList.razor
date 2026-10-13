@@ -1,0 +1,22 @@
+@* What Not interested has hidden, closed until asked for, each with Show again. *@
+
+<details class="dismissed">
+    <summary class="dismissed__summary">@RecommendationText.DismissedSummary(Dismissals.Count)</summary>
+
+    <ul class="dismissed__list">
+        @foreach (var dismissal in Dismissals)
+        {
+            <li class="dismissed__line" @key="dismissal.AniListId">
+                <FormatBadge Value="dismissal.Format" />
+                <span class="dismissed__title">@dismissal.Title</span>
+                <button type="button"
+                        class="ghost"
+                        disabled="@State.IsChangingDismissal"
+                        aria-label="@RecommendationText.ShowAgainLabel(dismissal.Title)"
+                        @onclick="() => State.ShowAgainAsync(dismissal)">
+                    Show again
+                </button>
+            </li>
+        }
+    </ul>
+</details>

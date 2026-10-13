@@ -1,0 +1,19 @@
+@* "Readers of {title} also liked": works AniList readers recommend, as cover tiles that scroll
+   sideways. Asked for after the page has drawn and never in its way: nothing renders while it
+   loads, on a failure, or when there is nothing to suggest. *@
+
+@if (_works is { Count: > 0 } works)
+{
+    <section class="also-liked" aria-labelledby="also-liked-title">
+        <div class="section-head">
+            <h2 id="also-liked-title" class="title-section">@RecommendationText.AlsoLikedHeading(Series.TitleEnglish)</h2>
+        </div>
+
+        @if (AddState.Message is { } message)
+        {
+            <p class="notice notice--message" role="status">@message</p>
+        }
+
+        <RecommendationTileRow Works="works" />
+    </section>
+}

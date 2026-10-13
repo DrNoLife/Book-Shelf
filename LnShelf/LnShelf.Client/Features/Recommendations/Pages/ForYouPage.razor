@@ -1,0 +1,65 @@
+@page "/for-you"
+@using LnShelf.Client.Features.Recommendations.Components
+
+@* "What should I read next?": works readers of the user's own series recommend, one
+   "Because you read X" row per series. Not interested hides a work for good; the hidden list
+   at the foot brings it back. *@
+
+<div class="page for-you">
+    <div class="page__stack">
+
+        <header class="for-you__head">
+            <h1 class="for-you__title">For you</h1>
+            @if (State.Response is { SeedCount: > 0 } seeded)
+            {
+                <p class="lead">@RecommendationText.SeedLine(seeded.SeedCount)</p>
+            }
+        </header>
+
+        @if (AddState.Message is { } addMessage)
+        {
+            <p class="notice notice--message" role="status">@addMessage</p>
+        }
+
+        @if (State.Message is { } message)
+        {
+            <p class="notice notice--message" role="status">
+                @message
+                @if (State.LastDismissed is not null)
+                {
+                    <button type="button" class="ghost" disabled="@State.IsChangingDismissal" @onclick="State.UndoAsync">Undo</button>
+                }
+            </p>
+        }
+
+        @if (State.LoadFailed)
+        {
+            <p class="notice">@RecommendationText.LoadFailed</p>
+        }
+        else if (State.Response is not { } response)
+        {
+            <p class="notice"><BusyIndicator /> Finding suggestions…</p>
+        }
+        else if (response.SeedCount == 0)
+        {
+            <p class="notice">@RecommendationText.NothingToGoOn</p>
+        }
+        else if (response.Rows.Count == 0)
+        {
+            <p class="notice">@RecommendationText.NothingNew</p>
+        }
+        else
+        {
+            @foreach (var row in response.Rows)
+            {
+                <ForYouRow @key="row.BecauseOfSeriesId" Row="row" />
+            }
+        }
+
+        @if (State.Dismissals.Count > 0)
+        {
+            <DismissedList Dismissals="State.Dismissals" />
+        }
+
+    </div>
+</div>

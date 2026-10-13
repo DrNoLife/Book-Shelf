@@ -1,0 +1,32 @@
+.dismissed__summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.dismissed__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dismissed__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  border-top: 1px solid var(--line);
+}
+
+.dismissed__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

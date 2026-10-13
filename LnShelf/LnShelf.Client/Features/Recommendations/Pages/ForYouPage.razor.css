@@ -1,0 +1,21 @@
+.for-you {
+  --page-width: 1240px;
+  --page-gap: 40px;
+}
+
+.for-you__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.for-you__title {
+  font-size: var(--fs-page-title);
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .for-you { --page-gap: 30px; }
+
+  .for-you__title { font-size: var(--fs-stat-medium); }
+}

@@ -1,0 +1,65 @@
+@implements IDisposable
+@inject ApiUrlBuilder ApiUrl
+
+@* One row of suggested works as small cover tiles that scroll sideways, laid out like
+   "More by {author}". Add goes through the page-wide add state, so one Add runs at a time. *@
+
+<ul class="tiles">
+    @foreach (var work in Works)
+    {
+        <li class="tiles__item" @key="work.AniListId">
+            <span class="tiles__cover" aria-hidden="true">
+                @if (work.CoverObjectKey is { } coverObjectKey)
+                {
+                    <img class="tiles__art" src="@ApiUrl.Cover(coverObjectKey)" alt="" loading="lazy" />
+                }
+            </span>
+            <FormatBadge Value="work.Format" />
+            <span class="tiles__title" title="@work.TitleEnglish">@work.TitleEnglish</span>
+            <span class="tiles__votes">
+                @RecommendationText.Votes(work.Votes)
+                @if (RecommendationText.OtherSeeds(work.OtherSeedCount) is { } others)
+                {
+                    <span> · @others</span>
+                }
+            </span>
+
+            @if (AddState.Added.TryGetValue(work.AniListId, out var shelfSeriesId))
+            {
+                <a class="ghost tiles__action tiles__action--first" href="@($"series/{shelfSeriesId}")">On your shelf →</a>
+            }
+            else
+            {
+                var isAddingThis = AddState.AddingAniListId == work.AniListId;
+                <button type="button"
+                        class="secondary tiles__action tiles__action--first"
+                        disabled="@AddState.IsAdding"
+                        aria-busy="@isAddingThis.ToAriaState()"
+                        aria-label="@(isAddingThis ? $"Adding {work.TitleEnglish} to the shelf…" : $"Add {work.TitleEnglish} to the shelf")"
+                        @onclick="() => AddState.AddAsync(work)">
+                    @if (isAddingThis)
+                    {
+                        <BusyIndicator />
+                        <span>Adding…</span>
+                    }
+                    else
+                    {
+                        <span>Add</span>
+                    }
+                </button>
+            }
+
+            @if (NotInterested.HasDelegate)
+            {
+                @* No indicator: hiding is a quick local write. *@
+                <button type="button"
+                        class="ghost tiles__action"
+                        disabled="@(IsDismissing || AddState.IsAdding)"
+                        aria-label="@RecommendationText.NotInterestedLabel(work.TitleEnglish)"
+                        @onclick="() => NotInterested.InvokeAsync(work)">
+                    Not interested
+                </button>
+            }
+        </li>
+    }
+</ul>
