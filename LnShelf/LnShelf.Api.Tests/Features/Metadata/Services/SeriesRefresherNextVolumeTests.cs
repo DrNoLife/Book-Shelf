@@ -130,6 +130,35 @@ public sealed class SeriesRefresherNextVolumeTests
     }
 
     [Fact]
+    public async Task RefreshAsync_TheRecordGoneWhileAKnownVolumeComesOut_DoesNotRaiseTheBadgeEveryNight()
+    {
+        // The MangaUpdates record was removed after the last sync, so LastSyncedAt stands
+        // still and Vol. 14's date passing is seen again on every refresh. Clearing the badge
+        // must stick.
+        var series = OwnersShelf();
+        series.Volumes.Add(new Volume
+        {
+            Id = Guid.CreateVersion7(),
+            Number = 14,
+            ReleaseDate = Volume14Date,
+            ReleaseDateSource = MetadataSourceName.AppleBooks,
+        });
+        var clock = new MutableTimeProvider(new DateTimeOffset(Volume14Date.AddDays(1), new TimeOnly(4, 0), TimeSpan.Zero));
+        var refresher = CreateRefresher(clock, recordGone: true);
+
+        foreach (var night in Enumerable.Range(0, 2))
+        {
+            clock.UtcNow = clock.UtcNow.AddDays(night);
+            series.UserState!.HasNewVolume = false;
+
+            var (_, events) = await RefreshAsync(refresher, series);
+
+            events.ShouldContain(shelfEvent => shelfEvent.Kind == ShelfEventKind.VolumeReleased);
+            series.UserState.HasNewVolume.ShouldBeFalse();
+        }
+    }
+
+    [Fact]
     public async Task RefreshAsync_UnderAVolumeCountChoice_CreatesNothing()
     {
         // The user settled the count by hand; the store does not reopen it.
@@ -177,12 +206,13 @@ public sealed class SeriesRefresherNextVolumeTests
     private static SeriesRefresher CreateRefresher(
         TimeProvider timeProvider,
         IVolumeCatalogueSource? catalogue = null,
-        int volumeCount = 13)
+        int volumeCount = 13,
+        bool recordGone = false)
     {
         var releaseSource = Substitute.For<IReleaseSource>();
         releaseSource.SourceName.Returns("MangaUpdates");
         releaseSource.GetSeriesAsync(MangaUpdatesId, Arg.Any<CancellationToken>())
-            .Returns(new ReleaseSeriesInfo
+            .Returns(recordGone ? null : new ReleaseSeriesInfo
             {
                 ExternalId = MangaUpdatesId,
                 Title = "86―EIGHTY-SIX",

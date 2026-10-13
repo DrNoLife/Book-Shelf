@@ -15,7 +15,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // one field it names; this class reads choices and never writes them.
 public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<ReleaseCountWriter> logger)
 {
-    public void Apply(Series series, ReleaseSeriesInfo info, SyncRun run, bool refreshedBefore)
+    public void Apply(Series series, ReleaseSeriesInfo info, SyncRun run, bool refreshedBefore, DateOnly today)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(info);
@@ -54,7 +54,7 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
             // The shelf's own list stands as the count: no volume is created, and every
             // synced one counts as out. A choice is the user's act, so it never raises the
             // new-volume badge either.
-            MarkReleasedThrough(series, series.Volumes.Max(volume => (decimal?)volume.Number) ?? 0, run, includeLocalOnly: false);
+            MarkShelfListReleased(series, run, today);
             return;
         }
 
@@ -100,10 +100,44 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
 
         foreach (var volume in series.Volumes)
         {
-            if (volume.Number > count
-                || volume.IsReleased
-                || (volume.IsLocalOnly && !includeLocalOnly)
-                || series.HasDateSourceChoice(volume.Number))
+            if (volume.Number > count || !MayMarkReleased(series, volume, includeLocalOnly))
+            {
+                continue;
+            }
+
+            volume.IsReleased = true;
+            newlyReleased++;
+
+            if (run is not null)
+            {
+                run.VolumesMarkedReleased++;
+            }
+        }
+
+        return newlyReleased;
+    }
+
+    /// <summary>
+    /// Marks every synced volume on the shelf as published, because under a volume-count choice
+    /// of AniList the shelf's own list is the count.
+    /// </summary>
+    /// <param name="run">Counted into when given; a choice made by the user passes none.</param>
+    /// <returns>How many volumes this call flipped.</returns>
+    // Not a volume the release source has not counted yet that carries a date still to come:
+    // 86's Vol. 14, which the store created as a pre-order while MangaUpdates counts 13. The
+    // shelf's list holds it only because it is announced, so calling it in print would list a
+    // December book as out and to buy in October. Its date decides, as it does without the
+    // choice (NextMainVolumeWriter), and once that date has passed it counts like the rest.
+    public static int MarkShelfListReleased(Series series, SyncRun? run, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+
+        var newlyReleased = 0;
+
+        foreach (var volume in series.Volumes)
+        {
+            if (!MayMarkReleased(series, volume, includeLocalOnly: false)
+                || IsAnnouncedPastTheCount(series, volume, today))
             {
                 continue;
             }
@@ -160,6 +194,16 @@ public sealed class ReleaseCountWriter(IReleaseSource releaseSource, ILogger<Rel
                 choice));
         }
     }
+
+    private static bool MayMarkReleased(Series series, Volume volume, bool includeLocalOnly) =>
+        !volume.IsReleased
+        && (!volume.IsLocalOnly || includeLocalOnly)
+        && !series.HasDateSourceChoice(volume.Number);
+
+    private static bool IsAnnouncedPastTheCount(Series series, Volume volume, DateOnly today) =>
+        series.ReleaseSourceVolumeCount is { } count
+        && volume.Number > count
+        && volume.ReleaseDate > today;
 
     private void CreateMissingVolumes(Series series, SyncRun run, int sourceCount, int trackedCount)
     {

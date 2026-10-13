@@ -14,7 +14,9 @@ namespace LnShelf.Api.Features.Metadata.Services;
 //
 // Every choice is applied from *the value the user saw in the diff* — the newest recorded row
 // — and never by calling a source.
-public sealed class SourceChoiceApplier
+// The clock is the one thing it reads: a volume-count choice leaves a pre-order whose date is
+// still to come as not out (ReleaseCountWriter.MarkShelfListReleased).
+public sealed class SourceChoiceApplier(TimeProvider timeProvider)
 {
     /// <param name="recorded">The newest recorded disagreement for the choice's key.</param>
     public void Apply(Series series, SourceChoice choice, SyncDiscrepancy? recorded)
@@ -33,8 +35,7 @@ public sealed class SourceChoiceApplier
             case { Field: SyncDiscrepancyField.VolumeCount, Source: MetadataSourceName.AniList }:
                 // The shelf's own list is the count: every synced volume is out. Nothing is
                 // deleted or created, and the user's own act raises no badge.
-                ReleaseCountWriter.MarkReleasedThrough(
-                    series, series.Volumes.Max(volume => (decimal?)volume.Number) ?? 0, run: null, includeLocalOnly: false);
+                ReleaseCountWriter.MarkShelfListReleased(series, run: null, timeProvider.Today());
                 break;
 
             case { Field: SyncDiscrepancyField.Status, Source: MetadataSourceName.MangaUpdates }:

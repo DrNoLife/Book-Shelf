@@ -269,7 +269,7 @@ public sealed class SourceChoiceCommandServiceTests
     private static SourceChoiceCommandService CreateService(LnShelfDbContext dbContext) =>
         new(
             dbContext,
-            new SourceChoiceApplier(),
+            new SourceChoiceApplier(TimeProvider.System),
             new SeriesDetailQueryService(dbContext, TimeProvider.System),
             TimeProvider.System);
 }

@@ -9,7 +9,7 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 /// </summary>
 public sealed class SourceChoiceApplierTests
 {
-    private readonly SourceChoiceApplier _applier = new();
+    private readonly SourceChoiceApplier _applier = new(TimeProvider.System);
 
     [Theory]
     [InlineData(MetadataSourceName.AppleBooks)]
@@ -54,6 +54,19 @@ public sealed class SourceChoiceApplierTests
 
         series.Volumes.Where(volume => !volume.IsLocalOnly).ShouldAllBe(volume => volume.IsReleased);
         series.Volumes.Single(volume => volume.IsLocalOnly).IsReleased.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Apply_VolumeCountChoiceOfAniList_LeavesAPreOrderPastTheCountUnreleased()
+    {
+        // The store's next volume, dated after today: the shelf's list holds it only because
+        // it is announced, so choosing that list must not call it out.
+        var series = CreateSeries(volumeCount: 4);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 5, ReleaseDate = FirstDate });
+
+        _applier.Apply(series, Choice(SyncDiscrepancyField.VolumeCount, null, MetadataSourceName.AniList), recorded: null);
+
+        series.Volumes.Single(volume => volume.Number == 5).IsReleased.ShouldBeFalse();
     }
 
     [Fact]

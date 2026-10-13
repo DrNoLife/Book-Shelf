@@ -55,7 +55,7 @@ public sealed class SeriesRefresher(
 
         if (info is not null)
         {
-            releaseCountWriter.Apply(series, info, run, refreshedBefore);
+            releaseCountWriter.Apply(series, info, run, refreshedBefore, today);
             publicationStatusWriter.Apply(series, info, run);
 
             // Metadata, never the reader's chapter (that is user state). Only a value is
@@ -83,7 +83,7 @@ public sealed class SeriesRefresher(
             ? []
             : ShelfEventDiff.Compare(snapshot, series, today, timeProvider.GetUtcNow());
 
-        if (refreshedBefore && IsNewVolumeOut(snapshot, events, nextVolumes, today))
+        if (refreshedBefore && IsNewVolumeOut(snapshot, events, nextVolumes, today, releaseSourceAnswered: info is not null))
         {
             NewVolumeFlag.Raise(series);
         }
@@ -141,14 +141,21 @@ public sealed class SeriesRefresher(
         ShelfSnapshot? snapshot,
         IReadOnlyList<ShelfEvent> events,
         IReadOnlyList<Volume> nextVolumes,
-        DateOnly today)
+        DateOnly today,
+        bool releaseSourceAnswered)
     {
         if (nextVolumes.Any(volume => volume.ReleaseDate <= today))
         {
             return true;
         }
 
-        if (snapshot is null)
+        // Only when the release source answered, because only then does LastSyncedAt move on.
+        // With no answer the snapshot's day stays put, so a volume whose date passed after it
+        // comes out again on every refresh: the activity log drops the repeats
+        // (SeriesSyncService.AddEventsAsync), but a badge raised from them would come back
+        // every night after the reader cleared it. The cost is no badge for a volume the shelf
+        // had that comes out while the record is missing; its activity entry is still logged.
+        if (snapshot is null || !releaseSourceAnswered)
         {
             return false;
         }

@@ -7,6 +7,8 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 /// </summary>
 public sealed class ReleaseCountWriterTests
 {
+    private static readonly DateOnly Today = new(2026, 10, 13);
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -28,7 +30,7 @@ public sealed class ReleaseCountWriterTests
             CountEvidence = "Yen On: 9 Volumes; Ongoing",
         };
 
-        CreateWriter().Apply(series, info, NewRun(), refreshedBefore: true);
+        CreateWriter().Apply(series, info, NewRun(), refreshedBefore: true, Today);
 
         series.ReleaseSourceVolumeCount.ShouldBe(9);
         series.VolumeCountBasis.ShouldBe(VolumeCountBasis.EnglishPublisherNote);
@@ -43,7 +45,7 @@ public sealed class ReleaseCountWriterTests
         series.VolumeCountBasis = VolumeCountBasis.MangaUpdatesStatus;
         series.VolumeCountEvidence = "8 Volumes (Ongoing)";
 
-        CreateWriter().Apply(series, Info() with { VolumeCount = null }, NewRun(), refreshedBefore: true);
+        CreateWriter().Apply(series, Info() with { VolumeCount = null }, NewRun(), refreshedBefore: true, Today);
 
         series.ReleaseSourceVolumeCount.ShouldBe(8);
         series.VolumeCountBasis.ShouldBe(VolumeCountBasis.MangaUpdatesStatus);
@@ -61,7 +63,7 @@ public sealed class ReleaseCountWriterTests
         var series = CreateSeries(volumeCount: tracked);
         var run = NewRun();
 
-        CreateWriter().Apply(series, Info(volumeCount: 13) with { ExtraVolumeCount = 2 }, run, refreshedBefore: true);
+        CreateWriter().Apply(series, Info(volumeCount: 13) with { ExtraVolumeCount = 2 }, run, refreshedBefore: true, Today);
 
         run.Discrepancies.ShouldBeEmpty();
         series.Volumes.Count.ShouldBe(tracked);
@@ -74,7 +76,7 @@ public sealed class ReleaseCountWriterTests
         var series = CreateSeries(volumeCount: 16);
         var run = NewRun();
 
-        CreateWriter().Apply(series, Info(volumeCount: 13) with { ExtraVolumeCount = 2 }, run, refreshedBefore: true);
+        CreateWriter().Apply(series, Info(volumeCount: 13) with { ExtraVolumeCount = 2 }, run, refreshedBefore: true, Today);
 
         var discrepancy = run.Discrepancies.ShouldHaveSingleItem();
         discrepancy.Field.ShouldBe(SyncDiscrepancyField.VolumeCount);
@@ -91,7 +93,7 @@ public sealed class ReleaseCountWriterTests
         series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m });
         var run = NewRun();
 
-        CreateWriter().Apply(series, Info(volumeCount: 9) with { ExtraVolumeCount = 1 }, run, refreshedBefore: true);
+        CreateWriter().Apply(series, Info(volumeCount: 9) with { ExtraVolumeCount = 1 }, run, refreshedBefore: true, Today);
 
         var discrepancy = run.Discrepancies.ShouldHaveSingleItem();
         discrepancy.Values.Select(value => (value.Source, value.Value))
@@ -106,7 +108,7 @@ public sealed class ReleaseCountWriterTests
         series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 7.5m });
         var run = NewRun();
 
-        CreateWriter().Apply(series, Info(volumeCount: 9) with { ExtraVolumeCount = 1 }, run, refreshedBefore: true);
+        CreateWriter().Apply(series, Info(volumeCount: 9) with { ExtraVolumeCount = 1 }, run, refreshedBefore: true, Today);
 
         run.Discrepancies.ShouldBeEmpty();
     }
@@ -118,9 +120,36 @@ public sealed class ReleaseCountWriterTests
         var series = CreateSeries(volumeCount: 15);
         var run = NewRun();
 
-        CreateWriter().Apply(series, Info(volumeCount: 13), run, refreshedBefore: true);
+        CreateWriter().Apply(series, Info(volumeCount: 13), run, refreshedBefore: true, Today);
 
         run.Discrepancies.ShouldHaveSingleItem().Field.ShouldBe(SyncDiscrepancyField.VolumeCount);
+    }
+
+    // 86 under an AniList count choice: the store's Vol. 14 is a December pre-order past
+    // MangaUpdates' 13. The shelf's list being the count does not put it in print early.
+    [Fact]
+    public void Apply_AniListCountChosen_LeavesAPreOrderPastTheCountUnreleased()
+    {
+        var series = CreateSeries(volumeCount: 13);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 14, ReleaseDate = new DateOnly(2026, 12, 8) });
+        series.SourceChoices.Add(Choice(SyncDiscrepancyField.VolumeCount, null, MetadataSourceName.AniList));
+
+        CreateWriter().Apply(series, Info(volumeCount: 13), NewRun(), refreshedBefore: true, Today);
+
+        series.Volumes.Single(volume => volume.Number == 14).IsReleased.ShouldBeFalse();
+    }
+
+    // The same pre-order once its date has come counts like every other synced volume.
+    [Fact]
+    public void Apply_AniListCountChosen_MarksAPastDatedVolumePastTheCountReleased()
+    {
+        var series = CreateSeries(volumeCount: 13);
+        series.Volumes.Add(new Volume { Id = Guid.CreateVersion7(), Number = 14, ReleaseDate = Today });
+        series.SourceChoices.Add(Choice(SyncDiscrepancyField.VolumeCount, null, MetadataSourceName.AniList));
+
+        CreateWriter().Apply(series, Info(volumeCount: 13), NewRun(), refreshedBefore: true, Today);
+
+        series.Volumes.Single(volume => volume.Number == 14).IsReleased.ShouldBeTrue();
     }
 
     private static ReleaseCountWriter CreateWriter()
