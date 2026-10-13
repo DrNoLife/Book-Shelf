@@ -67,6 +67,7 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
         // Generous, so a journey never meets a limit it is not about.
         builder.UseSetting("Limits:ExternalRequestsPerMinute", "10000");
         builder.UseSetting("Limits:SyncRunsPerHour", "1000");
+        builder.UseSetting("Limits:RecommendationsRequestsPerMinute", "10000");
 
         // The journeys use the in-memory store below, but the folder store's startup probe still
         // runs; give it a folder it can write to instead of the container path.
@@ -78,6 +79,8 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
             services.AddScoped<ISeriesMetadataSource, FixtureSeriesMetadataSource>();
             services.RemoveAll<IMangaUpdatesSeriesQueryService>();
             services.AddScoped<IMangaUpdatesSeriesQueryService, SilentMangaUpdatesSeriesQueryService>();
+            services.RemoveAll<IRecommendationSource>();
+            services.AddScoped<IRecommendationSource, FixtureRecommendationSource>();
             services.RemoveAll<IReleaseSource>();
             services.AddScoped<IReleaseSource, SilentReleaseSource>();
             services.RemoveAll<IVolumeCatalogueSource>();

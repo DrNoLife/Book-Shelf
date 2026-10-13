@@ -26,6 +26,8 @@ public sealed class PhoneOverflowTests(EndToEndFixture fixture) : JourneyTest(fi
     [InlineData("/changelog", 390)]
     [InlineData("/search", 360)]
     [InlineData("/search", 390)]
+    [InlineData("/for-you", 360)]
+    [InlineData("/for-you", 390)]
     public async Task Page_OnAPhone_DoesNotScrollSideways(string path, int width)
     {
         await Page.SetViewportSizeAsync(width, 780);
