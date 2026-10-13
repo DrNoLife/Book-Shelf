@@ -309,11 +309,11 @@ public sealed class ReleaseNotificationDispatcherTests : IDisposable
         decimal number,
         DateTimeOffset occurredAt,
         ShelfEventKind kind = ShelfEventKind.VolumeReleased) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        SeriesId = series.Id,
-        Kind = kind,
-        VolumeNumber = number,
-        OccurredAt = occurredAt,
-    };
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesId = series.Id,
+            Kind = kind,
+            VolumeNumber = number,
+            OccurredAt = occurredAt,
+        };
 }

@@ -123,14 +123,14 @@ public sealed class AniListRecommendationsMapperTests
 
     private static AniListRecommendation Node(
         int id, int? rating, string format, string? title, bool? isAdult = false) => new()
-    {
-        Rating = rating,
-        MediaRecommendation = new AniListMedia
         {
-            Id = id,
-            Format = format,
-            IsAdult = isAdult,
-            Title = title is null ? null : new AniListMediaTitle { English = title },
-        },
-    };
+            Rating = rating,
+            MediaRecommendation = new AniListMedia
+            {
+                Id = id,
+                Format = format,
+                IsAdult = isAdult,
+                Title = title is null ? null : new AniListMediaTitle { English = title },
+            },
+        };
 }
