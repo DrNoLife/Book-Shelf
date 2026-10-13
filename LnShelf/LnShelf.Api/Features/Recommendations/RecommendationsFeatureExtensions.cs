@@ -11,6 +11,9 @@ public static class RecommendationsFeatureExtensions
         {
             services.AddScoped<IRecommendationDismissalQueryService, RecommendationDismissalQueryService>();
             services.AddScoped<IRecommendationDismissalCommandService, RecommendationDismissalCommandService>();
+            services.AddScoped<RecommendationExclusions>();
+            services.AddScoped<ISeriesRecommendationsQueryService, SeriesRecommendationsQueryService>();
+            services.AddScoped<IForYouQueryService, ForYouQueryService>();
             return services;
         }
     }
