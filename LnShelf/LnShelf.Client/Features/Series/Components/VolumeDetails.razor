@@ -55,6 +55,13 @@
         }
     </div>
 
+    @* Where a chapter map gives the volume its chapters: "Ch. 98–103", or "Ch. 138–" while
+       the next volume's start is unknown. The series page's chapter block carries the credit. *@
+    @if (ChapterText.Range(Volume) is { } chapterRange)
+    {
+        <p class="fine tabular">@chapterRange</p>
+    }
+
     @* Ownership and edition in one choice: "No" is not owned, and the other two are owned
        in that edition. The model already says exactly this (Owned plus OwnedFormat). *@
     <div class="field">

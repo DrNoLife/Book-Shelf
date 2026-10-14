@@ -114,4 +114,28 @@ public static class MetadataRateLimiting
             TreatsForbiddenAsRateLimited = true,
         };
     }
+
+    /// <summary>
+    /// MangaDex: a twentieth of its global allowance, and — as Apple's — a 403 is a rate limit.
+    /// </summary>
+    public static SourceRateLimitPolicy MangaDex(IServiceProvider provider)
+    {
+        var options = provider.GetRequiredService<IOptions<MangaDexOptions>>().Value;
+
+        return new SourceRateLimitPolicy
+        {
+            SourceName = "MangaDex",
+            RequestsPerMinute = options.RequestsPerMinute,
+
+            // One window's worth: a run asks about one series at a time, four requests at most.
+            QueuedRequestLimit = options.RequestsPerMinute,
+
+            MaximumRetryDelay = options.MaximumRetryDelay,
+            RequestTimeout = options.RequestTimeout,
+
+            // MangaDex answers a caller that keeps going after a 429 with a temporary ban, a 403;
+            // backing off on it is the only polite reading.
+            TreatsForbiddenAsRateLimited = true,
+        };
+    }
 }

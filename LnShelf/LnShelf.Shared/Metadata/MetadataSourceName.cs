@@ -20,4 +20,7 @@ public enum MetadataSourceName
 
     /// <summary>A store catalogue: a whole series' volume titles, blurbs, dates and art.</summary>
     AppleBooks,
+
+    /// <summary>Which chapters are in which volume, from a scanlation index's per-volume chapter lists.</summary>
+    MangaDex,
 }

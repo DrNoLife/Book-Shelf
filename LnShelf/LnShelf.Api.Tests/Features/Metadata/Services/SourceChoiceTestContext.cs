@@ -48,6 +48,7 @@ internal static class SourceChoiceTestContext
                 enrichment ?? NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
+            ChapterMapPipeline.NoSources(),
             TimeProvider.System);
 
         await refresher.RefreshAsync(series, run, [], new EnrichmentBudget(20, 20), CancellationToken.None);

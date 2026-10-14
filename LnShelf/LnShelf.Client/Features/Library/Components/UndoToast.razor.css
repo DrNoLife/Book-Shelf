@@ -25,6 +25,11 @@
   animation: toast-rise 160ms ease-out;
 }
 
+/* The finished-volume offer stacks under the receipt it follows from. */
+.toast + .toast {
+  margin-top: var(--space-2);
+}
+
 .toast__text {
   font-size: var(--fs-body);
   font-weight: 500;

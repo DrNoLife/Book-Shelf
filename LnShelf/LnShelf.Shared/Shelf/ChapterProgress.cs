@@ -5,9 +5,9 @@ namespace LnShelf.Shared.Shelf;
 /// series page's input and the API's refusal cannot drift apart, as <see cref="ReadDateLimits"/>
 /// does for read dates.
 /// </summary>
-// Chapter progress is one number per series and nothing more: the shelf does not know which
-// volume a chapter belongs to (that mapping is a later layer), so it never moves a volume's
-// read status, and To buy / Backlog / Behind stay volume-based.
+// Chapter progress is one number per series. Where a chapter map gives volumes their chapter
+// ranges, the shelf can *offer* to mark a finished volume read, but it never moves a volume's
+// read status on its own, and To buy / Backlog / Behind stay volume-based.
 public static class ChapterProgress
 {
     /// <summary>Anything above this is a typo, not a chapter: the longest-running manga are near 1,200.</summary>
@@ -48,4 +48,50 @@ public static class ChapterProgress
     // counting, and with no latest chapter nobody can say they have caught up.
     public static bool IsCaughtUp(decimal? latestChapter, decimal? lastChapterRead) =>
         latestChapter is { } latest && lastChapterRead is { } lastRead && lastRead >= latest;
+
+    /// <summary>
+    /// The volume whose chapter range holds this chapter: [first, last], or [first, ∞) while the
+    /// volume is still open. Null when no range does.
+    /// </summary>
+    // The lowest such volume when an open range overlaps a later one, which a map whose ranges
+    // are built from rising starts cannot produce — but a hand-made list could, and the earlier
+    // volume is the honest answer for "where is this chapter".
+    public static decimal? VolumeContaining(decimal chapter, IEnumerable<VolumeResponse> volumes)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+
+        return volumes
+            .Where(volume => volume.FirstChapter is { } first
+                             && chapter >= first
+                             && (volume.LastChapter is not { } last || chapter <= last))
+            .OrderBy(volume => volume.Number)
+            .Select(volume => (decimal?)volume.Number)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The volumes the reader's chapter has carried them past: whole volumes not yet Read whose
+    /// last chapter is known and at or below the last chapter read. In volume order.
+    /// </summary>
+    // Derived, never stored (CLAUDE.md): it is what the series page offers to mark read, and an
+    // offer is all it is. An open volume is never in it, because "finished" needs a known end.
+    public static IReadOnlyList<VolumeResponse> VolumesFinishedBy(decimal? lastChapterRead, IEnumerable<VolumeResponse> volumes)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+
+        if (lastChapterRead is not { } lastRead)
+        {
+            return [];
+        }
+
+        return
+        [
+            .. volumes
+                .Where(volume => volume.Number == decimal.Truncate(volume.Number)
+                                 && volume.ReadStatus is not ReadStatus.Read
+                                 && volume.LastChapter is { } last
+                                 && last <= lastRead)
+                .OrderBy(volume => volume.Number),
+        ];
+    }
 }

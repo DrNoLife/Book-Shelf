@@ -27,8 +27,9 @@ public partial class ChapterTracking
 
     private string? _error;
 
+    // "Ch. 101 of 232 · Vol 12" once a chapter map places the chapter.
     private string PositionText => Series.LastChapterRead is { } lastRead
-        ? ChapterText.Position(lastRead, Series.LatestChapter)
+        ? ChapterText.WithVolume(ChapterText.Position(lastRead, Series.LatestChapter), lastRead, Series.Volumes)
         : "No chapter recorded yet";
 
     private string? ToReadText => ChapterText.ToRead(Series.LatestChapter, Series.LastChapterRead);

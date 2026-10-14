@@ -110,6 +110,7 @@ public sealed class AddSeriesEventsTests
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(NoCatalogue(), enrichmentSource, NoCandidates(), VolumeEnrichmentPipeline.Writer()),
+            ChapterMapPipeline.NoSources(),
             TimeProvider.System);
 
         return new SeriesSyncService(

@@ -112,5 +112,107 @@ public sealed class ChapterProgressTests
         typeof(AccountExportSeries).GetProperty(nameof(AccountExportSeries.ProgressUnit)).ShouldNotBeNull();
     }
 
+    public static TheoryData<decimal, decimal?> VolumeContainingCases => new()
+    {
+        // chapter -> volume, over Vol 1 = 1–7, Vol 2 = 8–16.5, Vol 3 = 17– (open)
+        { 1m, 1m },
+        { 7m, 1m },
+        { 7.5m, null },
+        { 16.5m, 2m },
+        { 17m, 3m },
+        { 400m, 3m },
+        { 0.5m, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(VolumeContainingCases))]
+    public void VolumeContaining_AChapter_IsTheVolumeWhoseRangeHoldsIt(decimal chapter, decimal? expected) =>
+        ChapterProgress.VolumeContaining(chapter, RangedVolumes()).ShouldBe(expected);
+
+    public static TheoryData<decimal?, decimal[]> VolumesFinishedByCases => new()
+    {
+        // last chapter read -> volumes finished and not yet read (Vol 1 is already read)
+        { null, [] },
+        { 6m, [] },
+        { 7m, [] },
+        { 16m, [] },
+        { 16.5m, [2m] },
+
+        // Vol 3 is open, so no chapter finishes it; the bonus Vol 2.5 is never offered.
+        { 500m, [2m] },
+    };
+
+    [Theory]
+    [MemberData(nameof(VolumesFinishedByCases))]
+    public void VolumesFinishedBy_TheLastChapterRead_IsTheUnreadWholeVolumesItHasPassed(
+        decimal? lastChapterRead, decimal[] expected) =>
+        ChapterProgress.VolumesFinishedBy(lastChapterRead, RangedVolumes())
+            .Select(volume => volume.Number)
+            .ShouldBe(expected);
+
+    [Theory]
+    [InlineData(ProgressUnit.Chapters, 1)]
+    [InlineData(ProgressUnit.Volumes, 0)]
+    public void SeriesDetailResponse_VolumesFinishedByChapter_IsOfferedOnlyOnAChaptersSeries(
+        ProgressUnit progressUnit, int expected)
+    {
+        var detail = Detail(RangedVolumes()) with { ProgressUnit = progressUnit, LastChapterRead = 20m };
+
+        detail.VolumesFinishedByChapter.Count.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void SeriesDetailResponse_ChapterRangeSources_AreEachSourceOnceAndOnlyWhereARangeIs()
+    {
+        var detail = Detail(RangedVolumes());
+
+        detail.ChapterRangeSources.ShouldBe([MetadataSourceName.MangaDex]);
+        Detail([Volume(1m, ReadStatus.Unread, null, null)]).ChapterRangeSources.ShouldBeEmpty();
+    }
+
+    private static List<VolumeResponse> RangedVolumes() =>
+    [
+        Volume(1m, ReadStatus.Read, 1m, 7m),
+        Volume(2m, ReadStatus.Unread, 8m, 16.5m),
+        Volume(2.5m, ReadStatus.Unread, null, null),
+        Volume(3m, ReadStatus.Reading, 17m, null),
+    ];
+
+    private static VolumeResponse Volume(decimal number, ReadStatus readStatus, decimal? first, decimal? last) => new()
+    {
+        VolumeId = Guid.CreateVersion7(),
+        Number = number,
+        IsOut = true,
+        ReadStatus = readStatus,
+        Owned = false,
+        IsLocalOnly = false,
+        FirstChapter = first,
+        LastChapter = last,
+        ChapterRangeSource = first is null ? null : MetadataSourceName.MangaDex,
+    };
+
+    private static SeriesDetailResponse Detail(IReadOnlyList<VolumeResponse> volumes) => new()
+    {
+        SeriesId = Guid.CreateVersion7(),
+        TitleEnglish = "Chainsaw Man",
+        Format = Format.Manga,
+        PublicationStatus = PublicationStatus.Ongoing,
+        TrackingStatus = TrackingStatus.Reading,
+        Genres = [],
+        HasNewVolume = false,
+        Counts = new SeriesCountsResponse
+        {
+            Read = 0,
+            Owned = 0,
+            Published = 0,
+            ToBuy = 0,
+            Backlog = 0,
+            Tracked = 0,
+            NotOut = 0,
+            Dated = 0,
+        },
+        Volumes = volumes,
+    };
+
     private static decimal Parse(string text) => decimal.Parse(text, CultureInfo.InvariantCulture);
 }

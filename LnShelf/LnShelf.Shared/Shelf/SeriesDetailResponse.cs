@@ -77,6 +77,34 @@ public sealed record SeriesDetailResponse
     // Derived, never stored (CLAUDE.md), on the same footing as LibraryCardResponse.Behind.
     public decimal? ChaptersToRead => ChapterProgress.ToRead(LatestChapter, LastChapterRead);
 
+    /// <summary>
+    /// MangaDex's own id for this series, for the link on the chapter-range credit. Null until a
+    /// chapter map was matched there.
+    /// </summary>
+    public Guid? MangaDexId { get; init; }
+
+    /// <summary>
+    /// Volumes the last chapter read has carried the reader past and that are not marked read:
+    /// what "You've finished Vol 12 — mark it read?" offers. Empty unless the series is counted
+    /// in chapters.
+    /// </summary>
+    // Derived, never stored (CLAUDE.md), on the same footing as ChaptersToRead. Read straight
+    // off the response by the series page and by the library after "+1 chapter", so both offer
+    // exactly the same volumes.
+    public IReadOnlyList<VolumeResponse> VolumesFinishedByChapter => ProgressUnit is ProgressUnit.Chapters
+        ? ChapterProgress.VolumesFinishedBy(LastChapterRead, Volumes)
+        : [];
+
+    /// <summary>The sources any volume's chapter range came from, for the credit line. Empty without ranges.</summary>
+    public IReadOnlyList<MetadataSourceName> ChapterRangeSources =>
+    [
+        .. Volumes
+            .Where(volume => volume.ChapterRangeSource is not null)
+            .Select(volume => volume.ChapterRangeSource!.Value)
+            .Distinct()
+            .Order(),
+    ];
+
     public required SeriesCountsResponse Counts { get; init; }
 
     /// <summary>Where the published count came from, for "How is this counted?".</summary>

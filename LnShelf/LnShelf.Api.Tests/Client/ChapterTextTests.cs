@@ -88,5 +88,42 @@ public sealed class ChapterTextTests
         ChapterInput.Format(null).ShouldBe(string.Empty);
     }
 
+    [Theory]
+    [InlineData("98", "103", "Ch. 98–103")]
+    [InlineData("138", null, "Ch. 138–")]
+    [InlineData(null, null, null)]
+    public void Range_AVolume_PrintsItsChaptersOrNothing(string? first, string? last, string? expected) =>
+        ChapterText.Range(Volume(12m, first, last)).ShouldBe(expected);
+
+    [Theory]
+    [InlineData("101", "Ch. 101 · Vol 12")]
+    [InlineData("50", "Ch. 50")]
+    public void WithVolume_AChapterAMapPlaces_NamesItsVolume(string lastRead, string expected) =>
+        ChapterText.WithVolume($"Ch. {lastRead}", Parse(lastRead), [Volume(12m, "98", "103")]).ShouldBe(expected);
+
+    public static TheoryData<decimal[], string> FinishedOfferCases => new()
+    {
+        { [12m], "You've finished Vol 12 — mark it read?" },
+        { [10m, 11m, 12m], "You've finished Vols 10–12 — mark them read?" },
+        { [12m, 10m], "You've finished Vols 10, 12 — mark them read?" },
+    };
+
+    [Theory]
+    [MemberData(nameof(FinishedOfferCases))]
+    public void FinishedOffer_TheVolumes_AreNamedInDesignsVolumeWords(decimal[] numbers, string expected) =>
+        ChapterText.FinishedOffer(numbers).ShouldBe(expected);
+
+    private static VolumeResponse Volume(decimal number, string? first, string? last) => new()
+    {
+        VolumeId = Guid.CreateVersion7(),
+        Number = number,
+        IsOut = true,
+        ReadStatus = ReadStatus.Unread,
+        Owned = false,
+        IsLocalOnly = false,
+        FirstChapter = first is null ? null : Parse(first),
+        LastChapter = last is null ? null : Parse(last),
+    };
+
     private static decimal Parse(string text) => decimal.Parse(text, CultureInfo.InvariantCulture);
 }

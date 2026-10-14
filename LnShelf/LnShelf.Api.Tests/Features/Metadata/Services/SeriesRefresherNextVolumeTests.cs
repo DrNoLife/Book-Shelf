@@ -233,6 +233,7 @@ public sealed class SeriesRefresherNextVolumeTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer(CoverCache())),
+            ChapterMapPipeline.NoSources(),
             timeProvider);
     }
 

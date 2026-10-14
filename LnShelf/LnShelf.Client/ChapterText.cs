@@ -37,4 +37,56 @@ public static class ChapterText
             ? $"{Position(lastRead, card.LatestChapter)} · {toRead}"
             : Position(lastRead, card.LatestChapter);
     }
+
+    /// <summary>"Ch. 101 · Vol 12" when a chapter map places the chapter, else just "Ch. 101".</summary>
+    public static string WithVolume(string position, decimal lastChapterRead, IEnumerable<VolumeResponse> volumes) =>
+        ChapterProgress.VolumeContaining(lastChapterRead, volumes) is { } volumeNumber
+            ? $"{position} · Vol {volumeNumber.ToVolumeText()}"
+            : position;
+
+    /// <summary>A volume's chapters: "Ch. 98–103", "Ch. 138–" while it is open, null without a range.</summary>
+    public static string? Range(VolumeResponse volume)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+
+        if (volume.FirstChapter is not { } first)
+        {
+            return null;
+        }
+
+        return volume.LastChapter is { } last
+            ? $"Ch. {first.ToVolumeText()}–{last.ToVolumeText()}"
+            : $"Ch. {first.ToVolumeText()}–";
+    }
+
+    /// <summary>"You've finished Vol 12 — mark it read?", or "Vols 10–12 … mark them read?".</summary>
+    public static string FinishedOffer(IReadOnlyList<decimal> volumeNumbers)
+    {
+        ArgumentNullException.ThrowIfNull(volumeNumbers);
+
+        return volumeNumbers.Count == 1
+            ? $"You've finished {VolumesLabel(volumeNumbers)} — mark it read?"
+            : $"You've finished {VolumesLabel(volumeNumbers)} — mark them read?";
+    }
+
+    /// <summary>
+    /// "Vol 12", "Vols 10–12" for a run, "Vols 10, 12" otherwise — design.md's volume words.
+    /// </summary>
+    public static string VolumesLabel(IReadOnlyList<decimal> volumeNumbers)
+    {
+        ArgumentNullException.ThrowIfNull(volumeNumbers);
+
+        var numbers = volumeNumbers.Order().ToList();
+
+        if (numbers.Count == 1)
+        {
+            return $"Vol {numbers[0].ToVolumeText()}";
+        }
+
+        var isRun = numbers.Zip(numbers.Skip(1)).All(pair => pair.Second == pair.First + 1);
+
+        return isRun
+            ? $"Vols {numbers[0].ToVolumeText()}–{numbers[^1].ToVolumeText()}"
+            : $"Vols {string.Join(", ", numbers.Select(number => number.ToVolumeText()))}";
+    }
 }

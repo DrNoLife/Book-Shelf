@@ -127,6 +127,21 @@ public sealed class Series : IOwned
     // source gives a value, so one empty answer never erases a known chapter.
     public decimal? LatestChapter { get; set; }
 
+    /// <summary>MangaDex's own id for this series, learned when a chapter map matched there.</summary>
+    // Another catalogue's handle for the same series, the same class of fact as MangaUpdatesId:
+    // MangaDex has no lookup by AniList or MangaUpdates id, so finding it again costs a title
+    // search every time. Only kept for a match whose map could be used at all (see
+    // MangaDexChapterMapSource), so a spin-off or a manhwa is never remembered as this series.
+    public Guid? MangaDexId { get; set; }
+
+    /// <summary>What the last chapter-map check concluded. Null until one has run.</summary>
+    // Sync bookkeeping, kept so the nightly sweep can leave a settled or hopeless series alone
+    // for a while (ChapterMapRefresher's cadence) instead of asking every night.
+    public ChapterMapStatus? ChapterMapStatus { get; set; }
+
+    /// <summary>When the chapter map was last checked, whatever it concluded.</summary>
+    public DateTimeOffset? ChapterMapCheckedAt { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
 
