@@ -20,6 +20,21 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.32.0", new DateOnly(2026, 10, 14), "Which chapters are in which volume",
+            Features: [
+                "Manga volumes now know their chapters: a volume shows \"Ch. 98–103\", and a series you track " +
+                    "by chapter shows which volume you are in (\"Ch. 101 of 232 · Vol 12\"). The ranges come " +
+                    "from Wikipedia's chapter lists, with MangaDex filling the gaps, and each one names its source.",
+                "Finish a volume's last chapter and the app offers to mark that volume read, on the series page " +
+                    "and in the Up next toast after +1 chapter. It only offers: volumes you skipped stay as they are.",
+                "Choose on your profile whether new manga and web novels start tracked by volume or by chapter.",
+            ],
+            Improvements: [
+                "Where Wikipedia and MangaDex disagree about where a volume starts, the series page lists it with " +
+                    "the other source disagreements.",
+            ],
+            Fixes: []
+        ),
         new("0.31.0", new DateOnly(2026, 10, 13), "What to read next",
             Features: [
                 "For you: a new page that suggests what to read next, in rows like \"Because you read " +

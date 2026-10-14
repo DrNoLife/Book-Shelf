@@ -386,6 +386,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ChapterRangesWritten")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("CoversWholeShelf")
                         .HasColumnType("boolean");
 
@@ -503,6 +506,13 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("DefaultProgressUnit")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Volumes");
+
                     b.Property<string>("GridDensity")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -609,6 +619,17 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)");
 
+                    b.Property<string>("ChapterListPage")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("ChapterMapCheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ChapterMapStatus")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -634,6 +655,9 @@ namespace LnShelf.Api.Migrations
 
                     b.Property<decimal?>("LatestChapter")
                         .HasColumnType("numeric");
+
+                    b.Property<Guid?>("MangaDexId")
+                        .HasColumnType("uuid");
 
                     b.Property<long?>("MangaUpdatesId")
                         .HasColumnType("bigint");
@@ -779,6 +803,10 @@ namespace LnShelf.Api.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ChapterRangeSource")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -790,6 +818,9 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<decimal?>("FirstChapter")
+                        .HasColumnType("numeric");
+
                     b.Property<bool>("IsLocalOnly")
                         .HasColumnType("boolean");
 
@@ -799,6 +830,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<string>("Isbn")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<decimal?>("LastChapter")
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("Number")
                         .HasColumnType("numeric");
