@@ -38,7 +38,7 @@ public static class SourceConflictMapper
             DisplayedSource = displayedSource,
             Reason = reason,
             Explanation = Explain(discrepancy, reason, displayedSource, choice),
-            CanChoose = discrepancy.Field is not SyncDiscrepancyField.SeriesLink,
+            CanChoose = discrepancy.Field is not (SyncDiscrepancyField.SeriesLink or SyncDiscrepancyField.ChapterRange),
             NeedsReview = resolution.Source is null,
             RecordedAt = recorded.RecordedAt,
             Note = discrepancy.Note,
@@ -104,6 +104,11 @@ public static class SourceConflictMapper
         if (discrepancy.Field is SyncDiscrepancyField.SeriesLink)
         {
             return $"You linked this series to {displayedSource?.DisplayName ?? "a release source"}.";
+        }
+
+        if (discrepancy.Field is SyncDiscrepancyField.ChapterRange)
+        {
+            return "Chapter ranges come from the first source that maps the volume: Wikipedia, then MangaDex.";
         }
 
         if (discrepancy.Field is not SyncDiscrepancyField.VolumeCount)

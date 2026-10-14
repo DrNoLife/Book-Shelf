@@ -23,4 +23,7 @@ public enum MetadataSourceName
 
     /// <summary>Which chapters are in which volume, from a scanlation index's per-volume chapter lists.</summary>
     MangaDex,
+
+    /// <summary>Which chapters are in which volume, from an encyclopedia's chapter list pages.</summary>
+    Wikipedia,
 }

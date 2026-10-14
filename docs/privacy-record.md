@@ -43,7 +43,7 @@ decisions (Art. 22).
 | Cloudflare (Tunnel, TLS) | processor | all traffic, decrypted at its edge | US, DPF and Standard Contractual Clauses in its DPA |
 | Google (FCM), Mozilla (autopush), Microsoft (WNS), Apple (APNs) | push services, only for users who turn notifications on | the push endpoint, message size and timing; the payload (titles, volume numbers, dates) is RFC 8291-encrypted end to end | possibly third country; Google, Microsoft and Apple DPF-certified |
 | The user's calendar provider (Google Calendar, iCloud, Outlook), only if they subscribe | independent controller, chosen by the user | titles with a format label, volume numbers and release dates of tracked, non-dropped series; no ownership, prices, notes or identity | depends on the provider; the user's own choice |
-| AniList, MangaUpdates, Open Library, Apple Books | none (server-side requests) | titles, catalogue ids, ISBNs, search text, and the AniList ids of series on a user's shelf when For you is opened (no user id); never a user id or email | not personal data |
+| AniList, MangaUpdates, Open Library, Apple Books, MangaDex, Wikipedia/Wikidata | none (server-side requests) | titles, catalogue ids, ISBNs, search text, and the AniList ids of series on a user's shelf when For you is opened (no user id); never a user id or email | not personal data |
 
 Hosting (API, Postgres, the covers volume, backups) is the owner's server in Denmark.
 

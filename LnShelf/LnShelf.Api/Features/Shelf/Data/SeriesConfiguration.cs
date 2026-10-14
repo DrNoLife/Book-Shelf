@@ -40,6 +40,7 @@ public sealed class SeriesConfiguration : IEntityTypeConfiguration<Series>
         // Text like every enum here. MangaDexId and ChapterMapCheckedAt need nothing: a Guid
         // and a timestamp map by convention.
         builder.Property(series => series.ChapterMapStatus).HasConversion<string>().HasMaxLength(32);
+        builder.Property(series => series.ChapterListPage).HasMaxLength(Series.ChapterListPageMaximumLength);
 
         // LatestChapter needs nothing: a decimal maps to unscaled numeric by convention, which
         // is what keeps 232 from coming back as 232.00 (see SeriesUserStateConfiguration).

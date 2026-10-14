@@ -23,6 +23,9 @@ namespace LnShelf.Api.Tests.Features.Metadata.Fixtures;
 //   mangadex-aggregate-86-empty.json
 //       86's all-languages aggregate without includeUnavailable: `"volumes": []`, an empty
 //       array where an object is expected.
+//   mangadex-search-berserk.json, mangadex-aggregate-berserk-{en,all}.json
+//       The same requests and trimming, for the Wikipedia merge: Berserk numbers its four
+//       prologue volumes' chapters 0.01–0.14, which Wikipedia lists without numbers.
 internal static class MangaDexFixtures
 {
     public const string ChainsawManSearch = "mangadex-search-chainsaw-man.json";
@@ -50,6 +53,10 @@ internal static class MangaDexFixtures
     public const string SoloLevelingAll = "mangadex-aggregate-solo-leveling-all.json";
 
     public const string EmptyAggregate = "mangadex-aggregate-86-empty.json";
+
+    public const string BerserkSearch = "mangadex-search-berserk.json";
+    public const string BerserkEnglish = "mangadex-aggregate-berserk-en.json";
+    public const string BerserkAll = "mangadex-aggregate-berserk-all.json";
 
     public static MangaDexMangaListResponse LoadSearch(string fileName) => Load<MangaDexMangaListResponse>(fileName);
 

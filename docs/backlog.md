@@ -290,7 +290,7 @@ under that user's cover keys. Open questions before any code:
   others; at least a "Report / hide this cover" and the uploader's name on each candidate.
 - Storage: shared images deduplicated by content hash in the cover store.
 
-## 10. Manga read chapter by chapter (owner, 2026-10-11) — layer 1 DONE (2026-10-11, v0.30.0)
+## 10. Manga read chapter by chapter (owner, 2026-10-11) — DONE (layer 1 2026-10-11, v0.30.0; layer 2 2026-10-14, v0.32.0)
 
 The owner reads some manga by chapter (weekly/simulpub), while the shelf only knew whole
 volumes. Layer 1 is built: each manga or web novel is counted in Volumes or Chapters
@@ -299,15 +299,15 @@ volumes. Layer 1 is built: each manga or web novel is counted in Volumes or Chap
 from MangaUpdates' `latest_chapter` on every refresh. "N to read" is derived, never stored. A
 Chapters series that is Reading and not caught up is on Continue reading / Up next by its
 chapters, with "+1 chapter" and Undo there, whether or not any volume is owned. Volume read
-states, To buy, Backlog and Behind stay volume-based. Still open:
+states, To buy, Backlog and Behind stay volume-based.
 
-- **Layer 2: chapter → volume mapping.** MangaUpdates only gives the latest chapter; AniList
-  gives a chapter total for finished series only. MangaDex's `GET /manga/{id}/aggregate` maps
-  chapters to volumes (unverified for English-edition numbering; scanlation-based). Spike it
-  like §1 before committing; whether reaching a volume's last chapter marks that volume read
-  is a design decision (probably offer, not force).
-- **A global default unit** (a preference for new manga/web novel series), instead of choosing
-  per series.
+- ~~**Layer 2: chapter → volume mapping.**~~ **[done 2026-10-14]** Spiked (MangaDex alone
+  missed Chainsaw Man 21–23, most of 86 and the newest volumes; Kitsu, MangaUpdates releases,
+  Comick and publisher pages carry nothing usable), then built as `IChapterMapSource` with
+  Wikipedia's chapter lists first (verified by English ISBN) and MangaDex's aggregate behind
+  them. Reaching a volume's last chapter offers Mark read; it never forces it (feature-spec §4.1).
+  Known gap: series with no chapter list anywhere (86 manga) and manhwa stay unmapped.
+- ~~**A global default unit**~~ **[done 2026-10-14]** `DefaultProgressUnit` on the profile page.
 
 ## 11. Recommendations — v0, v1 and Not interested DONE (2026-10-13, v0.31.0)
 

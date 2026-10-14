@@ -77,7 +77,6 @@ public sealed class ChapterMapBuilderTests
     {
         // name, chapters by volume, tracked, released through, words in the reason
         { "overlapping volumes", new() { [1] = [5m, 6m, 7m], [2] = [1m, 2m, 3m] }, 2, 2, "overlap" },
-        { "more volumes than the shelf", new() { [1] = [1m], [2] = [2m], [3] = [3m], [4] = [4m] }, 2, 2, "tracks 2" },
         { "too few released volumes", new() { [1] = [1m, 2m, 3m] }, 4, 4, "1 of the 4" },
         { "nothing filed under a volume", new() { [1] = [] }, 2, 2, "no chapters" },
     };
@@ -95,6 +94,20 @@ public sealed class ChapterMapBuilderTests
 
         map.IsUsable.ShouldBeFalse(name);
         map.RejectedBecause.ShouldNotBeNull().ShouldContain(expected);
+    }
+
+    // MangaDex follows the Japanese edition: 31 Slime volumes against an English shelf of 28.
+    // The volumes past the shelf's are no reason to refuse the rest; the writer skips them.
+    [Fact]
+    public void Build_SourceAheadOfTheShelf_IsUsable()
+    {
+        var chapters = MangaDexFixtures.ChaptersByVolume(MangaDexFixtures.SlimeEnglish, MangaDexFixtures.SlimeAll);
+
+        var map = ChapterMapBuilder.Build(chapters, Shelf(tracked: 28, releasedThrough: 28, latest: 146m));
+
+        map.IsUsable.ShouldBeTrue(map.RejectedBecause);
+        map.Ranges.Max(range => range.VolumeNumber).ShouldBe(31);
+        map.Chapters[4].ShouldBe([18m, 19m, 20m, 21m, 22m]);
     }
 
     // Where a volume ends depends on where the missing one starts — even for a completed series.

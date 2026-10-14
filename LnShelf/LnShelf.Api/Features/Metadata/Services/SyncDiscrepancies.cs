@@ -136,4 +136,30 @@ public static class SyncDiscrepancies
         }
             .Says(MetadataSourceName.MangaUpdates, DiscrepancyValueFormat.InPrint)
             .Says(source, DiscrepancyValueFormat.Date(date));
+
+    /// <summary>
+    /// Chapter-map sources starting one volume more than a chapter apart.
+    /// </summary>
+    // Resolved every time, by the source whose range was written: precedence settles a chapter
+    // range, and there is no choice to make (SyncDiscrepancyField.ChapterRange).
+    public static SyncDiscrepancy ChapterRange(Series series, ChapterStartDisagreement disagreement)
+    {
+        var discrepancy = new SyncDiscrepancy
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesId = series.Id,
+            SeriesTitle = series.TitleEnglish,
+            Field = SyncDiscrepancyField.ChapterRange,
+            VolumeNumber = disagreement.VolumeNumber,
+            ResolvedWith = disagreement.WrittenSource,
+            Note = $"The shelf shows {disagreement.WrittenSource.DisplayName}'s range: the first source that maps a volume supplies it.",
+        };
+
+        foreach (var offer in disagreement.Offers)
+        {
+            discrepancy.Says(offer.Source, DiscrepancyValueFormat.ChapterRange(offer.Range));
+        }
+
+        return discrepancy;
+    }
 }

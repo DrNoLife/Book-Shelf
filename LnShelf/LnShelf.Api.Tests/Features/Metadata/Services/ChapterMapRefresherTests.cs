@@ -1,3 +1,5 @@
+using LnShelf.Api.Tests.Features.Metadata.Fixtures;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -74,6 +76,55 @@ public sealed class ChapterMapRefresherTests
         series.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
         series.ChapterMapCheckedAt.ShouldNotBeNull();
         run.ChapterRangesWritten.ShouldBe(3);
+    }
+
+    // Real answers: Wikipedia lists Berserk's prologue volumes without numbers, MangaDex numbers
+    // them, and each volume is credited to the source that filled it.
+    [Fact]
+    public async Task RefreshAsync_WikipediaThenMangaDex_MangaDexFillsWikipediasGaps()
+    {
+        var series = Series(43);
+        var wikipedia = Source(
+            MetadataSourceName.Wikipedia,
+            ChapterMapAnswer.Found(GraphicNovelListVerifier.ToChaptersByVolume(WikipediaFixtures.Tables(WikipediaFixtures.BerserkPage)[0])));
+        var mangaDex = Source(
+            MetadataSourceName.MangaDex,
+            Found(new(MangaDexFixtures.ChaptersByVolume(MangaDexFixtures.BerserkEnglish, MangaDexFixtures.BerserkAll))));
+
+        await Refresher(wikipedia, mangaDex).RefreshAsync(series, new SyncRun(), CancellationToken.None);
+
+        series.Volumes.Where(volume => volume.Number <= 4).ShouldAllBe(volume => volume.ChapterRangeSource == MetadataSourceName.MangaDex);
+        series.Volumes.Where(volume => volume.Number >= 5).ShouldAllBe(volume => volume.ChapterRangeSource == MetadataSourceName.Wikipedia);
+        Volume(series, 4).LastChapter.ShouldBe(0.14m);
+        Volume(series, 5).FirstChapter.ShouldBe(1m);
+    }
+
+    // Chainsaw Man's vol 24: Wikipedia 223, MangaDex 230. Written from Wikipedia, and recorded.
+    [Fact]
+    public async Task RefreshAsync_SourcesStartAVolumeApart_RecordsTheDisagreement()
+    {
+        var series = Series(24);
+        var run = new SyncRun();
+        var wikipedia = Source(
+            MetadataSourceName.Wikipedia,
+            ChapterMapAnswer.Found(GraphicNovelListVerifier.ToChaptersByVolume(WikipediaFixtures.Tables(WikipediaFixtures.ChainsawManPage)[0])));
+        var mangaDex = Source(
+            MetadataSourceName.MangaDex,
+            Found(new(MangaDexFixtures.ChaptersByVolume(MangaDexFixtures.ChainsawManEnglish, MangaDexFixtures.ChainsawManAll))));
+
+        await Refresher(wikipedia, mangaDex).RefreshAsync(series, run, CancellationToken.None);
+
+        var discrepancy = run.Discrepancies.ShouldHaveSingleItem();
+        discrepancy.Field.ShouldBe(SyncDiscrepancyField.ChapterRange);
+        discrepancy.VolumeNumber.ShouldBe(24m);
+        discrepancy.ResolvedWith.ShouldBe(MetadataSourceName.Wikipedia);
+        discrepancy.Values.Select(value => (value.Source, value.Value)).ShouldBe(
+        [
+            (MetadataSourceName.Wikipedia, "chapters from 223"),
+            (MetadataSourceName.MangaDex, "chapters from 230"),
+        ]);
+        Volume(series, 24).FirstChapter.ShouldBe(223m);
+        series.Volumes.ShouldAllBe(volume => volume.ChapterRangeSource == MetadataSourceName.Wikipedia);
     }
 
     // Sync never mutates user state (testing.md #3), and a second run over the same answer

@@ -2,7 +2,8 @@ namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
 /// The chapter-map step of one series' refresh: asks every chapter-map source in precedence
-/// order, judges each answer, and writes the ranges onto the series' volumes.
+/// order, judges each answer, merges the usable ones (ChapterMapMerger) and writes the ranges
+/// onto the series' volumes.
 /// </summary>
 // A collaborator of SeriesRefresher rather than more of it, so the refresher stays the short
 // sequence of steps it was cut down to. Called on every refresh, nightly and on demand alike
@@ -97,7 +98,15 @@ public sealed class ChapterMapRefresher(
             }
         }
 
-        run.ChapterRangesWritten += ChapterRangeWriter.Apply(series, maps);
+        var merged = ChapterMapMerger.Merge(maps);
+        run.ChapterRangesWritten += ChapterRangeWriter.Apply(series, merged.Ranges);
+
+        // Only for volumes the shelf tracks: a disagreement about a volume nobody can see is noise.
+        foreach (var disagreement in merged.Disagreements.Where(disagreement =>
+                     series.Volumes.Any(volume => volume.Number == disagreement.VolumeNumber)))
+        {
+            run.Discrepancies.Add(SyncDiscrepancies.ChapterRange(series, disagreement));
+        }
 
         series.ChapterMapStatus = (maps.Count, refusals.Count) switch
         {

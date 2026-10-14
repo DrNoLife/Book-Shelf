@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
+using LnShelf.Api.Tests.Features.Metadata.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -26,7 +27,9 @@ namespace LnShelf.Api.Tests.Features.Metadata.Services;
 // image CDN. A request to anywhere else is recorded and answered 404, so a test can assert the
 // pipeline did not wander off to a source it was not meant to reach (AniList, Open Library).
 // MangaDex answers an empty search unless the test hands it captures: every manga series now
-// gets a chapter-map check, and most of these tests are not about it.
+// gets a chapter-map check, and most of these tests are not about it. Wikipedia and Wikidata
+// likewise answer "nothing known" unless given captures, though a series whose volumes carry
+// no ISBN never reaches them at all.
 internal sealed class SyncPipelineHost : IAsyncDisposable
 {
     private readonly InMemoryDatabaseRoot _databaseRoot = new();
@@ -34,7 +37,11 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
     private readonly ServiceProvider _provider;
     private readonly byte[] _cover = Png();
 
-    public SyncPipelineHost(string appleBooksFixture, string mangaUpdatesFixture, MangaDexCaptures? mangaDex = null)
+    public SyncPipelineHost(
+        string appleBooksFixture,
+        string mangaUpdatesFixture,
+        MangaDexCaptures? mangaDex = null,
+        WikimediaCaptures? wikimedia = null)
     {
         CoverRoot = Path.Combine(Path.GetTempPath(), $"lnshelf-sync-pipeline-{Guid.CreateVersion7()}");
         Directory.CreateDirectory(CoverRoot);
@@ -61,7 +68,7 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
 
         // Every typed client's innermost handler, under the app's own politeness handlers.
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(
-            () => new FixtureHandler(request => Answer(request, appleBooks, mangaUpdates, mangaDexAnswers))));
+            () => new FixtureHandler(request => Answer(request, appleBooks, mangaUpdates, mangaDexAnswers, wikimedia ?? new()))));
 
         _provider = services.BuildServiceProvider();
     }
@@ -70,6 +77,9 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
 
     /// <summary>Every MangaDex request, so a test can tell a search from an aggregate.</summary>
     public ConcurrentQueue<Uri> MangaDexRequests { get; } = new();
+
+    /// <summary>Every Wikipedia and Wikidata request.</summary>
+    public ConcurrentQueue<Uri> WikimediaRequests { get; } = new();
 
     /// <summary>Requests that went to neither a source this host answers for nor a CDN.</summary>
     public ConcurrentQueue<Uri> UnexpectedRequests { get; } = new();
@@ -128,7 +138,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         HttpRequestMessage request,
         string appleBooks,
         string mangaUpdates,
-        MangaDexAnswers mangaDex)
+        MangaDexAnswers mangaDex,
+        WikimediaCaptures wikimedia)
     {
         var uri = request.RequestUri!;
 
@@ -151,6 +162,12 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         {
             MangaDexRequests.Enqueue(uri);
             return Respond(new StringContent(mangaDex.For(uri), Encoding.UTF8, "application/json"));
+        }
+
+        if (WikimediaCaptures.Answers(uri))
+        {
+            WikimediaRequests.Enqueue(uri);
+            return Respond(new StringContent(wikimedia.For(uri), Encoding.UTF8, "application/json"));
         }
 
         if (uri.Host.EndsWith("mzstatic.com", StringComparison.Ordinal))

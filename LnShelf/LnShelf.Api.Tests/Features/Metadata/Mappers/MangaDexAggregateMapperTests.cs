@@ -51,6 +51,18 @@ public sealed class MangaDexAggregateMapperTests
         chapters[4].ShouldNotContain(26m);
     }
 
+    // Berserk's all-languages aggregate counts the prologue as chapters 1–16 where English says
+    // 0.01–0.16. Those never enter an English volume below the next English start.
+    [Fact]
+    public void ToChaptersByVolume_AllLanguagesNumberingDiffers_StaysOutOfEnglishVolumes()
+    {
+        var chapters = MangaDexFixtures.ChaptersByVolume(MangaDexFixtures.BerserkEnglish, MangaDexFixtures.BerserkAll);
+
+        chapters[1].ShouldBe([0.01m, 0.02m, 0.03m]);
+        chapters[5][0].ShouldBe(0.15m);
+        chapters[5].ShouldNotContain(15m);
+    }
+
     // Chainsaw Man in English stops at vol 11; vols 12–20 come from all languages, decimals
     // ("44.2", "175.5") and the vol 1 stray (ch 232) as filed.
     [Fact]

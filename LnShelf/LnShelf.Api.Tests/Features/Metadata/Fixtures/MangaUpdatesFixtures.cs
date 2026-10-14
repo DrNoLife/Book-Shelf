@@ -68,6 +68,15 @@ internal static class MangaUpdatesFixtures
 
     public const long ChainsawManSeriesId = 75336092483;
 
+    // 2026-10-14, for the Wikipedia chapter lists:
+    //
+    //   mangaupdates-series-51239621230-berserk.json   GET /v1/series/51239621230
+    //
+    // Untrimmed. Berserk is the canary whose Wikipedia list leaves four volumes unnumbered.
+    public const string BerserkSeries = "mangaupdates-series-51239621230-berserk.json";
+
+    public const long BerserkSeriesId = 51239621230;
+
     public static MangaUpdatesSearchResponse LoadSearch(string fileName) =>
         Load<MangaUpdatesSearchResponse>(fileName);
 

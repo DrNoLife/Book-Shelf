@@ -149,9 +149,29 @@ public static class MetadataFeatureExtensions
             return services;
         }
 
-        /// <summary>MangaDex behind <c>IChapterMapSource</c>: which chapters are in which volume.</summary>
+        /// <summary>
+        /// Wikipedia, then MangaDex, behind <c>IChapterMapSource</c>: which chapters are in which volume.
+        /// </summary>
         private IServiceCollection AddChapterMap(IConfiguration configuration)
         {
+            services.AddOptions<WikipediaOptions>()
+                .Bind(configuration.GetSection(WikipediaOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddHttpClient<WikipediaClient>((provider, httpClient) =>
+                {
+                    // No BaseAddress: the client asks two wikis, and each request names its own.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    // Wikimedia's User-Agent policy asks for contact details, and the shelf keeps
+                    // one address for exactly that (WikipediaOptions says why it is Open Library's).
+                    var contactEmail = provider.GetRequiredService<IOptions<OpenLibraryOptions>>().Value.ContactEmail;
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.WithContact(contactEmail));
+                })
+                .AddSourcePoliteness(MetadataRateLimiting.Wikipedia);
+
             services.AddOptions<MangaDexOptions>()
                 .Bind(configuration.GetSection(MangaDexOptions.SectionName))
                 .ValidateDataAnnotations()
@@ -174,7 +194,9 @@ public static class MetadataFeatureExtensions
                 .AddSourcePoliteness(MetadataRateLimiting.MangaDex);
 
             // In precedence order: ChapterMapRefresher fills each volume from the first source
-            // that maps it, so a second source registers after this one.
+            // that maps it. Wikipedia's edited lists first; MangaDex fills their gaps.
+            services.AddScoped<WikipediaListPageFinder>();
+            services.AddScoped<IChapterMapSource, WikipediaChapterMapSource>();
             services.AddScoped<IChapterMapSource, MangaDexChapterMapSource>();
             services.AddScoped<ChapterMapRefresher>();
 

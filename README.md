@@ -330,7 +330,7 @@ are most likely to change:
 | `Covers__FileSystem__RootPath` | `/data/covers` | The cover folder (the API image mounts its volume there) |
 | `Sync__Enabled`, `Sync__Hour` | `false`, `4` | The nightly sync and its local hour |
 | `WebPush__PublicKey`, `WebPush__PrivateKey`, `WebPush__Subject` | empty (off) | Release notifications by Web Push (`vapid-keys` makes the pair) |
-| `OpenLibrary__ContactEmail` | empty | Contact address sent to Open Library |
+| `OpenLibrary__ContactEmail` | empty | Contact address sent to Open Library, and to Wikimedia in the User-Agent (without it Wikipedia lookups drop to 10 a minute) |
 | `Shelf__SeedDevelopmentFixture` | `false` | Seed the fixture library on an empty database |
 
 Rate limits and timeouts for each metadata source are in

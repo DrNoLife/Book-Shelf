@@ -1,30 +1,32 @@
 namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <summary>
-/// Writes chapter ranges onto a series' existing whole volumes, each from the first usable map
-/// that covers it, and clears the ranges no map covers any more.
+/// Writes the merged chapter ranges onto a series' existing whole volumes, and clears the ranges
+/// no map covers any more.
 /// </summary>
 // Synced metadata only (CLAUDE.md): a range lands on a volume the shelf already tracks, keyed by
 // its whole number. A map never creates a volume, never deletes one, and never touches user
 // state — the offer to mark a volume read is computed from these columns on the way out.
 public static class ChapterRangeWriter
 {
-    /// <param name="maps">Usable maps in source precedence order. Empty clears every range.</param>
+    /// <param name="ranges">One range per volume, from ChapterMapMerger. Empty clears every range.</param>
     /// <returns>How many volumes' ranges changed, for the run's summary.</returns>
-    public static int Apply(Series series, IReadOnlyList<(MetadataSourceName Source, ChapterMap Map)> maps)
+    // A range for a volume the shelf does not track is simply not written: a source following
+    // the Japanese edition maps volumes the English one has not reached.
+    public static int Apply(Series series, IReadOnlyList<MergedVolumeRange> ranges)
     {
         ArgumentNullException.ThrowIfNull(series);
-        ArgumentNullException.ThrowIfNull(maps);
+        ArgumentNullException.ThrowIfNull(ranges);
 
         var changed = 0;
 
         foreach (var volume in series.Volumes)
         {
-            var (source, range) = RangeFor(volume, maps);
+            var merged = RangeFor(volume, ranges);
 
-            var first = range?.FirstChapter;
-            var last = range?.LastChapter;
-            MetadataSourceName? rangeSource = range is null ? null : source;
+            var first = merged?.Range.FirstChapter;
+            var last = merged?.Range.LastChapter;
+            var rangeSource = merged?.Source;
 
             if (volume.FirstChapter == first && volume.LastChapter == last && volume.ChapterRangeSource == rangeSource)
             {
@@ -42,23 +44,8 @@ public static class ChapterRangeWriter
 
     // A bonus volume (7.5) never takes a range: the sources number only whole volumes, and the
     // chapters of 7.5 are not "volume 7".
-    private static (MetadataSourceName Source, VolumeChapterRange? Range) RangeFor(
-        Volume volume,
-        IReadOnlyList<(MetadataSourceName Source, ChapterMap Map)> maps)
-    {
-        if (volume.Number != decimal.Truncate(volume.Number))
-        {
-            return (default, null);
-        }
-
-        foreach (var (source, map) in maps)
-        {
-            if (map.Ranges.FirstOrDefault(range => range.VolumeNumber == volume.Number) is { } range)
-            {
-                return (source, range);
-            }
-        }
-
-        return (default, null);
-    }
+    private static MergedVolumeRange? RangeFor(Volume volume, IReadOnlyList<MergedVolumeRange> ranges) =>
+        volume.Number == decimal.Truncate(volume.Number)
+            ? ranges.FirstOrDefault(merged => merged.Range.VolumeNumber == volume.Number)
+            : null;
 }

@@ -52,7 +52,11 @@ public static class ChapterMapBuilder
 
         return Refusal(kept, shelf) is { } reason
             ? ChapterMap.Rejected(reason)
-            : new ChapterMap { Ranges = ToRanges(kept, shelf.IsCompleted) };
+            : new ChapterMap
+            {
+                Ranges = ToRanges(kept, shelf.IsCompleted),
+                Chapters = kept.ToDictionary(volume => volume.Number, IReadOnlyList<decimal> (volume) => volume.Chapters),
+            };
     }
 
     /// <summary>
@@ -98,13 +102,11 @@ public static class ChapterMapBuilder
     }
 
     /// <returns>Why the map does not fit this shelf, or null when it does.</returns>
+    // No refusal for mapping more volumes than the shelf tracks: a source following the
+    // Japanese edition is volumes ahead of the English one (MangaDex maps 31 of Slime's
+    // volumes), and ChapterRangeWriter writes only the volumes the shelf has.
     private static string? Refusal(List<VolumeChapters> volumes, ChapterMapShelf shelf)
     {
-        if (volumes.Count > shelf.TrackedWholeVolumes + 1)
-        {
-            return $"The source maps {volumes.Count} volumes; the shelf tracks {shelf.TrackedWholeVolumes}.";
-        }
-
         // Whole chapters only, so a run of 67.1, 67.2 extras does not read as a fat volume.
         // Catches a source whose "volumes" are another edition's (Solo Leveling's seasons).
         if (shelf.LatestChapter is { } latest && shelf.TrackedWholeVolumes > 0)

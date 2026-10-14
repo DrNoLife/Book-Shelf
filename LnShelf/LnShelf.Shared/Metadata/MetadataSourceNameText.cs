@@ -12,6 +12,7 @@ public static class MetadataSourceNameText
             MetadataSourceName.OpenLibrary => "Open Library",
             MetadataSourceName.AppleBooks => "Apple Books",
             MetadataSourceName.MangaDex => "MangaDex",
+            MetadataSourceName.Wikipedia => "Wikipedia",
             _ => source.ToString(),
         };
     }

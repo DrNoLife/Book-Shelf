@@ -50,6 +50,7 @@ public static class SeriesDetailProjection
             LastChapterRead = series.UserState?.LastChapterRead,
             LatestChapter = series.LatestChapter,
             MangaDexId = series.MangaDexId,
+            ChapterListPage = series.ChapterListPage,
             Counts = ToCounts(volumes),
             CountProvenance = new CountProvenanceResponse
             {

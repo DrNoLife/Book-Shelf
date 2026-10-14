@@ -84,6 +84,12 @@ public sealed record SeriesDetailResponse
     public Guid? MangaDexId { get; init; }
 
     /// <summary>
+    /// The title of the English Wikipedia page whose chapter list mapped this series, for the
+    /// link on the chapter-range credit. Null until one was verified.
+    /// </summary>
+    public string? ChapterListPage { get; init; }
+
+    /// <summary>
     /// Volumes the last chapter read has carried the reader past and that are not marked read:
     /// what "You've finished Vol 12 — mark it read?" offers. Empty unless the series is counted
     /// in chapters.

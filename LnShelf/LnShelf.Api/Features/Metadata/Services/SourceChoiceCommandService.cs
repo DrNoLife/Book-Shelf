@@ -107,7 +107,7 @@ public sealed class SourceChoiceCommandService(
 
     private static void EnsureChoosable(SyncDiscrepancyField field, decimal? volumeNumber)
     {
-        if (!Enum.IsDefined(field) || field is SyncDiscrepancyField.SeriesLink)
+        if (!Enum.IsDefined(field) || field is SyncDiscrepancyField.SeriesLink or SyncDiscrepancyField.ChapterRange)
         {
             throw new InvalidInputException(
                 "Only the volume count, a volume's release date and the publication status can be chosen.");

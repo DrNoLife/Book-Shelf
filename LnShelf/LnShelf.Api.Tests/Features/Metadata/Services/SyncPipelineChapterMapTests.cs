@@ -64,6 +64,87 @@ public sealed class SyncPipelineChapterMapTests
         host.MangaDexRequests.ShouldNotContain(uri => uri.AbsolutePath.EndsWith("/aggregate"));
     }
 
+    // Wikipedia ahead of MangaDex through the real wiring: found by the template search (Chainsaw
+    // Man's Wikidata item names no list), verified by the shelf's vol 1 ISBN, remembered, and
+    // ahead of MangaDex on every volume — vols 21–23, which MangaDex lacks, included. Where the
+    // two start vol 24 seven chapters apart, the run records it.
+    [Fact]
+    public async Task RunAsync_AMangaWithAWikipediaList_GetsItsRangesAndRecordsWhereMangaDexDisagrees()
+    {
+        await using var host = new SyncPipelineHost(
+            AppleBooksFixtures.ChainsawManSearch,
+            MangaUpdatesFixtures.ChainsawManSeries,
+            new MangaDexCaptures(
+                MangaDexFixtures.ChainsawManSearch, MangaDexFixtures.ChainsawManEnglish, MangaDexFixtures.ChainsawManAll),
+            new WikimediaCaptures(
+                ItemSearch: WikipediaFixtures.ChainsawManItemSearch,
+                Claims: WikipediaFixtures.ChainsawManClaims,
+                PageSearch: WikipediaFixtures.ChainsawManPageSearch,
+                Pages: new Dictionary<string, string> { [WikipediaFixtures.ChainsawManPageTitle] = WikipediaFixtures.ChainsawManPage }));
+        var series = Manga("Chainsaw Man", MangaDexFixtures.ChainsawManAniListId, MangaUpdatesFixtures.ChainsawManSeriesId, volumeCount: 24);
+        series.Volumes.Single(volume => volume.Number == 1).Isbn = WikipediaFixtures.ChainsawManVolumeOneIsbn;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        host.UnexpectedRequests.ShouldBeEmpty();
+        saved.ChapterListPage.ShouldBe(WikipediaFixtures.ChainsawManPageTitle);
+        saved.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
+
+        var detail = SeriesDetailProjection.ToDetail(saved, DateOnly.FromDateTime(DateTime.UtcNow));
+        Shown(detail, 1).ShouldBe((1m, 7m));
+        Shown(detail, 20).ShouldBe((176m, 186m));
+        Shown(detail, 21).ShouldBe((187m, 198m));
+        Shown(detail, 24).First.ShouldBe(223m);
+        detail.ChapterRangeSources.ShouldBe([MetadataSourceName.Wikipedia]);
+        detail.ChapterListPage.ShouldBe(WikipediaFixtures.ChainsawManPageTitle);
+
+        var disagreement = run.Discrepancies.Where(discrepancy => discrepancy.Field == SyncDiscrepancyField.ChapterRange).ShouldHaveSingleItem();
+        disagreement.VolumeNumber.ShouldBe(24m);
+        disagreement.ResolvedWith.ShouldBe(MetadataSourceName.Wikipedia);
+    }
+
+    // Each volume credited to the source that filled it. Berserk's list numbers vols 5–43 and
+    // lists 1–4 by title only; MangaDex numbers those four's prologue chapters 0.01–0.14 and
+    // fills them. Its all-languages aggregate counts the prologue as 1–16 as well, which must
+    // not leak into the English breaks (MangaDexAggregateMapper).
+    [Fact]
+    public async Task RunAsync_WikipediaLeavesVolumesUnnumbered_MangaDexFillsThemCreditedPerVolume()
+    {
+        // The store answers with Chainsaw Man's catalogue, which the title arbiter refuses: this
+        // test is not about the store, and no Berserk capture of it exists.
+        await using var host = new SyncPipelineHost(
+            AppleBooksFixtures.ChainsawManSearch,
+            MangaUpdatesFixtures.BerserkSeries,
+            new MangaDexCaptures(MangaDexFixtures.BerserkSearch, MangaDexFixtures.BerserkEnglish, MangaDexFixtures.BerserkAll),
+            new WikimediaCaptures(
+                ItemSearch: WikipediaFixtures.BerserkItemSearch,
+                Claims: WikipediaFixtures.BerserkClaims,
+                PageSearch: WikipediaFixtures.BerserkPageSearch,
+                Pages: new Dictionary<string, string> { [WikipediaFixtures.BerserkPageTitle] = WikipediaFixtures.BerserkPage }));
+        var series = Manga("Berserk", WikipediaFixtures.BerserkAniListId, MangaUpdatesFixtures.BerserkSeriesId, volumeCount: 43);
+        series.Volumes.Single(volume => volume.Number == 1).Isbn = WikipediaFixtures.BerserkVolumeOneIsbn;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        saved.ChapterListPage.ShouldBe(WikipediaFixtures.BerserkPageTitle);
+
+        var detail = SeriesDetailProjection.ToDetail(saved, DateOnly.FromDateTime(DateTime.UtcNow));
+        detail.Volumes.Count(volume => volume.FirstChapter is not null).ShouldBe(43);
+        detail.Volumes.Where(volume => volume.Number <= 4).ShouldAllBe(volume => volume.ChapterRangeSource == MetadataSourceName.MangaDex);
+        detail.Volumes.Where(volume => volume.Number >= 5).ShouldAllBe(volume => volume.ChapterRangeSource == MetadataSourceName.Wikipedia);
+        Shown(detail, 1).ShouldBe((0.01m, 0.03m));
+        Shown(detail, 4).ShouldBe((0.10m, 0.14m));
+        Shown(detail, 5).ShouldBe((1m, 6m));
+        Shown(detail, 42).ShouldBe((365m, 373m));
+        detail.ChapterRangeSources.ShouldBe([MetadataSourceName.MangaDex, MetadataSourceName.Wikipedia]);
+    }
+
     private static (decimal? First, decimal? Last) Shown(SeriesDetailResponse detail, decimal number)
     {
         var volume = detail.Volumes.Single(candidate => candidate.Number == number);

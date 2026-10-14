@@ -12,6 +12,14 @@ public sealed record ChapterMap
     /// <summary>The ranges, in volume order. Empty when rejected.</summary>
     public IReadOnlyList<VolumeChapterRange> Ranges { get; init; } = [];
 
+    /// <summary>
+    /// The chapters each ranged volume was built from, strays dropped, sorted ascending.
+    /// </summary>
+    // Kept beside the ranges for ChapterMapMerger: where a volume ends when another source
+    // supplies the next one's start is "the highest of its own chapters below that start".
+    public IReadOnlyDictionary<int, IReadOnlyList<decimal>> Chapters { get; init; } =
+        new Dictionary<int, IReadOnlyList<decimal>>();
+
     /// <summary>Why the whole map was refused. Null for a usable map.</summary>
     public string? RejectedBecause { get; init; }
 

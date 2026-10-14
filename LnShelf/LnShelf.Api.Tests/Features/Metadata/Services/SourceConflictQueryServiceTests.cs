@@ -70,6 +70,45 @@ public sealed class SourceConflictQueryServiceTests
         conflict.RecordedAt.ShouldBe(Night);
     }
 
+    // The chapter map is checked weekly; the nightly sweeps in between do not look again, and
+    // what the last check found must not vanish with them. A later check that found nothing
+    // does clear it.
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 0)]
+    public async Task GetAsync_ChapterRangeFromAnEarlierCheck_StandsUntilTheNextCheck(bool checkedAgain, int expected)
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SaveSeriesAsync(dbContext);
+        series.ChapterMapCheckedAt = checkedAgain ? Night.AddDays(1).AddMinutes(5) : Night.AddMinutes(5);
+        await dbContext.SaveChangesAsync();
+        await SaveRunAsync(dbContext, Night, discrepancies: [ChapterRangeDisagreement(series)]);
+        await SaveRunAsync(dbContext, Night.AddDays(1));
+
+        var conflicts = await new SourceConflictQueryService(dbContext).GetAsync(series.Id, CancellationToken.None);
+
+        conflicts.ShouldNotBeNull().Count.ShouldBe(expected);
+        if (expected > 0)
+        {
+            var conflict = conflicts[0];
+            conflict.Field.ShouldBe(SyncDiscrepancyField.ChapterRange);
+            conflict.CanChoose.ShouldBeFalse();
+            conflict.NeedsReview.ShouldBeFalse();
+            conflict.RecordedAt.ShouldBe(Night);
+        }
+    }
+
+    private static SyncDiscrepancy ChapterRangeDisagreement(Series series) =>
+        SyncDiscrepancies.ChapterRange(
+            series,
+            new ChapterStartDisagreement(
+                24,
+                [
+                    new SourcedVolumeRange(MetadataSourceName.Wikipedia, new VolumeChapterRange(24, 223m, null)),
+                    new SourcedVolumeRange(MetadataSourceName.MangaDex, new VolumeChapterRange(24, 230m, null)),
+                ],
+                MetadataSourceName.Wikipedia));
+
     // Both per-volume passes ask about a volume that is in print with no date, and each one
     // records its own row when it dates it in the future. The page has to offer both.
     [Fact]

@@ -20,6 +20,14 @@ public static class DiscrepancyValueFormat
 
     public static string Status(PublicationStatus status) => status.ToString();
 
+    /// <summary>"chapters 223–232", or "chapters from 230" while the volume's end is unknown.</summary>
+    // Written to be read, never parsed back: a chapter range has no choice to act on.
+    public static string ChapterRange(VolumeChapterRange range) => range.LastChapter is { } last
+        ? $"chapters {Chapter(range.FirstChapter)}–{Chapter(last)}"
+        : $"chapters from {Chapter(range.FirstChapter)}";
+
+    private static string Chapter(decimal chapter) => chapter.ToString("0.##", CultureInfo.InvariantCulture);
+
     public static bool TryParseDate(string? text, out DateOnly date) =>
         DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 

@@ -13,6 +13,14 @@ namespace LnShelf.Api.Features.Metadata.Mappers;
 // volume past its last English chapter, because a translation that stopped mid-volume says
 // nothing about where the volume ends (Slime's English vol 24 has only ch 106).
 //
+// Either way an all-languages chapter is taken only inside English's breaks: below the start of
+// the next volume English has, and above English's own last chapter of the volume it extends
+// (or the start of the English volume before one English lacks). Some groups number
+// differently — Berserk's count its prologue as 1–16 where English says 0.01–0.16 — and their
+// chapters must never lower a start or cross English's breaks. Starts and a volume's own last
+// chapter rather than every English chapter, because English files strays too (Chainsaw Man's
+// ch 232 under vol 1) and one would wall off the rest of the series.
+//
 // Only whole volume numbers of 1 and up are kept. "none" is MangaDex's bucket for unassigned
 // chapters, "0" holds prologues and one-shots, and a decimal volume is nobody's edition. A
 // chapter filed both under a volume and under "none" therefore keeps its volume.
@@ -29,25 +37,39 @@ public static class MangaDexAggregateMapper
 
         foreach (var volumeNumber in englishVolumes.Keys.Union(allVolumes.Keys))
         {
-            var chapters = englishVolumes.TryGetValue(volumeNumber, out var inEnglish)
-                ? Extend(inEnglish, allVolumes.GetValueOrDefault(volumeNumber))
-                : allVolumes[volumeNumber];
+            var inEnglish = englishVolumes.GetValueOrDefault(volumeNumber) ?? [];
+            var additions = allVolumes.GetValueOrDefault(volumeNumber)?
+                .Where(chapter => IsBetweenEnglishNeighbours(chapter, volumeNumber, englishVolumes)) ?? [];
 
-            merged[volumeNumber] = [.. chapters];
+            List<decimal> chapters = [.. inEnglish.Union(additions).Order()];
+
+            if (chapters.Count > 0)
+            {
+                merged[volumeNumber] = chapters;
+            }
         }
 
         return merged;
     }
 
-    private static SortedSet<decimal> Extend(SortedSet<decimal> english, SortedSet<decimal>? allLanguages)
+    /// <summary>
+    /// Below the next English volume's start, and above this volume's last English chapter —
+    /// or, where English lacks the volume, above the previous English volume's start.
+    /// </summary>
+    private static bool IsBetweenEnglishNeighbours(
+        decimal chapter,
+        int volumeNumber,
+        Dictionary<int, SortedSet<decimal>> englishVolumes)
     {
-        if (allLanguages is null)
-        {
-            return english;
-        }
+        var before = englishVolumes.Keys.Where(number => number < volumeNumber).DefaultIfEmpty(0).Max();
+        var after = englishVolumes.Keys.Where(number => number > volumeNumber).DefaultIfEmpty(0).Min();
 
-        var lastInEnglish = english.Max;
-        return [.. english, .. allLanguages.Where(chapter => chapter > lastInEnglish)];
+        decimal? floor = englishVolumes.TryGetValue(volumeNumber, out var own)
+            ? own.Max
+            : englishVolumes.GetValueOrDefault(before)?.Min;
+        var ceiling = englishVolumes.GetValueOrDefault(after)?.Min;
+
+        return (floor is not { } low || chapter > low) && (ceiling is not { } high || chapter < high);
     }
 
     private static Dictionary<int, SortedSet<decimal>> Read(MangaDexAggregateResponse? aggregate)

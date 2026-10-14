@@ -29,6 +29,19 @@ public sealed class IsbnTests
         Isbn.Normalize(raw).ShouldBe(expected);
 
     [Theory]
+    // Already 13 digits: only cleaned.
+    [InlineData("978-1-59307-020-5", "9781593070205")]
+
+    // The same books as ISBN-10: 978 in front and the check digit recomputed, X included.
+    [InlineData("1-59307-020-9", "9781593070205")]
+    [InlineData("031636398X", "9780316363983")]
+
+    [InlineData(null, null)]
+    [InlineData("not an isbn", null)]
+    public void ToIsbn13_EitherForm_IsTheThirteenDigitForm(string? raw, string? expected) =>
+        Isbn.ToIsbn13(raw).ShouldBe(expected);
+
+    [Theory]
     // Registration group 4 is Japan, in both the 13- and the 10-digit form.
     [InlineData("9784896374599", true)]
     [InlineData("978-4-89637-459-9", true)]

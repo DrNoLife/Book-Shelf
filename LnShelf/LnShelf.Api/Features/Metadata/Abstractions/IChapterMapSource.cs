@@ -2,7 +2,7 @@ namespace LnShelf.Api.Features.Metadata.Abstractions;
 
 /// <summary>
 /// The named seam for "which chapters are in which volume of this series?" (CLAUDE.md —
-/// seam-first design). MangaDex is the first implementation.
+/// seam-first design). Wikipedia and MangaDex implement it, in that order of precedence.
 /// </summary>
 // Its own seam, because none of the others can be asked this: the release source knows a
 // latest chapter but not where volumes break, and the per-volume seams know editions, not

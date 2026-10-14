@@ -134,6 +134,18 @@ public sealed class Series : IOwned
     // MangaDexChapterMapSource), so a spin-off or a manhwa is never remembered as this series.
     public Guid? MangaDexId { get; set; }
 
+    /// <summary>The widest English Wikipedia page title the column holds (MediaWiki caps titles at 255 bytes).</summary>
+    public const int ChapterListPageMaximumLength = 256;
+
+    /// <summary>
+    /// The English Wikipedia page whose chapter list was verified as this series', by title.
+    /// </summary>
+    // Remembered for the same reason as MangaDexId: finding the page costs a Wikidata lookup, a
+    // search and a few page reads, and the page does not move. Only the page, not which of its
+    // tables: each refresh re-verifies the tables by ISBN (WikipediaChapterMapSource), so a
+    // reordered page costs nothing, and a page that stops verifying is forgotten.
+    public string? ChapterListPage { get; set; }
+
     /// <summary>What the last chapter-map check concluded. Null until one has run.</summary>
     // Sync bookkeeping, kept so the nightly sweep can leave a settled or hopeless series alone
     // for a while (ChapterMapRefresher's cadence) instead of asking every night.
