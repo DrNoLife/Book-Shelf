@@ -132,15 +132,17 @@ Round 3 shipped the `IReleaseNotifier` seam with Web Push as its first implement
 released volumes and changed release dates ("date moved" included), and a per-series
 mute on the series page. Still open:
 
-- ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.
+- ~~ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.~~ **[dropped
+  2026-10-14]**: the owner finds Web Push enough; the seam stays for a later need.
 - ~~"Notify me when dated" per volume on Upcoming.~~ **[done 2026-10-13, v0.31.0]**: a
   per-volume flag (`VolumeUserState.NotifyWhenDated`) that tells you once when that announced
   volume gets a date, even on a muted series.
 - ~~Remove a device automatically after N refused deliveries in a row.~~ **[done]**
   `WebPushReleaseNotifier.RemoveAfterRefusals` (5) deletes a device that keeps refusing, so a
   key rotation that leaves old subscriptions answering 403 cleans itself up.
-- Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
-  tap keeps the user gesture through Blazor interop.
+- ~~Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
+  tap keeps the user gesture through Blazor interop.~~ **[done 2026-10-14]**: the owner tested
+  both on an iPhone; they work.
 
 ## 0. Owner feedback after the multi-user deploy (2026-10-10) — next up
 
@@ -181,14 +183,15 @@ mute on the series page. Still open:
 
 ## 7. Sundry, when passing by
 
-- **Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.** 0.31.0 stopped
+- **[done 2026-10-14, migration `DropDefaultLibraryFilter`]** ~~**Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.**~~ 0.31.0 stopped
   mapping the column (`DefaultLibraryFilters` replaced it) and gave it a database default so the
   0.30.0 image still inserts; with no rollback to 0.30 left, a migration drops it (the contract
   step of `data-access.md`). Drop the `DefaultLibraryFilter` property from `PreferencesResponse`
   in the same release: 0.31.0 still sends it so a browser holding the 0.30 bundle can read the
   response.
-- **Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
-  real-iPhone test of Home Screen sign-in and the Enable tap (§6).
+- ~~**Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
+  real-iPhone test of Home Screen sign-in and the Enable tap (§6).~~ **[done 2026-10-14]**: the
+  owner checked both; they are fine.
 - **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
   suppressions are gone; the license key comes from `SixLaborsLicenseKey` (README, Deploy).
 - **Low-severity findings from the 2026-10-09 audit** are listed in
@@ -337,7 +340,7 @@ own the count (MU lagged in 1 of 12 series; 86 Vol 14 is a pre-order, MU's 13 is
    as medium evidence for manga only (Chainsaw Man, Berserk, Kodansha Slime); verify Slime
    manga 1–8 (likely a spin-off) with `enrichment-verify`; detect placeholder covers by
    `coverArt.<hash>.png` instead of discarding every future-dated cover. Bookworm stays out.
-   **[done 2026-10-11]** except the Slime manga 1–8 check, which is still open; "(comic)"
+   **[done 2026-10-11]**; the Slime manga 1–8 check followed on 2026-10-14 (fine); "(comic)"
    counts as a manga marker too (IZE Press). Found on the way (Solo Leveling stuck at 13 of 15): an English
    note's extras ("13+2 Volumes") may now be whole volumes past the count, created from the
    store like bonus volumes (CLAUDE.md, conflicting sources).
