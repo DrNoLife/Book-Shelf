@@ -21,6 +21,7 @@ public static class PreferencesMapper
             ShowVolumeTitles = preferences.ShowVolumeTitles,
             DefaultLibraryFilters = LibraryFilterSet.Normalize(preferences.DefaultLibraryFilters),
             LibrarySectionOrder = LibrarySections.Normalize(preferences.LibrarySectionOrder),
+            DefaultProgressUnit = preferences.DefaultProgressUnit,
         };
     }
 }

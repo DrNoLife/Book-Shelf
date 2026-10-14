@@ -31,6 +31,9 @@ public sealed class PreferencesState(HttpClient httpClient)
     /// <summary>The library page's sections, in the reader's order.</summary>
     public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; private set; } = LibrarySections.Default;
 
+    /// <summary>The unit a newly added manga or web novel starts in; each series can switch on its own page.</summary>
+    public ProgressUnit DefaultProgressUnit { get; private set; } = ProgressUnit.Volumes;
+
     public bool HasLoaded { get; private set; }
     public string? Message { get; private set; }
 
@@ -50,6 +53,7 @@ public sealed class PreferencesState(HttpClient httpClient)
                 LibraryView = preferences.LibraryView;
                 VolumeView = preferences.VolumeView;
                 ShowVolumeTitles = preferences.ShowVolumeTitles;
+                DefaultProgressUnit = preferences.DefaultProgressUnit;
 
                 // Normalised here as well: the page draws one section per entry, so an order
                 // missing one would lose that section outright.
@@ -106,6 +110,19 @@ public sealed class PreferencesState(HttpClient httpClient)
         Changed?.Invoke();
 
         return SaveAsync(new UpdatePreferencesRequest { VolumeView = view }, cancellationToken);
+    }
+
+    public Task SetDefaultProgressUnitAsync(ProgressUnit progressUnit, CancellationToken cancellationToken = default)
+    {
+        if (progressUnit == DefaultProgressUnit)
+        {
+            return Task.CompletedTask;
+        }
+
+        DefaultProgressUnit = progressUnit;
+        Changed?.Invoke();
+
+        return SaveAsync(new UpdatePreferencesRequest { DefaultProgressUnit = progressUnit }, cancellationToken);
     }
 
     public Task SetShowVolumeTitlesAsync(bool show, CancellationToken cancellationToken = default)

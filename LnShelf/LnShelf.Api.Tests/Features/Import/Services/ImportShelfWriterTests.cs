@@ -37,6 +37,44 @@ public sealed class ImportShelfWriterTests
             .ShouldAllBe(volume => volume.UserState!.ReadStatus == ReadStatus.Read && volume.UserState.Owned);
     }
 
+    [Theory]
+    [InlineData(Format.Manga, ProgressUnit.Chapters, ProgressUnit.Chapters)]
+    [InlineData(Format.LightNovel, ProgressUnit.Chapters, ProgressUnit.Volumes)]
+    public async Task ApplyAsync_ANewSeries_StartsInThePreferredUnitWhereTheFormatOffersChapters(
+        Format format,
+        ProgressUnit preferred,
+        ProgressUnit expected)
+    {
+        await using var dbContext = CreateDbContext();
+        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, preferred);
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 1, format));
+
+        await writer.ApplyAsync(
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        (await LoadSeriesAsync(dbContext)).UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_AReImportAfterThePreferenceChanged_LeavesTheSeriesUnitAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 1, Format.Manga));
+
+        await writer.ApplyAsync(
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, ProgressUnit.Chapters);
+
+        await writer.ApplyAsync(
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        (await LoadSeriesAsync(dbContext)).UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(ProgressUnit.Volumes);
+    }
+
     [Fact]
     public async Task ApplyAsync_VolumesTheSourceDoesNotKnow_AreAddedAsLocalOnly()
     {

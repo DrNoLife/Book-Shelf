@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+
 namespace LnShelf.Api.Features.Import.Services;
 
 /// <summary>
@@ -7,6 +9,7 @@ namespace LnShelf.Api.Features.Import.Services;
 /// </summary>
 public sealed class ImportShelfWriter(
     LnShelfDbContext dbContext,
+    IPreferencesService preferencesService,
     ISeriesMetadataSource metadataSource,
     ISeriesCoverCache coverCache,
     UserLimits userLimits,
@@ -95,6 +98,11 @@ public sealed class ImportShelfWriter(
         // Counted against what is saved plus what this commit has already added, so a big
         // export stops at the limit rather than after it.
         await userLimits.EnsureRoomForSeriesAsync(adding: counters.SeriesCreated + 1, cancellationToken);
+
+        // Only for a series created here: the existing-series and adopted branches above
+        // return before this, so a re-import never moves a unit the reader chose.
+        var preferences = await preferencesService.GetAsync(cancellationToken);
+        NewSeriesProgressUnit.ApplyTo(series, preferences.DefaultProgressUnit);
 
         dbContext.Series.Add(series);
         counters.SeriesCreated++;

@@ -674,6 +674,7 @@ public sealed class SeriesCommandServiceTests
         // from added the wrong series instead of saying so.
         var pipeline = new AddSeriesPipeline(
             dbContext,
+            TestPreferences.For(dbContext),
             [],
             NoStagedIsbns(),
             NoRefresh(),
@@ -1015,6 +1016,7 @@ public sealed class SeriesCommandServiceTests
         new(dbContext,
             new AddSeriesPipeline(
                 dbContext,
+                TestPreferences.For(dbContext),
                 [
                     new AniListAddSeriesFlow(
                         metadataSource,

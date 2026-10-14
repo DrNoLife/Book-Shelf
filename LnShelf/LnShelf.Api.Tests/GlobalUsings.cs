@@ -26,6 +26,7 @@ global using LnShelf.Api.Features.Shelf.Models;
 global using LnShelf.Api.Features.Shelf.Services;
 global using LnShelf.Api.Matching;
 global using LnShelf.Api.Tests.Features.Auth.Fixtures;
+global using LnShelf.Api.Tests.Features.Preferences.Fixtures;
 global using LnShelf.Shared.Import;
 global using LnShelf.Shared.Metadata;
 global using LnShelf.Shared.Shelf;

@@ -22,6 +22,11 @@ public sealed class UserPreferencesConfiguration : IEntityTypeConfiguration<User
         builder.Property(preferences => preferences.VolumeView)
             .HasConversion<string>().HasMaxLength(32).IsRequired();
 
+        // A database default, so the release before this column existed can still insert a row
+        // (migrations stay backward compatible for one release).
+        builder.Property(preferences => preferences.DefaultProgressUnit)
+            .HasConversion<string>().HasMaxLength(32).IsRequired().HasDefaultValue(ProgressUnit.Volumes);
+
         // The two ordered sets as comma-separated names in one text column each, rather than a
         // child table or a Postgres array: a handful of values read and written only as a
         // whole, and names keep them as readable in psql as the single enums above.

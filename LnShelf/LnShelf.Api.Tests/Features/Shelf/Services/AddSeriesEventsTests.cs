@@ -80,6 +80,7 @@ public sealed class AddSeriesEventsTests
 
         return new AddSeriesPipeline(
             dbContext,
+            TestPreferences.For(dbContext),
             [
                 new AniListAddSeriesFlow(
                     metadataSource,

@@ -70,6 +70,26 @@ public sealed class ManualSeriesCommandServiceTests
     }
 
     [Theory]
+    [InlineData(Format.Manga, ProgressUnit.Chapters, ProgressUnit.Chapters)]
+    [InlineData(Format.WebNovel, ProgressUnit.Chapters, ProgressUnit.Chapters)]
+    [InlineData(Format.LightNovel, ProgressUnit.Chapters, ProgressUnit.Volumes)]
+    [InlineData(Format.Manga, ProgressUnit.Volumes, ProgressUnit.Volumes)]
+    public async Task AddAsync_ProgressUnit_FollowsThePreferenceWhereTheFormatOffersChapters(
+        Format format,
+        ProgressUnit preferred,
+        ProgressUnit expected)
+    {
+        await using var dbContext = CreateDbContext();
+        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, preferred);
+
+        await CreateService(dbContext).AddAsync(
+            new AddManualSeriesRequest { TitleEnglish = "Overlord", Format = format }, CancellationToken.None);
+
+        var series = await dbContext.Series.Include(candidate => candidate.UserState).SingleAsync();
+        series.UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(expected);
+    }
+
+    [Theory]
     [InlineData("   ", null, 1)]
     [InlineData("A title", null, -1)]
     [InlineData("A title", null, AddManualSeriesRequest.MaximumVolumeCount + 1)]
@@ -240,6 +260,7 @@ public sealed class ManualSeriesCommandServiceTests
 
     private static ManualSeriesCommandService CreateService(LnShelfDbContext dbContext, ICoverStore? coverStore = null) =>
         new(dbContext,
+            TestPreferences.For(dbContext),
             TestUsers.Limits(dbContext),
             coverStore ?? Substitute.For<ICoverStore>(),
             TimeProvider.System,

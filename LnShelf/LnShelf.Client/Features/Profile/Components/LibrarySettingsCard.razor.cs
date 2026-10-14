@@ -2,6 +2,12 @@ namespace LnShelf.Client.Features.Profile.Components;
 
 public partial class LibrarySettingsCard : IDisposable
 {
+    private static readonly IReadOnlyList<SegmentedOption<ProgressUnit>> UnitOptions =
+    [
+        new(ProgressUnit.Volumes, "Volumes", "Start new manga and web novels counted in volumes"),
+        new(ProgressUnit.Chapters, "Chapters", "Start new manga and web novels counted in chapters"),
+    ];
+
     [Inject]
     public required PreferencesState Preferences { get; set; }
 
@@ -24,6 +30,9 @@ public partial class LibrarySettingsCard : IDisposable
 
     private Task OnDefaultFiltersChangedAsync(IReadOnlyList<LibraryFilter> filters) =>
         Preferences.SetDefaultLibraryFiltersAsync(filters);
+
+    private Task OnDefaultProgressUnitChangedAsync(ProgressUnit progressUnit) =>
+        Preferences.SetDefaultProgressUnitAsync(progressUnit);
 
     private Task MoveAsync(LibrarySection section, int offset) =>
         Preferences.SetLibrarySectionOrderAsync(LibrarySectionMoves.Move(Order, section, offset));

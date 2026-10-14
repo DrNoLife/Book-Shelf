@@ -57,6 +57,17 @@
         <p class="fine">The header stays on top.</p>
     </div>
 
+    <div class="setting">
+        <span class="eyebrow">New manga &amp; web novels track by</span>
+        <SegmentedControl TValue="ProgressUnit"
+                          Options="UnitOptions"
+                          Value="Preferences.DefaultProgressUnit"
+                          ValueChanged="OnDefaultProgressUnitChangedAsync"
+                          Inset="true"
+                          AriaLabel="New manga and web novels track by" />
+        <p class="fine">Each series can still be switched on its own page.</p>
+    </div>
+
     @if (Preferences.Message is { } message)
     {
         <p class="notice notice--warning" role="alert">@message</p>

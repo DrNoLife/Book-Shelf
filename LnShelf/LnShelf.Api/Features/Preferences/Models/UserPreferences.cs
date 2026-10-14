@@ -40,6 +40,12 @@ public sealed class UserPreferences : IOwned
     public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; set; } = LibrarySections.Default;
 
     /// <summary>
+    /// The progress unit a newly added manga or web novel starts with; existing series are
+    /// never touched by it.
+    /// </summary>
+    public ProgressUnit DefaultProgressUnit { get; set; } = ProgressUnit.Volumes;
+
+    /// <summary>
     /// When the reader last dismissed "Since your last visit". Null means never: the panel
     /// then looks back a fixed window instead.
     /// </summary>

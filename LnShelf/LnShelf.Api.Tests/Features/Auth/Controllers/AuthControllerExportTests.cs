@@ -82,6 +82,7 @@ public sealed class AuthControllerExportTests
             ShowVolumeTitles = true,
             DefaultLibraryFilters = LibraryFilterSet.Default,
             LibrarySectionOrder = LibrarySections.Default,
+            DefaultProgressUnit = ProgressUnit.Volumes,
         },
         Series = [],
         ImportBatches = [],

@@ -39,6 +39,12 @@ public sealed record PreferencesResponse
     /// (<see cref="LibrarySections.Normalize"/>).
     /// </summary>
     public required IReadOnlyList<LibrarySection> LibrarySectionOrder { get; init; }
+
+    /// <summary>
+    /// The unit a newly added manga or web novel starts in. Existing series keep their own, and
+    /// a light novel is always counted in volumes.
+    /// </summary>
+    public required ProgressUnit DefaultProgressUnit { get; init; }
 }
 
 /// <summary>Partial update: every null leaves that setting alone.</summary>
@@ -55,4 +61,6 @@ public sealed record UpdatePreferencesRequest
 
     /// <summary>Normalised on save: repeats dropped, missing sections appended.</summary>
     public IReadOnlyList<LibrarySection>? LibrarySectionOrder { get; init; }
+
+    public ProgressUnit? DefaultProgressUnit { get; init; }
 }
