@@ -28,9 +28,12 @@ public sealed class SourceConflictQueryService(LnShelfDbContext dbContext) : ISo
             .ThenInclude(discrepancy => discrepancy.Values)
             .LatestSweepAsync(cancellationToken);
 
+        // Chapter ranges are left out of the sweep's rows and read from the run that last
+        // checked the map instead (below), so they are never listed twice.
         var recorded = sweep is null
             ? []
             : sweep.Discrepancies
+                .Where(discrepancy => discrepancy.Field is not SyncDiscrepancyField.ChapterRange)
                 .GroupBy(discrepancy => (discrepancy.Field, discrepancy.VolumeNumber))
                 .Select(group => RecordedDisagreement.FromRows(group, sweep.StartedAt))
                 .ToList();
@@ -38,10 +41,9 @@ public sealed class SourceConflictQueryService(LnShelfDbContext dbContext) : ISo
         // Chapter ranges are checked weekly, not nightly (ChapterMapRefresher.IsDue), so the
         // latest sweep usually never looked: what the last check found still stands, and is read
         // from the run that made that check.
-        if (!recorded.Any(row => row.Discrepancy.Field is SyncDiscrepancyField.ChapterRange)
-            && series.ChapterMapCheckedAt is { } checkedAt)
+        if (series.ChapterMapSyncRunId is { } checkingRunId)
         {
-            recorded.AddRange(await LastChapterMapCheckAsync(seriesId, checkedAt, cancellationToken));
+            recorded.AddRange(await ChapterMapCheckAsync(seriesId, checkingRunId, cancellationToken));
         }
 
         // A choice outlives the sweep that showed its disagreement: when the sources agree
@@ -73,24 +75,21 @@ public sealed class SourceConflictQueryService(LnShelfDbContext dbContext) : ISo
     }
 
     /// <summary>
-    /// The chapter-range disagreements of the run during which the series' chapter map was last
-    /// checked; none when that check found none.
+    /// The chapter-range disagreements the series' last chapter-map check recorded; none when
+    /// it found none.
     /// </summary>
-    private async Task<IEnumerable<RecordedDisagreement>> LastChapterMapCheckAsync(
+    private async Task<IEnumerable<RecordedDisagreement>> ChapterMapCheckAsync(
         Guid seriesId,
-        DateTimeOffset checkedAt,
+        Guid checkingRunId,
         CancellationToken cancellationToken)
     {
         // Through SyncRuns, which is owner-filtered, like the sweep above.
         var run = await dbContext.SyncRuns
             .AsNoTracking()
-            .Where(candidate => candidate.StartedAt <= checkedAt
-                                && (candidate.FinishedAt == null || candidate.FinishedAt >= checkedAt))
-            .OrderByDescending(candidate => candidate.StartedAt)
             .Include(candidate => candidate.Discrepancies.Where(discrepancy =>
                 discrepancy.SeriesId == seriesId && discrepancy.Field == SyncDiscrepancyField.ChapterRange))
             .ThenInclude(discrepancy => discrepancy.Values)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.Id == checkingRunId, cancellationToken);
 
         return run is null
             ? []

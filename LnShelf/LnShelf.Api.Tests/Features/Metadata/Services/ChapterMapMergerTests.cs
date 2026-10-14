@@ -98,7 +98,7 @@ public sealed class ChapterMapMergerTests
     [Fact]
     public void Merge_Berserk_PrologueVolumesFromMangaDexTheRestFromWikipedia()
     {
-        var shelf = new ChapterMapShelf(43, Enumerable.Range(1, 43).ToHashSet(), 386m, IsCompleted: false);
+        var shelf = new ChapterMapShelf(43, Enumerable.Range(1, 43).ToHashSet(), 386m, IsCompleted: false, HighestTrackedWholeVolume: 43);
         var wikipedia = ChapterMapBuilder.Build(
             GraphicNovelListVerifier.ToChaptersByVolume(WikipediaFixtures.Tables(WikipediaFixtures.BerserkPage)[0]), shelf);
         var mangaDex = ChapterMapBuilder.Build(
@@ -115,6 +115,26 @@ public sealed class ChapterMapMergerTests
         merged.Ranges.Select(range => range.Range.FirstChapter).ShouldBeInOrder(SortDirection.Ascending);
     }
 
+    // Vol 1 comes from the first source only, at 10; the other two start vol 2 below it, so
+    // neither is written. The disagreement must not name a source as shown.
+    [Fact]
+    public void Merge_NoOfferRisesAboveThePreviousStart_RecordsTheDisagreementWithNoWrittenSource()
+    {
+        var wikipedia = Map(new() { [1] = Chapters(10, 12) });
+        var mangaDex = Map(new() { [2] = Chapters(3, 4) });
+        var third = Map(new() { [2] = Chapters(5, 6) });
+
+        var merged = Merge(
+            (MetadataSourceName.Wikipedia, wikipedia),
+            (MetadataSourceName.MangaDex, mangaDex),
+            (MetadataSourceName.AniList, third));
+
+        merged.Ranges.ShouldNotContain(range => range.Range.VolumeNumber == 2);
+        var disagreement = merged.Disagreements.ShouldHaveSingleItem();
+        disagreement.VolumeNumber.ShouldBe(2);
+        disagreement.WrittenSource.ShouldBeNull();
+    }
+
     private static MergedChapterMap Merge(params (MetadataSourceName Source, ChapterMap Map)[] maps) =>
         ChapterMapMerger.Merge(maps);
 
@@ -124,7 +144,7 @@ public sealed class ChapterMapMergerTests
     // A shelf that refuses nothing, so each test's maps are exactly what it wrote.
     private static ChapterMap Map(Dictionary<int, IReadOnlyList<decimal>> chapters)
     {
-        var map = ChapterMapBuilder.Build(chapters, new ChapterMapShelf(100, new HashSet<int>(), null, IsCompleted: false));
+        var map = ChapterMapBuilder.Build(chapters, new ChapterMapShelf(100, new HashSet<int>(), null, IsCompleted: false, HighestTrackedWholeVolume: 100));
         map.IsUsable.ShouldBeTrue(map.RejectedBecause);
         return map;
     }

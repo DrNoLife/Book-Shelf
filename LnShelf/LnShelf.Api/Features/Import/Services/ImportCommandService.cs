@@ -1,9 +1,12 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+
 namespace LnShelf.Api.Features.Import.Services;
 
 /// <inheritdoc />
 public sealed class ImportCommandService(
     LnShelfDbContext dbContext,
     ImportShelfWriter shelfWriter,
+    IPreferencesService preferencesService,
     ISeriesMetadataSource metadataSource,
     ISeriesCoverCache coverCache,
     TimeProvider timeProvider,
@@ -118,13 +121,17 @@ public sealed class ImportCommandService(
         var counters = new ImportWriteCounters();
         var appliedAt = timeProvider.GetUtcNow();
 
+        // Once for the whole commit: every series it creates starts in the same unit, and a big
+        // export would otherwise read the same row once per new series.
+        var preferences = await preferencesService.GetAsync(cancellationToken);
+
         // Grouped by AniList id, which is what merges the two spellings of one
         // series — a real export lists Slime and Overlord under both their English
         // and their Japanese titles, and they are one shelf entry each.
         foreach (var seriesGroups in toApply.GroupBy(group => group.MatchedAniListId!.Value))
         {
             await shelfWriter.ApplyAsync(
-                seriesGroups.Key, [.. seriesGroups], counters, cancellationToken);
+                seriesGroups.Key, [.. seriesGroups], counters, preferences.DefaultProgressUnit, cancellationToken);
         }
 
         foreach (var group in toApply)

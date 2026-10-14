@@ -34,9 +34,17 @@ public sealed record ChapterMap
 /// <param name="TrackedWholeVolumes">Whole volumes the shelf tracks, released or not.</param>
 /// <param name="ReleasedWholeVolumes">The numbers of the whole volumes that are out.</param>
 /// <param name="LatestChapter">The release source's latest chapter, when it knows one.</param>
-/// <param name="IsCompleted">The series' publication status is Completed, so its highest volume closes.</param>
+/// <param name="IsCompleted">The series' publication status is Completed, so its final volume closes.</param>
+/// <param name="HighestTrackedWholeVolume">
+/// The highest whole volume number the shelf tracks; null when it tracks none. On a completed
+/// series this is the final volume, the only one a map may close without a next start.
+/// </param>
+// The highest number rather than "the source's last volume": a source can stop short of the
+// shelf (MangaDex's index lags a new volume), and closing its last mapped volume as if final
+// would end it on whatever chapters that source happens to list.
 public sealed record ChapterMapShelf(
     int TrackedWholeVolumes,
     IReadOnlySet<int> ReleasedWholeVolumes,
     decimal? LatestChapter,
-    bool IsCompleted);
+    bool IsCompleted,
+    int? HighestTrackedWholeVolume);

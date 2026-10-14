@@ -45,7 +45,7 @@ public static class ChapterRangeWriter
     // A bonus volume (7.5) never takes a range: the sources number only whole volumes, and the
     // chapters of 7.5 are not "volume 7".
     private static MergedVolumeRange? RangeFor(Volume volume, IReadOnlyList<MergedVolumeRange> ranges) =>
-        volume.Number == decimal.Truncate(volume.Number)
+        !volume.Number.IsBonusVolume
             ? ranges.FirstOrDefault(merged => merged.Range.VolumeNumber == volume.Number)
             : null;
 }

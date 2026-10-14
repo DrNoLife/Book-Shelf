@@ -54,7 +54,7 @@ public static class ChapterMapBuilder
             ? ChapterMap.Rejected(reason)
             : new ChapterMap
             {
-                Ranges = ToRanges(kept, shelf.IsCompleted),
+                Ranges = ToRanges(kept, shelf),
                 Chapters = kept.ToDictionary(volume => volume.Number, IReadOnlyList<decimal> (volume) => volume.Chapters),
             };
     }
@@ -135,9 +135,10 @@ public static class ChapterMapBuilder
 
     /// <summary>
     /// First is a volume's lowest chapter. Last is known only where the next volume's start is,
-    /// or for the final volume of a completed series; otherwise the range stays open.
+    /// or for the final volume of a completed series — the highest volume the shelf tracks, not
+    /// merely the highest this source maps; otherwise the range stays open.
     /// </summary>
-    private static List<VolumeChapterRange> ToRanges(List<VolumeChapters> volumes, bool isCompleted)
+    private static List<VolumeChapterRange> ToRanges(List<VolumeChapters> volumes, ChapterMapShelf shelf)
     {
         var ranges = new List<VolumeChapterRange>();
 
@@ -146,7 +147,7 @@ public static class ChapterMapBuilder
             var volume = volumes[index];
             var next = index < volumes.Count - 1 ? volumes[index + 1] : null;
 
-            ranges.Add(new VolumeChapterRange(volume.Number, volume.Chapters[0], LastChapter(volume, next, isCompleted)));
+            ranges.Add(new VolumeChapterRange(volume.Number, volume.Chapters[0], LastChapter(volume, next, shelf)));
         }
 
         return ranges;
@@ -155,7 +156,7 @@ public static class ChapterMapBuilder
     // A gap after this volume (the next mapped one is not number + 1) leaves it open: where it
     // ends depends on where the missing volume starts. Never empty below the next start,
     // because starts rise.
-    private static decimal? LastChapter(VolumeChapters volume, VolumeChapters? next, bool isCompleted)
+    private static decimal? LastChapter(VolumeChapters volume, VolumeChapters? next, ChapterMapShelf shelf)
     {
         if (next is not null)
         {
@@ -164,7 +165,7 @@ public static class ChapterMapBuilder
                 : null;
         }
 
-        return isCompleted ? volume.Chapters[^1] : null;
+        return shelf.IsCompleted && volume.Number == shelf.HighestTrackedWholeVolume ? volume.Chapters[^1] : null;
     }
 
     private static bool IsRising(List<decimal> values) =>

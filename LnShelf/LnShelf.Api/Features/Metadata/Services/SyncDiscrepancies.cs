@@ -140,8 +140,9 @@ public static class SyncDiscrepancies
     /// <summary>
     /// Chapter-map sources starting one volume more than a chapter apart.
     /// </summary>
-    // Resolved every time, by the source whose range was written: precedence settles a chapter
-    // range, and there is no choice to make (SyncDiscrepancyField.ChapterRange).
+    // Resolved by the source whose range was written: precedence settles a chapter range, and
+    // there is no choice to make (SyncDiscrepancyField.ChapterRange). Unresolved when no offer
+    // could be written, because naming a source there would claim a range the shelf does not show.
     public static SyncDiscrepancy ChapterRange(Series series, ChapterStartDisagreement disagreement)
     {
         var discrepancy = new SyncDiscrepancy
@@ -152,7 +153,9 @@ public static class SyncDiscrepancies
             Field = SyncDiscrepancyField.ChapterRange,
             VolumeNumber = disagreement.VolumeNumber,
             ResolvedWith = disagreement.WrittenSource,
-            Note = $"The shelf shows {disagreement.WrittenSource.DisplayName}'s range: the first source that maps a volume supplies it.",
+            Note = disagreement.WrittenSource is { } written
+                ? $"The shelf shows {written.DisplayName}'s range: the first source that maps a volume supplies it."
+                : "The shelf shows no range for this volume: no source's start comes after the volume before it.",
         };
 
         foreach (var offer in disagreement.Offers)

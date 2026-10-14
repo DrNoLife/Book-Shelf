@@ -17,6 +17,9 @@ public sealed class FixtureChapterMapSource : IChapterMapSource
 
     public MetadataSourceName SourceName => MetadataSourceName.MangaDex;
 
+    /// <summary>No allowance to spend: the fake never reaches the network.</summary>
+    public bool CanAnswer(Series series) => true;
+
     public Task<ChapterMapAnswer> GetChapterMapAsync(Series series, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);

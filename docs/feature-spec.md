@@ -140,9 +140,10 @@ The series/volume tracking domain.
   dropped, implausible maps rejected). The step runs at the end of a series refresh, at
   most weekly per series (30 days after an unmatched or rejected answer, never again once a
   completed series is fully closed). Starts more than one chapter apart become a
-  `ChapterRange` discrepancy. When `LastChapterRead` passes the end of unread volumes, the
-  series page and the Up next toast offer "Mark read" for them (derived, never stored,
-  never forced; it uses the per-volume read endpoint so skipped volumes stay as they are).
+  `ChapterRange` discrepancy. When `LastChapterRead` passes the end of unread volumes
+  numbered above the highest volume already read, the series page and the Up next toast
+  offer "Mark read" for them (derived, never stored, never forced; a skipped volume below
+  the highest one read is never offered, and the per-volume read endpoint leaves it as it is).
   Each range credits its source (MangaDex, or Wikipedia under CC BY-SA) with a link, as
   MangaDex's terms require.
 - Library query returns everything a card needs in **one round trip**:
@@ -547,8 +548,11 @@ Series
   -- [added 2026-10-11] MangaUpdates' latest_chapter for the linked record, written by
   -- every refresh that reads a value; a refresh with none never clears a known one.
   MangaDexId (nullable uuid), ChapterListPage (nullable, ≤ 256), ChapterMapStatus
-  (nullable Mapped|Rejected|Unmatched), ChapterMapCheckedAt (nullable)
-  -- [added 2026-10-14] the chapter-map sources' handles and cadence; metadata.
+  (nullable Mapped|Rejected|Unmatched), ChapterMapCheckedAt (nullable),
+  ChapterMapSyncRunId (nullable uuid, no FK)
+  -- [added 2026-10-14] the chapter-map sources' handles and cadence; metadata. The run id
+  -- names the sync run whose check wrote the ranges, so the series page reads that check's
+  -- ChapterRange discrepancies from it.
 
 Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),

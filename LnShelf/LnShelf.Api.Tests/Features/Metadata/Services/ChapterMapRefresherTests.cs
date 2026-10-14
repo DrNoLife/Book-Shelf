@@ -189,19 +189,69 @@ public sealed class ChapterMapRefresherTests
         series.ChapterMapCheckedAt.ShouldBeNull();
     }
 
+    // The only source fails: what the last good check wrote stands, but the check is stamped,
+    // so a source that fails every time is asked on the cadence rather than every night.
     [Fact]
-    public async Task RefreshAsync_SourceThrows_IsIsolatedAndWritesNothing()
+    public async Task RefreshAsync_TheOnlySourceThrows_KeepsTheRangesAndStampsTheCheck()
     {
         var series = Series(1);
+        var earlierRunId = Guid.CreateVersion7();
         Volume(series, 1).FirstChapter = 1m;
-        var failing = Substitute.For<IChapterMapSource>();
-        failing.GetChapterMapAsync(series, Arg.Any<CancellationToken>())
-            .Returns<ChapterMapAnswer>(_ => throw new HttpRequestException("503"));
+        series.ChapterMapStatus = ChapterMapStatus.Mapped;
+        series.ChapterMapSyncRunId = earlierRunId;
 
-        await Should.NotThrowAsync(() => Refresher(failing).RefreshAsync(series, new SyncRun(), CancellationToken.None));
+        await Should.NotThrowAsync(() => Refresher(Failing()).RefreshAsync(series, new SyncRun(), CancellationToken.None));
 
         Volume(series, 1).FirstChapter.ShouldBe(1m);
+        series.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
+        series.ChapterMapCheckedAt.ShouldNotBeNull();
+        series.ChapterMapSyncRunId.ShouldBe(earlierRunId);
+    }
+
+    // One source failing costs only its own answer: the other's map is merged and written, and
+    // the run that did it is remembered on the series.
+    [Fact]
+    public async Task RefreshAsync_OneSourceThrows_WritesTheOthersMapAndStampsTheCheck()
+    {
+        var series = Series(2);
+        var run = new SyncRun { Id = Guid.CreateVersion7() };
+        var mangaDex = Source(MetadataSourceName.MangaDex, Found(new() { [1] = [1m, 2m], [2] = [3m, 4m] }));
+
+        await Refresher(Failing(), mangaDex).RefreshAsync(series, run, CancellationToken.None);
+
+        Volume(series, 1).ShouldSatisfyAllConditions(
+            volume => volume.FirstChapter.ShouldBe(1m),
+            volume => volume.ChapterRangeSource.ShouldBe(MetadataSourceName.MangaDex));
+        series.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
+        series.ChapterMapCheckedAt.ShouldNotBeNull();
+        series.ChapterMapSyncRunId.ShouldBe(run.Id);
+    }
+
+    // MangaDex's allowance is checked before Wikipedia is asked anything: a series one source
+    // cannot afford is left whole, and the other's requests are not spent on it.
+    [Fact]
+    public async Task RefreshAsync_ALaterSourceIsShortOfAllowance_AsksNoSource()
+    {
+        var series = Series(1);
+        var wikipedia = Source(MetadataSourceName.Wikipedia, Found(new() { [1] = [1m, 2m] }));
+        var mangaDex = Source(MetadataSourceName.MangaDex, Found(new() { [1] = [1m, 2m] }));
+        mangaDex.CanAnswer(series).Returns(false);
+
+        await Refresher(wikipedia, mangaDex).RefreshAsync(series, new SyncRun(), CancellationToken.None);
+
+        await wikipedia.DidNotReceive().GetChapterMapAsync(Arg.Any<Series>(), Arg.Any<CancellationToken>());
+        await mangaDex.DidNotReceive().GetChapterMapAsync(Arg.Any<Series>(), Arg.Any<CancellationToken>());
         series.ChapterMapCheckedAt.ShouldBeNull();
+    }
+
+    private static IChapterMapSource Failing()
+    {
+        var failing = Substitute.For<IChapterMapSource>();
+        failing.SourceName.Returns(MetadataSourceName.Wikipedia);
+        failing.CanAnswer(Arg.Any<Series>()).Returns(true);
+        failing.GetChapterMapAsync(Arg.Any<Series>(), Arg.Any<CancellationToken>())
+            .Returns<ChapterMapAnswer>(_ => throw new HttpRequestException("503"));
+        return failing;
     }
 
     private static ChapterMapRefresher Refresher(params IChapterMapSource[] sources) =>
@@ -211,6 +261,7 @@ public sealed class ChapterMapRefresherTests
     {
         var source = Substitute.For<IChapterMapSource>();
         source.SourceName.Returns(name);
+        source.CanAnswer(Arg.Any<Series>()).Returns(true);
         source.GetChapterMapAsync(Arg.Any<Series>(), Arg.Any<CancellationToken>()).Returns(answer);
         return source;
     }

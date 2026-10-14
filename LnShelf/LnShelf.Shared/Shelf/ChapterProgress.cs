@@ -70,11 +70,15 @@ public static class ChapterProgress
     }
 
     /// <summary>
-    /// The volumes the reader's chapter has carried them past: whole volumes not yet Read whose
-    /// last chapter is known and at or below the last chapter read. In volume order.
+    /// The volumes the reader's chapter has carried them past: whole volumes not yet Read,
+    /// numbered above the highest volume already Read, whose last chapter is known and at or
+    /// below the last chapter read. In volume order.
     /// </summary>
     // Derived, never stored (CLAUDE.md): it is what the series page offers to mark read, and an
     // offer is all it is. An open volume is never in it, because "finished" needs a known end.
+    // Only above the highest Read volume: a volume below it that is still unread was skipped,
+    // and a chapter read past it says nothing about whether the reader means to go back. With
+    // nothing read yet, every finished volume qualifies.
     public static IReadOnlyList<VolumeResponse> VolumesFinishedBy(decimal? lastChapterRead, IEnumerable<VolumeResponse> volumes)
     {
         ArgumentNullException.ThrowIfNull(volumes);
@@ -84,11 +88,18 @@ public static class ChapterProgress
             return [];
         }
 
+        var candidates = volumes.ToList();
+        var highestRead = candidates
+            .Where(volume => volume.ReadStatus is ReadStatus.Read)
+            .Select(volume => (decimal?)volume.Number)
+            .Max();
+
         return
         [
-            .. volumes
-                .Where(volume => volume.Number == decimal.Truncate(volume.Number)
+            .. candidates
+                .Where(volume => !volume.Number.IsBonusVolume
                                  && volume.ReadStatus is not ReadStatus.Read
+                                 && (highestRead is not { } highest || volume.Number > highest)
                                  && volume.LastChapter is { } last
                                  && last <= lastRead)
                 .OrderBy(volume => volume.Number),

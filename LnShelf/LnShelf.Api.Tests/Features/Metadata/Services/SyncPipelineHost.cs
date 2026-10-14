@@ -41,7 +41,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         string appleBooksFixture,
         string mangaUpdatesFixture,
         MangaDexCaptures? mangaDex = null,
-        WikimediaCaptures? wikimedia = null)
+        WikimediaCaptures? wikimedia = null,
+        IReadOnlyDictionary<string, string?>? settings = null)
     {
         CoverRoot = Path.Combine(Path.GetTempPath(), $"lnshelf-sync-pipeline-{Guid.CreateVersion7()}");
         Directory.CreateDirectory(CoverRoot);
@@ -51,12 +52,15 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         var mangaDexAnswers = new MangaDexAnswers(
             mangaDex is null ? EmptyMangaDexSearch : Fixture(mangaDex.Search),
             mangaDex?.English is { } english ? Fixture(english) : EmptyMangaDexAggregate,
-            mangaDex?.All is { } all ? Fixture(all) : EmptyMangaDexAggregate);
+            mangaDex?.All is { } all ? Fixture(all) : EmptyMangaDexAggregate,
+            mangaDex?.AggregateStatus ?? HttpStatusCode.OK);
 
-        var services = CompositionRootTests.BuildServices(new Dictionary<string, string?>
+        // The test's own settings over the app's, for a test about an option (an allowance).
+        var configuration = new Dictionary<string, string?>(settings ?? new Dictionary<string, string?>())
         {
             ["Covers:FileSystem:RootPath"] = CoverRoot,
-        });
+        };
+        var services = CompositionRootTests.BuildServices(configuration);
 
         // Postgres out, the in-memory provider in. Both registrations go: AddDbContext keeps
         // its provider call as a separate configuration, and leaving it would give the
@@ -114,6 +118,16 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
             .SingleAsync(series => series.Id == seriesId);
     }
 
+    /// <summary>What the series page's disagreement list would show for the series now.</summary>
+    public async Task<IReadOnlyList<SourceConflictResponse>> ConflictsAsync(Guid seriesId)
+    {
+        await using var scope = Scope();
+        var conflicts = await scope.ServiceProvider.GetRequiredService<ISourceConflictQueryService>()
+            .GetAsync(seriesId, CancellationToken.None);
+
+        return conflicts ?? throw new InvalidOperationException($"No series {seriesId} to list conflicts for.");
+    }
+
     public bool StoreHolds(string objectKey) =>
         File.Exists(Path.Combine(CoverRoot, objectKey.Replace('/', Path.DirectorySeparatorChar)));
 
@@ -161,7 +175,9 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         if (uri.Host == "api.mangadex.org")
         {
             MangaDexRequests.Enqueue(uri);
-            return Respond(new StringContent(mangaDex.For(uri), Encoding.UTF8, "application/json"));
+            return mangaDex.StatusFor(uri) is HttpStatusCode.OK
+                ? Respond(new StringContent(mangaDex.For(uri), Encoding.UTF8, "application/json"))
+                : new HttpResponseMessage(mangaDex.StatusFor(uri));
         }
 
         if (WikimediaCaptures.Answers(uri))
@@ -186,8 +202,11 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
 
     private const string EmptyMangaDexAggregate = """{"result":"ok","volumes":[]}""";
 
-    private sealed record MangaDexAnswers(string Search, string English, string All)
+    private sealed record MangaDexAnswers(string Search, string English, string All, HttpStatusCode AggregateStatus)
     {
+        public HttpStatusCode StatusFor(Uri uri) =>
+            uri.AbsolutePath.EndsWith("/aggregate", StringComparison.Ordinal) ? AggregateStatus : HttpStatusCode.OK;
+
         public string For(Uri uri)
         {
             if (!uri.AbsolutePath.EndsWith("/aggregate", StringComparison.Ordinal))
@@ -222,5 +241,12 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
     }
 }
 
-/// <summary>Captured MangaDex answers for one series: its title search and its two aggregates.</summary>
-internal sealed record MangaDexCaptures(string Search, string? English = null, string? All = null);
+/// <summary>
+/// Captured MangaDex answers for one series: its title search and its two aggregates, or the
+/// status the aggregates answer with instead (a 404 for a record MangaDex no longer has).
+/// </summary>
+internal sealed record MangaDexCaptures(
+    string Search,
+    string? English = null,
+    string? All = null,
+    HttpStatusCode AggregateStatus = HttpStatusCode.OK);

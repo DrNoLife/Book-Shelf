@@ -47,6 +47,18 @@ public sealed class ChapterMapBuilderTests
         Range(map, 14).ShouldBe(new VolumeChapterRange(14, 128m, 137m));
     }
 
+    // The shelf tracks 16 volumes and the source maps 14: its last mapped volume is not the
+    // series' final one, so it stays open however completed the series is.
+    [Fact]
+    public void Build_CompletedSeriesTheSourceStopsShortOf_LeavesItsLastMappedVolumeOpen()
+    {
+        var map = ChapterMapBuilder.Build(Frieren(), Shelf(tracked: 16, releasedThrough: 14, latest: 150m, completed: true));
+
+        map.IsUsable.ShouldBeTrue(map.RejectedBecause);
+        Range(map, 13).ShouldBe(new VolumeChapterRange(13, 118m, 127m));
+        Range(map, 14).ShouldBe(new VolumeChapterRange(14, 128m, null));
+    }
+
     [Fact]
     public void Build_SlimeStrayUnderVolumeFour_IsDropped()
     {
@@ -131,9 +143,11 @@ public sealed class ChapterMapBuilderTests
     private static VolumeChapterRange Range(ChapterMap map, int volumeNumber) =>
         map.Ranges.Single(range => range.VolumeNumber == volumeNumber);
 
+    /// <param name="tracked">Whole volumes 1 to this number, the highest of them included.</param>
     private static ChapterMapShelf Shelf(int tracked, int releasedThrough, decimal? latest, bool completed = false) => new(
         tracked,
         Enumerable.Range(1, releasedThrough).ToHashSet(),
         latest,
-        completed);
+        completed,
+        HighestTrackedWholeVolume: tracked);
 }

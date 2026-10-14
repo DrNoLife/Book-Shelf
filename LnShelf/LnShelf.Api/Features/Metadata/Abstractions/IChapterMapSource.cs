@@ -19,6 +19,17 @@ public interface IChapterMapSource
     MetadataSourceName SourceName { get; }
 
     /// <summary>
+    /// Whether this run's request allowance still covers the most this series can cost here.
+    /// </summary>
+    /// <remarks>
+    /// Asked of every source before any is asked for a map, so a series one source cannot afford
+    /// is left whole for the next run without spending another source's requests on it. Costs
+    /// nothing and sends nothing; a source that would not ask anything for the series (no ISBN
+    /// to verify a page against) can always answer.
+    /// </remarks>
+    bool CanAnswer(Series series);
+
+    /// <summary>
     /// The source's chapters per volume for this series.
     /// </summary>
     /// <remarks>

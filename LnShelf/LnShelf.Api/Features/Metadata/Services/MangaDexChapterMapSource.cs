@@ -1,3 +1,4 @@
+using System.Net;
 using LnShelf.Api.Features.Metadata.Models.MangaDex;
 
 namespace LnShelf.Api.Features.Metadata.Services;
@@ -24,12 +25,14 @@ public sealed class MangaDexChapterMapSource(
 
     public MetadataSourceName SourceName => MetadataSourceName.MangaDex;
 
+    // All or nothing per series: a half-asked series would be judged on half an answer.
+    public bool CanAnswer(Series series) => _budget.Remaining >= MaximumRequestsPerSeries;
+
     public async Task<ChapterMapAnswer> GetChapterMapAsync(Series series, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
 
-        // All or nothing per series: a half-asked series would be judged on half an answer.
-        if (_budget.Remaining < MaximumRequestsPerSeries)
+        if (!CanAnswer(series))
         {
             return ChapterMapAnswer.Skipped;
         }
@@ -55,7 +58,33 @@ public sealed class MangaDexChapterMapSource(
             series.MangaDexId = id;
         }
 
-        var english = await client.GetAggregateAsync(id, englishOnly: true, cancellationToken);
+        return await ReadAggregatesAsync(series, id, cancellationToken);
+    }
+
+    private async Task<ChapterMapAnswer> ReadAggregatesAsync(Series series, Guid id, CancellationToken cancellationToken)
+    {
+        MangaDexAggregateResponse? english;
+
+        try
+        {
+            english = await client.GetAggregateAsync(id, englishOnly: true, cancellationToken);
+        }
+        // A record MangaDex has removed or merged into another answers 404 for good. Forgotten,
+        // so the next due check matches the series afresh; kept, it would cost a failed request
+        // on every check and never map again.
+        catch (HttpRequestException exception) when (exception.StatusCode is HttpStatusCode.NotFound)
+        {
+            _budget.Spend(1);
+            series.MangaDexId = null;
+
+            logger.LogWarning(
+                "MangaDex record {MangaDexId} for {TitleEnglish} is gone; the link is forgotten",
+                id,
+                series.TitleEnglish);
+
+            return ChapterMapAnswer.Unmatched("The MangaDex record this series was linked to no longer exists.");
+        }
+
         var allLanguages = await client.GetAggregateAsync(id, englishOnly: false, cancellationToken);
         _budget.Spend(2);
 

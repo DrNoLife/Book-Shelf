@@ -154,6 +154,15 @@ public sealed class Series : IOwned
     /// <summary>When the chapter map was last checked, whatever it concluded.</summary>
     public DateTimeOffset? ChapterMapCheckedAt { get; set; }
 
+    /// <summary>
+    /// The sync run whose chapter-map check the series' ranges come from. Null until one wrote.
+    /// </summary>
+    // The series page reads that check's chapter-range disagreements from this run. Matching
+    // ChapterMapCheckedAt against run windows picked the wrong run whenever two overlapped (the
+    // nightly sweep and a one-series refresh). A plain id rather than a foreign key, like the
+    // discrepancy rows' own SeriesId: a run that is gone simply has nothing to show.
+    public Guid? ChapterMapSyncRunId { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
 

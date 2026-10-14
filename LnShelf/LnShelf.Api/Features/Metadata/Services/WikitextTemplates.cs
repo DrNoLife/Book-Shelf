@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace LnShelf.Api.Features.Metadata.Services;
@@ -14,6 +15,10 @@ public static partial class WikitextTemplates
     /// <summary>A template found in a page: where it starts, and what is between its braces.</summary>
     public sealed record Template(int Start, string Body);
 
+    // One expression per template name, built on first use: the callers ask for the same few
+    // names on every page of every run, and building it per call parsed the pattern every time.
+    private static readonly ConcurrentDictionary<string, Regex> OpeningsByName = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Every <c>{{name|…}}</c> in the text, by exact name (case-insensitive), in page order.
     /// </summary>
@@ -24,7 +29,7 @@ public static partial class WikitextTemplates
         ArgumentNullException.ThrowIfNull(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var opening = new Regex(@"\{\{\s*" + Regex.Escape(name) + @"\s*(?=\||\n|\}\})", RegexOptions.IgnoreCase);
+        var opening = OpeningsByName.GetOrAdd(name, OpeningOf);
         var templates = new List<Template>();
         var match = opening.Match(text);
 
@@ -45,6 +50,9 @@ public static partial class WikitextTemplates
 
         return templates;
     }
+
+    private static Regex OpeningOf(string name) =>
+        new(@"\{\{\s*" + Regex.Escape(name) + @"\s*(?=\||\n|\}\})", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// The body split on its top-level pipes. The first part is the template's name.

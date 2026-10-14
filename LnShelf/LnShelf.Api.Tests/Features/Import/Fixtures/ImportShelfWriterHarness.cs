@@ -24,7 +24,7 @@ internal static class ImportShelfWriterHarness
     public static ImportShelfWriter CreateWriter(
         LnShelfDbContext dbContext,
         ISeriesMetadataSource metadataSource) =>
-        new(dbContext, TestPreferences.For(dbContext), metadataSource, Substitute.For<ISeriesCoverCache>(),
+        new(dbContext, metadataSource, Substitute.For<ISeriesCoverCache>(),
             TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<ImportShelfWriter>.Instance);
 
     public static ISeriesMetadataSource CreateMetadataSource(int? volumeCount, Format format = Format.LightNovel)

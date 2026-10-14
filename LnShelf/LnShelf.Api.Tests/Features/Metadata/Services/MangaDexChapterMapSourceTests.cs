@@ -43,16 +43,38 @@ public sealed class MangaDexChapterMapSourceTests
     public async Task GetChapterMapAsync_AllowanceBelowOneSeries_IsSkippedWithoutARequest()
     {
         var requests = new List<Uri>();
+        var source = Source(requests, maximumRequestsPerRun: 3);
 
-        var answer = await Source(requests, maximumRequestsPerRun: 3).GetChapterMapAsync(ChainsawMan(), CancellationToken.None);
+        source.CanAnswer(ChainsawMan()).ShouldBeFalse();
+        var answer = await source.GetChapterMapAsync(ChainsawMan(), CancellationToken.None);
 
         answer.Kind.ShouldBe(ChapterMapAnswerKind.Skipped);
         requests.ShouldBeEmpty();
     }
 
-    private static MangaDexChapterMapSource Source(List<Uri> requests, int maximumRequestsPerRun)
+    // A remembered record MangaDex no longer has answers 404 for good: the link is forgotten so
+    // the next check matches afresh, and the answer is Unmatched rather than a failure.
+    [Fact]
+    public async Task GetChapterMapAsync_RememberedRecordIsGone_ForgetsTheIdAndIsUnmatched()
     {
-        var httpClient = new HttpClient(new CapturedAnswers(requests)) { BaseAddress = new Uri("https://api.mangadex.org/") };
+        var requests = new List<Uri>();
+        var series = ChainsawMan();
+        series.MangaDexId = MangaDexFixtures.ChainsawManId;
+
+        var answer = await Source(requests, maximumRequestsPerRun: 10, aggregateStatus: HttpStatusCode.NotFound)
+            .GetChapterMapAsync(series, CancellationToken.None);
+
+        answer.Kind.ShouldBe(ChapterMapAnswerKind.Unmatched);
+        series.MangaDexId.ShouldBeNull();
+        requests.Count.ShouldBe(1);
+    }
+
+    private static MangaDexChapterMapSource Source(
+        List<Uri> requests,
+        int maximumRequestsPerRun,
+        HttpStatusCode aggregateStatus = HttpStatusCode.OK)
+    {
+        var httpClient = new HttpClient(new CapturedAnswers(requests, aggregateStatus)) { BaseAddress = new Uri("https://api.mangadex.org/") };
 
         return new MangaDexChapterMapSource(
             new MangaDexClient(httpClient, NullLogger<MangaDexClient>.Instance),
@@ -68,7 +90,7 @@ public sealed class MangaDexChapterMapSourceTests
         TitleEnglish = "Chainsaw Man",
     };
 
-    private sealed class CapturedAnswers(List<Uri> requests) : HttpMessageHandler
+    private sealed class CapturedAnswers(List<Uri> requests, HttpStatusCode aggregateStatus) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -78,6 +100,11 @@ public sealed class MangaDexChapterMapSourceTests
             var fixture = MangaDexFixtures.ChainsawManSearch;
             if (uri.AbsolutePath.EndsWith("/aggregate", StringComparison.Ordinal))
             {
+                if (aggregateStatus is not HttpStatusCode.OK)
+                {
+                    return Task.FromResult(new HttpResponseMessage(aggregateStatus));
+                }
+
                 fixture = uri.Query.Contains("translatedLanguage", StringComparison.Ordinal)
                     ? MangaDexFixtures.ChainsawManEnglish
                     : MangaDexFixtures.ChainsawManAll;

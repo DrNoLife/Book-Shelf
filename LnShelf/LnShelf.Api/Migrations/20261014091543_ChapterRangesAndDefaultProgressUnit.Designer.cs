@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LnShelf.Api.Migrations
 {
     [DbContext(typeof(LnShelfDbContext))]
-    [Migration("20261014085627_ChapterRangesAndDefaultProgressUnit")]
+    [Migration("20261014091543_ChapterRangesAndDefaultProgressUnit")]
     partial class ChapterRangesAndDefaultProgressUnit
     {
         /// <inheritdoc />
@@ -632,6 +632,9 @@ namespace LnShelf.Api.Migrations
                     b.Property<string>("ChapterMapStatus")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("ChapterMapSyncRunId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)

@@ -10,11 +10,14 @@ public sealed record SourcedVolumeRange(MetadataSourceName Source, VolumeChapter
 /// Two or more sources starting one volume on chapters more than one apart.
 /// </summary>
 /// <param name="Offers">Every source's range for the volume, in precedence order.</param>
-/// <param name="WrittenSource">The source whose range the shelf shows: precedence's, unless it broke the order.</param>
+/// <param name="WrittenSource">
+/// The source whose range the shelf shows: precedence's, unless it broke the order. Null when no
+/// offer rose above the volume before it, so the volume was left without a range.
+/// </param>
 public sealed record ChapterStartDisagreement(
     int VolumeNumber,
     IReadOnlyList<SourcedVolumeRange> Offers,
-    MetadataSourceName WrittenSource);
+    MetadataSourceName? WrittenSource);
 
 /// <summary>What ChapterMapMerger made of every usable map: the ranges to write and the disagreements to record.</summary>
 public sealed record MergedChapterMap(

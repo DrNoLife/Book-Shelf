@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LnShelf.Shared.Auth;
 
 namespace LnShelf.Api.Tests.Contracts;
@@ -150,6 +151,36 @@ public sealed class ChapterProgressTests
             .Select(volume => volume.Number)
             .ShouldBe(expected);
 
+    public static TheoryData<string, decimal[], decimal, decimal[]> SkippedVolumeCases => new()
+    {
+        // name, volumes read, last chapter read -> offered (twelve volumes of ten chapters each)
+        { "nothing read", [], 30m, [1m, 2m, 3m] },
+        { "Vol 5 skipped, 6–10 read, past 11", [1m, 2m, 3m, 4m, 6m, 7m, 8m, 9m, 10m], 110m, [11m] },
+        { "read through 4, past 6", [1m, 2m, 3m, 4m], 60m, [5m, 6m] },
+        { "the chapter lags the volumes read", [1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m, 10m], 50m, [] },
+    };
+
+    // Owner decision 2026-10-14: a volume below the highest one read that is still unread was
+    // skipped, and a chapter past it must not offer it back.
+    [Theory]
+    [MemberData(nameof(SkippedVolumeCases))]
+    public void VolumesFinishedBy_AVolumeBelowTheHighestRead_IsNeverOffered(
+        string name, decimal[] volumesRead, decimal lastChapterRead, decimal[] expected)
+    {
+        List<VolumeResponse> volumes =
+        [
+            .. Enumerable.Range(1, 12).Select(number => Volume(
+                number,
+                volumesRead.Contains(number) ? ReadStatus.Read : ReadStatus.Unread,
+                ((number - 1) * 10) + 1,
+                number * 10)),
+        ];
+
+        ChapterProgress.VolumesFinishedBy(lastChapterRead, volumes)
+            .Select(volume => volume.Number)
+            .ShouldBe(expected, name);
+    }
+
     [Theory]
     [InlineData(ProgressUnit.Chapters, 1)]
     [InlineData(ProgressUnit.Volumes, 0)]
@@ -168,6 +199,22 @@ public sealed class ChapterProgressTests
 
         detail.ChapterRangeSources.ShouldBe([MetadataSourceName.MangaDex]);
         Detail([Volume(1m, ReadStatus.Unread, null, null)]).ChapterRangeSources.ShouldBeEmpty();
+    }
+
+    // Computed on both sides from fields that do travel, so the wire carries neither: the offer
+    // would otherwise be a second copy of volumes already in Volumes.
+    [Fact]
+    public void SeriesDetailResponse_Serialized_LeavesTheDerivedListsOutAndRecomputesThem()
+    {
+        var detail = Detail(RangedVolumes()) with { ProgressUnit = ProgressUnit.Chapters, LastChapterRead = 20m };
+
+        var json = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web);
+        var read = JsonSerializer.Deserialize<SeriesDetailResponse>(json, JsonSerializerOptions.Web)!;
+
+        json.ShouldNotContain("volumesFinishedByChapter");
+        json.ShouldNotContain("chapterRangeSources");
+        read.VolumesFinishedByChapter.Select(volume => volume.Number).ShouldBe([2m]);
+        read.ChapterRangeSources.ShouldBe([MetadataSourceName.MangaDex]);
     }
 
     private static List<VolumeResponse> RangedVolumes() =>

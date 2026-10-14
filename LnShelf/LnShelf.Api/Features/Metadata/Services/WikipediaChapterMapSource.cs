@@ -21,6 +21,21 @@ public sealed class WikipediaChapterMapSource(
 
     public MetadataSourceName SourceName => MetadataSourceName.Wikipedia;
 
+    // All or nothing per series, as MangaDex's: a half-asked series would be judged on half an
+    // answer. A series this source asks nothing about costs nothing, so it can always answer.
+    public bool CanAnswer(Series series)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+
+        if (series.Format is not Format.Manga || IsbnsOf(series).Count == 0)
+        {
+            return true;
+        }
+
+        var cost = series.ChapterListPage is null ? WikipediaListPageFinder.MaximumRequests : 1;
+        return _budget.Remaining >= cost;
+    }
+
     public async Task<ChapterMapAnswer> GetChapterMapAsync(Series series, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
@@ -31,15 +46,13 @@ public sealed class WikipediaChapterMapSource(
         }
 
         // Without an ISBN nothing could verify a page, so nothing is asked.
-        IReadOnlySet<string> isbns = series.Volumes.Select(volume => Isbn.ToIsbn13(volume.Isbn)).OfType<string>().ToHashSet();
+        var isbns = IsbnsOf(series);
         if (isbns.Count == 0)
         {
             return ChapterMapAnswer.Unmatched("No volume has an ISBN to verify a Wikipedia list against.");
         }
 
-        // All or nothing per series, as MangaDex's: a half-asked series would be judged on half an answer.
-        var cost = series.ChapterListPage is null ? WikipediaListPageFinder.MaximumRequests : 1;
-        if (_budget.Remaining < cost)
+        if (!CanAnswer(series))
         {
             return ChapterMapAnswer.Skipped;
         }
@@ -66,6 +79,9 @@ public sealed class WikipediaChapterMapSource(
         series.ChapterListPage = verified.PageTitle;
         return ChapterMapAnswer.Found(GraphicNovelListVerifier.ToChaptersByVolume(verified.Table));
     }
+
+    private static IReadOnlySet<string> IsbnsOf(Series series) =>
+        series.Volumes.Select(volume => Isbn.ToIsbn13(volume.Isbn)).OfType<string>().ToHashSet();
 
     private async Task<VerifiedChapterList?> ReverifyAsync(
         string pageTitle,

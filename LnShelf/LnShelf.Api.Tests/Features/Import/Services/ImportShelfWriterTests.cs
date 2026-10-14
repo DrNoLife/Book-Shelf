@@ -19,7 +19,7 @@ public sealed class ImportShelfWriterTests
         var counters = new ImportWriteCounters();
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1, 2, 3])], counters, CancellationToken.None);
+            AniListId, [CreateGroup([1, 2, 3])], counters, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         counters.SeriesCreated.ShouldBe(1);
@@ -46,11 +46,10 @@ public sealed class ImportShelfWriterTests
         ProgressUnit expected)
     {
         await using var dbContext = CreateDbContext();
-        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, preferred);
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 1, format));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), preferred, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await LoadSeriesAsync(dbContext)).UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(expected);
@@ -63,13 +62,11 @@ public sealed class ImportShelfWriterTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 1, Format.Manga));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
-        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, ProgressUnit.Chapters);
-
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), ProgressUnit.Chapters, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await LoadSeriesAsync(dbContext)).UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(ProgressUnit.Volumes);
@@ -85,7 +82,7 @@ public sealed class ImportShelfWriterTests
         var counters = new ImportWriteCounters();
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1, 2, 3])], counters, CancellationToken.None);
+            AniListId, [CreateGroup([1, 2, 3])], counters, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         counters.LocalOnlyVolumesCreated.ShouldBe(3);
@@ -105,11 +102,11 @@ public sealed class ImportShelfWriterTests
         var writer = CreateWriter(dbContext, metadataSource);
 
         var first = new ImportWriteCounters();
-        await writer.ApplyAsync(AniListId, [CreateGroup([1, 2, 3])], first, CancellationToken.None);
+        await writer.ApplyAsync(AniListId, [CreateGroup([1, 2, 3])], first, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var second = new ImportWriteCounters();
-        await writer.ApplyAsync(AniListId, [CreateGroup([1, 2, 3])], second, CancellationToken.None);
+        await writer.ApplyAsync(AniListId, [CreateGroup([1, 2, 3])], second, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         first.SeriesCreated.ShouldBe(1);
@@ -133,7 +130,7 @@ public sealed class ImportShelfWriterTests
 
         // Import once as unread-and-unowned.
         var group = CreateGroup([1], ReadStatus.Unread, treatReadAsOwned: false);
-        await writer.ApplyAsync(AniListId, [group], new ImportWriteCounters(), CancellationToken.None);
+        await writer.ApplyAsync(AniListId, [group], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         // The user then reads and buys it.
@@ -144,7 +141,7 @@ public sealed class ImportShelfWriterTests
         await dbContext.SaveChangesAsync();
 
         // Re-importing the same export must not undo that.
-        await writer.ApplyAsync(AniListId, [group], new ImportWriteCounters(), CancellationToken.None);
+        await writer.ApplyAsync(AniListId, [group], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var reloaded = await dbContext.Volumes.Include(candidate => candidate.UserState)
@@ -165,7 +162,7 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([2, 3, 4, 5, 6, 7, 8, 9, 15]), CreateGroup([1, 10, 11, 12, 13, 14])],
-            counters,
+            counters, ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -183,7 +180,7 @@ public sealed class ImportShelfWriterTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1, 2, 3])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1, 2, 3])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var series = await LoadSeriesAsync(dbContext);
@@ -203,7 +200,7 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([1, 2, 3], ReadStatus.Unread, treatReadAsOwned: false)],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -233,7 +230,7 @@ public sealed class ImportShelfWriterTests
 
         var counters = new ImportWriteCounters();
         await CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18)).ApplyAsync(
-            AniListId, [CreateGroup([1])], counters, CancellationToken.None);
+            AniListId, [CreateGroup([1])], counters, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         counters.SeriesCreated.ShouldBe(0);
@@ -252,7 +249,7 @@ public sealed class ImportShelfWriterTests
         var writer = CreateWriter(dbContext, CreateMetadataSource(volumeCount: 18));
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var series = await LoadSeriesAsync(dbContext);
@@ -260,7 +257,7 @@ public sealed class ImportShelfWriterTests
         await dbContext.SaveChangesAsync();
 
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([1, 2])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1, 2])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         // The importer promotes from the untouched default only; a status the user
@@ -277,7 +274,7 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([3], isbn: "978-0-316-36398-3")],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -298,14 +295,14 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([3], isbn: "9780316363983")],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         // The same export re-cut without the ISBN column, or a different export
         // covering the same volume. Neither is grounds for erasing the identifier.
         await writer.ApplyAsync(
-            AniListId, [CreateGroup([3])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([3])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         (await dbContext.Volumes.SingleAsync(candidate => candidate.Number == 3))
@@ -321,14 +318,14 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([3], isbn: "9780316363983")],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([3], isbn: "9784041052853")],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -347,7 +344,7 @@ public sealed class ImportShelfWriterTests
         await writer.ApplyAsync(
             AniListId,
             [CreateGroup([3], subtitle: "The Bloody Valkyrie", isbn: "9780316363983")],
-            new ImportWriteCounters(),
+            new ImportWriteCounters(), ProgressUnit.Volumes,
             CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
@@ -358,7 +355,7 @@ public sealed class ImportShelfWriterTests
         weaker.Rows.Single().OwnedFormat = null;
 
         var counters = new ImportWriteCounters();
-        await writer.ApplyAsync(AniListId, [weaker], counters, CancellationToken.None);
+        await writer.ApplyAsync(AniListId, [weaker], counters, ProgressUnit.Volumes, CancellationToken.None);
         await dbContext.SaveChangesAsync();
 
         var volume = await LoadVolumeAsync(dbContext, 3);
@@ -387,7 +384,7 @@ public sealed class ImportShelfWriterTests
         var writer = CreateWriter(dbContext, metadataSource);
 
         var act = async () => await writer.ApplyAsync(
-            AniListId, [CreateGroup([1])], new ImportWriteCounters(), CancellationToken.None);
+            AniListId, [CreateGroup([1])], new ImportWriteCounters(), ProgressUnit.Volumes, CancellationToken.None);
 
         await act.ShouldThrowAsync<LnShelf.Api.Errors.ConflictException>();
     }

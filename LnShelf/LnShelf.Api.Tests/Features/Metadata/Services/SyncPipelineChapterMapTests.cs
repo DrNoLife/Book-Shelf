@@ -1,3 +1,4 @@
+using System.Net;
 using LnShelf.Api.Tests.Features.Metadata.Fixtures;
 
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
@@ -104,7 +105,104 @@ public sealed class SyncPipelineChapterMapTests
         var disagreement = run.Discrepancies.Where(discrepancy => discrepancy.Field == SyncDiscrepancyField.ChapterRange).ShouldHaveSingleItem();
         disagreement.VolumeNumber.ShouldBe(24m);
         disagreement.ResolvedWith.ShouldBe(MetadataSourceName.Wikipedia);
+
+        // The series names the run that checked it, and the page reads the disagreement from it.
+        saved.ChapterMapSyncRunId.ShouldBe(run.Id);
+        var conflict = (await host.ConflictsAsync(series.Id))
+            .Where(candidate => candidate.Field == SyncDiscrepancyField.ChapterRange)
+            .ShouldHaveSingleItem();
+        conflict.VolumeNumber.ShouldBe(24m);
+        conflict.DisplayedSource.ShouldBe(MetadataSourceName.Wikipedia);
     }
+
+    // The remembered MangaDex record is gone (its aggregate answers 404). Wikipedia's answer is
+    // still written, the check is stamped so the dead link is not retried every night, and the
+    // link is forgotten so the next due check matches the series afresh.
+    [Fact]
+    public async Task RunAsync_RememberedMangaDexRecordIsGone_WritesWikipediasMapAndForgetsTheLink()
+    {
+        await using var host = new SyncPipelineHost(
+            AppleBooksFixtures.ChainsawManSearch,
+            MangaUpdatesFixtures.ChainsawManSeries,
+            new MangaDexCaptures(MangaDexFixtures.ChainsawManSearch, AggregateStatus: HttpStatusCode.NotFound),
+            ChainsawManWikimedia());
+        var series = Manga("Chainsaw Man", MangaDexFixtures.ChainsawManAniListId, MangaUpdatesFixtures.ChainsawManSeriesId, volumeCount: 24);
+        series.Volumes.Single(volume => volume.Number == 1).Isbn = WikipediaFixtures.ChainsawManVolumeOneIsbn;
+        series.MangaDexId = MangaDexFixtures.ChainsawManId;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        saved.MangaDexId.ShouldBeNull();
+        saved.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
+        saved.ChapterMapCheckedAt.ShouldNotBeNull();
+        saved.ChapterMapSyncRunId.ShouldBe(run.Id);
+        host.MangaDexRequests.ShouldAllBe(uri => uri.AbsolutePath.EndsWith("/aggregate"));
+
+        var detail = SeriesDetailProjection.ToDetail(saved, DateOnly.FromDateTime(DateTime.UtcNow));
+        Shown(detail, 1).ShouldBe((1m, 7m));
+        detail.ChapterRangeSources.ShouldBe([MetadataSourceName.Wikipedia]);
+    }
+
+    // MangaDex's allowance for the run cannot cover a series, so the series is left whole for
+    // the next run — and Wikipedia, asked first in precedence, is not asked either.
+    [Fact]
+    public async Task RunAsync_MangaDexAllowanceTooSmallForASeries_AsksWikipediaNothing()
+    {
+        await using var host = new SyncPipelineHost(
+            AppleBooksFixtures.ChainsawManSearch,
+            MangaUpdatesFixtures.ChainsawManSeries,
+            new MangaDexCaptures(
+                MangaDexFixtures.ChainsawManSearch, MangaDexFixtures.ChainsawManEnglish, MangaDexFixtures.ChainsawManAll),
+            ChainsawManWikimedia(),
+            new Dictionary<string, string?> { ["MangaDex:MaximumRequestsPerRun"] = "3" });
+        var series = Manga("Chainsaw Man", MangaDexFixtures.ChainsawManAniListId, MangaUpdatesFixtures.ChainsawManSeriesId, volumeCount: 24);
+        series.Volumes.Single(volume => volume.Number == 1).Isbn = WikipediaFixtures.ChainsawManVolumeOneIsbn;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        host.WikimediaRequests.ShouldBeEmpty();
+        host.MangaDexRequests.ShouldBeEmpty();
+        saved.ChapterMapCheckedAt.ShouldBeNull();
+        saved.ChapterListPage.ShouldBeNull();
+        saved.Volumes.ShouldAllBe(volume => volume.FirstChapter == null);
+    }
+
+    // A completed series whose shelf tracks two volumes past MangaDex's last mapped one: that
+    // volume is not the final one, so it must not be closed on MangaDex's last listed chapter.
+    [Fact]
+    public async Task RunAsync_ACompletedSeriesTheMapStopsShortOf_LeavesTheLastMappedVolumeOpen()
+    {
+        await using var host = new SyncPipelineHost(
+            AppleBooksFixtures.ChainsawManSearch,
+            MangaUpdatesFixtures.ChainsawManSeries,
+            new MangaDexCaptures(
+                MangaDexFixtures.ChainsawManSearch, MangaDexFixtures.ChainsawManEnglish, MangaDexFixtures.ChainsawManAll));
+        var series = Manga("Chainsaw Man", MangaDexFixtures.ChainsawManAniListId, MangaUpdatesFixtures.ChainsawManSeriesId, volumeCount: 26);
+        series.PublicationStatus = PublicationStatus.Completed;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        saved.PublicationStatus.ShouldBe(PublicationStatus.Completed);
+        saved.ChapterMapStatus.ShouldBe(ChapterMapStatus.Mapped);
+
+        var detail = SeriesDetailProjection.ToDetail(saved, DateOnly.FromDateTime(DateTime.UtcNow));
+        Shown(detail, 24).ShouldBe((230m, null));
+    }
+
+    private static WikimediaCaptures ChainsawManWikimedia() => new(
+        ItemSearch: WikipediaFixtures.ChainsawManItemSearch,
+        Claims: WikipediaFixtures.ChainsawManClaims,
+        PageSearch: WikipediaFixtures.ChainsawManPageSearch,
+        Pages: new Dictionary<string, string> { [WikipediaFixtures.ChainsawManPageTitle] = WikipediaFixtures.ChainsawManPage });
 
     // Each volume credited to the source that filled it. Berserk's list numbers vols 5–43 and
     // lists 1–4 by title only; MangaDex numbers those four's prologue chapters 0.01–0.14 and

@@ -43,7 +43,7 @@ public static class GraphicNovelListVerifier
         {
             if (entry is { VolumeNumber: { } number, Chapters: { Count: > 0 } chapters }
                 && number >= 1
-                && number == decimal.Truncate(number))
+                && !number.IsBonusVolume)
             {
                 chaptersByVolume.TryAdd((int)number, chapters);
             }

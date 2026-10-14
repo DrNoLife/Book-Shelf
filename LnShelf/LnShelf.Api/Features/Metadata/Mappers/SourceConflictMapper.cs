@@ -95,6 +95,8 @@ public static class SourceConflictMapper
                 "Nothing was changed: the count says it's out, and a future date never overrules it.",
             SyncDiscrepancyField.Status =>
                 "MangaUpdates only says it isn't finished, so Completed stands until you pick.",
+            SyncDiscrepancyField.ChapterRange =>
+                "No range is shown for this volume: no source's start comes after the volume before it.",
             _ => "No release source is linked to this series yet.",
         };
     }

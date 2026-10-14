@@ -80,10 +80,11 @@ public sealed class SourceConflictQueryServiceTests
     {
         await using var dbContext = CreateDbContext();
         var series = await SaveSeriesAsync(dbContext);
+        var checkingRun = await SaveRunAsync(dbContext, Night, discrepancies: [ChapterRangeDisagreement(series)]);
+        var laterRun = await SaveRunAsync(dbContext, Night.AddDays(1));
         series.ChapterMapCheckedAt = checkedAgain ? Night.AddDays(1).AddMinutes(5) : Night.AddMinutes(5);
+        series.ChapterMapSyncRunId = checkedAgain ? laterRun.Id : checkingRun.Id;
         await dbContext.SaveChangesAsync();
-        await SaveRunAsync(dbContext, Night, discrepancies: [ChapterRangeDisagreement(series)]);
-        await SaveRunAsync(dbContext, Night.AddDays(1));
 
         var conflicts = await new SourceConflictQueryService(dbContext).GetAsync(series.Id, CancellationToken.None);
 
@@ -96,6 +97,28 @@ public sealed class SourceConflictQueryServiceTests
             conflict.NeedsReview.ShouldBeFalse();
             conflict.RecordedAt.ShouldBe(Night);
         }
+    }
+
+    // A one-series refresh that overlaps the sweep which checked the map, and a later sweep that
+    // did not look: the rows come from the run the series names, not from whichever run's
+    // window happens to contain the check's time.
+    [Fact]
+    public async Task GetAsync_ChapterRangeCheckedDuringOverlappingRuns_ReadsTheRunThatChecked()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SaveSeriesAsync(dbContext);
+        var checkingSweep = await SaveRunAsync(dbContext, Night, discrepancies: [ChapterRangeDisagreement(series)]);
+        await SaveRunAsync(dbContext, Night.AddMinutes(10), coversWholeShelf: false);
+        await SaveRunAsync(dbContext, Night.AddDays(1));
+        series.ChapterMapCheckedAt = Night.AddMinutes(12);
+        series.ChapterMapSyncRunId = checkingSweep.Id;
+        await dbContext.SaveChangesAsync();
+
+        var conflicts = await new SourceConflictQueryService(dbContext).GetAsync(series.Id, CancellationToken.None);
+
+        var conflict = conflicts.ShouldNotBeNull().ShouldHaveSingleItem();
+        conflict.Field.ShouldBe(SyncDiscrepancyField.ChapterRange);
+        conflict.RecordedAt.ShouldBe(Night);
     }
 
     private static SyncDiscrepancy ChapterRangeDisagreement(Series series) =>

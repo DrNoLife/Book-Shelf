@@ -630,6 +630,9 @@ namespace LnShelf.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<Guid?>("ChapterMapSyncRunId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("CoverObjectKey")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");

@@ -50,7 +50,7 @@ public static class ChapterMapMerger
                 disagreements.Add(new ChapterStartDisagreement(
                     number,
                     [.. offers.Select(offer => new SourcedVolumeRange(offer.Source, offer.Range))],
-                    pick?.Source ?? offers[0].Source));
+                    pick?.Source));
             }
         }
 

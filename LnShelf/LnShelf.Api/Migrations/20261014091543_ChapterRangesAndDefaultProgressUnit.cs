@@ -66,6 +66,12 @@ namespace LnShelf.Api.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<Guid>(
+                name: "ChapterMapSyncRunId",
+                table: "series",
+                type: "uuid",
+                nullable: true);
+
+            migrationBuilder.AddColumn<Guid>(
                 name: "MangaDexId",
                 table: "series",
                 type: "uuid",
@@ -105,6 +111,10 @@ namespace LnShelf.Api.Migrations
 
             migrationBuilder.DropColumn(
                 name: "ChapterMapStatus",
+                table: "series");
+
+            migrationBuilder.DropColumn(
+                name: "ChapterMapSyncRunId",
                 table: "series");
 
             migrationBuilder.DropColumn(
