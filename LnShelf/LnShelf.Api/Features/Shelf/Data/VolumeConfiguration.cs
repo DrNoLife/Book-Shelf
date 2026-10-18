@@ -27,6 +27,10 @@ public sealed class VolumeConfiguration : IEntityTypeConfiguration<Volume>
 
         builder.Property(volume => volume.ReleaseDateSource).HasConversion<string>().HasMaxLength(32);
 
+        // FirstChapter and LastChapter need nothing: unscaled numeric by convention, as
+        // Series.LatestChapter, so chapter 232 does not come back as 232.00.
+        builder.Property(volume => volume.ChapterRangeSource).HasConversion<string>().HasMaxLength(32);
+
         // Uncapped, the one string here without a length — exactly the call
         // SeriesConfiguration makes about the series synopsis. A blurb is prose, so its
         // length is the source's business; uncapped means Postgres `text`, which costs

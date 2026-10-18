@@ -127,6 +127,42 @@ public sealed class Series : IOwned
     // source gives a value, so one empty answer never erases a known chapter.
     public decimal? LatestChapter { get; set; }
 
+    /// <summary>MangaDex's own id for this series, learned when a chapter map matched there.</summary>
+    // Another catalogue's handle for the same series, the same class of fact as MangaUpdatesId:
+    // MangaDex has no lookup by AniList or MangaUpdates id, so finding it again costs a title
+    // search every time. Only kept for a match whose map could be used at all (see
+    // MangaDexChapterMapSource), so a spin-off or a manhwa is never remembered as this series.
+    public Guid? MangaDexId { get; set; }
+
+    /// <summary>The widest English Wikipedia page title the column holds (MediaWiki caps titles at 255 bytes).</summary>
+    public const int ChapterListPageMaximumLength = 256;
+
+    /// <summary>
+    /// The English Wikipedia page whose chapter list was verified as this series', by title.
+    /// </summary>
+    // Remembered for the same reason as MangaDexId: finding the page costs a Wikidata lookup, a
+    // search and a few page reads, and the page does not move. Only the page, not which of its
+    // tables: each refresh re-verifies the tables by ISBN (WikipediaChapterMapSource), so a
+    // reordered page costs nothing, and a page that stops verifying is forgotten.
+    public string? ChapterListPage { get; set; }
+
+    /// <summary>What the last chapter-map check concluded. Null until one has run.</summary>
+    // Sync bookkeeping, kept so the nightly sweep can leave a settled or hopeless series alone
+    // for a while (ChapterMapRefresher's cadence) instead of asking every night.
+    public ChapterMapStatus? ChapterMapStatus { get; set; }
+
+    /// <summary>When the chapter map was last checked, whatever it concluded.</summary>
+    public DateTimeOffset? ChapterMapCheckedAt { get; set; }
+
+    /// <summary>
+    /// The sync run whose chapter-map check the series' ranges come from. Null until one wrote.
+    /// </summary>
+    // The series page reads that check's chapter-range disagreements from this run. Matching
+    // ChapterMapCheckedAt against run windows picked the wrong run whenever two overlapped (the
+    // nightly sweep and a one-series refresh). A plain id rather than a foreign key, like the
+    // discrepancy rows' own SeriesId: a run that is gone simply has nothing to show.
+    public Guid? ChapterMapSyncRunId { get; set; }
+
     public SeriesUserState? UserState { get; set; }
     public ICollection<Volume> Volumes { get; set; } = [];
 

@@ -26,6 +26,7 @@ public sealed class PreferencesServiceTests
         response.LibraryView.ShouldBe(LibraryView.Covers);
         response.VolumeView.ShouldBe(VolumeView.Tiles);
         response.ShowVolumeTitles.ShouldBeTrue();
+        response.DefaultProgressUnit.ShouldBe(ProgressUnit.Volumes);
         response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Behind]);
         response.LibrarySectionOrder.ShouldBe(
             [LibrarySection.ContinueReading, LibrarySection.OutNow, LibrarySection.Shelf]);
@@ -204,6 +205,26 @@ public sealed class PreferencesServiceTests
         response.DefaultLibraryFilters.ShouldBe([LibraryFilter.Owned, LibraryFilter.Reading]);
         response.LibrarySectionOrder.ShouldBe(
             [LibrarySection.OutNow, LibrarySection.ContinueReading, LibrarySection.Shelf]);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DefaultProgressUnit_RoundTripsAndANullLeavesItAlone()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var updated = await service.UpdateAsync(
+            new UpdatePreferencesRequest { DefaultProgressUnit = ProgressUnit.Chapters }, CancellationToken.None);
+
+        updated.DefaultProgressUnit.ShouldBe(ProgressUnit.Chapters);
+        (await dbContext.UserPreferences.SingleAsync()).DefaultProgressUnit.ShouldBe(ProgressUnit.Chapters);
+
+        // A request that names another setting must not send the unit back to Volumes.
+        var untouched = await service.UpdateAsync(
+            new UpdatePreferencesRequest { GridDensity = GridDensity.Compact }, CancellationToken.None);
+
+        untouched.DefaultProgressUnit.ShouldBe(ProgressUnit.Chapters);
+        (await service.GetAsync(CancellationToken.None)).DefaultProgressUnit.ShouldBe(ProgressUnit.Chapters);
     }
 
     private static PreferencesService CreateService(LnShelfDbContext dbContext) =>

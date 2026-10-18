@@ -52,6 +52,33 @@ public static class Isbn
     }
 
     /// <summary>
+    /// The 13-digit form, or null when the value is not an ISBN. An ISBN-10 gains the 978
+    /// prefix and a recomputed check digit.
+    /// </summary>
+    // For comparing two ISBNs written by different hands: an older encyclopedia row may give the
+    // 10-digit form of the very edition the shelf holds as 13 digits, and they are one book.
+    public static string? ToIsbn13(string? value)
+    {
+        var normalized = Normalize(value);
+
+        if (normalized is not { Length: 10 })
+        {
+            return normalized;
+        }
+
+        var body = "978" + normalized[..9];
+        var sum = 0;
+
+        for (var index = 0; index < body.Length; index++)
+        {
+            var digit = body[index] - '0';
+            sum += index % 2 == 0 ? digit : digit * 3;
+        }
+
+        return body + (char)('0' + ((10 - (sum % 10)) % 10));
+    }
+
+    /// <summary>
     /// Whether this identifies a Japanese-market edition — registration group 4.
     /// </summary>
     // Needed because one volume can arrive twice, once per edition: the real export

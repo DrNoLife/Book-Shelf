@@ -28,12 +28,23 @@ public sealed class SourceConflictQueryService(LnShelfDbContext dbContext) : ISo
             .ThenInclude(discrepancy => discrepancy.Values)
             .LatestSweepAsync(cancellationToken);
 
+        // Chapter ranges are left out of the sweep's rows and read from the run that last
+        // checked the map instead (below), so they are never listed twice.
         var recorded = sweep is null
             ? []
             : sweep.Discrepancies
+                .Where(discrepancy => discrepancy.Field is not SyncDiscrepancyField.ChapterRange)
                 .GroupBy(discrepancy => (discrepancy.Field, discrepancy.VolumeNumber))
                 .Select(group => RecordedDisagreement.FromRows(group, sweep.StartedAt))
                 .ToList();
+
+        // Chapter ranges are checked weekly, not nightly (ChapterMapRefresher.IsDue), so the
+        // latest sweep usually never looked: what the last check found still stands, and is read
+        // from the run that made that check.
+        if (series.ChapterMapSyncRunId is { } checkingRunId)
+        {
+            recorded.AddRange(await ChapterMapCheckAsync(seriesId, checkingRunId, cancellationToken));
+        }
 
         // A choice outlives the sweep that showed its disagreement: when the sources agree
         // again nothing is recorded, but the choice stands and its page entry must too.
@@ -61,6 +72,30 @@ public sealed class SourceConflictQueryService(LnShelfDbContext dbContext) : ISo
                 .Select(row => SourceConflictMapper.ToConflict(
                     row, series.SourceChoices.FirstOrDefault(choice => choice.Covers(row.Discrepancy)))),
         ];
+    }
+
+    /// <summary>
+    /// The chapter-range disagreements the series' last chapter-map check recorded; none when
+    /// it found none.
+    /// </summary>
+    private async Task<IEnumerable<RecordedDisagreement>> ChapterMapCheckAsync(
+        Guid seriesId,
+        Guid checkingRunId,
+        CancellationToken cancellationToken)
+    {
+        // Through SyncRuns, which is owner-filtered, like the sweep above.
+        var run = await dbContext.SyncRuns
+            .AsNoTracking()
+            .Include(candidate => candidate.Discrepancies.Where(discrepancy =>
+                discrepancy.SeriesId == seriesId && discrepancy.Field == SyncDiscrepancyField.ChapterRange))
+            .ThenInclude(discrepancy => discrepancy.Values)
+            .FirstOrDefaultAsync(candidate => candidate.Id == checkingRunId, cancellationToken);
+
+        return run is null
+            ? []
+            : run.Discrepancies
+                .GroupBy(discrepancy => discrepancy.VolumeNumber)
+                .Select(group => RecordedDisagreement.FromRows(group, run.StartedAt));
     }
 
     // Status, then the count, then volumes in order; the link question last because it is

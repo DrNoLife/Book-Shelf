@@ -13,6 +13,18 @@
                 Undo<span class="visually-hidden"> marking @finished.Label of @finished.SeriesTitle read</span>
             </button>
         </div>
+
+        @* The chapter just recorded finished a volume whose end a chapter map knows: offered on
+           the same toast, so the one place a thumb is already looking carries the next step. *@
+        @if (State.Offer is { } offer)
+        {
+            <div class="toast" @key="offer">
+                <span class="toast__text">@ChapterText.FinishedOffer(offer.VolumeNumbers)</span>
+                <button type="button" class="secondary" disabled="@State.IsBusy" @onclick="AcceptOfferAsync">
+                    Mark read<span class="visually-hidden">: @ChapterText.VolumesLabel(offer.VolumeNumbers) of @offer.SeriesTitle</span>
+                </button>
+            </div>
+        }
     }
     else if (State.Message is { } message)
     {

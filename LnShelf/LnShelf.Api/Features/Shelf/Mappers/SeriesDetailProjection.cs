@@ -49,6 +49,8 @@ public static class SeriesDetailProjection
             ProgressUnit = series.UserState?.ProgressUnit ?? ProgressUnit.Volumes,
             LastChapterRead = series.UserState?.LastChapterRead,
             LatestChapter = series.LatestChapter,
+            MangaDexId = series.MangaDexId,
+            ChapterListPage = series.ChapterListPage,
             Counts = ToCounts(volumes),
             CountProvenance = new CountProvenanceResponse
             {
@@ -130,6 +132,9 @@ public static class SeriesDetailProjection
                 ? volume.CoverObjectKey ?? seriesCoverObjectKey
                 : null,
             IsLocalOnly = volume.IsLocalOnly,
+            FirstChapter = volume.FirstChapter,
+            LastChapter = volume.LastChapter,
+            ChapterRangeSource = volume.ChapterRangeSource,
         };
     }
 

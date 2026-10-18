@@ -285,6 +285,7 @@ public sealed class SeriesRefresherTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
+            ChapterMapPipeline.NoSources(),
             TimeProvider.System);
     }
 

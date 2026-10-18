@@ -1,3 +1,4 @@
+using LnShelf.Shared.Metadata;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.EndToEnd.Tests.Journeys.Series;
@@ -112,6 +113,31 @@ public sealed class ChapterProgressTests(EndToEndFixture fixture) : JourneyTest(
         await Assertions.Expect(continueReading.GetByRole(AriaRole.Heading, new() { Name = SeriesTitle })).ToHaveCountAsync(0);
     }
 
+    // Chapter layer 2: with chapter ranges on the volumes, reaching Vol 12's last chapter offers
+    // to mark it read — offered, never forced — and accepting marks exactly that volume.
+    [Fact]
+    public async Task ChaptersSeries_ReachingAVolumesLastChapter_OffersToMarkItReadAndMarksIt()
+    {
+        await SeedChapterRangesAsync(lastChapterRead: 102m);
+        await OpenSeriesAsync(SeriesTitle);
+
+        var progress = Page.GetByRole(AriaRole.Region, new() { Name = "Progress" });
+        await Assertions.Expect(progress.GetByText("Ch. 102 of 232 · Vol 12", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(progress.GetByRole(AriaRole.Link, new() { Name = "MangaDex" })).ToBeVisibleAsync();
+
+        var offer = progress.GetByRole(AriaRole.Group, new() { Name = "Finished volumes" });
+        await Assertions.Expect(offer).ToHaveCountAsync(0);
+
+        await progress.GetByRole(AriaRole.Button, new() { NameRegex = new Regex(@"^\+1") }).ClickAsync();
+        await Assertions.Expect(offer).ToContainTextAsync("You've finished Vol 12 — mark it read?");
+
+        await offer.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Mark read") }).ClickAsync();
+
+        await Assertions.Expect(Page.Locator("button[data-volume='12']")).ToHaveAttributeAsync("aria-label", new Regex(", read$"));
+        await Assertions.Expect(Page.Locator("button[data-volume='13']")).Not.ToHaveAttributeAsync("aria-label", new Regex(", read$"));
+        await Assertions.Expect(offer).ToHaveCountAsync(0);
+    }
+
     // A light novel is read and bought by the volume: no choice is offered.
     [Fact]
     public async Task LightNovelSeries_OffersNoChapterChoice()
@@ -155,6 +181,31 @@ public sealed class ChapterProgressTests(EndToEndFixture fixture) : JourneyTest(
             series.UserState!.ProgressUnit = ProgressUnit.Chapters;
             series.UserState.LastChapterRead = lastChapterRead;
             series.UserState.LastReadAt = DateOnly.FromDateTime(DateTime.Today);
+
+            await dbContext.SaveChangesAsync();
+        });
+
+    // What a night's sync would have written from FixtureChapterMapSource: Vol 12 is ch 98–103,
+    // Vol 13 starts at 104 and stays open (the fake knows no Vol 14).
+    private Task SeedChapterRangesAsync(decimal lastChapterRead) =>
+        Fixture.SeedAsync(async dbContext =>
+        {
+            var series = await dbContext.Series
+                .Include(candidate => candidate.UserState)
+                .Include(candidate => candidate.Volumes)
+                .SingleAsync(candidate => candidate.TitleEnglish == SeriesTitle);
+
+            series.LatestChapter = 232m;
+            series.MangaDexId = Guid.Parse("a77742b1-befd-49a4-bff5-1ad4e6b0ef7b");
+            series.UserState!.ProgressUnit = ProgressUnit.Chapters;
+            series.UserState.LastChapterRead = lastChapterRead;
+
+            foreach (var volume in series.Volumes.Where(candidate => candidate.Number is 12m or 13m))
+            {
+                volume.FirstChapter = volume.Number == 12m ? 98m : 104m;
+                volume.LastChapter = volume.Number == 12m ? 103m : null;
+                volume.ChapterRangeSource = MetadataSourceName.MangaDex;
+            }
 
             await dbContext.SaveChangesAsync();
         });

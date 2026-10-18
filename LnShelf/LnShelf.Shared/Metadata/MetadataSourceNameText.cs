@@ -11,6 +11,8 @@ public static class MetadataSourceNameText
             MetadataSourceName.MangaUpdates => "MangaUpdates",
             MetadataSourceName.OpenLibrary => "Open Library",
             MetadataSourceName.AppleBooks => "Apple Books",
+            MetadataSourceName.MangaDex => "MangaDex",
+            MetadataSourceName.Wikipedia => "Wikipedia",
             _ => source.ToString(),
         };
     }

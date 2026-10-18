@@ -128,9 +128,24 @@ The series/volume tracking domain.
   decimals); switching either way never clears it and never touches a volume's read or
   owned state. *Chapters to read* = `Series.LatestChapter` (MangaUpdates'
   `latest_chapter`) − `LastChapterRead`, computed, only when both are known and the
-  difference is positive. Layer 1 only: no chapter → volume mapping, so To buy / Backlog /
-  Behind stay volume-based. A chapter above 0 on a PlanToStart series moves it to Reading
+  difference is positive. To buy / Backlog / Behind stay volume-based. A chapter above 0 on a PlanToStart series moves it to Reading
   (`TrackingStatusRules.AfterChapterRecorded`); nothing else moves from a chapter.
+  New manga and web novels start in the reader's `DefaultProgressUnit` preference
+  (**[added 2026-10-14]**), applied only when a series is created, never on adoption.
+- **Chapter → volume mapping [added 2026-10-14]:** a manga's volumes carry
+  `FirstChapter` / `LastChapter` (synced metadata) from the `IChapterMapSource` seam:
+  Wikipedia's "List of … chapters" page (`{{Graphic novel list}}`, accepted only when a
+  table shares an English ISBN with the shelf's volumes), then MangaDex's aggregate
+  (matched by its AniList or MangaUpdates link, Japanese originals only, stray chapters
+  dropped, implausible maps rejected). The step runs at the end of a series refresh, at
+  most weekly per series (30 days after an unmatched or rejected answer, never again once a
+  completed series is fully closed). Starts more than one chapter apart become a
+  `ChapterRange` discrepancy. When `LastChapterRead` passes the end of unread volumes
+  numbered above the highest volume already read, the series page and the Up next toast
+  offer "Mark read" for them (derived, never stored, never forced; a skipped volume below
+  the highest one read is never offered, and the per-volume read endpoint leaves it as it is).
+  Each range credits its source (MangaDex, or Wikipedia under CC BY-SA) with a link, as
+  MangaDex's terms require.
 - Library query returns everything a card needs in **one round trip**:
   series, counts (read/owned/published), publication status, new-volume flag,
   next-to-buy volume number (feeds the "Vol 12 on Saxo" CTA — a Saxo search
@@ -258,6 +273,22 @@ The series/volume tracking domain.
 - **Cover override:** any cover is a drop target. Uploaded image → stored as
   override object; overrides always win and are never replaced by sync.
   Removing an override falls back to synced art.
+- **Community covers (opt-in, v1, 2026-10-18; backlog §9).** A user who switches on
+  "Share your covers" (`UserPreferences.CoverSharingSince`, the time of consent; null is off)
+  publishes each uploaded override on a catalogued volume (series with an AniList or
+  MangaUpdates id; manual series never publish) as a row in `community_cover`: a pointer to
+  the user's own override object plus the SHA-256 of its bytes and a snapshot of the series'
+  external ids, format and volume number. The row is written in the same save as the override
+  change, so upload, replace, remove, merge and sharing on/off keep it in step. A volume's
+  "Community covers" picker lists the other users' images for the same format, number and
+  external id, grouped by hash (ordered by distinct sharers, then earliest), with the sharers'
+  display names and "used by N" (distinct sharers whose current override has that hash).
+  Picking copies the bytes verbatim into the picker's own override key (re-encoding would
+  change the hash), so from then on it is an ordinary override that outlives the uploader.
+  Per-user Hide (`community_cover_hide`, owned) removes one hash from that user's list.
+  `GET api/community-covers/{hash}` serves the image to signed-in users only;
+  `community-cover-withdraw --hash` removes one image for everyone (owner moderation).
+  Deferred: the per-user "use the community default" and a global Report.
 - Server-side normalization on ingest: cap dimensions, re-encode to webp,
   strip metadata. One size class in v1 (the grid renders it at two scales;
   thumbnails are a measured-need optimization, not a default).
@@ -328,8 +359,8 @@ guessed.
 - `IReleaseNotifier` seam with **one** v1 implementation (**[decision, revised
   2026-10-11]**: **Web Push** (VAPID, `Lib.Net.Http.WebPush`), not ntfy. The shelf
   has several readers on phones, and Web Push needs no extra app or topic; the PWA
-  manifest makes it work on iOS 16.4+ once the app is on the Home Screen. ntfy or a
-  Discord webhook remain possible implementation #2.)
+  manifest makes it work on iOS 16.4+ once the app is on the Home Screen. **[2026-10-14]**
+  the owner finds Web Push enough; no second notifier is planned.)
   - **What is news** comes from one diff per series refresh (`ShelfEventDiff`), never
     on a series' first refresh and never from user actions: a volume that was not out
     and now is (`IsReleased`, or its date has come — the projections' rule), a volume
@@ -532,11 +563,19 @@ Series
   LatestChapter (nullable numeric)
   -- [added 2026-10-11] MangaUpdates' latest_chapter for the linked record, written by
   -- every refresh that reads a value; a refresh with none never clears a known one.
+  MangaDexId (nullable uuid), ChapterListPage (nullable, ≤ 256), ChapterMapStatus
+  (nullable Mapped|Rejected|Unmatched), ChapterMapCheckedAt (nullable),
+  ChapterMapSyncRunId (nullable uuid, no FK)
+  -- [added 2026-10-14] the chapter-map sources' handles and cadence; metadata. The run id
+  -- names the sync run whose check wrote the ranges, so the series page reads that check's
+  -- ChapterRange discrepancies from it.
 
 Volume
   Id, SeriesId (FK), Number, ReleaseDate (nullable), ReleaseDateSource (nullable),
   IsReleased, Isbn (nullable), Title (nullable),
-  CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly
+  CoverObjectKey (nullable), ExternalId (nullable), IsLocalOnly,
+  FirstChapter, LastChapter (nullable numeric), ChapterRangeSource (nullable)
+  -- [added 2026-10-14] synced chapter range; LastChapter null = still open.
 
   -- Number is numeric (decimal) [added 2026-10-11]: bonus volumes are numbered between
   -- the main ones by their publishers (Torture Princess Vol. 7.5, Classroom of the
@@ -820,6 +859,12 @@ bundle holds no token at all:
   same reason `shelf_share` is, and the feed is read as its owner in a scope of its own.
   The token is never logged. The activity log `shelf_event` is a child of `Series`,
   filtered through it like `Volume`.
+  **[added 2026-10-18]** `community_cover` (§4.3) is unfiltered on purpose: it is published by a
+  consenting user so that other users can see it. Every write is hand-scoped to the current user
+  (`UploaderUserId`), and reads go only by the match key (external id, format, number) or by
+  content hash, never by listing a user's rows. It cascades with the account and the source
+  volume. Its counterpart `community_cover_hide` (OwnerId, ContentHash, HiddenAt) is the
+  seventh `IOwned` root and filtered like the others.
 - **Background work acts as each user.** The nightly sync runs once per user,
   each in its own scope after `ICurrentUser.ActAs`, sharing each source's
   allowance for the night (`OpenLibrary:MaximumLookupsPerNight`, `AppleBooks:MaximumRequestsPerNight`); console

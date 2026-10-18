@@ -31,6 +31,12 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     /// <summary>Release calendar links (Features/Calendar). Unfiltered on purpose, like ShelfShares.</summary>
     public DbSet<CalendarFeed> CalendarFeeds => Set<CalendarFeed>();
 
+    /// <summary>Uploaded covers users share on purpose (Features/Covers). Unfiltered, like ShelfShares.</summary>
+    public DbSet<CommunityCover> CommunityCovers => Set<CommunityCover>();
+
+    /// <summary>Shared covers a user chose to hide (Features/Covers).</summary>
+    public DbSet<CommunityCoverHide> CommunityCoverHides => Set<CommunityCoverHide>();
+
     /// <summary>Devices with Web Push turned on (Features/Notifications).</summary>
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
@@ -65,12 +71,14 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
     /// </summary>
     // Here rather than in the slices' configurations because a filter that reads the current
     // user has to close over this context. A scope with no user matches nothing: a forgotten
-    // ActAs reads an empty shelf instead of everyone's. The six roots carry OwnerId; the
+    // ActAs reads an empty shelf instead of everyone's. The seven roots carry OwnerId; the
     // children that request paths query by their own id are filtered through their root.
     // Children reached only through a root (volume user state, import rows and candidates,
     // discrepancies) are covered by the root's filter; OwnerFiltersTests holds that list.
     // ShelfShare and CalendarFeed are unfiltered on purpose (Features/Sharing, Features/Calendar):
     // each is how an anonymous request learns whom to act for, the same reason User is.
+    // CommunityCover is unfiltered for another reason: its owner published it so that other
+    // users can read it by match key (Features/Covers).
     private void ApplyOwnerFilters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Series>().HasQueryFilter(OwnerFilter, series => series.OwnerId == CurrentOwnerId);
@@ -79,6 +87,7 @@ public sealed class LnShelfDbContext(DbContextOptions<LnShelfDbContext> options,
         modelBuilder.Entity<UserPreferences>().HasQueryFilter(OwnerFilter, preferences => preferences.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<PushSubscription>().HasQueryFilter(OwnerFilter, subscription => subscription.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<RecommendationDismissal>().HasQueryFilter(OwnerFilter, dismissal => dismissal.OwnerId == CurrentOwnerId);
+        modelBuilder.Entity<CommunityCoverHide>().HasQueryFilter(OwnerFilter, hide => hide.OwnerId == CurrentOwnerId);
 
         modelBuilder.Entity<Volume>().HasQueryFilter(OwnerFilter, volume => volume.Series!.OwnerId == CurrentOwnerId);
         modelBuilder.Entity<SeriesUserState>().HasQueryFilter(OwnerFilter, state => state.Series!.OwnerId == CurrentOwnerId);

@@ -4,6 +4,7 @@ namespace LnShelf.Api.Features.Shelf.Controllers;
 [Route("api/volumes")]
 public sealed class VolumesController(
     IVolumeCommandService volumeCommandService,
+    IVolumeCoverCommandService volumeCoverCommandService,
     IVolumeReadDateCommandService volumeReadDateCommandService,
     IOptions<CoverImageOptions> coverOptions) : ControllerBase
 {
@@ -63,7 +64,23 @@ public sealed class VolumesController(
             await source.CopyToAsync(buffer, cancellationToken);
         }
 
-        var detail = await volumeCommandService.SetCoverAsync(volumeId, buffer.ToArray(), cancellationToken);
+        var detail = await volumeCoverCommandService.SetCoverAsync(volumeId, buffer.ToArray(), cancellationToken);
+        return detail is null ? NotFound() : Ok(detail);
+    }
+
+    /// <summary>
+    /// Takes a cover another user shares for this volume as its own. 404 when the volume is not
+    /// the user's, or nobody shares that cover for it.
+    /// </summary>
+    [HttpPut("{volumeId:guid}/cover/community")]
+    public async Task<ActionResult<SeriesDetailResponse>> PickCommunityCoverAsync(
+        Guid volumeId,
+        [FromBody] PickCommunityCoverRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var detail = await volumeCoverCommandService.PickCommunityAsync(volumeId, request.ContentHash, cancellationToken);
         return detail is null ? NotFound() : Ok(detail);
     }
 
@@ -73,7 +90,7 @@ public sealed class VolumesController(
         Guid volumeId,
         CancellationToken cancellationToken)
     {
-        var detail = await volumeCommandService.RemoveCoverAsync(volumeId, cancellationToken);
+        var detail = await volumeCoverCommandService.RemoveCoverAsync(volumeId, cancellationToken);
         return detail is null ? NotFound() : Ok(detail);
     }
 

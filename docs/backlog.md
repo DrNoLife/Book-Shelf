@@ -132,15 +132,17 @@ Round 3 shipped the `IReleaseNotifier` seam with Web Push as its first implement
 released volumes and changed release dates ("date moved" included), and a per-series
 mute on the series page. Still open:
 
-- ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.
+- ~~ntfy or Discord as `IReleaseNotifier` implementation #2, when wanted.~~ **[dropped
+  2026-10-14]**: the owner finds Web Push enough; the seam stays for a later need.
 - ~~"Notify me when dated" per volume on Upcoming.~~ **[done 2026-10-13, v0.31.0]**: a
   per-volume flag (`VolumeUserState.NotifyWhenDated`) that tells you once when that announced
   volume gets a date, even on a muted series.
 - ~~Remove a device automatically after N refused deliveries in a row.~~ **[done]**
   `WebPushReleaseNotifier.RemoveAfterRefusals` (5) deletes a device that keeps refusing, so a
   key rotation that leaves old subscriptions answering 403 cleans itself up.
-- Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
-  tap keeps the user gesture through Blazor interop.
+- ~~Test on a real iPhone: Google sign-in inside the Home Screen app, and whether the Enable
+  tap keeps the user gesture through Blazor interop.~~ **[done 2026-10-14]**: the owner tested
+  both on an iPhone; they work.
 
 ## 0. Owner feedback after the multi-user deploy (2026-10-10) — next up
 
@@ -181,14 +183,15 @@ mute on the series page. Still open:
 
 ## 7. Sundry, when passing by
 
-- **Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.** 0.31.0 stopped
+- **[done 2026-10-14, migration `DropDefaultLibraryFilter`]** ~~**Drop `user_preferences.DefaultLibraryFilter` in the release after 0.31.0.**~~ 0.31.0 stopped
   mapping the column (`DefaultLibraryFilters` replaced it) and gave it a database default so the
   0.30.0 image still inserts; with no rollback to 0.30 left, a migration drops it (the contract
   step of `data-access.md`). Drop the `DefaultLibraryFilter` property from `PreferencesResponse`
   in the same release: 0.31.0 still sends it so a browser holding the 0.30 bundle can read the
   response.
-- **Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
-  real-iPhone test of Home Screen sign-in and the Enable tap (§6).
+- ~~**Owner tasks still open:** the Slime manga 1-8 check (`enrichment-verify`, §12 step 1) and the
+  real-iPhone test of Home Screen sign-in and the Enable tap (§6).~~ **[done 2026-10-14]**: the
+  owner checked both; they are fine.
 - **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
   suppressions are gone; the license key comes from `SixLaborsLicenseKey` (README, Deploy).
 - **Low-severity findings from the 2026-10-09 audit** are listed in
@@ -263,7 +266,12 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   - **Budget.** One lookup per watched volume per night, rate limited like the other
     sources, across every user.
 
-## 9. Community volume covers (a friend's request, 2026-10-11) — future
+## 9. Community volume covers (a friend's request, 2026-10-11) — v1 built 2026-10-18 (v0.33.0)
+
+**Status:** v1 is built: the opt-in sharing switch on the profile (consent time recorded), the
+"Community covers" picker on a volume, per-user Hide, and the `community-cover-withdraw`
+console command. Deferred: the per-user "use the community default" and a global Report. The
+notes below are the original open questions, kept for the deferred parts.
 
 > "If I upload the Chainsaw Man Vol 1 cover, can [another user] pick the cover I uploaded
 > without finding it themselves? Maybe a setting that by default picks whatever most of the
@@ -287,7 +295,7 @@ under that user's cover keys. Open questions before any code:
   others; at least a "Report / hide this cover" and the uploader's name on each candidate.
 - Storage: shared images deduplicated by content hash in the cover store.
 
-## 10. Manga read chapter by chapter (owner, 2026-10-11) — layer 1 DONE (2026-10-11, v0.30.0)
+## 10. Manga read chapter by chapter (owner, 2026-10-11) — DONE (layer 1 2026-10-11, v0.30.0; layer 2 2026-10-14, v0.32.0)
 
 The owner reads some manga by chapter (weekly/simulpub), while the shelf only knew whole
 volumes. Layer 1 is built: each manga or web novel is counted in Volumes or Chapters
@@ -296,15 +304,15 @@ volumes. Layer 1 is built: each manga or web novel is counted in Volumes or Chap
 from MangaUpdates' `latest_chapter` on every refresh. "N to read" is derived, never stored. A
 Chapters series that is Reading and not caught up is on Continue reading / Up next by its
 chapters, with "+1 chapter" and Undo there, whether or not any volume is owned. Volume read
-states, To buy, Backlog and Behind stay volume-based. Still open:
+states, To buy, Backlog and Behind stay volume-based.
 
-- **Layer 2: chapter → volume mapping.** MangaUpdates only gives the latest chapter; AniList
-  gives a chapter total for finished series only. MangaDex's `GET /manga/{id}/aggregate` maps
-  chapters to volumes (unverified for English-edition numbering; scanlation-based). Spike it
-  like §1 before committing; whether reaching a volume's last chapter marks that volume read
-  is a design decision (probably offer, not force).
-- **A global default unit** (a preference for new manga/web novel series), instead of choosing
-  per series.
+- ~~**Layer 2: chapter → volume mapping.**~~ **[done 2026-10-14]** Spiked (MangaDex alone
+  missed Chainsaw Man 21–23, most of 86 and the newest volumes; Kitsu, MangaUpdates releases,
+  Comick and publisher pages carry nothing usable), then built as `IChapterMapSource` with
+  Wikipedia's chapter lists first (verified by English ISBN) and MangaDex's aggregate behind
+  them. Reaching a volume's last chapter offers Mark read; it never forces it (feature-spec §4.1).
+  Known gap: series with no chapter list anywhere (86 manga) and manhwa stay unmapped.
+- ~~**A global default unit**~~ **[done 2026-10-14]** `DefaultProgressUnit` on the profile page.
 
 ## 11. Recommendations — v0, v1 and Not interested DONE (2026-10-13, v0.31.0)
 
@@ -337,7 +345,7 @@ own the count (MU lagged in 1 of 12 series; 86 Vol 14 is a pre-order, MU's 13 is
    as medium evidence for manga only (Chainsaw Man, Berserk, Kodansha Slime); verify Slime
    manga 1–8 (likely a spin-off) with `enrichment-verify`; detect placeholder covers by
    `coverArt.<hash>.png` instead of discarding every future-dated cover. Bookworm stays out.
-   **[done 2026-10-11]** except the Slime manga 1–8 check, which is still open; "(comic)"
+   **[done 2026-10-11]**; the Slime manga 1–8 check followed on 2026-10-14 (fine); "(comic)"
    counts as a manga marker too (IZE Press). Found on the way (Solo Leveling stuck at 13 of 15): an English
    note's extras ("13+2 Volumes") may now be whole volumes past the count, created from the
    store like bonus volumes (CLAUDE.md, conflicting sources).

@@ -27,7 +27,7 @@ internal static class ImportShelfWriterHarness
         new(dbContext, metadataSource, Substitute.For<ISeriesCoverCache>(),
             TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<ImportShelfWriter>.Instance);
 
-    public static ISeriesMetadataSource CreateMetadataSource(int? volumeCount)
+    public static ISeriesMetadataSource CreateMetadataSource(int? volumeCount, Format format = Format.LightNovel)
     {
         var metadataSource = Substitute.For<ISeriesMetadataSource>();
         metadataSource.GetSeriesAsync(AniListId, Arg.Any<CancellationToken>())
@@ -35,7 +35,7 @@ internal static class ImportShelfWriterHarness
             {
                 ExternalId = AniListId,
                 TitleEnglish = "Overlord",
-                Format = Format.LightNovel,
+                Format = format,
                 PublicationStatus = PublicationStatus.Ongoing,
                 Volumes = volumeCount is null
                     ? []

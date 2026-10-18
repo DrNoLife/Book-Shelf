@@ -14,6 +14,7 @@ public static class SeriesClientExtensions
             services.AddScoped<SeriesState>();
             services.AddScoped<SourceConflictState>();
             services.AddScoped<ReleaseLinkClient>();
+            services.AddScoped<CommunityCoverClient>();
 
             // Menu and select mode: page state, deliberately separate from the series.
             services.AddScoped<VolumeSelectionState>();

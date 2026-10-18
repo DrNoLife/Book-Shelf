@@ -1,3 +1,4 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LnShelf.Api.Tests.Features.Import.Services;
@@ -141,6 +142,52 @@ public sealed class ImportCommandServiceTests
 
         (await dbContext.Series.CountAsync()).ShouldBe(1);
         (await dbContext.ImportBatches.SingleAsync()).CommittedAt.ShouldNotBeNull();
+    }
+
+    // The preference is read once per commit and handed to every series it creates, not once
+    // per created series.
+    [Fact]
+    public async Task CommitAsync_TwoNewSeries_ReadsThePreferenceOnceAndStartsBothInIt()
+    {
+        await using var dbContext = CreateDbContext();
+        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, ProgressUnit.Chapters);
+        var batch = await SeedBatchAsync(dbContext);
+        var second = new ImportGroup
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesKey = "overlord manga",
+            SeriesTitle = "Overlord (manga)",
+            Status = ImportGroupStatus.NeedsReview,
+            Reason = ImportReviewReason.NoCandidate,
+            TreatReadAsOwned = true,
+        };
+        second.Rows.Add(new ImportRow
+        {
+            Id = Guid.CreateVersion7(),
+            LineNumber = 9,
+            RawTitle = "Overlord (manga), Vol. 1",
+            VolumeNumber = 1,
+            ReadStatus = ReadStatus.Read,
+            OwnedInExport = false,
+        });
+        batch.Groups.Add(second);
+        await dbContext.SaveChangesAsync();
+
+        var stored = TestPreferences.For(dbContext);
+        var preferences = Substitute.For<IPreferencesService>();
+        preferences.GetAsync(Arg.Any<CancellationToken>())
+            .Returns(call => stored.GetAsync(call.Arg<CancellationToken>()));
+        var service = CreateService(dbContext, Format.Manga, preferences);
+        await service.ResolveGroupAsync(
+            batch.Groups.First().Id, new ResolveImportGroupRequest { AniListId = NovelAniListId }, CancellationToken.None);
+        await service.ResolveGroupAsync(
+            second.Id, new ResolveImportGroupRequest { AniListId = MangaAniListId }, CancellationToken.None);
+
+        var result = await service.CommitAsync(batch.Id, CancellationToken.None);
+
+        result.ShouldNotBeNull().SeriesCreated.ShouldBe(2);
+        await preferences.Received(1).GetAsync(Arg.Any<CancellationToken>());
+        (await dbContext.SeriesUserStates.ToListAsync()).ShouldAllBe(state => state.ProgressUnit == ProgressUnit.Chapters);
     }
 
     // An unparsed title resolved to a series whose other books are numbered used to be
@@ -313,15 +360,18 @@ public sealed class ImportCommandServiceTests
         Rank = rank,
     };
 
-    private static ImportCommandService CreateService(LnShelfDbContext dbContext)
+    private static ImportCommandService CreateService(
+        LnShelfDbContext dbContext,
+        Format format = Format.LightNovel,
+        IPreferencesService? preferences = null)
     {
         var metadataSource = Substitute.For<ISeriesMetadataSource>();
         metadataSource.GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => new SeriesMetadata
             {
                 ExternalId = callInfo.Arg<int>(),
-                TitleEnglish = "Overlord",
-                Format = Format.LightNovel,
+                TitleEnglish = $"Overlord {callInfo.Arg<int>()}",
+                Format = format,
                 PublicationStatus = PublicationStatus.Ongoing,
                 Volumes = [.. Enumerable.Range(1, 18).Select(number => new VolumeMetadata { Number = number })],
             });
@@ -331,6 +381,7 @@ public sealed class ImportCommandServiceTests
         return new ImportCommandService(
             dbContext,
             new ImportShelfWriter(dbContext, metadataSource, coverCache, TestUsers.Limits(dbContext), TimeProvider.System, NullLogger<ImportShelfWriter>.Instance),
+            preferences ?? TestPreferences.For(dbContext),
             metadataSource,
             coverCache,
             TimeProvider.System,

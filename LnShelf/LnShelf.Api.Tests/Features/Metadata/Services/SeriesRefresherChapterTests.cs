@@ -95,6 +95,7 @@ public sealed class SeriesRefresherChapterTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
+            ChapterMapPipeline.NoSources(),
             TimeProvider.System);
     }
 

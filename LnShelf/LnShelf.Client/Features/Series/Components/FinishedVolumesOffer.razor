@@ -1,0 +1,18 @@
+@* "You've finished Vol 12 — mark it read?" on a series counted in chapters, once the last
+   chapter read is at or past the known end of a volume above the highest one read (a skipped
+   volume below it is never offered: ChapterProgress.VolumesFinishedBy). An offer, never a write: the chapter map is
+   community data, so the reader decides (owner decision 2026-10-14). "Not now" hides it until
+   the chapter changes, in this page's memory only — nothing is stored. *@
+
+@if (IsShown)
+{
+    <div class="offer" role="group" aria-label="Finished volumes">
+        <p class="offer__text">@ChapterText.FinishedOffer(VolumeNumbers)</p>
+        <div class="offer__actions">
+            <button type="button" class="secondary" disabled="@SeriesState.IsSaving" @onclick="MarkReadAsync">
+                Mark read<span class="visually-hidden">: @ChapterText.VolumesLabel(VolumeNumbers)</span>
+            </button>
+            <button type="button" class="ghost" @onclick="NotNow">Not now</button>
+        </div>
+    </div>
+}

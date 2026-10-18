@@ -79,6 +79,9 @@ public sealed class SyncRun : IOwned
     /// <summary>Volumes the release source knew about and the shelf did not.</summary>
     public int NewVolumes { get; set; }
 
+    /// <summary>Volumes whose chapter range was written, moved or cleared by this run.</summary>
+    public int ChapterRangesWritten { get; set; }
+
     /// <summary>Series whose refresh threw. One failure never stops a run.</summary>
     public int Failures { get; set; }
 

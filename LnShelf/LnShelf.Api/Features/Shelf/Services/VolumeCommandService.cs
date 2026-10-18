@@ -3,10 +3,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 /// <inheritdoc />
 public sealed class VolumeCommandService(
     LnShelfDbContext dbContext,
-    ICoverStore coverStore,
-    CoverNormalizer coverNormalizer,
     TimeProvider timeProvider,
-    UserLimits userLimits,
     ILogger<VolumeCommandService> logger) : IVolumeCommandService
 {
     public async Task<SeriesDetailResponse?> SetReadAsync(
@@ -171,114 +168,6 @@ public sealed class VolumeCommandService(
             request.Format);
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
-    }
-
-    public async Task<SeriesDetailResponse?> SetCoverAsync(
-        Guid volumeId,
-        ReadOnlyMemory<byte> content,
-        CancellationToken cancellationToken)
-    {
-        if (content.Length == 0)
-        {
-            throw new InvalidInputException("That file is empty.");
-        }
-
-        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
-        if (series is null || Find(series, volumeId) is not { } volume)
-        {
-            return null;
-        }
-
-        // Replacing a cover takes no extra room; a first one for this volume does.
-        if (volume.UserState?.CoverOverrideObjectKey is null)
-        {
-            await userLimits.EnsureRoomForCoverOverrideAsync(cancellationToken);
-        }
-
-        // Normalized before anything is stored, so an upload that is not a decodable
-        // image is refused rather than served back as one later.
-        var normalized = await coverNormalizer.NormalizeAsync(content, cancellationToken)
-            ?? throw new InvalidInputException("That file is not an image the shelf can read.");
-
-        var objectKey = CoverObjectKey.ForVolumeOverride(
-            volume.Id, Guid.CreateVersion7(), CoverNormalizer.Extension);
-        await coverStore.SaveAsync(objectKey, normalized, CoverNormalizer.ContentType, cancellationToken);
-
-        // The key lands on user state, not on the volume: it is user data, and sync
-        // writes the volume but never the state (CLAUDE.md).
-        var state = EnsureState(volume);
-        var replacedObjectKey = state.CoverOverrideObjectKey;
-        state.CoverOverrideObjectKey = objectKey;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Only once the new key is saved: until then the old object is still what the
-        // shelf points at.
-        await DeleteReplacedOverrideAsync(replacedObjectKey, cancellationToken);
-
-        logger.LogInformation(
-            "Volume {VolumeNumber} of {SeriesId} has a cover override at {ObjectKey}",
-            volume.Number, volume.SeriesId, objectKey);
-
-        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
-    }
-
-    public async Task<SeriesDetailResponse?> RemoveCoverAsync(
-        Guid volumeId,
-        CancellationToken cancellationToken)
-    {
-        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
-        if (series is null || Find(series, volumeId) is not { } volume)
-        {
-            return null;
-        }
-
-        // The stored object goes too. It used to be kept so an accidental removal was
-        // recoverable, but every upload now has its own key, so a kept object is one
-        // nothing can name again — not a backup, just a leak.
-        if (volume.UserState is { CoverOverrideObjectKey: { } removedObjectKey } state)
-        {
-            state.CoverOverrideObjectKey = null;
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            await DeleteReplacedOverrideAsync(removedObjectKey, cancellationToken);
-        }
-
-        logger.LogInformation(
-            "Volume {VolumeNumber} of {SeriesId} is back to its synced cover",
-            volume.Number, volume.SeriesId);
-
-        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
-    }
-
-    /// <summary>
-    /// Removes an override object the shelf no longer points at.
-    /// </summary>
-    // Never fatal. The user's change is already saved by the time this runs, and failing
-    // the request over an orphaned 100 KB object would report a write that succeeded as
-    // one that did not. The orphan is harmless: nothing references it.
-    private async Task DeleteReplacedOverrideAsync(string? objectKey, CancellationToken cancellationToken)
-    {
-        if (objectKey is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await coverStore.DeleteAsync(objectKey, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Could not delete the replaced cover override {ObjectKey}; it is orphaned but unreferenced",
-                objectKey);
-        }
     }
 
     /// <summary>

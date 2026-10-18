@@ -48,6 +48,15 @@ public sealed class AccountExportQueryServiceTests
         export.RecommendationDismissals.ShouldHaveSingleItem().Title.ShouldBe("Dismissed by owner");
         export.Preferences.GridDensity.ShouldBe(GridDensity.Compact);
         export.ActivitySeenAt.ShouldBe(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
+        export.CoverSharingSince.ShouldBe(new DateTimeOffset(2026, 10, 7, 12, 0, 0, TimeSpan.Zero));
+
+        var sharedCover = export.SharedCovers.ShouldHaveSingleItem();
+        sharedCover.ContentHash.ShouldBe(new string('o', 64));
+        sharedCover.PublishedAt.ShouldBe(new DateTimeOffset(2026, 10, 7, 13, 0, 0, TimeSpan.Zero));
+
+        var hiddenCover = export.HiddenCovers.ShouldHaveSingleItem();
+        hiddenCover.ContentHash.ShouldBe(new string('o', 63) + "0");
+        hiddenCover.HiddenAt.ShouldBe(new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero));
 
         var series = export.Series.ShouldHaveSingleItem();
         series.TitleEnglish.ShouldBe("Title of owner");
@@ -131,6 +140,9 @@ public sealed class AccountExportQueryServiceTests
         export.RecommendationDismissals.ShouldBeEmpty();
         export.Preferences.GridDensity.ShouldBe(GridDensity.Comfortable);
         export.ActivitySeenAt.ShouldBeNull();
+        export.CoverSharingSince.ShouldBeNull();
+        export.SharedCovers.ShouldBeEmpty();
+        export.HiddenCovers.ShouldBeEmpty();
         export.Series.ShouldBeEmpty();
         export.ImportBatches.ShouldBeEmpty();
         export.SyncRuns.ShouldBeEmpty();
@@ -194,10 +206,29 @@ public sealed class AccountExportQueryServiceTests
         {
             GridDensity = GridDensity.Compact,
             ActivitySeenAt = new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero),
+            CoverSharingSince = new DateTimeOffset(2026, 10, 7, 12, 0, 0, TimeSpan.Zero),
         });
 
         var seriesId = Guid.CreateVersion7();
         var firstVolumeId = Guid.CreateVersion7();
+        dbContext.CommunityCoverHides.Add(new CommunityCoverHide
+        {
+            Id = Guid.CreateVersion7(),
+            ContentHash = new string(marker[0], 63) + "0",
+            HiddenAt = new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero),
+        });
+        dbContext.CommunityCovers.Add(new CommunityCover
+        {
+            Id = Guid.CreateVersion7(),
+            UploaderUserId = userId,
+            SourceVolumeId = firstVolumeId,
+            AniListId = 85737,
+            Format = Format.LightNovel,
+            Number = 1,
+            ContentHash = new string(marker[0], 64),
+            ObjectKey = $"override/volume/{marker}-cover",
+            PublishedAt = new DateTimeOffset(2026, 10, 7, 13, 0, 0, TimeSpan.Zero),
+        });
         dbContext.ShelfEvents.Add(new ShelfEvent
         {
             Id = Guid.CreateVersion7(),

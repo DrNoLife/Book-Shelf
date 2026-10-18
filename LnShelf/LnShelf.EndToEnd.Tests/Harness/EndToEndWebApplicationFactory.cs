@@ -89,6 +89,8 @@ public sealed class EndToEndWebApplicationFactory : WebApplicationFactory<Progra
             services.AddScoped<IVolumeEnrichmentSource, SilentVolumeEnrichmentSource>();
             services.RemoveAll<IIsbnCandidateSource>();
             services.AddScoped<IIsbnCandidateSource, SilentIsbnCandidateSource>();
+            services.RemoveAll<IChapterMapSource>();
+            services.AddScoped<IChapterMapSource, FixtureChapterMapSource>();
 
             services.RemoveAll<ICoverStore>();
             services.AddSingleton<ICoverStore>(CoverStore);

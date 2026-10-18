@@ -126,5 +126,25 @@ public sealed class Volume
 
     public bool IsLocalOnly { get; set; }
 
+    /// <summary>
+    /// The first chapter this volume collects, from a chapter map. Null when no map covers it.
+    /// </summary>
+    // Synced metadata, the same class of fact as ReleaseDate: what a source says is in the
+    // volume, and nothing on the shelf can derive it. Written only onto volumes that exist
+    // (ChapterRangeWriter); a map never creates or deletes one.
+    public decimal? FirstChapter { get; set; }
+
+    /// <summary>
+    /// The last chapter this volume collects. Null while the volume is open: the next volume has
+    /// no known start, so where this one ends is not known either.
+    /// </summary>
+    public decimal? LastChapter { get; set; }
+
+    /// <summary>Which chapter-map source wrote the range. Null exactly when there is no range.</summary>
+    // Per volume rather than per series, because the chapter-map sources are asked in order and
+    // each volume takes its range from the first that maps it: one series can mix sources, and
+    // the credit line has to name each one it shows.
+    public MetadataSourceName? ChapterRangeSource { get; set; }
+
     public VolumeUserState? UserState { get; set; }
 }

@@ -40,10 +40,23 @@ public sealed class UserPreferences : IOwned
     public IReadOnlyList<LibrarySection> LibrarySectionOrder { get; set; } = LibrarySections.Default;
 
     /// <summary>
+    /// The progress unit a newly added manga or web novel starts with; existing series are
+    /// never touched by it.
+    /// </summary>
+    public ProgressUnit DefaultProgressUnit { get; set; } = ProgressUnit.Volumes;
+
+    /// <summary>
     /// When the reader last dismissed "Since your last visit". Null means never: the panel
     /// then looks back a fixed window instead.
     /// </summary>
     // An acknowledgment, like SeriesUserState.HasNewVolume: an event the reader caused, not
     // something derivable from the shelf.
     public DateTimeOffset? ActivitySeenAt { get; set; }
+
+    /// <summary>
+    /// When the reader agreed to share their uploaded covers with other users. Null means off.
+    /// </summary>
+    // The timestamp, not a bool, because it is the record of consent (GDPR Art. 7(1)): when it
+    // was given, kept for as long as it stands.
+    public DateTimeOffset? CoverSharingSince { get; set; }
 }

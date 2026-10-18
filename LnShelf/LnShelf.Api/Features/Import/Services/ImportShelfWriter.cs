@@ -17,16 +17,21 @@ public sealed class ImportShelfWriter(
     /// Every group that resolved to <paramref name="aniListId"/> — one shelf entry
     /// can arrive under two titles.
     /// </param>
+    /// <param name="defaultProgressUnit">
+    /// The reader's preferred unit for new series, read once per commit by the caller rather than
+    /// once per series created here.
+    /// </param>
     public async Task ApplyAsync(
         int aniListId,
         IReadOnlyList<ImportGroup> groups,
         ImportWriteCounters counters,
+        ProgressUnit defaultProgressUnit,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(groups);
         ArgumentNullException.ThrowIfNull(counters);
 
-        var series = await FindOrCreateSeriesAsync(aniListId, counters, cancellationToken);
+        var series = await FindOrCreateSeriesAsync(aniListId, counters, defaultProgressUnit, cancellationToken);
         var desiredStates = DesiredVolumeStateMerger.Merge(groups);
 
         foreach (var desired in desiredStates.Values.OrderBy(state => state.VolumeNumber))
@@ -47,6 +52,7 @@ public sealed class ImportShelfWriter(
     private async Task<Series> FindOrCreateSeriesAsync(
         int aniListId,
         ImportWriteCounters counters,
+        ProgressUnit defaultProgressUnit,
         CancellationToken cancellationToken)
     {
         // Keyed on AniList id, which is what makes a re-import additive: the second
@@ -95,6 +101,10 @@ public sealed class ImportShelfWriter(
         // Counted against what is saved plus what this commit has already added, so a big
         // export stops at the limit rather than after it.
         await userLimits.EnsureRoomForSeriesAsync(adding: counters.SeriesCreated + 1, cancellationToken);
+
+        // Only for a series created here: the existing-series and adopted branches above
+        // return before this, so a re-import never moves a unit the reader chose.
+        NewSeriesProgressUnit.ApplyTo(series, defaultProgressUnit);
 
         dbContext.Series.Add(series);
         counters.SeriesCreated++;

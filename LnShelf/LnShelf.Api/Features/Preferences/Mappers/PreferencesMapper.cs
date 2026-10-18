@@ -12,8 +12,6 @@ public static class PreferencesMapper
 
         // Normalised on the way out as well as on the way in: the column reader drops a
         // name the enum no longer has, and what is left must still be a whole answer.
-        var defaultFilters = LibraryFilterSet.Normalize(preferences.DefaultLibraryFilters);
-
         return new PreferencesResponse
         {
             GridDensity = preferences.GridDensity,
@@ -21,11 +19,9 @@ public static class PreferencesMapper
             LibraryView = preferences.LibraryView,
             VolumeView = preferences.VolumeView,
             ShowVolumeTitles = preferences.ShowVolumeTitles,
-            DefaultLibraryFilters = defaultFilters,
-
-            // Normalize never returns an empty set, so there is always a first entry.
-            DefaultLibraryFilter = defaultFilters[0],
+            DefaultLibraryFilters = LibraryFilterSet.Normalize(preferences.DefaultLibraryFilters),
             LibrarySectionOrder = LibrarySections.Normalize(preferences.LibrarySectionOrder),
+            DefaultProgressUnit = preferences.DefaultProgressUnit,
         };
     }
 }

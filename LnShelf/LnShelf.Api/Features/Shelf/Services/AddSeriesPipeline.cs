@@ -1,3 +1,5 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+
 namespace LnShelf.Api.Features.Shelf.Services;
 
 /// <summary>
@@ -13,6 +15,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 // The source-specific half lives behind IAddSeriesFlow, one implementation per source.
 public sealed class AddSeriesPipeline(
     LnShelfDbContext dbContext,
+    IPreferencesService preferencesService,
     IEnumerable<IAddSeriesFlow> addSeriesFlows,
     IIsbnBackfill isbnBackfill,
     ISeriesSyncService seriesSync,
@@ -63,6 +66,11 @@ public sealed class AddSeriesPipeline(
         // Before the save, so the series and the reader's place in it are one write: a race
         // lost below detaches both together and leaves the winner's state alone.
         startingState.ApplyTo(series, timeProvider.Today());
+
+        // Only here, after the adoption branch above: a series matched onto an existing one
+        // keeps the unit its reader chose.
+        var preferences = await preferencesService.GetAsync(cancellationToken);
+        NewSeriesProgressUnit.ApplyTo(series, preferences.DefaultProgressUnit);
 
         dbContext.Series.Add(series);
 

@@ -368,6 +368,11 @@ public sealed class SeriesSyncService(
             parts.Add($"{run.VolumeCoversCached} volume covers cached");
         }
 
+        if (run.ChapterRangesWritten > 0)
+        {
+            parts.Add($"{run.ChapterRangesWritten} chapter ranges written");
+        }
+
         if (run.VolumesResolvedBySearch > 0)
         {
             // Named as the weaker claim it is: the reader's own ISBN was not indexed, so

@@ -57,6 +57,7 @@ global using LnShelf.Api.Features.Stats.Services;
 global using LnShelf.Api.Matching;
 global using LnShelf.Shared.Auth;
 global using LnShelf.Shared.Changelog;
+global using LnShelf.Shared.Covers;
 global using LnShelf.Shared.Import;
 global using LnShelf.Shared.Metadata;
 global using LnShelf.Shared.Notifications;

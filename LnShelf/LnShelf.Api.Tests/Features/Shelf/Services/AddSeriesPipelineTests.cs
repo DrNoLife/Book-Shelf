@@ -235,6 +235,35 @@ public sealed class AddSeriesPipelineTests
         series.UserState.ShouldNotBeNull().TrackingStatus.ShouldBe(TrackingStatus.Dropped);
     }
 
+    [Theory]
+    [InlineData(Format.Manga, ProgressUnit.Chapters, ProgressUnit.Chapters)]
+    [InlineData(Format.LightNovel, ProgressUnit.Chapters, ProgressUnit.Volumes)]
+    [InlineData(Format.Manga, ProgressUnit.Volumes, ProgressUnit.Volumes)]
+    public async Task RunAsync_ANewSeries_StartsInThePreferredUnitWhereTheFormatOffersChapters(
+        Format format,
+        ProgressUnit preferred,
+        ProgressUnit expected)
+    {
+        await using var dbContext = CreateDbContext();
+        await TestPreferences.ChooseDefaultProgressUnitAsync(dbContext, preferred);
+
+        // The format comes from the source's answer, not the request: the request says
+        // LightNovel throughout, as a stale search page would.
+        var metadataSource = Substitute.For<ISeriesMetadataSource>();
+        metadataSource.GetSeriesAsync(AniListId, Arg.Any<CancellationToken>())
+            .Returns(new SeriesMetadata
+            {
+                ExternalId = AniListId,
+                TitleEnglish = Title,
+                Format = format,
+                PublicationStatus = PublicationStatus.Completed,
+            });
+
+        await CreatePipeline(dbContext, metadataSource).RunAsync(StartWith(read: null, owned: null), CancellationToken.None);
+
+        (await LoadAsync()).UserState.ShouldNotBeNull().ProgressUnit.ShouldBe(expected);
+    }
+
     private static AddSeriesRequest StartWith(int? read, int? owned) => new()
     {
         AniListId = AniListId,
@@ -292,6 +321,7 @@ public sealed class AddSeriesPipelineTests
     {
         return new AddSeriesPipeline(
             dbContext,
+            TestPreferences.For(dbContext),
             [
                 new AniListAddSeriesFlow(
                     metadataSource,

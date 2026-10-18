@@ -16,4 +16,9 @@ public enum SyncDiscrepancyField
 
     /// <summary>No confident link between the shelf's series and the release source's.</summary>
     SeriesLink,
+
+    /// <summary>Two chapter-map sources start one volume on chapters more than one apart.</summary>
+    // Settled by the sources' precedence every time, so it is shown but never chosen: there is
+    // no override column for a chapter range, and a person has nothing better to go on.
+    ChapterRange,
 }

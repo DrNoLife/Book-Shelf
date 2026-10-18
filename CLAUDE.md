@@ -173,7 +173,8 @@ from writes** — command/query separation at the service boundary.
 - **Every external call sits behind a seam** (see Architecture principles).
   Nothing outside `Features/Metadata` knows what AniList is.
 - **Be a polite API citizen.** Respect AniList's rate limit (30 req/min while its API is degraded; its responses say so in `X-RateLimit-Limit`);
-  MangaUpdates likewise. Sync jobs batch and back off on 429 (Apple Books says it with a 403). This is a hobby
+  MangaUpdates likewise. Sync jobs batch and back off on 429 (Apple Books, MangaDex and Wikimedia say it with a 403).
+  Wikimedia wants a User-Agent with contact details (the Open Library contact address). This is a hobby
   app hitting free community APIs — never hammer them.
 - **Cache covers locally** on first fetch. The shelf must render without the
   AniList CDN being up.
@@ -203,6 +204,10 @@ from writes** — command/query separation at the service boundary.
     row dated no more than twelve months ahead; only once the release source states a count,
     never under a volume-count choice, never released by the count, never deleted. Unlike
     extras they are news (activity, push, and the new-volume badge when already out).
+  - **Chapter ranges** (which chapters a volume holds) — Wikipedia's chapter list, accepted
+    only when one of its English ISBNs is a volume ISBN the shelf holds, then MangaDex for the
+    volumes it leaves open. Written only onto existing whole volumes; starts more than one
+    chapter apart are recorded, never chosen. The "mark read" offer is derived, never stored.
   - **Everything else** — AniList.
   - Record the discrepancy in the sync log rather than silently picking. A
     `SyncDiscrepancy` carries one `(source, value)` pair per disagreeing source,
@@ -367,8 +372,9 @@ subfolder; if earlier work put them elsewhere, move them.
   on ISBN — the two series-level seams cannot express "tell me about volume 7"),
   `IIsbnCandidateSource` (the guess that feeds ISBN discovery, kept separate from
   the seam that reads facts), `IShelfImporter` (StoryGraph CSV today,
-  Goodreads or MAL export later), `IReleaseNotifier` (ntfy/Discord/email —
-  pick one for v1, seam stays), `IRecommendationSource` (what readers of a series also liked; AniList today, kept
+  Goodreads or MAL export later), `IReleaseNotifier` (Web Push; the owner
+  needs no second notifier, the seam stays), `IChapterMapSource` (which chapters are in which
+  volume; Wikipedia's chapter lists first, MangaDex fills their gaps), `IRecommendationSource` (what readers of a series also liked; AniList today, kept
   apart from the series-level seam because it answers a different question),
   `IConsoleCommand` (one-shot maintenance jobs, so a
   backfill never becomes a permanent API endpoint), `IHeartbeat` (tells a monitor a
@@ -389,8 +395,8 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Many users, separate shelves.** Login is OpenID Connect run by the API
   (`Features/Auth`, Google by default) with the session in a cookie on the
   shared origin — never a token in the client bundle, which is public by
-  nature. Each user owns their own copies of everything: the six roots
-  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`, `RecommendationDismissal`) implement `IOwned`,
+  nature. Each user owns their own copies of everything: the seven roots
+  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`, `RecommendationDismissal`, `CommunityCoverHide`) implement `IOwned`,
   `LnShelfDbContext` stamps `OwnerId` on save and filters every query by the
   current user (`ICurrentUser`). **Never filter by owner by hand and never
   call `IgnoreQueryFilters` in request code**; background work and console
@@ -400,8 +406,8 @@ subfolder; if earlier work put them elsewhere, move them.
   The read-only shared shelf and the release calendar feed are the two request
   paths that resolve an owner from a token (`shelf_share`, `calendar_feed`) and
   read through `ICurrentUser.ActAs` in a child scope; `shelf_share`,
-  `calendar_feed` and `app_user` are the only unfiltered tables, each with its
-  reason in feature-spec §7.
+  `calendar_feed`, `community_cover` and `app_user` are the only unfiltered tables,
+  each with its reason in feature-spec §7.
   Details: `docs/feature-spec.md` §7.
 
 ---
@@ -445,6 +451,7 @@ dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [
 dotnet run --project LnShelf/LnShelf.Api -- subtitle-backfill
 dotnet run --project LnShelf/LnShelf.Api -- volume-merge --series "<title>" --from 10 --into 7.5 [--format LightNovel] [--dry-run]
 dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # all shelves; no --user needed
+dotnet run --project LnShelf/LnShelf.Api -- community-cover-withdraw --hash <sha256>   # stop sharing one cover with everyone; no --user needed
 dotnet run --project LnShelf/LnShelf.Api -- vapid-keys                         # a Web Push key pair for the .env
 ```
 

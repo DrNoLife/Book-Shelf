@@ -18,6 +18,7 @@ public sealed class SeriesRefresher(
     ReleaseCountWriter releaseCountWriter,
     PublicationStatusWriter publicationStatusWriter,
     VolumeEnrichmentService volumeEnrichment,
+    ChapterMapRefresher chapterMapRefresher,
     TimeProvider timeProvider)
 {
     /// <param name="linkedExternalIds">
@@ -76,6 +77,10 @@ public sealed class SeriesRefresher(
         // Also unconditional, and for the same reason: whether this series has a synopsis
         // has nothing to do with whether the release source recognised it.
         await descriptionHealer.HealAsync(series, cancellationToken);
+
+        // After the count and the enrichment, so it judges a map against the volumes and the
+        // latest chapter as this run left them. It isolates its own failures.
+        await chapterMapRefresher.RefreshAsync(series, run, cancellationToken);
 
         // Before the early return below: enrichment can date a volume of a series whose
         // release-source record came back empty, and that date passing is still news.

@@ -70,4 +70,17 @@ public sealed record VolumeResponse
 
     /// <summary>Added by hand or by an import, not by a metadata source.</summary>
     public required bool IsLocalOnly { get; init; }
+
+    /// <summary>The first chapter collected in this volume. Null when no chapter map covers it.</summary>
+    // Optional like CoverFallbackObjectKey, so a bundle from before chapter ranges still reads it.
+    public decimal? FirstChapter { get; init; }
+
+    /// <summary>
+    /// The last chapter collected in this volume. Null while it is open — the next volume has no
+    /// known start yet — which reads as "Ch. 138–".
+    /// </summary>
+    public decimal? LastChapter { get; init; }
+
+    /// <summary>Which source the chapter range came from, for the credit line. Null without a range.</summary>
+    public MetadataSourceName? ChapterRangeSource { get; init; }
 }

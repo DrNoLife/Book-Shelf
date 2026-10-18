@@ -1,8 +1,11 @@
+using LnShelf.Api.Features.Preferences.Abstractions;
+
 namespace LnShelf.Api.Features.Shelf.Services;
 
 /// <inheritdoc />
 public sealed class ManualSeriesCommandService(
     LnShelfDbContext dbContext,
+    IPreferencesService preferencesService,
     UserLimits userLimits,
     ICoverStore coverStore,
     TimeProvider timeProvider,
@@ -58,6 +61,9 @@ public sealed class ManualSeriesCommandService(
         // Created now rather than on the first touch, as every add does, so the series lands on
         // Plan to start like one added from a search.
         series.UserState = SeriesUserState.Untouched(series.Id);
+
+        var preferences = await preferencesService.GetAsync(cancellationToken);
+        NewSeriesProgressUnit.ApplyTo(series, preferences.DefaultProgressUnit);
 
         for (var number = 1; number <= volumeCount; number++)
         {

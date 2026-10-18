@@ -12,6 +12,9 @@ public static class ProfileClientExtensions
             // Page-local, like StatsState: only the profile page reads it.
             services.AddScoped<ProfileState>();
 
+            // The owner's cover-sharing switch, for the card on the same page.
+            services.AddScoped<CoverSharingState>();
+
             return services;
         }
     }

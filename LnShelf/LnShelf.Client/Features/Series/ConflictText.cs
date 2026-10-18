@@ -18,6 +18,7 @@ public static class ConflictText
             SyncDiscrepancyField.ReleaseDate => "the release date",
             SyncDiscrepancyField.Status => "publication status",
             SyncDiscrepancyField.SeriesLink => "which series this is",
+            SyncDiscrepancyField.ChapterRange => "the chapter range",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown disagreement field."),
         };
 
@@ -27,6 +28,7 @@ public static class ConflictText
             SyncDiscrepancyField.ReleaseDate => "release date",
             SyncDiscrepancyField.VolumeCount => "volume count",
             SyncDiscrepancyField.Status => "publication status",
+            SyncDiscrepancyField.ChapterRange => "chapter range",
             _ => "series link",
         };
     }

@@ -140,6 +140,7 @@ public sealed class SeriesRefresherWholeExtraVolumeTests
                 NoEnrichment(),
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer(CoverCache())),
+            ChapterMapPipeline.NoSources(),
             new FixedTimeProvider(Now));
     }
 

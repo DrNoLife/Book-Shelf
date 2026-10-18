@@ -29,6 +29,7 @@ public static class MetadataFeatureExtensions
             services.AddSeriesSearch();
             services.AddVolumeCatalogue(configuration);
             services.AddVolumeEnrichment(configuration);
+            services.AddChapterMap(configuration);
             services.AddEnrichmentVerification();
             services.AddSync(configuration);
 
@@ -144,6 +145,60 @@ public static class MetadataFeatureExtensions
                 .AddSourcePoliteness(MetadataRateLimiting.AppleBooks);
 
             services.AddScoped<IVolumeCatalogueSource, AppleBooksVolumeCatalogueSource>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Wikipedia, then MangaDex, behind <c>IChapterMapSource</c>: which chapters are in which volume.
+        /// </summary>
+        private IServiceCollection AddChapterMap(IConfiguration configuration)
+        {
+            services.AddOptions<WikipediaOptions>()
+                .Bind(configuration.GetSection(WikipediaOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddHttpClient<WikipediaClient>((provider, httpClient) =>
+                {
+                    // No BaseAddress: the client asks two wikis, and each request names its own.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    // Wikimedia's User-Agent policy asks for contact details, and the shelf keeps
+                    // one address for exactly that (WikipediaOptions says why it is Open Library's).
+                    var contactEmail = provider.GetRequiredService<IOptions<OpenLibraryOptions>>().Value.ContactEmail;
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.WithContact(contactEmail));
+                })
+                .AddSourcePoliteness(MetadataRateLimiting.Wikipedia);
+
+            services.AddOptions<MangaDexOptions>()
+                .Bind(configuration.GetSection(MangaDexOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddHttpClient<MangaDexClient>((provider, httpClient) =>
+                {
+                    var mangaDex = provider.GetRequiredService<IOptions<MangaDexOptions>>().Value;
+                    httpClient.BaseAddress = mangaDex.Endpoint;
+
+                    // Infinite here, and enforced per request inside the handler instead, as
+                    // for every source: HttpClient.Timeout would also cover the 429 back-off.
+                    // See PoliteRateLimitHandler.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    // MangaDex's terms ask for a real User-Agent and refuse an anonymous one.
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(LnShelfUserAgent.Value);
+                })
+                .AddSourcePoliteness(MetadataRateLimiting.MangaDex);
+
+            // In precedence order: ChapterMapRefresher fills each volume from the first source
+            // that maps it. Wikipedia's edited lists first; MangaDex fills their gaps.
+            services.AddScoped<WikipediaListPageFinder>();
+            services.AddScoped<IChapterMapSource, WikipediaChapterMapSource>();
+            services.AddScoped<IChapterMapSource, MangaDexChapterMapSource>();
+            services.AddScoped<ChapterMapRefresher>();
 
             return services;
         }

@@ -38,7 +38,7 @@ public static class SourceConflictMapper
             DisplayedSource = displayedSource,
             Reason = reason,
             Explanation = Explain(discrepancy, reason, displayedSource, choice),
-            CanChoose = discrepancy.Field is not SyncDiscrepancyField.SeriesLink,
+            CanChoose = discrepancy.Field is not (SyncDiscrepancyField.SeriesLink or SyncDiscrepancyField.ChapterRange),
             NeedsReview = resolution.Source is null,
             RecordedAt = recorded.RecordedAt,
             Note = discrepancy.Note,
@@ -95,6 +95,8 @@ public static class SourceConflictMapper
                 "Nothing was changed: the count says it's out, and a future date never overrules it.",
             SyncDiscrepancyField.Status =>
                 "MangaUpdates only says it isn't finished, so Completed stands until you pick.",
+            SyncDiscrepancyField.ChapterRange =>
+                "No range is shown for this volume: no source's start comes after the volume before it.",
             _ => "No release source is linked to this series yet.",
         };
     }
@@ -104,6 +106,11 @@ public static class SourceConflictMapper
         if (discrepancy.Field is SyncDiscrepancyField.SeriesLink)
         {
             return $"You linked this series to {displayedSource?.DisplayName ?? "a release source"}.";
+        }
+
+        if (discrepancy.Field is SyncDiscrepancyField.ChapterRange)
+        {
+            return "Chapter ranges come from the first source that maps the volume: Wikipedia, then MangaDex.";
         }
 
         if (discrepancy.Field is not SyncDiscrepancyField.VolumeCount)

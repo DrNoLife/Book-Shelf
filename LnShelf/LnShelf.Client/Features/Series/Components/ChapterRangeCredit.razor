@@ -1,0 +1,44 @@
+@* "Chapter ranges from MangaDex and Wikipedia", wherever the series page shows chapter ranges.
+   Read from the sources the volumes' ranges actually came from, so a source is named only when
+   it supplied one. MangaDex's terms ask for exactly this credit, linked to its title, and
+   Wikipedia's licence (CC BY-SA) asks for the same, linked to the page the list came from. *@
+
+@if (Series.ChapterRangeSources.Count > 0)
+{
+    <p class="fine">
+        Chapter ranges from
+        @for (var index = 0; index < Series.ChapterRangeSources.Count; index++)
+        {
+            var source = Series.ChapterRangeSources[index];
+            @if (index > 0)
+            {
+                @(index == Series.ChapterRangeSources.Count - 1 ? " and " : ", ")
+            }
+            @if (LinkFor(source) is { } link)
+            {
+                <a href="@link" target="_blank" rel="noopener noreferrer">@source.DisplayName</a>
+            }
+            else
+            {
+                @source.DisplayName
+            }
+        }
+    </p>
+}
+
+@code {
+    [Parameter]
+    public required SeriesDetailResponse Series { get; set; }
+
+    // Only the sources whose page for this series the client can name.
+    private string? LinkFor(MetadataSourceName source) => source switch
+    {
+        MetadataSourceName.MangaDex when Series.MangaDexId is { } mangaDexId => $"https://mangadex.org/title/{mangaDexId}",
+        MetadataSourceName.Wikipedia when Series.ChapterListPage is { } page => WikipediaLink(page),
+        _ => null,
+    };
+
+    // MediaWiki's own URL form: spaces as underscores, everything else escaped.
+    private static string WikipediaLink(string pageTitle) =>
+        $"https://en.wikipedia.org/wiki/{Uri.EscapeDataString(pageTitle.Replace(' ', '_'))}";
+}

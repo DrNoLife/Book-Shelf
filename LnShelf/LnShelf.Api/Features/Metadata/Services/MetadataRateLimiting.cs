@@ -114,4 +114,62 @@ public static class MetadataRateLimiting
             TreatsForbiddenAsRateLimited = true,
         };
     }
+
+    /// <summary>
+    /// MangaDex: a twentieth of its global allowance, and — as Apple's — a 403 is a rate limit.
+    /// </summary>
+    public static SourceRateLimitPolicy MangaDex(IServiceProvider provider)
+    {
+        var options = provider.GetRequiredService<IOptions<MangaDexOptions>>().Value;
+
+        return new SourceRateLimitPolicy
+        {
+            SourceName = "MangaDex",
+            RequestsPerMinute = options.RequestsPerMinute,
+
+            // One window's worth: a run asks about one series at a time, four requests at most.
+            QueuedRequestLimit = options.RequestsPerMinute,
+
+            MaximumRetryDelay = options.MaximumRetryDelay,
+            RequestTimeout = options.RequestTimeout,
+
+            // MangaDex answers a caller that keeps going after a 429 with a temporary ban, a 403;
+            // backing off on it is the only polite reading.
+            TreatsForbiddenAsRateLimited = true,
+        };
+    }
+
+    /// <summary>
+    /// Wikipedia and Wikidata, one pool: a seventh of what Wikimedia allows a contactable agent,
+    /// and the anonymous allowance when there is no contact address to send.
+    /// </summary>
+    public static SourceRateLimitPolicy Wikipedia(IServiceProvider provider)
+    {
+        var options = provider.GetRequiredService<IOptions<WikipediaOptions>>().Value;
+        var contactEmail = provider.GetRequiredService<IOptions<OpenLibraryOptions>>().Value.ContactEmail;
+
+        // Wikimedia allows an agent without contact details 10 requests a minute; going over it
+        // would be impolite, whatever the configured number says.
+        var requestsPerMinute = string.IsNullOrWhiteSpace(contactEmail)
+            ? Math.Min(options.RequestsPerMinute, AnonymousWikimediaRequestsPerMinute)
+            : options.RequestsPerMinute;
+
+        return new SourceRateLimitPolicy
+        {
+            SourceName = "Wikipedia",
+            RequestsPerMinute = requestsPerMinute,
+
+            // One window's worth: a run asks about one series at a time, seven requests at most.
+            QueuedRequestLimit = options.RequestsPerMinute,
+
+            MaximumRetryDelay = options.MaximumRetryDelay,
+            RequestTimeout = options.RequestTimeout,
+
+            // Wikimedia's edge answers a client it has decided is scraping with a 403 that names
+            // the robot policy. Backing off is the polite reading of that, as of a 429.
+            TreatsForbiddenAsRateLimited = true,
+        };
+    }
+
+    private const int AnonymousWikimediaRequestsPerMinute = 10;
 }

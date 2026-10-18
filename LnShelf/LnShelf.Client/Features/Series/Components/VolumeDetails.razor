@@ -55,6 +55,13 @@
         }
     </div>
 
+    @* Where a chapter map gives the volume its chapters: "Ch. 98–103", or "Ch. 138–" while
+       the next volume's start is unknown. The series page's chapter block carries the credit. *@
+    @if (ChapterText.Range(Volume) is { } chapterRange)
+    {
+        <p class="fine tabular">@chapterRange</p>
+    }
+
     @* Ownership and edition in one choice: "No" is not owned, and the other two are owned
        in that edition. The model already says exactly this (Owned plus OwnedFormat). *@
     <div class="field">
@@ -80,6 +87,15 @@
         <button type="button" class="secondary" disabled="@IsBusy" @onclick="OnPickCoverAsync">
             @(Volume.HasCoverOverride ? "Replace cover…" : "Set cover…")
         </button>
+
+        @* Only a catalogued series: the covers on offer are matched by AniList or MangaUpdates
+           id, so a series kept by hand has none to find. *@
+        @if (HasCommunityCovers)
+        {
+            <button type="button" class="secondary" disabled="@IsBusy" @onclick="OnCommunityCoversAsync">
+                Community covers…
+            </button>
+        }
 
         @if (Volume.HasCoverOverride)
         {

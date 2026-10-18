@@ -518,6 +518,7 @@ public sealed class SeriesSyncServiceTests
                 enrichmentSource,
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
+            ChapterMapPipeline.NoSources(),
             TimeProvider.System);
 
         return new SeriesSyncService(

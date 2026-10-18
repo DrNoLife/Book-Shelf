@@ -17,6 +17,8 @@ public partial class UndoToast : IDisposable
 
     private Task UndoAsync() => State.UndoAsync();
 
+    private Task AcceptOfferAsync() => State.AcceptOfferAsync();
+
     private void OnStateChanged()
     {
         // A new receipt restarts the clock: two quick finishes each get their full offer.
