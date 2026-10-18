@@ -256,6 +256,17 @@ public sealed class SeriesDetailClient(HttpClient httpClient)
         return await ReadDetailAsync(response, "Could not remove that cover", cancellationToken);
     }
 
+    /// <summary>Takes a cover another user shares as this volume's own. Answers with the refreshed series.</summary>
+    public Task<SeriesDetailResponse?> PickCommunityCoverAsync(
+        Guid volumeId,
+        string contentHash,
+        CancellationToken cancellationToken = default) =>
+        WriteAsync(
+            $"api/volumes/{volumeId}/cover/community",
+            new PickCommunityCoverRequest { ContentHash = contentHash },
+            "Could not use that cover",
+            cancellationToken);
+
     /// <summary>
     /// Adds a volume to a series kept by hand: the next whole number when none is given.
     /// </summary>

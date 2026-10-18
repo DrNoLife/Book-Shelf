@@ -273,6 +273,22 @@ The series/volume tracking domain.
 - **Cover override:** any cover is a drop target. Uploaded image → stored as
   override object; overrides always win and are never replaced by sync.
   Removing an override falls back to synced art.
+- **Community covers (opt-in, v1, 2026-10-18; backlog §9).** A user who switches on
+  "Share your covers" (`UserPreferences.CoverSharingSince`, the time of consent; null is off)
+  publishes each uploaded override on a catalogued volume (series with an AniList or
+  MangaUpdates id; manual series never publish) as a row in `community_cover`: a pointer to
+  the user's own override object plus the SHA-256 of its bytes and a snapshot of the series'
+  external ids, format and volume number. The row is written in the same save as the override
+  change, so upload, replace, remove, merge and sharing on/off keep it in step. A volume's
+  "Community covers" picker lists the other users' images for the same format, number and
+  external id, grouped by hash (ordered by distinct sharers, then earliest), with the sharers'
+  display names and "used by N" (distinct sharers whose current override has that hash).
+  Picking copies the bytes verbatim into the picker's own override key (re-encoding would
+  change the hash), so from then on it is an ordinary override that outlives the uploader.
+  Per-user Hide (`community_cover_hide`, owned) removes one hash from that user's list.
+  `GET api/community-covers/{hash}` serves the image to signed-in users only;
+  `community-cover-withdraw --hash` removes one image for everyone (owner moderation).
+  Deferred: the per-user "use the community default" and a global Report.
 - Server-side normalization on ingest: cap dimensions, re-encode to webp,
   strip metadata. One size class in v1 (the grid renders it at two scales;
   thumbnails are a measured-need optimization, not a default).
@@ -843,6 +859,12 @@ bundle holds no token at all:
   same reason `shelf_share` is, and the feed is read as its owner in a scope of its own.
   The token is never logged. The activity log `shelf_event` is a child of `Series`,
   filtered through it like `Volume`.
+  **[added 2026-10-18]** `community_cover` (§4.3) is unfiltered on purpose: it is published by a
+  consenting user so that other users can see it. Every write is hand-scoped to the current user
+  (`UploaderUserId`), and reads go only by the match key (external id, format, number) or by
+  content hash, never by listing a user's rows. It cascades with the account and the source
+  volume. Its counterpart `community_cover_hide` (OwnerId, ContentHash, HiddenAt) is the
+  seventh `IOwned` root and filtered like the others.
 - **Background work acts as each user.** The nightly sync runs once per user,
   each in its own scope after `ICurrentUser.ActAs`, sharing each source's
   allowance for the night (`OpenLibrary:MaximumLookupsPerNight`, `AppleBooks:MaximumRequestsPerNight`); console

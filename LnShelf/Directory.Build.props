@@ -14,7 +14,7 @@
          ChangelogCatalogTests enforces that mechanically. Pre-1.0 scheme: bump the
          MINOR for a feature batch, the PATCH for a fix-only batch. Releasing a batch is:
          add the changelog entry, bump this. -->
-    <Version>0.32.0</Version>
+    <Version>0.33.0</Version>
 
     <!-- TreatWarningsAsErrors only covers the compiler. MSBuild warnings —
          assembly version conflicts, NuGet audit advisories — are defects by the

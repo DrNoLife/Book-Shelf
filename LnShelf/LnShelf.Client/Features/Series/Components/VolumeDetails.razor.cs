@@ -31,6 +31,10 @@ public partial class VolumeDetails
     [Parameter]
     public EventCallback<VolumeResponse> CoverPickRequested { get; set; }
 
+    /// <summary>Asks the owner to open the community-cover picker for this volume.</summary>
+    [Parameter]
+    public EventCallback<VolumeResponse> CommunityCoversRequested { get; set; }
+
     [Inject]
     public required SeriesState SeriesState { get; set; }
 
@@ -208,6 +212,11 @@ public partial class VolumeDetails
             await Settled.InvokeAsync();
         }
     }
+
+    private bool HasCommunityCovers =>
+        SeriesState.Series is { } series && (series.AniListId is not null || series.MangaUpdatesId is not null);
+
+    private Task OnCommunityCoversAsync() => CommunityCoversRequested.InvokeAsync(Volume);
 
     private Task OnPickCoverAsync() => CoverPickRequested.InvokeAsync(Volume);
 

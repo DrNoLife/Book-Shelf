@@ -235,6 +235,28 @@ public sealed class VolumeMergeCommandServiceTests
         await ShouldBeUnchangedAsync(dbContext, source.Id);
     }
 
+    [Fact]
+    public async Task MergeAsync_CoverOverrideMoved_StagesTheTargetWithTheCopiedKeyAndHash()
+    {
+        await using var dbContext = CreateDbContext();
+        var series = await SeedAsync(dbContext);
+        var source = series.Volumes.Single(volume => volume.Number == 10);
+        var target = series.Volumes.Single(volume => volume.Number == 7.5m);
+        var oldCoverKey = CoverObjectKey.ForVolumeOverride(source.Id, Guid.CreateVersion7(), ".png");
+        source.UserState = FullState(source.Id, oldCoverKey);
+        await dbContext.SaveChangesAsync();
+
+        var communityCoverCommand = Substitute.For<ICommunityCoverCommandService>();
+
+        await CreateService(dbContext, CoverStoreHolding(oldCoverKey), communityCoverCommand)
+            .MergeAsync(Request(), CancellationToken.None);
+
+        var newCoverKey = (await dbContext.VolumeUserStates.SingleAsync(state => state.VolumeId == target.Id))
+            .CoverOverrideObjectKey.ShouldNotBeNull();
+        await communityCoverCommand.Received(1).StageForVolumeAsync(
+            series, target, newCoverKey, CoverContentHash.Compute([1, 2, 3]), Arg.Any<CancellationToken>());
+    }
+
     private static VolumeMergeRequest Request() => new(Title, Format: null, FromNumber: 10, IntoNumber: 7.5m, DryRun: false);
 
     private static VolumeUserState FullState(Guid volumeId, string coverKey) => new()
@@ -266,8 +288,14 @@ public sealed class VolumeMergeCommandServiceTests
         (await dbContext.VolumeUserStates.AnyAsync(state => state.VolumeId == sourceId)).ShouldBeTrue();
     }
 
-    private static VolumeMergeCommandService CreateService(LnShelfDbContext dbContext, ICoverStore? coverStore = null) =>
-        new(dbContext, coverStore ?? Substitute.For<ICoverStore>(), NullLogger<VolumeMergeCommandService>.Instance);
+    private static VolumeMergeCommandService CreateService(
+        LnShelfDbContext dbContext,
+        ICoverStore? coverStore = null,
+        ICommunityCoverCommandService? communityCoverCommand = null) =>
+        new(dbContext,
+            coverStore ?? Substitute.For<ICoverStore>(),
+            communityCoverCommand ?? Substitute.For<ICommunityCoverCommandService>(),
+            NullLogger<VolumeMergeCommandService>.Instance);
 
     /// <summary>Volumes 7, 7.5 (the real bonus volume, synced) and 10 (the phantom).</summary>
     private static async Task<Series> SeedAsync(LnShelfDbContext dbContext)

@@ -7,8 +7,8 @@ namespace LnShelf.Api.Features.Auth.Services;
 // preferences are read
 // under the owner filters, with no
 // filtering by hand: what the filters leave is this user's data, which is what makes the
-// export safe by construction. Only the three rows keyed by the user themselves (the account,
-// its public link and its calendar link) are matched by id, the way CurrentUserQueryService
+// export safe by construction. Only the rows keyed by the user themselves (the account, its
+// public link, its calendar link and the covers it published) are matched by id, the way CurrentUserQueryService
 // and ShelfShareQueryService do it.
 public sealed class AccountExportQueryService(
     LnShelfDbContext dbContext,
@@ -35,6 +35,19 @@ public sealed class AccountExportQueryService(
         var calendar = await dbContext.CalendarFeeds
             .AsNoTracking()
             .SingleOrDefaultAsync(candidate => candidate.UserId == userId, cancellationToken);
+
+        var sharedCovers = await dbContext.CommunityCovers
+            .AsNoTracking()
+            .Where(cover => cover.UploaderUserId == userId)
+            .OrderBy(cover => cover.PublishedAt)
+            .ThenBy(cover => cover.Id)
+            .ToListAsync(cancellationToken);
+
+        var hiddenCovers = await dbContext.CommunityCoverHides
+            .AsNoTracking()
+            .OrderBy(hide => hide.HiddenAt)
+            .ThenBy(hide => hide.ContentHash)
+            .ToListAsync(cancellationToken);
 
         var devices = await dbContext.PushSubscriptions
             .AsNoTracking()
@@ -88,6 +101,9 @@ public sealed class AccountExportQueryService(
             // Never saved reads as the defaults, the same answer GET /api/preferences gives.
             Preferences = PreferencesMapper.ToResponse(preferences ?? new UserPreferences()),
             ActivitySeenAt = preferences?.ActivitySeenAt,
+            CoverSharingSince = preferences?.CoverSharingSince,
+            SharedCovers = sharedCovers.Select(AccountExportMapper.ToSharedCover).ToList(),
+            HiddenCovers = hiddenCovers.Select(AccountExportMapper.ToHiddenCover).ToList(),
             Series = series.Select(candidate => AccountExportMapper.ToSeries(candidate, events[candidate.Id])).ToList(),
             ImportBatches = batches.Select(AccountExportMapper.ToImportBatch).ToList(),
             SyncRuns = runs.Select(AccountExportMapper.ToSyncRun).ToList(),

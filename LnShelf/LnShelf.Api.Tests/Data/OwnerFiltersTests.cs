@@ -19,6 +19,7 @@ public sealed class OwnerFiltersTests
     private static readonly Dictionary<Type, string> Unfiltered = new()
     {
         [typeof(User)] = "It is what the owner filters are about.",
+        [typeof(CommunityCover)] = "Published on purpose by a consenting user; every write is hand-scoped to the current user and reads go only by match key (Features/Covers).",
         [typeof(ShelfShare)] = "How an anonymous request learns whom to act for (Features/Sharing).",
         [typeof(CalendarFeed)] = "How a calendar app's anonymous fetch learns whom to read for (Features/Calendar).",
         [typeof(DataProtectionKey)] = "The session cookie's signing keys: the app's, not a user's.",
@@ -62,6 +63,20 @@ public sealed class OwnerFiltersTests
         foreignKey.DeleteBehavior.ShouldBe(DeleteBehavior.Cascade);
     }
 
+    // Two foreign keys, so outside the single-key theory below: the sharer's account and the
+    // volume it was published from each take the row with them.
+    [Fact]
+    public void CommunityCover_ForeignKeys_CascadeFromTheUserAndTheVolume()
+    {
+        using var dbContext = Context();
+
+        var foreignKeys = dbContext.Model.FindEntityType(typeof(CommunityCover)).ShouldNotBeNull().GetForeignKeys().ToList();
+
+        foreignKeys.Select(foreignKey => foreignKey.PrincipalEntityType.ClrType)
+            .ShouldBe([typeof(User), typeof(Volume)], ignoreOrder: true);
+        foreignKeys.ShouldAllBe(foreignKey => foreignKey.DeleteBehavior == DeleteBehavior.Cascade);
+    }
+
     // Each of these is deleted with its principal by the database, so account deletion
     // (ExecuteDelete on the user) and an older image that does not know the table still work.
     public static TheoryData<Type, Type> CascadingForeignKeys => new()
@@ -71,6 +86,7 @@ public sealed class OwnerFiltersTests
         { typeof(CalendarFeed), typeof(User) },
         { typeof(PushSubscription), typeof(User) },
         { typeof(RecommendationDismissal), typeof(User) },
+        { typeof(CommunityCoverHide), typeof(User) },
     };
 
     [Theory]

@@ -31,6 +31,15 @@ public sealed record AccountExportResponse
     /// <summary>When "Since your last visit" was last dismissed. Null if never.</summary>
     public DateTimeOffset? ActivitySeenAt { get; init; }
 
+    /// <summary>When the user agreed to share their uploaded covers with other users. Null if they have not.</summary>
+    public DateTimeOffset? CoverSharingSince { get; init; }
+
+    /// <summary>The covers published for other users to find, one per volume.</summary>
+    public required IReadOnlyList<AccountExportSharedCover> SharedCovers { get; init; }
+
+    /// <summary>Shared covers the user chose never to be offered.</summary>
+    public required IReadOnlyList<AccountExportHiddenCover> HiddenCovers { get; init; }
+
     public required IReadOnlyList<AccountExportSeries> Series { get; init; }
 
     public required IReadOnlyList<AccountExportImportBatch> ImportBatches { get; init; }
@@ -39,6 +48,24 @@ public sealed record AccountExportResponse
 
     /// <summary>Works hidden from For you with Not interested.</summary>
     public required IReadOnlyList<AccountExportRecommendationDismissal> RecommendationDismissals { get; init; }
+}
+
+/// <summary>One uploaded cover published for other users, by the volume it came from.</summary>
+public sealed record AccountExportSharedCover
+{
+    public required Guid SourceVolumeId { get; init; }
+
+    /// <summary>Lowercase hex SHA-256 of the image; the image itself is not in the export.</summary>
+    public required string ContentHash { get; init; }
+
+    public required DateTimeOffset PublishedAt { get; init; }
+}
+
+/// <summary>One shared cover the user hid, by the hash of its image.</summary>
+public sealed record AccountExportHiddenCover
+{
+    public required string ContentHash { get; init; }
+    public required DateTimeOffset HiddenAt { get; init; }
 }
 
 /// <summary>One work hidden from For you with Not interested.</summary>

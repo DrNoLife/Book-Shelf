@@ -5,6 +5,7 @@ global using System.Net.Http.Json;
 global using LnShelf.Client.Components;
 global using LnShelf.Client.Features.Preferences;
 global using LnShelf.Shared;
+global using LnShelf.Shared.Covers;
 global using LnShelf.Shared.Import;
 global using LnShelf.Shared.Metadata;
 global using LnShelf.Shared.Preferences;

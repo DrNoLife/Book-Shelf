@@ -52,6 +52,12 @@ public static class CoversFeatureExtensions
             services.AddScoped<CoverOrphanSweeper>();
             services.AddScoped<IConsoleCommand, CoverOrphanSweepCommand>();
 
+            // Both halves of cover sharing: reads by match key, and writes scoped by hand to the
+            // current user. The shelf's cover writes stage their changes through the command side.
+            services.AddScoped<ICommunityCoverQueryService, CommunityCoverQueryService>();
+            services.AddScoped<ICommunityCoverCommandService, CommunityCoverCommandService>();
+            services.AddScoped<IConsoleCommand, CommunityCoverWithdrawCommand>();
+
             return services;
         }
     }

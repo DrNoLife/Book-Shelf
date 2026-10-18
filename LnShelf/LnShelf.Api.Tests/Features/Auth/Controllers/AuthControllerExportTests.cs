@@ -84,6 +84,8 @@ public sealed class AuthControllerExportTests
             LibrarySectionOrder = LibrarySections.Default,
             DefaultProgressUnit = ProgressUnit.Volumes,
         },
+        SharedCovers = [],
+        HiddenCovers = [],
         Series = [],
         ImportBatches = [],
         SyncRuns = [],

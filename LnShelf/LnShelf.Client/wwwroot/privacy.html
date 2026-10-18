@@ -56,7 +56,7 @@
 
             <article class="privacy__body">
                 <header class="privacy__intro">
-                    <span class="eyebrow">Last updated 13 October 2026</span>
+                    <span class="eyebrow">Last updated 18 October 2026</span>
                     <h1 class="title-page">Privacy</h1>
                     <p class="lead">LN Shelf is a small, self-hosted tracker for light novels, manga and web novels. This page explains, in plain language, what it stores about you, why, who else is involved and what you can do about it. There are no ads, no analytics and no tracking.</p>
                 </header>
@@ -110,6 +110,18 @@
                                     <td data-label="Details">Covers you upload are re-encoded and stripped of all embedded metadata, such as camera details or location, before they are stored.</td>
                                     <td data-label="Why">To show them on your shelf.</td>
                                     <td data-label="How long">Until you replace or remove the cover, remove its series, or delete your account.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Shared covers</th>
+                                    <td data-label="Details">Only if you turn on <em>Share your covers</em> on your profile: for each cover you uploaded to a catalogued series (one with an AniList or MangaUpdates ID), a pointer to that image, a fingerprint of it, the series&rsquo; catalogue IDs, the volume number and format, and when it was shared. Other signed-in people who track the same volume see the image and a name made from the start of your email address. When you turn it on, we also record when you agreed.</td>
+                                    <td data-label="Why">So other readers can pick a cover you already found, if you choose to help them.</td>
+                                    <td data-label="How long">Until you turn sharing off, replace or remove the cover, remove its series, or delete your account. Copies other people already picked stay on their shelves as their own covers, without your name.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Hidden covers</th>
+                                    <td data-label="Details">The shared covers you choose to hide when picking a cover: the fingerprint of the image, and when you hid it.</td>
+                                    <td data-label="Why">So a cover you hid is not offered to you again.</td>
+                                    <td data-label="How long">Until you delete your account.</td>
                                 </tr>
                                 <tr>
                                     <th scope="row">Your public link</th>
@@ -169,7 +181,8 @@
                 <section class="privacy__section" id="basis" aria-labelledby="basis-title">
                     <h2 class="title-section" id="basis-title">Legal basis</h2>
                     <ul>
-                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers, your public link, notifications, the activity log, your hidden suggestions and your calendar link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Contract (GDPR Article 6(1)(b))</strong> for your account, your picture, your shelf, imports, sync records, uploaded covers, your public link, notifications, the activity log, your hidden suggestions, the covers you hide and your calendar link: we need this data to provide the service you asked for.</li>
+                        <li><strong>Consent (Article 6(1)(a))</strong> for sharing the covers you upload with other readers: it is off until you turn on <em>Share your covers</em> on your profile, and you can withdraw it at any time by turning it off, which stops your covers being offered at once. Withdrawing does not affect what was shared before.</li>
                         <li><strong>Legitimate interests (Article 6(1)(f))</strong> for technical logs, rate limiting and backups: keeping a small public service secure, working and recoverable, and not overloading the free community catalogues it relies on. We keep these to what a web server normally needs, for a short time, and never use them for profiling or marketing. You can object to this; see your rights.</li>
                     </ul>
                     <p>You need a Google account with a verified email address to sign up. Nothing is decided about you automatically.</p>
@@ -200,6 +213,7 @@
                         <li><strong>Your account and everything on your shelf:</strong> until you delete your account. Deleting it removes everything at once and signs you out on every device.</li>
                         <li><strong>Things you delete yourself</strong> (a series, a note, a cover, an uploaded picture) are gone straight away. That includes covers you uploaded to a series you remove.</li>
                         <li><strong>Your picture:</strong> the copy of your Google picture until that picture changes or you delete your account; a picture you upload until you replace it, go back to the Google picture, or delete your account.</li>
+                        <li><strong>Your shared covers:</strong> until you turn sharing off, replace or remove the cover, remove its series, or delete your account. The covers you hide: until you delete your account.</li>
                         <li><strong>Your public link:</strong> until you make your shelf private, make a new link, or delete your account.</li>
                         <li><strong>Your calendar link:</strong> until you turn the calendar off, make a new link, or delete your account.</li>
                         <li><strong>Notifications:</strong> a device&rsquo;s subscription until you turn notifications off on it, remove it on your profile, sign out on that browser, or delete your account.</li>
@@ -216,7 +230,7 @@
                     <h2 class="title-section" id="rights-title">Your rights</h2>
                     <p>You have the right to:</p>
                     <ul>
-                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports, your sync records, your activity log, your hidden suggestions, your calendar link and the devices you turned notifications on for (without their encryption keys) as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
+                        <li><strong>Access</strong> your data and get a copy of it. Use <em>Export my data</em> on your <a class="text-link" href="profile">profile</a> to download your account, your shelf, your imports, your sync records, your activity log, your hidden suggestions, your shared and hidden covers, your calendar link and the devices you turned notifications on for (without their encryption keys) as one file. The images themselves (the covers you uploaded and your picture) and any log entries about you are not in it: email us for those.</li>
                         <li><strong>Correct</strong> it. You can edit everything on your shelf yourself. Your email address follows your Google account.</li>
                         <li><strong>Delete</strong> it. <em>Delete account</em> on your profile deletes your account and all its data immediately.</li>
                         <li><strong>Take it with you</strong> (data portability). The export is a standard JSON file.</li>
@@ -243,6 +257,7 @@
                     <h2 class="title-section" id="sharing-title">Public shelves</h2>
                     <p>Your shelf is private unless you make it public on your profile. Then anyone with the link can see the titles of the series on it, their format, publication status and cover, whether you are reading, have finished or plan to start each one, and how many volumes you have read and how many are out.</p>
                     <p>They never see your name, email or picture, what you own or paid, your dates, your notes, the series you dropped, or covers you uploaded. Public shelf pages ask search engines not to index them.</p>
+                    <p>Covers you share through <em>Share your covers</em> are a separate thing: only signed-in people who track the same volume can see them, not public shelf visitors.</p>
                     <p>Anyone who has the link can pass it on. Making your shelf private, or making a new link, stops the old link from working immediately.</p>
                     <p>The release calendar link works the same way: anyone who has it can see the release dates of the series you track, until you turn the calendar off or make a new link. It shows nothing else.</p>
                 </section>

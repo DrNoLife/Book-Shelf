@@ -266,7 +266,12 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   - **Budget.** One lookup per watched volume per night, rate limited like the other
     sources, across every user.
 
-## 9. Community volume covers (a friend's request, 2026-10-11) — future
+## 9. Community volume covers (a friend's request, 2026-10-11) — v1 built 2026-10-18 (v0.33.0)
+
+**Status:** v1 is built: the opt-in sharing switch on the profile (consent time recorded), the
+"Community covers" picker on a volume, per-user Hide, and the `community-cover-withdraw`
+console command. Deferred: the per-user "use the community default" and a global Report. The
+notes below are the original open questions, kept for the deferred parts.
 
 > "If I upload the Chainsaw Man Vol 1 cover, can [another user] pick the cover I uploaded
 > without finding it themselves? Maybe a setting that by default picks whatever most of the

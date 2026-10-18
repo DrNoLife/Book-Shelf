@@ -24,6 +24,9 @@ public partial class VolumeSheet
     [Parameter]
     public EventCallback<VolumeResponse> CoverPickRequested { get; set; }
 
+    [Parameter]
+    public EventCallback<VolumeResponse> CommunityCoversRequested { get; set; }
+
     private VolumeTileState State => VolumeTileStateMap.For(Volume);
 
     /// <summary>"Owned, unread", "Not out yet · 12 Sep 2026" — the tile's state in full words.</summary>

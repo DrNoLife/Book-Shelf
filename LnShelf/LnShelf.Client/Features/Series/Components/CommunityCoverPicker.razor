@@ -1,0 +1,65 @@
+@inject ApiUrlBuilder ApiUrl
+
+@* The covers other readers share for one volume, in a bottom sheet over the page. Opened
+   on request, so the list is only asked for when somebody looks. Each row is the image, who
+   shares it and how many readers use it, and two actions: use it as this volume's own cover,
+   or hide it — a hidden image stops being offered to this reader only. An empty list says so
+   rather than leaving a blank sheet. *@
+
+<BottomSheet AriaLabel="@($"Community covers for volume {Volume.Number.ToVolumeText()}")" Closed="Closed">
+    <h2 class="picker__title">Community covers · Vol @Volume.Number.ToVolumeText()</h2>
+
+    @if (_candidates is null && _message is null)
+    {
+        <p class="fine"><BusyIndicator /> Loading shared covers…</p>
+    }
+    else if (_candidates is { Count: 0 })
+    {
+        <p class="fine">Nobody has shared a cover for this volume yet.</p>
+    }
+    else if (_candidates is not null)
+    {
+        <ul class="picker__list" aria-label="Shared covers">
+            @foreach (var candidate in _candidates)
+            {
+                <li class="picker__row" @key="candidate.ContentHash">
+                    <span class="picker__cover" aria-hidden="true">
+                        <CoverImage class="picker__art" Sources="@(new[] { ApiUrl.CommunityCover(candidate.ContentHash) })" />
+                    </span>
+                    <div class="picker__text">
+                        <span class="picker__by">Shared by @string.Join(", ", candidate.SharedBy)</span>
+                        <span class="fine">Used by @candidate.UsedByCount</span>
+                    </div>
+                    <div class="picker__actions">
+                        @if (candidate.IsCurrent)
+                        {
+                            <span class="picker__current fine">Your cover</span>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    class="secondary"
+                                    disabled="@_isBusy"
+                                    aria-label="@($"Use the cover shared by {string.Join(", ", candidate.SharedBy)}")"
+                                    @onclick="() => UseAsync(candidate)">
+                                Use
+                            </button>
+                        }
+                        <button type="button"
+                                class="ghost"
+                                disabled="@_isBusy"
+                                aria-label="@($"Hide the cover shared by {string.Join(", ", candidate.SharedBy)}")"
+                                @onclick="() => HideAsync(candidate)">
+                            Hide
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (_message is { } message)
+    {
+        <p class="notice notice--warning" role="alert">@message</p>
+    }
+</BottomSheet>

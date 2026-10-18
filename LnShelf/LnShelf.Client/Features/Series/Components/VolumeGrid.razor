@@ -85,7 +85,8 @@
                          IsBusy="SeriesState.IsSaving"
                          CoverVersion="SeriesState.CoverVersion"
                          Closed="OnMenuClosedAsync"
-                         CoverPickRequested="OnCoverPickRequestedAsync" />
+                         CoverPickRequested="OnCoverPickRequestedAsync"
+                         CommunityCoversRequested="OnCommunityCoversRequested" />
         }
         else if (_placement is { } placement)
         {
@@ -95,8 +96,15 @@
                            DateChoice="dateChoice"
                            IsBusy="SeriesState.IsSaving"
                            Closed="OnMenuClosedAsync"
-                           CoverPickRequested="OnCoverPickRequestedAsync" />
+                           CoverPickRequested="OnCoverPickRequestedAsync"
+                           CommunityCoversRequested="OnCommunityCoversRequested" />
         }
+    }
+
+    @* Opened from a volume's menu, which closes first: the sheet is a dialog of its own. *@
+    @if (_communityCoverVolume is { } communityCoverVolume)
+    {
+        <CommunityCoverPicker Volume="communityCoverVolume" Closed="OnCommunityCoversClosed" />
     }
 
     @* The legend names every state in words, which is the channel that survives both

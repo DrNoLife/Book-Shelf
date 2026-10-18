@@ -36,6 +36,7 @@ public static class ShelfFeatureExtensions
             services.AddScoped<IManualSeriesCommandService, ManualSeriesCommandService>();
             services.AddScoped<ISeriesDetailQueryService, SeriesDetailQueryService>();
             services.AddScoped<IVolumeCommandService, VolumeCommandService>();
+            services.AddScoped<IVolumeCoverCommandService, VolumeCoverCommandService>();
             services.AddScoped<IVolumeReadDateCommandService, VolumeReadDateCommandService>();
             services.AddScoped<ISeriesProgressCommandService, SeriesProgressCommandService>();
             services.AddScoped<IVolumeMergeCommandService, VolumeMergeCommandService>();

@@ -124,6 +124,19 @@ public static class AccountExportMapper
         DismissedAt = dismissal.DismissedAt,
     };
 
+    public static AccountExportSharedCover ToSharedCover(CommunityCover cover) => new()
+    {
+        SourceVolumeId = cover.SourceVolumeId,
+        ContentHash = cover.ContentHash,
+        PublishedAt = cover.PublishedAt,
+    };
+
+    public static AccountExportHiddenCover ToHiddenCover(CommunityCoverHide hide) => new()
+    {
+        ContentHash = hide.ContentHash,
+        HiddenAt = hide.HiddenAt,
+    };
+
     private static AccountExportVolume ToVolume(Volume volume) => new()
     {
         Number = volume.Number,

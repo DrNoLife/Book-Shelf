@@ -52,4 +52,11 @@ public sealed class UserPreferences : IOwned
     // An acknowledgment, like SeriesUserState.HasNewVolume: an event the reader caused, not
     // something derivable from the shelf.
     public DateTimeOffset? ActivitySeenAt { get; set; }
+
+    /// <summary>
+    /// When the reader agreed to share their uploaded covers with other users. Null means off.
+    /// </summary>
+    // The timestamp, not a bool, because it is the record of consent (GDPR Art. 7(1)): when it
+    // was given, kept for as long as it stands.
+    public DateTimeOffset? CoverSharingSince { get; set; }
 }

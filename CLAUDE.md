@@ -395,8 +395,8 @@ subfolder; if earlier work put them elsewhere, move them.
 - **Many users, separate shelves.** Login is OpenID Connect run by the API
   (`Features/Auth`, Google by default) with the session in a cookie on the
   shared origin — never a token in the client bundle, which is public by
-  nature. Each user owns their own copies of everything: the six roots
-  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`, `RecommendationDismissal`) implement `IOwned`,
+  nature. Each user owns their own copies of everything: the seven roots
+  (`Series`, `ImportBatch`, `SyncRun`, `UserPreferences`, `PushSubscription`, `RecommendationDismissal`, `CommunityCoverHide`) implement `IOwned`,
   `LnShelfDbContext` stamps `OwnerId` on save and filters every query by the
   current user (`ICurrentUser`). **Never filter by owner by hand and never
   call `IgnoreQueryFilters` in request code**; background work and console
@@ -406,8 +406,8 @@ subfolder; if earlier work put them elsewhere, move them.
   The read-only shared shelf and the release calendar feed are the two request
   paths that resolve an owner from a token (`shelf_share`, `calendar_feed`) and
   read through `ICurrentUser.ActAs` in a child scope; `shelf_share`,
-  `calendar_feed` and `app_user` are the only unfiltered tables, each with its
-  reason in feature-spec §7.
+  `calendar_feed`, `community_cover` and `app_user` are the only unfiltered tables,
+  each with its reason in feature-spec §7.
   Details: `docs/feature-spec.md` §7.
 
 ---
@@ -451,6 +451,7 @@ dotnet run --project LnShelf/LnShelf.Api -- enrichment-verify [--series "A;B"] [
 dotnet run --project LnShelf/LnShelf.Api -- subtitle-backfill
 dotnet run --project LnShelf/LnShelf.Api -- volume-merge --series "<title>" --from 10 --into 7.5 [--format LightNovel] [--dry-run]
 dotnet run --project LnShelf/LnShelf.Api -- cover-orphan-sweep [--dry-run]   # all shelves; no --user needed
+dotnet run --project LnShelf/LnShelf.Api -- community-cover-withdraw --hash <sha256>   # stop sharing one cover with everyone; no --user needed
 dotnet run --project LnShelf/LnShelf.Api -- vapid-keys                         # a Web Push key pair for the .env
 ```
 

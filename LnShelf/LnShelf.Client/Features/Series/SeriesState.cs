@@ -357,6 +357,34 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
         });
     }
 
+    /// <summary>Takes a cover another user shares as this volume's own.</summary>
+    /// <returns>Whether the cover was set — the picker stays open on a refusal.</returns>
+    public Task<bool> PickCommunityCoverAsync(
+        VolumeResponse volume,
+        string contentHash,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(volume);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentHash);
+
+        if (Series is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        return RunAsync(async () =>
+        {
+            var updated = await client.PickCommunityCoverAsync(volume.VolumeId, contentHash, cancellationToken);
+
+            if (updated is not null)
+            {
+                CoverVersion++;
+                ReplaceSeries(updated);
+                Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
+            }
+        });
+    }
+
     /// <summary>Takes this source's word for the disagreement, and reloads the side-by-side view.</summary>
     public Task ChooseSourceAsync(
         SourceConflictResponse conflict,

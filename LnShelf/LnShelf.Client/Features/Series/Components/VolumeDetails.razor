@@ -88,6 +88,15 @@
             @(Volume.HasCoverOverride ? "Replace cover…" : "Set cover…")
         </button>
 
+        @* Only a catalogued series: the covers on offer are matched by AniList or MangaUpdates
+           id, so a series kept by hand has none to find. *@
+        @if (HasCommunityCovers)
+        {
+            <button type="button" class="secondary" disabled="@IsBusy" @onclick="OnCommunityCoversAsync">
+                Community covers…
+            </button>
+        }
+
         @if (Volume.HasCoverOverride)
         {
             <button type="button" class="ghost" disabled="@IsBusy" @onclick="OnRemoveCoverAsync">

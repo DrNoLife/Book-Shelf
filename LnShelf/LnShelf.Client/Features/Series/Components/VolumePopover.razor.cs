@@ -108,6 +108,10 @@ public partial class VolumePopover
     [Parameter]
     public EventCallback<VolumeResponse> CoverPickRequested { get; set; }
 
+    /// <summary>Asks the grid to open the community-cover picker — the grid owns the sheet.</summary>
+    [Parameter]
+    public EventCallback<VolumeResponse> CommunityCoversRequested { get; set; }
+
     [Inject]
     public required IJSRuntime JavaScript { get; set; }
 

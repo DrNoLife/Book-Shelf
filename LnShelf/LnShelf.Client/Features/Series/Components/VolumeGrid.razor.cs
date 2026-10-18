@@ -41,6 +41,9 @@ public partial class VolumeGrid
 
     private Guid _tilesSeriesId;
 
+    /// <summary>The volume whose community-cover picker is open, or null.</summary>
+    private VolumeResponse? _communityCoverVolume;
+
     private PopoverPlacement? _placement;
 
     /// <summary>True when the open volume is shown in the phone's bottom sheet rather than the popover.</summary>
@@ -160,6 +163,14 @@ public partial class VolumeGrid
         _pendingCoverVolume = volume;
         await JavaScript.InvokeVoidAsync("lnshelf.openFilePicker", input);
     }
+
+    private void OnCommunityCoversRequested(VolumeResponse volume)
+    {
+        Selection.CloseMenu();
+        _communityCoverVolume = volume;
+    }
+
+    private void OnCommunityCoversClosed() => _communityCoverVolume = null;
 
     private Task OnCoverPickedAsync(InputFileChangeEventArgs args)
     {

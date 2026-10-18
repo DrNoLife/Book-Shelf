@@ -20,6 +20,20 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.33.0", new DateOnly(2026, 10, 18), "Community covers",
+            Features: [
+                "Community covers: on a volume of a catalogued series, \"Community covers…\" lists the covers " +
+                    "other readers uploaded for the same volume, with who shared them and how many use them. Use " +
+                    "one as your own, or Hide one you never want to see.",
+                "Share your covers: a new switch on your profile, off until you turn it on, shares the covers " +
+                    "you upload with other readers who track the same volume. Switch it off and they are no " +
+                    "longer offered; copies others already picked stay on their shelves.",
+            ],
+            Improvements: [
+                "Export my data now includes your sharing choice, the covers you share and the ones you hide.",
+            ],
+            Fixes: []
+        ),
         new("0.32.0", new DateOnly(2026, 10, 14), "Which chapters are in which volume",
             Features: [
                 "Manga volumes now know their chapters: a volume shows \"Ch. 98–103\", and a series you track " +

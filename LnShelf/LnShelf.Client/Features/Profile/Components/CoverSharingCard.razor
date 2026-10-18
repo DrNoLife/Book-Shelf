@@ -1,0 +1,51 @@
+@* "Share your covers" (feature-spec §4.3), for the user page's right column. One switch, and
+   the consent written out in plain words next to it: what is shared, who sees it, and how
+   to take it back. Off until the user turns it on; turning it on is the consent. *@
+
+<Panel id="cover-sharing" aria-labelledby="cover-sharing-title">
+    <h2 class="title-panel" id="cover-sharing-title">Share your covers</h2>
+
+    @if (State.Sharing is not { } sharing)
+    {
+        <p class="fine">@(State.Message ?? "Loading…")</p>
+    }
+    else
+    {
+        <SegmentedControl TValue="bool"
+                          Options="SharingOptions"
+                          Value="sharing.Enabled"
+                          ValueChanged="OnEnabledChangedAsync"
+                          AriaLabel="Share your covers"
+                          Disabled="State.IsBusy"
+                          Stretch="true"
+                          Inset="true" />
+
+        @if (sharing.Enabled)
+        {
+            <p class="fine" role="status">
+                @SharedLine(sharing)
+            </p>
+        }
+
+        <dl class="scope">
+            <dt class="eyebrow">What is shared</dt>
+            <dd class="fine">
+                The covers you upload for volumes of catalogued series, with your name beside them (made from the start of your email address).
+            </dd>
+            <dt class="eyebrow">Who sees it</dt>
+            <dd class="fine">
+                Signed-in readers who track the same volume. Nobody else, and never your shelf.
+            </dd>
+            <dt class="eyebrow">Taking it back</dt>
+            <dd class="fine">
+                Switch this off and your covers are no longer offered. Copies others already
+                picked stay on their shelves, without your name.
+            </dd>
+        </dl>
+
+        @if (State.Message is { } message)
+        {
+            <p class="notice notice--warning" role="alert">@message</p>
+        }
+    }
+</Panel>

@@ -7,6 +7,7 @@ namespace LnShelf.Api.Features.Shelf.Services;
 public sealed class VolumeMergeCommandService(
     LnShelfDbContext dbContext,
     ICoverStore coverStore,
+    ICommunityCoverCommandService communityCoverCommand,
     ILogger<VolumeMergeCommandService> logger) : IVolumeMergeCommandService
 {
     public async Task<VolumeMergeReport> MergeAsync(VolumeMergeRequest request, CancellationToken cancellationToken)
@@ -37,7 +38,7 @@ public sealed class VolumeMergeCommandService(
 
         if (!request.DryRun)
         {
-            await MoveAndDeleteAsync(source, target, cancellationToken);
+            await MoveAndDeleteAsync(series, source, target, cancellationToken);
         }
 
         logger.LogInformation(
@@ -62,11 +63,15 @@ public sealed class VolumeMergeCommandService(
         }
     }
 
-    private async Task MoveAndDeleteAsync(Volume source, Volume target, CancellationToken cancellationToken)
+    private async Task MoveAndDeleteAsync(
+        Series series,
+        Volume source,
+        Volume target,
+        CancellationToken cancellationToken)
     {
         var moved = source.UserState;
         var replacedCoverKey = moved?.CoverOverrideObjectKey;
-        var copiedCoverKey = await CopyCoverOverrideAsync(replacedCoverKey, target.Id, cancellationToken);
+        var (copiedCoverKey, copiedCoverHash) = await CopyCoverOverrideAsync(replacedCoverKey, target.Id, cancellationToken);
 
         if (moved is not null)
         {
@@ -84,6 +89,10 @@ public sealed class VolumeMergeCommandService(
 
             dbContext.VolumeUserStates.Remove(moved);
         }
+
+        // The source's published row goes with the source volume (cascade); the target takes
+        // over, in the same save as the move.
+        await communityCoverCommand.StageForVolumeAsync(series, target, copiedCoverKey, copiedCoverHash, cancellationToken);
 
         dbContext.Volumes.Remove(source);
 
@@ -111,14 +120,14 @@ public sealed class VolumeMergeCommandService(
     // A copy rather than the old key carried over: an override key names its volume, and the
     // covers endpoint and the orphan sweep both judge a key by that volume. Left under the
     // deleted volume's id, the cover would 404 at once and be swept as an orphan later.
-    private async Task<string?> CopyCoverOverrideAsync(
+    private async Task<(string? Key, string? Hash)> CopyCoverOverrideAsync(
         string? objectKey,
         Guid targetVolumeId,
         CancellationToken cancellationToken)
     {
         if (objectKey is null)
         {
-            return null;
+            return (null, null);
         }
 
         var cover = await coverStore.ReadAsync(objectKey, cancellationToken)
@@ -126,7 +135,7 @@ public sealed class VolumeMergeCommandService(
 
         var copiedKey = CoverObjectKey.ForVolumeOverride(targetVolumeId, Guid.CreateVersion7(), Path.GetExtension(objectKey));
         await coverStore.SaveAsync(copiedKey, cover.Content, cover.ContentType, cancellationToken);
-        return copiedKey;
+        return (copiedKey, CoverContentHash.Compute(cover.Content));
     }
 
     // Best effort, as when a cover is replaced through the API: the merge is saved, and an

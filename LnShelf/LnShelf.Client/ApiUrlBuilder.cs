@@ -13,6 +13,10 @@ public sealed class ApiUrlBuilder(HttpClient httpClient)
     public string Cover(string objectKey) =>
         new Uri(httpClient.BaseAddress!, $"api/covers/{objectKey}").ToString();
 
+    /// <summary>A cover another user shares, by the hash of its bytes (feature-spec §4.3).</summary>
+    public string CommunityCover(string contentHash) =>
+        new Uri(httpClient.BaseAddress!, $"api/community-covers/{contentHash}").ToString();
+
     /// <summary>
     /// Cover URLs for the keys given, best first, skipping the null ones: a CoverImage's
     /// candidates, so a key whose file is gone gives way to the next.

@@ -89,6 +89,87 @@ namespace LnShelf.Api.Migrations
                     b.ToTable("calendar_feed", (string)null);
                 });
 
+            modelBuilder.Entity("LnShelf.Api.Features.Covers.Models.CommunityCover", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AniListId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("char(64)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long?>("MangaUpdatesId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Number")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SourceVolumeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UploaderUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("SourceVolumeId")
+                        .IsUnique();
+
+                    b.HasIndex("UploaderUserId");
+
+                    b.HasIndex("AniListId", "Format", "Number")
+                        .HasFilter("\"AniListId\" IS NOT NULL");
+
+                    b.HasIndex("MangaUpdatesId", "Format", "Number")
+                        .HasFilter("\"MangaUpdatesId\" IS NOT NULL");
+
+                    b.ToTable("community_cover", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_community_cover_external_id", "\"AniListId\" IS NOT NULL OR \"MangaUpdatesId\" IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Covers.Models.CommunityCoverHide", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("char(64)");
+
+                    b.Property<DateTimeOffset>("HiddenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("community_cover_hide", (string)null);
+                });
+
             modelBuilder.Entity("LnShelf.Api.Features.Import.Models.ImportBatch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -499,6 +580,9 @@ namespace LnShelf.Api.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ActivitySeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CoverSharingSince")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DefaultLibraryFilters")
@@ -927,6 +1011,30 @@ namespace LnShelf.Api.Migrations
                     b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Covers.Models.CommunityCover", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Shelf.Models.Volume", null)
+                        .WithMany()
+                        .HasForeignKey("SourceVolumeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploaderUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LnShelf.Api.Features.Covers.Models.CommunityCoverHide", b =>
+                {
+                    b.HasOne("LnShelf.Api.Features.Auth.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
