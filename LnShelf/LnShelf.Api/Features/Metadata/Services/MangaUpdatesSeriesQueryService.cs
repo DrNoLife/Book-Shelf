@@ -2,11 +2,11 @@ namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <inheritdoc />
 // Named per CLAUDE.md's <Source><Entity>QueryService rule: reads from MangaUpdates and
-// nothing else. It wraps the same MangaUpdatesClient the release source uses, so both go
-// through one rate limiter and one set of politeness rules.
+// nothing else. It reads through the same caches over the same MangaUpdatesClient the release
+// source uses, so both go through one rate limiter and one set of politeness rules.
 public sealed class MangaUpdatesSeriesQueryService(
-    MangaUpdatesClient client,
     MangaUpdatesSearchCache searchCache,
+    MangaUpdatesSeriesCache seriesCache,
     ILogger<MangaUpdatesSeriesQueryService> logger) : IMangaUpdatesSeriesQueryService
 {
     /// <summary>Same floor as the AniList search, for the same reason.</summary>
@@ -72,9 +72,9 @@ public sealed class MangaUpdatesSeriesQueryService(
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(seriesId);
 
-        // Not cached, matching the AniList detail query: adding a series happens once per
-        // series, and a cache here would only serve a person pressing Add twice.
-        var record = await client.GetSeriesAsync(seriesId, cancellationToken);
+        // Cached and shared with the release source, because the refresh that completes the
+        // add asks for this same record seconds later (MangaUpdatesSeriesCache).
+        var record = await seriesCache.GetSeriesAsync(seriesId, cancellationToken);
         if (record is null)
         {
             logger.LogWarning("MangaUpdates has no series with id {MangaUpdatesId}", seriesId);

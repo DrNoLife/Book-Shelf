@@ -2,8 +2,8 @@ namespace LnShelf.Api.Features.Metadata.Services;
 
 /// <inheritdoc />
 public sealed class MangaUpdatesReleaseSource(
-    MangaUpdatesClient client,
     MangaUpdatesSearchCache searchCache,
+    MangaUpdatesSeriesCache seriesCache,
     ILogger<MangaUpdatesReleaseSource> logger) : IReleaseSource
 {
     public string SourceName => "MangaUpdates";
@@ -47,7 +47,8 @@ public sealed class MangaUpdatesReleaseSource(
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(externalId);
 
-        var record = await client.GetSeriesAsync(externalId, cancellationToken);
+        // Cached and shared with the add flow's read of the same record (MangaUpdatesSeriesCache).
+        var record = await seriesCache.GetSeriesAsync(externalId, cancellationToken);
         if (record is null)
         {
             return null;

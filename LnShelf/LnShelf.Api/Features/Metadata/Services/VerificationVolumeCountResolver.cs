@@ -83,8 +83,10 @@ public sealed class VerificationVolumeCountResolver(
         Series series,
         CancellationToken cancellationToken)
     {
+        // A budget of its own for its one question: the verification run sizes its lookups
+        // separately (VerificationEnrichmentRunner), and nothing else draws on this one.
         var catalogue = await catalogueSource.GetVolumesAsync(
-            series.TitleEnglish, series.Format, cancellationToken);
+            series.TitleEnglish, series.Format, new LookupBudget(1), cancellationToken);
 
         return catalogueMatcher.Match(series, series.TitleEnglish, catalogue)
             .HighestReleasedNumber(timeProvider.Today());

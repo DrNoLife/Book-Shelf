@@ -35,8 +35,8 @@ public sealed class VolumeEnrichmentService(
     /// </param>
     /// <param name="budget">
     /// Spent down as requests are made, not as volumes are visited, and per source: the
-    /// catalogue pass draws on <see cref="EnrichmentBudget.Catalogue"/> (one request per title
-    /// attempted), the by-ISBN pass on <see cref="EnrichmentBudget.ByIsbn"/> (one volume can
+    /// catalogue pass draws on <see cref="EnrichmentBudget.Catalogue"/> (one per title
+    /// attempted that was not already cached), the by-ISBN pass on <see cref="EnrichmentBudget.ByIsbn"/> (one volume can
     /// cost several when its own ISBN turns out not to be indexed).
     /// </param>
     /// <param name="expectedBonusVolumes">
@@ -105,7 +105,7 @@ public sealed class VolumeEnrichmentService(
         // volumes first, so the ones just created count against the same extras.
         if (expectedBonusVolumes > 0)
         {
-            bonusVolumeWriter.Create(series, match, run);
+            bonusVolumeWriter.Create(series, match, expectedBonusVolumes, run);
             wholeExtraVolumeWriter.Create(series, match, expectedBonusVolumes, run);
         }
 

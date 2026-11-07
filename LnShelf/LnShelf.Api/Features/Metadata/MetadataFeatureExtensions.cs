@@ -110,6 +110,9 @@ public static class MetadataFeatureExtensions
             // the add-flow search in AddSeriesSearch ask the endpoint the same question.
             services.AddScoped<MangaUpdatesSearchCache>();
 
+            // Likewise one cached `series/{id}` for the release source and the add flow.
+            services.AddScoped<MangaUpdatesSeriesCache>();
+
             services.AddScoped<IReleaseSource, MangaUpdatesReleaseSource>();
             services.AddScoped<IReleaseSourceMatcher, ReleaseSourceMatcher>();
 

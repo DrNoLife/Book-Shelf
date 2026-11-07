@@ -81,12 +81,13 @@ public sealed class MangaUpdatesSearchCacheTests
 
         var searchCache = new MangaUpdatesSearchCache(
             client, cache, options, NullLogger<MangaUpdatesSearchCache>.Instance);
+        var seriesCache = new MangaUpdatesSeriesCache(client, cache, options);
 
         return (
             new MangaUpdatesReleaseSource(
-                client, searchCache, NullLogger<MangaUpdatesReleaseSource>.Instance),
+                searchCache, seriesCache, NullLogger<MangaUpdatesReleaseSource>.Instance),
             new MangaUpdatesSeriesQueryService(
-                client, searchCache, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
+                searchCache, seriesCache, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
     }
 
     /// <summary>Answers one captured search response, and counts how often it was asked.</summary>

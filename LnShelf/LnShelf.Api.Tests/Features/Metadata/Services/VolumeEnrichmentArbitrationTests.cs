@@ -147,8 +147,13 @@ public sealed class VolumeEnrichmentArbitrationTests
 
         var catalogueSource = Substitute.For<IVolumeCatalogueSource>();
         catalogueSource.SourceName.Returns("AppleBooks");
-        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns<Task<IReadOnlyList<CatalogueVolume>>>(_ => throw new HttpRequestException("Apple is down"));
+        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<CatalogueVolume>>>(call =>
+            {
+                // Sent, and failed: the real source has spent the request by then.
+                VolumeEnrichmentTestContext.SpendOne(call);
+                throw new HttpRequestException("Apple is down");
+            });
 
         await CreateService(catalogueSource)
             .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
