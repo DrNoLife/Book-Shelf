@@ -46,5 +46,9 @@ public sealed class InMemoryCoverStore : ICoverStore
         await Task.CompletedTask;
     }
 
+    // No journey runs the orphan sweep, so "just now" is all a journey's covers need to say.
+    public Task<DateTimeOffset?> GetLastModifiedAsync(string objectKey, CancellationToken cancellationToken) =>
+        Task.FromResult<DateTimeOffset?>(_covers.ContainsKey(objectKey) ? DateTimeOffset.UtcNow : null);
+
     public void Clear() => _covers.Clear();
 }

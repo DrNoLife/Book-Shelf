@@ -1,3 +1,4 @@
+using LnShelf.Api.Features.Covers.Services;
 using Microsoft.EntityFrameworkCore;
 using static LnShelf.Api.Tests.Features.Metadata.Services.SourceChoiceTestContext;
 
@@ -202,6 +203,45 @@ public sealed class ReleaseLinkCommandServiceTests
         await _syncService.DidNotReceiveWithAnyArgs().RunForSeriesAsync(default, default);
     }
 
+    // A shared cover snapshots the series' ids; left on the old record after a relink, it would
+    // keep being offered to readers of the series the matcher wrongly picked.
+    [Fact]
+    public async Task LinkAsync_ARelinkedSeriesWithASharedCover_MovesTheSharedCoverToTheNewRecordInTheSameSave()
+    {
+        var databaseName = $"release-link-{Guid.CreateVersion7()}";
+        await using var dbContext = CreateDbContext(databaseName, TestUsers.Current);
+        var series = await SaveSeriesAsync(dbContext);
+        var volume = series.Volumes.First();
+        var own = SharedCover(TestUsers.Owner, volume.Id);
+        var someoneElses = SharedCover(TestUsers.SomeoneElse, Guid.CreateVersion7());
+        dbContext.CommunityCovers.AddRange(own, someoneElses);
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).LinkAsync(series.Id, Request(FreeRecord), CancellationToken.None);
+
+        await using var saved = CreateDbContext(databaseName, TestUsers.Current);
+        var rows = await saved.CommunityCovers.AsNoTracking().ToDictionaryAsync(cover => cover.Id);
+        rows[own.Id].MangaUpdatesId.ShouldBe(FreeRecord);
+        rows[own.Id].AniListId.ShouldBe(AniListId);
+
+        // Another user's row for the old record is theirs, and their series is still on it.
+        rows[someoneElses.Id].MangaUpdatesId.ShouldBe(MangaUpdatesId);
+    }
+
+    private static CommunityCover SharedCover(Guid uploaderId, Guid sourceVolumeId) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        UploaderUserId = uploaderId,
+        SourceVolumeId = sourceVolumeId,
+        AniListId = AniListId,
+        MangaUpdatesId = MangaUpdatesId,
+        Format = Format.LightNovel,
+        Number = 1,
+        ContentHash = new string('a', 64),
+        ObjectKey = CoverObjectKey.ForVolumeOverride(sourceVolumeId, Guid.CreateVersion7(), ".webp"),
+        PublishedAt = DateTimeOffset.UtcNow,
+    };
+
     private static async Task<Series> SaveUnlinkedSeriesAsync(LnShelfDbContext dbContext)
     {
         var series = CreateSeries();
@@ -248,5 +288,11 @@ public sealed class ReleaseLinkCommandServiceTests
             _gate,
             TestUsers.Current,
             new SeriesDetailQueryService(dbContext, TimeProvider.System),
+            new CommunityCoverCommandService(
+                dbContext,
+                Substitute.For<ICoverStore>(),
+                TestUsers.Current,
+                TimeProvider.System,
+                NullLogger<CommunityCoverCommandService>.Instance),
             NullLogger<ReleaseLinkCommandService>.Instance);
 }

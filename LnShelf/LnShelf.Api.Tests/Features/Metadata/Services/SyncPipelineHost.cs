@@ -168,10 +168,16 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         }
     }
 
-    private AsyncServiceScope Scope(Guid? userId = null)
+    private AsyncServiceScope Scope(Guid? userId = null) => ScopeAs(userId ?? TestUsers.Owner);
+
+    /// <summary>
+    /// A request scope acting as one user, for a test that drives a service other than the
+    /// sync through the same wiring, or reads as a second user.
+    /// </summary>
+    public AsyncServiceScope ScopeAs(Guid userId)
     {
         var scope = _provider.CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId ?? TestUsers.Owner);
+        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId);
         return scope;
     }
 

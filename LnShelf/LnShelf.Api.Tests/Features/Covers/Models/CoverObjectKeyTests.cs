@@ -57,6 +57,14 @@ public sealed class CoverObjectKeyTests
     [InlineData("anilist/*")]
     [InlineData("anilist/85470.jpg;")]
     [InlineData("anilist/%2e%2e/secret.jpg")]
+
+    // Segments the store refuses: an empty one or one starting with a dot (its staging
+    // folder). Passing them here sent the request on to a store that threw, and a 500.
+    [InlineData("anilist/.x.jpg")]
+    [InlineData(".hidden")]
+    [InlineData(".staging/a.jpg")]
+    [InlineData("anilist//1.jpg")]
+    [InlineData("anilist/")]
     public void IsWellFormed_AnythingThatCouldClimbOutOfThePrefix_IsRefused(string? objectKey) =>
         CoverObjectKey.IsWellFormed(objectKey).ShouldBeFalse();
 

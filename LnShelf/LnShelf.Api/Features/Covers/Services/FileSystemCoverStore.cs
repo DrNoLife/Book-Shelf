@@ -86,6 +86,13 @@ public sealed class FileSystemCoverStore(CoverStoreRoot root) : ICoverStore
         {
             return null;
         }
+        catch (UnauthorizedAccessException) when (Directory.Exists(path))
+        {
+            // A key that names a folder ("anilist", "override/volume/<id>") is well formed but
+            // is no cover. Reading a folder throws this, which would otherwise be a server error
+            // any signed-in user can cause through the cover route.
+            return null;
+        }
     }
 
     public Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
@@ -102,6 +109,17 @@ public sealed class FileSystemCoverStore(CoverStoreRoot root) : ICoverStore
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<DateTimeOffset?> GetLastModifiedAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // The rename in SaveAsync keeps the staged file's write time, which is the moment the
+        // bytes were written: exactly the time the sweep's grace window is measured from.
+        var file = new FileInfo(PathFor(objectKey));
+
+        return Task.FromResult<DateTimeOffset?>(file.Exists ? new DateTimeOffset(file.LastWriteTimeUtc) : null);
     }
 
     /// <remarks>

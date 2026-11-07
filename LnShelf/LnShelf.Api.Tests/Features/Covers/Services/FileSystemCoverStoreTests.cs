@@ -81,6 +81,21 @@ public sealed class FileSystemCoverStoreTests : CoverStoreContractTests, IDispos
         (await Store.ReadAsync("anilist/85470.jpg", CancellationToken.None))!.ContentType.ShouldBe("image/webp");
     }
 
+    // A well-formed key can name a folder (GET /api/covers/anilist); that is a miss the route
+    // answers 404, not a server error.
+    [Theory]
+    [InlineData("anilist")]
+    [InlineData("override/volume/0190f1a2-0000-7000-8000-000000000001")]
+    public async Task ReadAsync_KeyNamingAFolder_ReturnsNull(string objectKey)
+    {
+        await Store.SaveAsync("anilist/1.webp", Webp(), "image/webp", CancellationToken.None);
+        await Store.SaveAsync(
+            "override/volume/0190f1a2-0000-7000-8000-000000000001/0190f1a2-0000-7000-8000-000000000002.webp",
+            Webp(), "image/webp", CancellationToken.None);
+
+        (await Store.ReadAsync(objectKey, CancellationToken.None)).ShouldBeNull();
+    }
+
     [Fact]
     public async Task ListKeysAsync_LeftoverStagingFile_IsNeverListed()
     {

@@ -34,4 +34,12 @@ public interface ICoverStore
     // once. Exists for the orphan sweep (Features/Covers/Commands); nothing on a request
     // path lists the bucket.
     IAsyncEnumerable<string> ListKeysAsync(string prefix, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// When the object under a key was last written.
+    /// </summary>
+    /// <returns>Null when the store holds nothing under that key.</returns>
+    // For the orphan sweep only: an upload is written just before the row that names it, so an
+    // unreferenced upload is only safe to delete once it is older than that window.
+    Task<DateTimeOffset?> GetLastModifiedAsync(string objectKey, CancellationToken cancellationToken);
 }
