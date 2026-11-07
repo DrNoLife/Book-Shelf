@@ -34,6 +34,7 @@ public static class MetadataSourceFailure
             // Throttling is the source answering, about us. Waiting is the correct response
             // and the rate-limit handler has already done it once; moving the request to
             // another free community API instead would be impoliteness with extra steps.
+            // The handler's own full queue is thrown as this same 429.
             HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests } => false,
 
             // No status at all means no HTTP exchange happened — DNS, a refused connection,
@@ -41,9 +42,8 @@ public static class MetadataSourceFailure
             // exception above, so this branch is genuinely "unreachable", not "unhappy".
             HttpRequestException { StatusCode: null } => true,
 
-            // Anything else — including the rate limiter's own "the queue is full" and a
-            // GraphQL-level rejection of our query — is this app's problem to fix, not
-            // another source's to paper over.
+            // Anything else — including a GraphQL-level rejection of our query — is this
+            // app's problem to fix, not another source's to paper over.
             _ => false,
         };
     }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using LnShelf.Api.Tests.Features.Metadata.Fixtures;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,10 +60,48 @@ public sealed class MangaUpdatesSearchCacheTests
         upstream.Calls.ShouldBe(2);
     }
 
-    private static (MangaUpdatesReleaseSource ReleaseSource, MangaUpdatesSeriesQueryService QueryService)
-        CreateServices(HttpMessageHandler upstream)
+    [Fact]
+    public async Task SearchAsync_TheSharedRequest_AsksForTheLongerOfTheTwoLists()
     {
-        var options = Options.Create(new MangaUpdatesOptions());
+        using var upstream = new CountingHandler(MangaUpdatesFixtures.YoujoSenkiSearch);
+        var (releaseSource, _) = CreateServices(upstream);
+
+        await releaseSource.SearchAsync("Youjo Senki", Format.LightNovel, CancellationToken.None);
+
+        // The person's search wants twenty and the matcher five; one request serves both only
+        // if it asks for twenty. It used to ask for the matcher's five, which was all a person
+        // ever saw when MangaUpdates answered the search (audit 2026-10-09, #11).
+        upstream.RequestedPageSizes.ShouldBe([20]);
+    }
+
+    [Fact]
+    public async Task SearchAsync_EachReader_TakesOnlyItsOwnNumberOfHits()
+    {
+        using var upstream = new CountingHandler(MangaUpdatesFixtures.YoujoSenkiSearch);
+        var (releaseSource, queryService) = CreateServices(
+            upstream,
+            new MangaUpdatesOptions { SearchResultLimit = 2, FallbackSearchResultLimit = 4 });
+
+        var candidates = await releaseSource.SearchAsync(
+            "Youjo Senki", Format.LightNovel, CancellationToken.None);
+        var results = await queryService.SearchAsync(
+            "Youjo Senki", Format.LightNovel, CancellationToken.None);
+
+        // Still one request, and each reader its own prefix of it: the matcher fetches every
+        // candidate it is handed, so a longer shared page must not become a longer fetch list.
+        upstream.Calls.ShouldBe(1);
+        upstream.RequestedPageSizes.ShouldBe([4]);
+        candidates.Count.ShouldBe(2);
+        results.Count.ShouldBe(4);
+
+        // A prefix, in the source's own order: the matcher's best guess is still the first hit.
+        candidates[0].ExternalId.ShouldBe(results[0].SourceId);
+    }
+
+    private static (MangaUpdatesReleaseSource ReleaseSource, MangaUpdatesSeriesQueryService QueryService)
+        CreateServices(HttpMessageHandler upstream, MangaUpdatesOptions? settings = null)
+    {
+        var options = Options.Create(settings ?? new MangaUpdatesOptions());
 
         var httpClient = new HttpClient(upstream, disposeHandler: false)
         {
@@ -85,9 +124,9 @@ public sealed class MangaUpdatesSearchCacheTests
 
         return (
             new MangaUpdatesReleaseSource(
-                searchCache, seriesCache, NullLogger<MangaUpdatesReleaseSource>.Instance),
+                searchCache, seriesCache, options, NullLogger<MangaUpdatesReleaseSource>.Instance),
             new MangaUpdatesSeriesQueryService(
-                searchCache, seriesCache, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
+                searchCache, seriesCache, options, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
     }
 
     /// <summary>Answers one captured search response, and counts how often it was asked.</summary>
@@ -98,16 +137,23 @@ public sealed class MangaUpdatesSearchCacheTests
 
         public int Calls { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        /// <summary>The page size each search asked MangaUpdates for.</summary>
+        public List<int> RequestedPageSizes { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             Calls++;
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(body);
+            RequestedPageSizes.Add(document.RootElement.GetProperty("perpage").GetInt32());
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(_json, Encoding.UTF8, "application/json"),
-            });
+            };
         }
     }
 }

@@ -69,8 +69,8 @@ public sealed class MangaUpdatesSeriesCacheTests
         var seriesCache = new MangaUpdatesSeriesCache(client, cache, options);
 
         return (
-            new MangaUpdatesReleaseSource(searchCache, seriesCache, NullLogger<MangaUpdatesReleaseSource>.Instance),
-            new MangaUpdatesSeriesQueryService(searchCache, seriesCache, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
+            new MangaUpdatesReleaseSource(searchCache, seriesCache, options, NullLogger<MangaUpdatesReleaseSource>.Instance),
+            new MangaUpdatesSeriesQueryService(searchCache, seriesCache, options, NullLogger<MangaUpdatesSeriesQueryService>.Instance));
     }
 
     /// <summary>

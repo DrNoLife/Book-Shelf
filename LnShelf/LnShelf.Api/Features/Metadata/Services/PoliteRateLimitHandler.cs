@@ -98,8 +98,14 @@ public sealed class PoliteRateLimitHandler(
 
         if (!lease.IsAcquired)
         {
-            throw new InvalidOperationException(
-                $"The {policy.SourceName} request queue is full; no permit could be acquired.");
+            // Thrown as the 429 it amounts to: this app's own budget is spent, which is the
+            // same "slow down" as the source saying it. So it takes the same paths — no
+            // fallback to another source (MetadataSourceFailure), and a 503 with a Retry-After
+            // on a request path instead of a 500 (audit 2026-10-09, #20).
+            throw new HttpRequestException(
+                $"The {policy.SourceName} request queue is full; no permit could be acquired.",
+                inner: null,
+                HttpStatusCode.TooManyRequests);
         }
 
         if (policy.RequestTimeout is not { } requestTimeout)

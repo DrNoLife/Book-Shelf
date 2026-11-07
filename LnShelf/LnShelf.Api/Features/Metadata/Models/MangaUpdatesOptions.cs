@@ -22,7 +22,7 @@ public sealed class MangaUpdatesOptions
     public int RequestsPerMinute { get; set; } = 60;
 
     /// <summary>
-    /// Candidates a search returns, every one of which is scored.
+    /// Candidates the link matcher takes from a search, every one of which is scored.
     /// </summary>
     // There is deliberately no second, smaller "how many to score" limit. There was
     // one, set to three, and it silently lost the correct match for 86―EIGHTY-SIX:
@@ -31,6 +31,16 @@ public sealed class MangaUpdatesOptions
     // A candidate the search returns is a candidate the matcher looks at.
     [Range(1, 100)]
     public int SearchResultLimit { get; set; } = 5;
+
+    /// <summary>
+    /// Results a person sees when MangaUpdates answers the series search in AniList's place.
+    /// </summary>
+    // Separate from SearchResultLimit because the two answer different questions. The matcher
+    // fetches every candidate it is given, so its number is a request budget; a person picking
+    // a series from a list needs the list AniList would have shown, which is 20. Sharing the
+    // matcher's 5 hid the series somebody was looking for (audit 2026-10-09, #11).
+    [Range(1, 100)]
+    public int FallbackSearchResultLimit { get; set; } = 20;
 
     /// <summary>Minimum title similarity for an automatic link.</summary>
     // Bounded by the scorer, which is documented as producing 0-100 (TitleSimilarityScorer).

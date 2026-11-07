@@ -84,14 +84,25 @@ public sealed class FallbackSeriesSearchService(
         }
         catch (Exception exception)
         {
+            // The only place the fallback's own raw failure is logged: the central handler logs
+            // the wrapper's message, which from here on holds only the readable sentences.
+            logger.LogWarning(
+                exception,
+                "{FallbackSource} could not answer the search for {Query} either",
+                FallbackSourceName,
+                query);
+
             // Named for the search rather than for one of the two sources: with both of
             // them refusing, "AniList is unavailable" would be half the story and the
-            // reader's actual situation is that searching does not work at all.
+            // reader's actual situation is that searching does not work at all. The detail goes
+            // to the browser verbatim, so each half is a sentence this app controls; the raw
+            // messages (a host name, a queue, a deadline) stay in the warning logged above and
+            // on the inner exception.
             throw new MetadataSourceUnavailableException(
                 "Series search",
                 $"Neither {PreferredSourceName} nor {FallbackSourceName} could answer. "
-                + $"{PreferredSourceName}: {preferredFailure.Message} "
-                + $"{FallbackSourceName}: {exception.Message}",
+                + $"{PreferredSourceName}: {ReleaseSourceUnavailable.ReadableReason(preferredFailure)} "
+                + $"{FallbackSourceName}: {ReleaseSourceUnavailable.ReadableReason(exception)}",
                 innerException: exception);
         }
     }
