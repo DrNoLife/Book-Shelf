@@ -13,36 +13,20 @@ public sealed class VolumeCommandService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
-        if (series is null || Find(series, volumeId) is not { } volume)
+        var series = await FirstTouchRetry.SaveAsync(
+            dbContext,
+            token => ApplyReadAsync(volumeId, request.Status, token),
+            logger,
+            cancellationToken);
+
+        if (series is null)
         {
             return null;
         }
 
-        var state = EnsureState(volume);
-        var becameRead = request.Status is ReadStatus.Read && state.ReadStatus is not ReadStatus.Read;
-        state.ReadStatus = request.Status;
-
-        // A read date is stamped when a volume becomes read and cleared when it stops
-        // being read: keeping a stale date on an unread volume would be a lie the
-        // stats page would later believe.
-        state.ReadAt = request.Status is ReadStatus.Read
-            ? state.ReadAt ?? timeProvider.Today()
-            : null;
-
-        if (becameRead)
-        {
-            // The series is already loaded with its user state here, so no second read.
-            StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
-        }
-
-        AdvanceTrackingStatus(series);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
         logger.LogInformation(
             "Volume {VolumeNumber} of {SeriesId} is now {ReadStatus}",
-            volume.Number, volume.SeriesId, request.Status);
+            Find(series, volumeId)?.Number, series.Id, request.Status);
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
@@ -65,40 +49,20 @@ public sealed class VolumeCommandService(
                 $"A purchase price can be at most {VolumeUserState.MaximumPurchasePrice}.");
         }
 
-        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
-        if (series is null || Find(series, volumeId) is not { } volume)
+        var series = await FirstTouchRetry.SaveAsync(
+            dbContext,
+            token => ApplyOwnedAsync(volumeId, request, token),
+            logger,
+            cancellationToken);
+
+        if (series is null)
         {
             return null;
         }
 
-        var state = EnsureState(volume);
-        state.Owned = request.Owned;
-
-        if (request.Owned)
-        {
-            // Physical is the default a book shelf assumes; the format only means
-            // anything while the volume is owned.
-            state.OwnedFormat = request.Format ?? state.OwnedFormat ?? OwnedFormat.Physical;
-            state.PurchasedAt ??= timeProvider.Today();
-
-            if (request.PurchasePrice is not null)
-            {
-                state.PurchasePrice = request.PurchasePrice;
-            }
-        }
-        else
-        {
-            state.OwnedFormat = null;
-
-            // The price and the purchase date are kept: un-owning a volume you sold
-            // should not erase what you paid for it.
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
         logger.LogInformation(
             "Volume {VolumeNumber} of {SeriesId} is now {OwnedState}",
-            volume.Number, volume.SeriesId, request.Owned ? "owned" : "not owned");
+            Find(series, volumeId)?.Number, series.Id, request.Owned ? "owned" : "not owned");
 
         return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
     }
@@ -129,6 +93,109 @@ public sealed class VolumeCommandService(
             throw new InvalidInputException("That is not an edition a volume can be owned in.");
         }
 
+        var series = await FirstTouchRetry.SaveAsync(
+            dbContext,
+            token => ApplyBulkAsync(seriesId, request, token),
+            logger,
+            cancellationToken);
+
+        if (series is null)
+        {
+            return null;
+        }
+
+        logger.LogInformation(
+            "Bulk change on {SeriesId}: volumes 1–{ThroughNumber} ({AffectedCount} of {TrackedCount}) "
+            + "read={Read} owned={Owned} format={OwnedFormat}",
+            seriesId, request.ThroughNumber, series.Volumes.Count(volume => volume.Number <= request.ThroughNumber),
+            series.Volumes.Count, request.Read, request.Owned, request.Format);
+
+        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
+    }
+
+    /// <summary>
+    /// Loads the volume's series and records the read status on it, without saving.
+    /// </summary>
+    /// <returns>Null when no volume on this shelf has that id.</returns>
+    private async Task<Series?> ApplyReadAsync(Guid volumeId, ReadStatus status, CancellationToken cancellationToken)
+    {
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
+        {
+            return null;
+        }
+
+        var state = EnsureState(volume);
+        var becameRead = status is ReadStatus.Read && state.ReadStatus is not ReadStatus.Read;
+        state.ReadStatus = status;
+
+        // A read date is stamped when a volume becomes read and cleared when it stops
+        // being read: keeping a stale date on an unread volume would be a lie the
+        // stats page would later believe.
+        state.ReadAt = status is ReadStatus.Read
+            ? state.ReadAt ?? timeProvider.Today()
+            : null;
+
+        if (becameRead)
+        {
+            // The series is already loaded with its user state here, so no second read.
+            StampLastRead(series.UserState ??= SeriesUserState.Untouched(series.Id), timeProvider.Today());
+        }
+
+        AdvanceTrackingStatus(series);
+        return series;
+    }
+
+    /// <summary>
+    /// Loads the volume's series and records the ownership on it, without saving.
+    /// </summary>
+    /// <returns>Null when no volume on this shelf has that id.</returns>
+    private async Task<Series?> ApplyOwnedAsync(
+        Guid volumeId,
+        SetVolumeOwnedRequest request,
+        CancellationToken cancellationToken)
+    {
+        var series = await LoadSeriesForVolumeAsync(volumeId, cancellationToken);
+        if (series is null || Find(series, volumeId) is not { } volume)
+        {
+            return null;
+        }
+
+        var state = EnsureState(volume);
+        state.Owned = request.Owned;
+
+        if (request.Owned)
+        {
+            // Physical is the default a book shelf assumes; the format only means
+            // anything while the volume is owned.
+            state.OwnedFormat = request.Format ?? state.OwnedFormat ?? OwnedFormat.Physical;
+            state.PurchasedAt ??= timeProvider.Today();
+
+            if (request.PurchasePrice is not null)
+            {
+                state.PurchasePrice = request.PurchasePrice;
+            }
+        }
+        else
+        {
+            state.OwnedFormat = null;
+
+            // The price and the purchase date are kept: un-owning a volume you sold
+            // should not erase what you paid for it.
+        }
+
+        return series;
+    }
+
+    /// <summary>
+    /// Loads the series and applies the bulk change to it, without saving.
+    /// </summary>
+    /// <returns>Null when no series on this shelf has that id.</returns>
+    private async Task<Series?> ApplyBulkAsync(
+        Guid seriesId,
+        BulkVolumeStateRequest request,
+        CancellationToken cancellationToken)
+    {
         var series = await dbContext.Series
             .Include(candidate => candidate.UserState)
             .Include(candidate => candidate.SourceChoices)
@@ -159,15 +226,7 @@ public sealed class VolumeCommandService(
             AdvanceTrackingStatus(series);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Bulk change on {SeriesId}: volumes 1–{ThroughNumber} ({AffectedCount} of {TrackedCount}) "
-            + "read={Read} owned={Owned} format={OwnedFormat}",
-            seriesId, request.ThroughNumber, outcome.AffectedCount, series.Volumes.Count, request.Read, request.Owned,
-            request.Format);
-
-        return SeriesDetailProjection.ToDetail(series, timeProvider.Today());
+        return series;
     }
 
     /// <summary>
