@@ -31,7 +31,7 @@ RUN perl -0777 -ne 'print $1 if /<script type="importmap">(.*?)<\/script>/s' /pu
 # The unprivileged build of nginx: master and workers run as uid 101, not root, so an nginx
 # bug is not a root shell in the container. The stable line, pinned to its minor; Dependabot
 # moves it.
-FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:15c994d10d6d78658721c3bcafff14cb281fba2a4bdf9d5ba92c416a472516e3 AS runtime
+FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03 AS runtime
 # The publish output's wwwroot is the whole site: index.html, _framework/, the
 # vendored fonts and css. Everything else in /publish is build residue.
 COPY --from=build /publish/wwwroot /usr/share/nginx/html
