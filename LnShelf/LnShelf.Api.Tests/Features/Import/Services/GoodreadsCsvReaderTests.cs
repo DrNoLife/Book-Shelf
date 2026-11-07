@@ -166,4 +166,43 @@ public sealed class GoodreadsCsvReaderTests
         books.Count.ShouldBe(1);
         books[0].LineNumber.ShouldBe(2);
     }
+
+    // The line the user finds the book on in the file, not its record count: the review
+    // before it spans three lines (audit 2026-10-09, #19).
+    [Fact]
+    public async Task ReadAsync_AfterAMultiLineQuotedField_NumbersBooksByTheirLineInTheFile()
+    {
+        const string csv = """
+            Book Id,Title,Exclusive Shelf,My Review
+            1,"Overlord, Vol. 1",read,"Great.
+
+            Would read again."
+            2,,read,
+            3,"Overlord, Vol. 2",read,
+            """;
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+        var reader = new GoodreadsCsvReader(NullLogger<GoodreadsCsvReader>.Instance);
+
+        var books = await reader.ReadAsync(stream, CancellationToken.None);
+
+        books.Select(book => book.LineNumber).ShouldBe([2, 6]);
+    }
+
+    // One unreadable title must not fail the upload (it used to throw FormatException).
+    [Fact]
+    public async Task ReadAsync_AFullWidthVolumeNumber_ReadsTheVolume()
+    {
+        const string csv = """
+            Book Id,Title,Exclusive Shelf
+            1,転生したらスライムだった件１３,read
+            """;
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+        var reader = new GoodreadsCsvReader(NullLogger<GoodreadsCsvReader>.Instance);
+
+        var books = await reader.ReadAsync(stream, CancellationToken.None);
+
+        books.ShouldHaveSingleItem().VolumeNumber.ShouldBe(13);
+    }
 }

@@ -16,12 +16,13 @@ public sealed class StoryGraphCsvReader(ILogger<StoryGraphCsvReader> logger)
         using var csvReader = CsvReader.Create(reader, ExportCsvConfiguration.Forgiving);
 
         var books = new List<ImportedBook>();
-        var lineNumber = 1;
         var skipped = 0;
 
         await foreach (var row in csvReader.GetRecordsAsync<StoryGraphCsvRow>(cancellationToken))
         {
-            lineNumber++;
+            // The physical line the record starts on, not a record count: a review with
+            // line breaks in it spans several lines, and the user goes looking in the file.
+            var lineNumber = checked((int)csvReader.LineNumber);
 
             if (string.IsNullOrWhiteSpace(row.Title))
             {

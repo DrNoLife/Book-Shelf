@@ -25,5 +25,9 @@ internal static class ExportCsvConfiguration
         // trailing space inside the quotes.
         TrimWhitespace = true,
         TrimInsideQuotes = true,
+
+        // For CsvReader.LineNumber: the import log and the review panel name the line in
+        // the file, and quoted reviews with line breaks make that differ from the row count.
+        TrackLineNumbers = true,
     };
 }
