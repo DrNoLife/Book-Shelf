@@ -1,4 +1,4 @@
-using CsvHelper.Configuration.Attributes;
+using CsvHelper;
 
 namespace LnShelf.Api.Features.Import.Models;
 
@@ -17,51 +17,43 @@ namespace LnShelf.Api.Features.Import.Models;
 //
 // Every column is [Optional]: Goodreads has changed its export header before, and
 // a missing column it never used must not fail the whole import.
-public sealed class GoodreadsCsvRow
+[CsvRecord]
+public sealed partial class GoodreadsCsvRow
 {
-    [Name("Title")]
-    [Optional]
+    [CsvColumn("Title", Optional = true)]
     public string? Title { get; set; }
 
-    [Name("Author")]
-    [Optional]
+    [CsvColumn("Author", Optional = true)]
     public string? Author { get; set; }
 
     /// <summary>
     /// Everyone credited besides the main author, comma-separated and unlabelled —
     /// for a light novel that is usually the illustrator.
     /// </summary>
-    [Name("Additional Authors")]
-    [Optional]
+    [CsvColumn("Additional Authors", Optional = true)]
     public string? AdditionalAuthors { get; set; }
 
     /// <summary>ISBN-10, wrapped in Excel armour: <c>="0316363987"</c>.</summary>
-    [Name("ISBN")]
-    [Optional]
+    [CsvColumn("ISBN", Optional = true)]
     public string? Isbn { get; set; }
 
     /// <summary>ISBN-13, likewise armoured, and the one the shelf prefers.</summary>
-    [Name("ISBN13")]
-    [Optional]
+    [CsvColumn("ISBN13", Optional = true)]
     public string? Isbn13 { get; set; }
 
     /// <summary>"Paperback", "Kindle Edition", "Mass Market Paperback", "Audible Audio".</summary>
-    [Name("Binding")]
-    [Optional]
+    [CsvColumn("Binding", Optional = true)]
     public string? Binding { get; set; }
 
     /// <summary>One date only — Goodreads exports no per-read history.</summary>
-    [Name("Date Read")]
-    [Optional]
+    [CsvColumn("Date Read", Optional = true)]
     public string? DateRead { get; set; }
 
     /// <summary>"read", "currently-reading", "to-read", or a custom shelf name.</summary>
-    [Name("Exclusive Shelf")]
-    [Optional]
+    [CsvColumn("Exclusive Shelf", Optional = true)]
     public string? ExclusiveShelf { get; set; }
 
     /// <summary>An integer, not a Yes/No: 0 for a book the user does not own.</summary>
-    [Name("Owned Copies")]
-    [Optional]
+    [CsvColumn("Owned Copies", Optional = true)]
     public string? OwnedCopies { get; set; }
 }

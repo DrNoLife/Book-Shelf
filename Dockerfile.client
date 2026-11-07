@@ -39,8 +39,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY nginx-security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /importmap.sha256 /tmp/importmap.sha256
 # Root only for this build step (the copied files are root's); the container runs as 101.
+# The brotli-libs upgrade closes CVE-2026-111497 (critical, Trivy fails the release on it)
+# until the base image ships 1.2.1 itself; the version floor fails the build if it cannot.
 USER root
-RUN sed -i "s|__IMPORTMAP_SHA256__|$(cat /tmp/importmap.sha256)|" /etc/nginx/security-headers.conf \
+RUN apk add --no-cache --upgrade "brotli-libs>=1.2.1" \
+    && sed -i "s|__IMPORTMAP_SHA256__|$(cat /tmp/importmap.sha256)|" /etc/nginx/security-headers.conf \
     && rm /tmp/importmap.sha256 \
     && ! grep -q __IMPORTMAP_SHA256__ /etc/nginx/security-headers.conf
 USER 101

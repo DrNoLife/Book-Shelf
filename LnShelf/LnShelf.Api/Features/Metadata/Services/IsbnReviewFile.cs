@@ -1,5 +1,4 @@
 using CsvHelper;
-using CsvHelper.Configuration;
 
 namespace LnShelf.Api.Features.Metadata.Services;
 
@@ -12,15 +11,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // except the apply command, so it has no business being schema.
 public sealed class IsbnReviewFile(ILogger<IsbnReviewFile> logger)
 {
-    private static readonly CsvConfiguration Configuration = new(CultureInfo.InvariantCulture)
-    {
-        // Forgiving on read for the same reason the StoryGraph reader is: this file
-        // comes back from a spreadsheet, which may well have reordered or dropped a
-        // column the reviewer had no use for.
-        HeaderValidated = null,
-        MissingFieldFound = null,
-        DetectDelimiter = false,
-    };
+    private static readonly CsvReaderOptions ReadOptions = new() { Separator = ',' };
 
     public async Task WriteAsync(
         string path,
@@ -37,7 +28,7 @@ public sealed class IsbnReviewFile(ILogger<IsbnReviewFile> logger)
         }
 
         await using var writer = new StreamWriter(path, append: false, Encoding.UTF8);
-        await using var csvWriter = new CsvWriter(writer, Configuration);
+        await using var csvWriter = CsvWriter.Create(writer);
 
         await csvWriter.WriteRecordsAsync(rows.Select(row => row.ToCsvRow()), cancellationToken);
 
@@ -66,7 +57,7 @@ public sealed class IsbnReviewFile(ILogger<IsbnReviewFile> logger)
         }
 
         using var reader = new StreamReader(path, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        using var csvReader = new CsvReader(reader, Configuration);
+        using var csvReader = CsvReader.Create(reader, ReadOptions);
 
         var instructions = new List<IsbnReviewInstruction>();
         var skipped = 0;

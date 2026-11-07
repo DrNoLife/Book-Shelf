@@ -12,7 +12,7 @@ public sealed class GoodreadsCsvReader(ILogger<GoodreadsCsvReader> logger)
         ArgumentNullException.ThrowIfNull(csv);
 
         using var reader = new StreamReader(csv, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        using var csvReader = new CsvReader(reader, ExportCsvConfiguration.Forgiving);
+        using var csvReader = CsvReader.Create(reader, ExportCsvConfiguration.Forgiving);
 
         var books = new List<ImportedBook>();
         var lineNumber = 1;
