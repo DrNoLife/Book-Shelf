@@ -5,8 +5,10 @@ namespace LnShelf.Client.Features.Series;
 /// settle a disagreement.
 /// </summary>
 // Split out of SeriesState, which only decides how a write is wrapped (saving flag, message,
-// change notification). This holds what is conflict-specific: the list, and that it is
-// re-read after every choice because a choice changes which source the shelf shows.
+// change notification). This holds what is conflict-specific: the list and the two calls.
+// The list is re-read after every choice because a choice changes which source the shelf
+// shows, but SeriesState makes that call: only it knows whether the answer still belongs to
+// the series on screen.
 public sealed class SourceConflictState(SeriesDetailClient client)
 {
     /// <summary>
@@ -33,7 +35,7 @@ public sealed class SourceConflictState(SeriesDetailClient client)
         }
     }
 
-    /// <summary>Takes this source's word for the disagreement, then re-reads the view.</summary>
+    /// <summary>Takes this source's word for the disagreement.</summary>
     /// <returns>The refreshed series the server answered with.</returns>
     public async Task<SeriesDetailResponse?> ChooseAsync(
         Guid seriesId,
@@ -43,14 +45,11 @@ public sealed class SourceConflictState(SeriesDetailClient client)
     {
         ArgumentNullException.ThrowIfNull(conflict);
 
-        var detail = await client.ChooseSourceAsync(
+        return await client.ChooseSourceAsync(
             seriesId, conflict.Field, conflict.VolumeNumber, source, cancellationToken);
-        await LoadAsync(seriesId, cancellationToken);
-
-        return detail;
     }
 
-    /// <summary>Hands the disagreement back to the usual rules, then re-reads the view.</summary>
+    /// <summary>Hands the disagreement back to the usual rules.</summary>
     /// <returns>The refreshed series the server answered with.</returns>
     public async Task<SeriesDetailResponse?> ResetAsync(
         Guid seriesId,
@@ -59,10 +58,7 @@ public sealed class SourceConflictState(SeriesDetailClient client)
     {
         ArgumentNullException.ThrowIfNull(conflict);
 
-        var detail = await client.ResetSourceAsync(
+        return await client.ResetSourceAsync(
             seriesId, conflict.Field, conflict.VolumeNumber, cancellationToken);
-        await LoadAsync(seriesId, cancellationToken);
-
-        return detail;
     }
 }

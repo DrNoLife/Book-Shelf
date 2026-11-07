@@ -9,6 +9,9 @@ namespace LnShelf.Api.Tests.Client;
 /// </summary>
 public sealed class SearchSupersededTests
 {
+    // The query whose search finds the API unreachable.
+    private const string UnreachableQuery = "unreachable";
+
     [Fact]
     public async Task SearchAsync_AnOlderSearchAnswersLast_ShowsTheNewerResults()
     {
@@ -58,6 +61,41 @@ public sealed class SearchSupersededTests
         state.IsSearching.ShouldBeFalse();
     }
 
+    // Only on the browser's one thread: the older search has already failed, but its catch waits
+    // behind the newer search's click. HttpClient turns a failure after the cancel into a
+    // cancellation, so this ordering is the one way a superseded failure reaches the catch.
+    [Fact]
+    public void SearchAsync_AnOlderSearchFailsBehindANewerOne_ShowsNoFailure()
+    {
+        using var handler = new ScriptedHttpHandler(Answer);
+        var state = CreateState(handler);
+        var browser = new BrowserTurns();
+        var older = handler.Hold(HttpMethod.Get, "/api/search");
+        Task olderSearch = Task.CompletedTask;
+        Task newerSearch = Task.CompletedTask;
+
+        browser.Run(() =>
+        {
+            state.Query = UnreachableQuery;
+            olderSearch = state.SearchAsync();
+        });
+        browser.RunUntil(older.Arrived);
+        older.Release();
+
+        // The fetch has failed; its catch now waits for the thread behind the next click.
+        browser.WaitForQueuedTurn();
+        browser.Run(() =>
+        {
+            state.Query = "tanya";
+            newerSearch = state.SearchAsync();
+        });
+        browser.RunUntil(olderSearch);
+        browser.RunUntil(newerSearch);
+
+        state.Message.ShouldBeNull();
+        state.Results.ShouldHaveSingleItem().TitleEnglish.ShouldBe("tanya");
+    }
+
     private static SeriesSearchState CreateState(ScriptedHttpHandler handler)
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://api/") };
@@ -77,6 +115,11 @@ public sealed class SearchSupersededTests
         }
 
         var query = Uri.UnescapeDataString(uri.Query["?q=".Length..]);
+
+        if (query == UnreachableQuery)
+        {
+            throw new HttpRequestException("No connection could be made.");
+        }
 
         return ScriptedHttpHandler.Json(new SeriesSearchResponse
         {

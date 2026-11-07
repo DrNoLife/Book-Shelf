@@ -392,8 +392,9 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
         ArgumentNullException.ThrowIfNull(conflict);
 
         return Series is { } series
-            ? RunAsync(async () => ReplaceSeries(
-                await sourceConflicts.ChooseAsync(series.SeriesId, conflict, source, cancellationToken)))
+            ? RunAsync(async () => await ReloadConflictsIfTakenAsync(
+                await sourceConflicts.ChooseAsync(series.SeriesId, conflict, source, cancellationToken),
+                cancellationToken))
             : Task.CompletedTask;
     }
 
@@ -403,9 +404,20 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
         ArgumentNullException.ThrowIfNull(conflict);
 
         return Series is { } series
-            ? RunAsync(async () => ReplaceSeries(
-                await sourceConflicts.ResetAsync(series.SeriesId, conflict, cancellationToken)))
+            ? RunAsync(async () => await ReloadConflictsIfTakenAsync(
+                await sourceConflicts.ResetAsync(series.SeriesId, conflict, cancellationToken),
+                cancellationToken))
             : Task.CompletedTask;
+    }
+
+    // Only for an answer that is still the series on screen: re-reading the side-by-side view
+    // for a series the reader has left would put its disagreements under the next one's page.
+    private async Task ReloadConflictsIfTakenAsync(SeriesDetailResponse? updated, CancellationToken cancellationToken)
+    {
+        if (updated is not null && ReplaceSeries(updated))
+        {
+            await sourceConflicts.LoadAsync(updated.SeriesId, cancellationToken);
+        }
     }
 
     /// <summary>

@@ -51,6 +51,54 @@ public sealed class SeriesStateStaleWriteTests
     }
 
     [Fact]
+    public async Task ChooseSourceAsync_AnswersAfterAnotherSeriesLoaded_KeepsTheOtherSeriesConflicts()
+    {
+        using var handler = new ScriptedHttpHandler(Answer);
+        var state = CreateState(handler);
+        await state.LoadAsync(SeriesA);
+        var choice = handler.Hold(HttpMethod.Put, $"/api/series/{SeriesA}/source-choice");
+
+        var choosing = state.ChooseSourceAsync(ConflictOf(SeriesA), MetadataSourceName.AppleBooks);
+        await choice.Arrived;
+        await state.LoadAsync(SeriesB);
+        choice.Release();
+        await choosing;
+
+        // Re-reading A's disagreements here would put them on B's page.
+        state.Conflicts.ShouldHaveSingleItem().Note.ShouldBe(SeriesB.ToString());
+    }
+
+    [Fact]
+    public async Task ResetSourceAsync_AnswersAfterAnotherSeriesLoaded_KeepsTheOtherSeriesConflicts()
+    {
+        using var handler = new ScriptedHttpHandler(Answer);
+        var state = CreateState(handler);
+        await state.LoadAsync(SeriesA);
+        var reset = handler.Hold(HttpMethod.Delete, $"/api/series/{SeriesA}/source-choice");
+
+        var resetting = state.ResetSourceAsync(ConflictOf(SeriesA));
+        await reset.Arrived;
+        await state.LoadAsync(SeriesB);
+        reset.Release();
+        await resetting;
+
+        state.Conflicts.ShouldHaveSingleItem().Note.ShouldBe(SeriesB.ToString());
+    }
+
+    [Fact]
+    public async Task ChooseSourceAsync_AnswersForTheSeriesOnScreen_ReReadsItsConflicts()
+    {
+        using var handler = new ScriptedHttpHandler(Answer);
+        var state = CreateState(handler);
+        await state.LoadAsync(SeriesA);
+
+        await state.ChooseSourceAsync(ConflictOf(SeriesA), MetadataSourceName.AppleBooks);
+
+        handler.Requests.Count(request => request == $"GET /api/series/{SeriesA}/conflicts").ShouldBe(2);
+        state.Conflicts.ShouldHaveSingleItem().Note.ShouldBe(SeriesA.ToString());
+    }
+
+    [Fact]
     public async Task SetReadAsync_AnswersForTheSeriesOnScreen_IsTaken()
     {
         using var handler = new ScriptedHttpHandler(Answer);
@@ -70,13 +118,29 @@ public sealed class SeriesStateStaleWriteTests
         return new SeriesState(client, new SourceConflictState(client));
     }
 
+    // Tagged with its series in the note, so a test can tell whose disagreements are listed.
+    private static SourceConflictResponse ConflictOf(Guid seriesId) => new()
+    {
+        Field = SyncDiscrepancyField.ReleaseDate,
+        VolumeNumber = 1,
+        Options = [],
+        Reason = SourceDisplayReason.WaitingOnYou,
+        Explanation = "The sources disagree.",
+        CanChoose = true,
+        NeedsReview = true,
+        RecordedAt = DateTimeOffset.UnixEpoch,
+        Note = seriesId.ToString(),
+    };
+
     private static HttpResponseMessage Answer(HttpRequestMessage request)
     {
         var path = request.RequestUri.ShouldNotBeNull().AbsolutePath;
 
         if (path.EndsWith("/conflicts", StringComparison.Ordinal))
         {
-            return ScriptedHttpHandler.Json(Array.Empty<SourceConflictResponse>());
+            var seriesId = path.Contains(SeriesB.ToString(), StringComparison.Ordinal) ? SeriesB : SeriesA;
+
+            return ScriptedHttpHandler.Json(new[] { ConflictOf(seriesId) });
         }
 
         if (path == $"/api/series/{SeriesB}")

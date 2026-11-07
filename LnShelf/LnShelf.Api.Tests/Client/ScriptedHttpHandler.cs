@@ -64,9 +64,11 @@ internal sealed class ScriptedHttpHandler(Func<HttpRequestMessage, HttpResponseM
             }
         }
 
+        // Off any synchronization context, like the network: a released call answers on its own
+        // thread, and only the state container's await resumes on the caller's (BrowserTurns).
         if (held is not null)
         {
-            await held.WaitAsync(cancellationToken);
+            await held.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return answer(request);
@@ -90,7 +92,7 @@ internal sealed class ScriptedHttpHandler(Func<HttpRequestMessage, HttpResponseM
         internal async Task WaitAsync(CancellationToken cancellationToken)
         {
             _arrived.TrySetResult();
-            await _released.Task.WaitAsync(cancellationToken);
+            await _released.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }

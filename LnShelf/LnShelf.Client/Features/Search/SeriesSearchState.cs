@@ -166,6 +166,14 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
         }
         catch (HttpRequestException exception)
         {
+            // A search that failed after a newer one replaced it is as stale as one that
+            // answered: its failure line would sit under the newer results. Checked in the body,
+            // not as a filter, so a superseded failure is still caught rather than escaping.
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
             // No answer at all — the API itself is unreachable. Rendering the failure is
             // handling it; there is nothing else the browser can do about it.
             SetResults([]);
