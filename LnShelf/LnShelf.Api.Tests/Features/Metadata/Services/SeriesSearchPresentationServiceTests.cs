@@ -79,12 +79,12 @@ public sealed class SeriesSearchPresentationServiceTests
         long sourceId,
         string? coverImageUrl,
         MetadataSourceName source = MetadataSourceName.AniList) => new()
-    {
-        Source = source,
-        SourceId = sourceId,
-        TitleEnglish = $"Series {sourceId}",
-        Format = Format.LightNovel,
-        PublicationStatus = PublicationStatus.Ongoing,
-        CoverImageUrl = coverImageUrl,
-    };
+        {
+            Source = source,
+            SourceId = sourceId,
+            TitleEnglish = $"Series {sourceId}",
+            Format = Format.LightNovel,
+            PublicationStatus = PublicationStatus.Ongoing,
+            CoverImageUrl = coverImageUrl,
+        };
 }
