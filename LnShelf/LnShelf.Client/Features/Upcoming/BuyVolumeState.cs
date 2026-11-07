@@ -45,14 +45,22 @@ public sealed class BuyVolumeState(HttpClient httpClient, UpcomingState upcoming
 
         var volume = new BoughtVolume(entry.VolumeIds[0], entry.VolumeNumbers[0]);
 
-        if (await WriteAsync(volume.VolumeId, owned: true, cancellationToken))
+        // A line drawn before the last re-read can still offer a volume already bought here;
+        // buying it twice would record it twice and never reach the next one.
+        if (_bought.GetValueOrDefault(entry.SeriesId)?.Volumes.Any(bought => bought.VolumeId == volume.VolumeId) == true)
         {
-            var bought = _bought.GetValueOrDefault(entry.SeriesId) ?? new BoughtSeries(entry, []);
-            _bought[entry.SeriesId] = bought with { Volumes = [.. bought.Volumes, volume] };
-            await upcomingState.LoadAsync();
+            return;
         }
 
-        Changed?.Invoke();
+        await RunAsync(async () =>
+        {
+            if (await WriteAsync(volume.VolumeId, owned: true, cancellationToken))
+            {
+                var bought = _bought.GetValueOrDefault(entry.SeriesId) ?? new BoughtSeries(entry, []);
+                _bought[entry.SeriesId] = bought with { Volumes = [.. bought.Volumes, volume] };
+                await upcomingState.LoadAsync();
+            }
+        });
     }
 
     /// <summary>Puts every volume bought from this series here back to not owned.</summary>
@@ -63,25 +71,27 @@ public sealed class BuyVolumeState(HttpClient httpClient, UpcomingState upcoming
             return;
         }
 
-        // Latest first, and stop at the first refusal: what is still recorded is then exactly
-        // what is still owned, so a second Undo picks up where the first one stopped.
-        var remaining = bought.Volumes.ToList();
-        while (remaining.Count > 0 && await WriteAsync(remaining[^1].VolumeId, owned: false, cancellationToken))
+        await RunAsync(async () =>
         {
-            remaining.RemoveAt(remaining.Count - 1);
-        }
+            // Latest first, and stop at the first refusal: what is still recorded is then exactly
+            // what is still owned, so a second Undo picks up where the first one stopped.
+            var remaining = bought.Volumes.ToList();
+            while (remaining.Count > 0 && await WriteAsync(remaining[^1].VolumeId, owned: false, cancellationToken))
+            {
+                remaining.RemoveAt(remaining.Count - 1);
+            }
 
-        if (remaining.Count == 0)
-        {
-            _bought.Remove(seriesId);
-        }
-        else
-        {
-            _bought[seriesId] = bought with { Volumes = remaining };
-        }
+            if (remaining.Count == 0)
+            {
+                _bought.Remove(seriesId);
+            }
+            else
+            {
+                _bought[seriesId] = bought with { Volumes = remaining };
+            }
 
-        await upcomingState.LoadAsync();
-        Changed?.Invoke();
+            await upcomingState.LoadAsync();
+        });
     }
 
     /// <summary>
@@ -94,16 +104,41 @@ public sealed class BuyVolumeState(HttpClient httpClient, UpcomingState upcoming
         Message = null;
     }
 
+    /// <summary>
+    /// The busy flag around a whole operation: the writes and the re-read of the groups after them.
+    /// </summary>
+    // Not around each write alone. The re-read raises Changed before it fetches, so a flag
+    // cleared after the PUT put the button back on the old line, and a second tap bought the
+    // same volume again instead of the next one.
+    private async Task RunAsync(Func<Task> operation)
+    {
+        // Two taps can both arrive before the first one's disabled button is rendered.
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            IsBusy = false;
+            Changed?.Invoke();
+        }
+    }
+
     // The endpoint the series page's ownership control writes through. It answers with the
     // whole series, which is not needed here: the Upcoming groups are re-read afterwards.
     // No format and no price: "I bought it" says nothing about either, and the volume menu
     // can add them later.
     private async Task<bool> WriteAsync(Guid volumeId, bool owned, CancellationToken cancellationToken)
     {
-        IsBusy = true;
-        Message = null;
-        Changed?.Invoke();
-
         try
         {
             using var response = await httpClient.PutAsJsonAsync(
@@ -124,10 +159,6 @@ public sealed class BuyVolumeState(HttpClient httpClient, UpcomingState upcoming
             // Rendering the failure is handling it; the shelf is unchanged.
             Message = "Could not reach the API. Nothing was changed.";
             return false;
-        }
-        finally
-        {
-            IsBusy = false;
         }
     }
 }

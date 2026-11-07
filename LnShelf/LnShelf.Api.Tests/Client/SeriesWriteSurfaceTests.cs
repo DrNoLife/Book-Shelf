@@ -67,8 +67,10 @@ public sealed class SeriesWriteSurfaceTests
         source.ShouldContain("if (Series is { HasNewVolume: true })");
         source.ShouldContain("await MarkSeenAsync(cancellationToken)");
 
-        // And the flag is put down locally, so a second render cannot ask again.
-        source.ShouldContain("Series = series with { HasNewVolume = false }");
+        // And the flag is put down locally, so a second render cannot ask again — on the
+        // series still held, which may have changed hands while the call was out.
+        source.ShouldContain("if (Series is { } current && current.SeriesId == series.SeriesId)");
+        source.ShouldContain("Series = current with { HasNewVolume = false }");
     }
 
     /// <summary>A 404 means the series is gone, which is not a failure worth printing.</summary>

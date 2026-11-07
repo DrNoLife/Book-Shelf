@@ -27,8 +27,9 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
     {
         await OpenSeriesAsync();
 
-        await Volume(12).ClickAsync(new() { Modifiers = [KeyboardModifier.Shift] });
-        await WaitForSaveAsync();
+        await Page.RunAndWaitForSaveAsync(
+            () => Volume(12).ClickAsync(new() { Modifiers = [KeyboardModifier.Shift] }),
+            "/owned");
 
         await Page.ReloadAsync();
         await Volume(12).ClickAsync();
@@ -73,9 +74,8 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
     {
         await OpenSeriesAsync();
 
-        await TrackingChoice("Dropped").ClickAsync();
+        await Page.RunAndWaitForSaveAsync(() => TrackingChoice("Dropped").ClickAsync(), "/state");
         await Assertions.Expect(TrackingChoice("Dropped")).ToHaveAttributeAsync("aria-pressed", "true");
-        await WaitForSaveAsync();
 
         await Page.ReloadAsync();
 
@@ -113,8 +113,7 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
             () => Page.GetByRole(AriaRole.Button, new() { Name = "Set cover…" }).ClickAsync(),
             new() { Timeout = 5_000 });
 
-        await chooser.SetFilesAsync(StubImageHandler.ImagePath);
-        await WaitForSaveAsync();
+        await Page.RunAndWaitForSaveAsync(() => chooser.SetFilesAsync(StubImageHandler.ImagePath), "/cover");
     }
 
     // The upload is read from the browser in chunks before it is sent, so the network can
@@ -129,8 +128,4 @@ public sealed class SeriesPageTests(EndToEndFixture fixture) : JourneyTest(fixtu
 
         return Fixture.CoverStore.ObjectKeys.Count;
     }
-
-    // A write is done when nothing on the page is marked busy any more.
-    private Task WaitForSaveAsync() =>
-        Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 }

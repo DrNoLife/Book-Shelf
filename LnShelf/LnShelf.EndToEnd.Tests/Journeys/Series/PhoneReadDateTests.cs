@@ -32,10 +32,11 @@ public sealed class PhoneReadDateTests(EndToEndFixture fixture) : JourneyTest(fi
         box.Height.ShouldBeGreaterThanOrEqualTo(44);
         box.Width.ShouldBeGreaterThanOrEqualTo(120);
 
-        // The picker closing blurs the input on a phone, and that is what saves the date.
+        // The picker closing blurs the input on a phone, and that is what saves the date. Focus
+        // is moved away with Tab rather than BlurAsync: element.blur() raised no blur event in
+        // headless Chromium here, so nothing was saved and the old NetworkIdle wait hid it.
         await input.FillAsync("2024-03-14");
-        await input.BlurAsync();
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Page.RunAndWaitForSaveAsync(() => input.PressAsync("Tab"), "/read-date");
 
         await Page.ReloadAsync();
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();

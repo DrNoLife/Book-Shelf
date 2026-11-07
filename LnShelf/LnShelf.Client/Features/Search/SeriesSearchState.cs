@@ -26,6 +26,10 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
     // Stopped when the add ends, so a fast add never shows the "this can take a moment" line.
     private readonly SlowOperationWatch _slowAddWatch = new(SlowAddAfter);
 
+    // Each search cancels the one before, so only the latest answer can land: under AniList's
+    // degraded rate limit an older query can answer last and put its works under the new one.
+    private CancellationTokenSource? _searchCancellation;
+
     public string Query { get; set; } = string.Empty;
 
     public IReadOnlyList<SeriesSearchResultResponse> Results { get; private set; } = [];
@@ -104,11 +108,26 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
 
     public async Task SearchAsync(CancellationToken cancellationToken = default)
     {
+        // Before the empty-query branch, so clearing the box also stops a search in flight.
+        if (_searchCancellation is { } previous)
+        {
+            await previous.CancelAsync();
+            previous.Dispose();
+        }
+
+        var search = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _searchCancellation = search;
+
+        // Captured now: the next search disposes this source, and reading Token off a
+        // disposed source throws where the token itself still answers.
+        var token = search.Token;
+
         var query = Query.Trim();
         if (query.Length == 0)
         {
             SetResults([]);
             HasSearched = false;
+            IsSearching = false;
             Message = null;
             DegradedNote = null;
             Changed?.Invoke();
@@ -127,17 +146,18 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
             // due to severe stability issues" — and printing
             // "net_http_message_not_success_statuscode_reason" instead is what this replaces.
             using var response = await httpClient.GetAsync(
-                $"api/search?q={Uri.EscapeDataString(query)}", cancellationToken);
+                $"api/search?q={Uri.EscapeDataString(query)}", token);
 
             if (!response.IsSuccessStatusCode)
             {
-                await FailAsync(response, cancellationToken);
+                await FailAsync(response, token);
                 return;
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<SeriesSearchResponse>(cancellationToken);
+            var payload = await response.Content.ReadFromJsonAsync<SeriesSearchResponse>(token);
 
-            await LoadTrackedIdsAsync(cancellationToken);
+            await LoadTrackedIdsAsync(token);
+            token.ThrowIfCancellationRequested();
 
             SetResults(payload?.Results ?? []);
             Source = payload?.Source ?? MetadataSourceName.AniList;
@@ -153,10 +173,19 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
             HasSearched = true;
             Message = $"Search failed: {exception.Message}";
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Superseded or abandoned: the answer is dropped whole, nothing of it is shown.
+        }
         finally
         {
-            IsSearching = false;
-            Changed?.Invoke();
+            // Only the latest search owns the spinner; an older one ending must not turn it
+            // off while the newer one is still waiting for its answer.
+            if (ReferenceEquals(_searchCancellation, search))
+            {
+                IsSearching = false;
+                Changed?.Invoke();
+            }
         }
     }
 
@@ -322,11 +351,14 @@ public sealed class SeriesSearchState(HttpClient httpClient, SeriesAddClient add
 
     private async Task FailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
+        var problem = await response.ReadProblemAsync(cancellationToken);
+
+        // A failure that lands after a newer search started is that search's business no more.
+        cancellationToken.ThrowIfCancellationRequested();
+
         SetResults([]);
         DegradedNote = null;
         HasSearched = true;
-
-        var problem = await response.ReadProblemAsync(cancellationToken);
 
         Message = problem is null
             ? $"Search failed: {(int)response.StatusCode} {response.StatusCode}."

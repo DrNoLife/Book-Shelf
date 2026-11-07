@@ -342,10 +342,9 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
                 var updated = await client.SetCoverAsync(
                     volume.VolumeId, content, fileName, cancellationToken);
 
-                if (updated is not null)
+                if (ReplaceSeries(updated))
                 {
                     CoverVersion++;
-                    ReplaceSeries(updated);
                     Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
                 }
             }
@@ -376,10 +375,9 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
         {
             var updated = await client.PickCommunityCoverAsync(volume.VolumeId, contentHash, cancellationToken);
 
-            if (updated is not null)
+            if (ReplaceSeries(updated))
             {
                 CoverVersion++;
-                ReplaceSeries(updated);
                 Message = $"Cover set for volume {volume.Number.ToVolumeText()}.";
             }
         });
@@ -482,8 +480,12 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
                 await client.MarkSeenAsync(series.SeriesId, cancellationToken);
 
                 // Cleared locally rather than re-fetched: the acknowledgement changes one
-                // flag, and the library re-reads its cards on every visit anyway.
-                Series = series with { HasNewVolume = false };
+                // flag, and the library re-reads its cards on every visit anyway. Only on the
+                // series it was sent for: the reader may have moved on to another one by now.
+                if (Series is { } current && current.SeriesId == series.SeriesId)
+                {
+                    Series = current with { HasNewVolume = false };
+                }
             })
             : Task.CompletedTask;
 
@@ -524,16 +526,27 @@ public sealed class SeriesState(SeriesDetailClient client, SourceConflictState s
     // Nothing is recomputed here. The counts, the next-to-buy number and the tile states
     // are the server's derivation (SeriesDetailProjection), and this container holding a
     // second copy of that rule was two implementations of one thing, hand-synced.
-    private void ReplaceSeries(SeriesDetailResponse? updated)
+    /// <returns>Whether the answer was taken; one for a series no longer on screen is not.</returns>
+    private bool ReplaceSeries(SeriesDetailResponse? updated)
     {
         if (updated is null)
         {
-            return;
+            return false;
+        }
+
+        // This container outlives the page, so a write started on series A can answer after
+        // the reader followed a link to B. Taking it would put A under B's URL and leave the
+        // page on "Loading the series…" for good. Series is not cleared when a load starts, so
+        // an answer landing mid-load still matches and the newer load then overwrites it.
+        if (Series is { } current && current.SeriesId != updated.SeriesId)
+        {
+            return false;
         }
 
         // The write endpoints project the series without its LN ↔ manga link — only the
         // GET loads that — so the one the page arrived with is carried across rather than
         // vanishing on the first click.
         Series = updated with { Relation = updated.Relation ?? Series?.Relation };
+        return true;
     }
 }
