@@ -277,7 +277,9 @@ public sealed class SeriesRefresherTests
         return new SeriesRefresher(
             matcher,
             releaseSource,
-            new SeriesDescriptionHealer(NoMetadata(), NullLogger<SeriesDescriptionHealer>.Instance),
+            NoMetadata(),
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(

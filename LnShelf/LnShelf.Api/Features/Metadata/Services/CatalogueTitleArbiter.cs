@@ -49,13 +49,14 @@ public sealed class CatalogueTitleArbiter(
                 break;
             }
 
-            // Spent from the store's own allowance (EnrichmentBudget.Catalogue): a series with
+            // Drawn from the store's own allowance (EnrichmentBudget.Catalogue): a series with
             // no remembered title can spend several attempts, and none of them is an ISBN
-            // lookup's.
-            budget.Spend(1);
+            // lookup's. The source spends it, and only when a request actually goes out —
+            // an answer cached from another user's shelf costs nothing. `tried` still counts
+            // every title asked about, because that is what forgetting a title rests on.
             tried++;
 
-            var catalogue = await TryGetVolumesAsync(series, attempts[attempt], run, cancellationToken);
+            var catalogue = await TryGetVolumesAsync(series, attempts[attempt], run, budget, cancellationToken);
 
             if (catalogue is null)
             {
@@ -130,11 +131,12 @@ public sealed class CatalogueTitleArbiter(
         Series series,
         string attemptTitle,
         SyncRun run,
+        LookupBudget budget,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await catalogueSource.GetVolumesAsync(attemptTitle, series.Format, cancellationToken);
+            return await catalogueSource.GetVolumesAsync(attemptTitle, series.Format, budget, cancellationToken);
         }
         // The caller's cancellation only — a timed-out attempt is that attempt's failure.
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

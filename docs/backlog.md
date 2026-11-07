@@ -195,7 +195,7 @@ mute on the series page. Still open:
 - **ImageSharp 3.1.12 advisories [done].** Upgraded to ImageSharp 4.1.3 and the five
   suppressions are gone; the license key comes from `SixLaborsLicenseKey` (README, Deploy).
 - **Low-severity findings from the 2026-10-09 audit** are listed in
-  `.research/audit-2026-10-09.md`. The medium ones are fixed; the rest are open.
+  `.research/audit-2026-10-09.md`. The medium ones are fixed; the low ones were fixed in 0.33.1.
 
 - Library "type to filter" could grow fuzzy matching if the shelf ever gets
   big enough to need it.
@@ -219,12 +219,13 @@ Deferred by the 2026-09-06 sweep, each checked against the code as it now stands
   against a real export — confirm the column names on the first real one.
 - `ImportSourceResolver` needs a seekable upload stream to sniff the header. True
   for a bound `IFormFile`; a streaming upload path would have to buffer first.
-- Tests run on EF InMemory, which cannot prove unique indexes, cascade deletes or
-  anything else Postgres does — those are covered by configuration review only.
+- ~~Tests run on EF InMemory only~~ **[done 0.33.1]**: `LnShelf.Api.Tests/Data/Postgres` runs
+  unique indexes, cascades and owner filters against a Testcontainers Postgres (`[PostgresFact]`,
+  skipped locally without Docker, never in CI).
 - **MinIO's image is no longer publicly pullable [done, 0.20.0/0.20.1].** Covers moved to
   `FileSystemCoverStore` (a folder in a Docker volume), copied across by `cover-migrate`,
   and MinIO is gone from the code and the stack. The old `lnshelf_lnshelf-minio` volume
-  stays on the server until 2026-10-24 as a fallback, then `docker volume rm` it.
+  was removed from the server on 2026-11-07.
 - **Outside watchdog [parked].** Uptime Kuma runs on the same host it watches, so a dead
   host or a dead Kuma raises nothing. A free external check (healthchecks.io pinging Kuma's
   own status, or watching the public `/api/health`) closes that gap.

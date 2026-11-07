@@ -27,7 +27,7 @@ public sealed class VolumeEnrichmentNextVolumeTests
             .EnrichAsync(series, Run(Today), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         await catalogueSource.Received(1)
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -97,7 +97,7 @@ public sealed class VolumeEnrichmentNextVolumeTests
 
         created.ShouldBeEmpty();
         await catalogueSource.DidNotReceive()
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class VolumeEnrichmentNextVolumeTests
         created.ShouldBeEmpty();
         series.Volumes.Count.ShouldBe(13);
         await catalogueSource.DidNotReceive()
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     private static VolumeEnrichmentService CreateService(IVolumeCatalogueSource catalogueSource) =>

@@ -1,3 +1,5 @@
+using NSubstitute.Core;
+
 namespace LnShelf.Api.Tests.Features.Metadata.Services;
 
 /// <summary>
@@ -71,12 +73,18 @@ internal static class VolumeEnrichmentTestContext
     public static IVolumeCatalogueSource NoCatalogue() => Catalogue();
 
     /// <summary>A store that answers with the same records whatever title it is asked about.</summary>
+    // Every call spends one, as the real source does on a cache miss: a double has no cache,
+    // so every answer it gives is a request the store would have been sent.
     public static IVolumeCatalogueSource Catalogue(params CatalogueVolume[] records)
     {
         var source = Substitute.For<IVolumeCatalogueSource>();
         source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns(records);
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                SpendOne(call);
+                return records;
+            });
 
         return source;
     }
@@ -86,11 +94,18 @@ internal static class VolumeEnrichmentTestContext
     {
         var source = Substitute.For<IVolumeCatalogueSource>();
         source.SourceName.Returns("AppleBooks");
-        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns(call => answers.TryGetValue(call.ArgAt<string>(0), out var records) ? records : []);
+        source.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                SpendOne(call);
+                return answers.TryGetValue(call.ArgAt<string>(0), out var records) ? records : [];
+            });
 
         return source;
     }
+
+    /// <summary>What the real catalogue source does with its budget when it sends a request.</summary>
+    public static void SpendOne(CallInfo call) => call.ArgAt<LookupBudget>(2).Spend(1);
 
     /// <summary>A search that offers nothing, so a file can stay about the direct lookup.</summary>
     public static IIsbnCandidateSource NoCandidates()

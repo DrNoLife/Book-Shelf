@@ -1,4 +1,4 @@
-using CsvHelper.Configuration.Attributes;
+using CsvHelper;
 
 namespace LnShelf.Api.Features.Import.Models;
 
@@ -12,49 +12,41 @@ namespace LnShelf.Api.Features.Import.Models;
 //
 // Every column is [Optional]: StoryGraph has changed its export header before,
 // and a missing column it never used must not fail the whole import.
-public sealed class StoryGraphCsvRow
+[CsvRecord]
+public sealed partial class StoryGraphCsvRow
 {
-    [Name("Title")]
-    [Optional]
+    [CsvColumn("Title", Optional = true)]
     public string? Title { get; set; }
 
-    [Name("Authors")]
-    [Optional]
+    [CsvColumn("Authors", Optional = true)]
     public string? Authors { get; set; }
 
     /// <summary>
     /// Everyone else credited, as "Name (Role), Name (Role)" — translators,
     /// editors, and the illustrator the format tie-break needs.
     /// </summary>
-    [Name("Contributors")]
-    [Optional]
+    [CsvColumn("Contributors", Optional = true)]
     public string? Contributors { get; set; }
 
-    [Name("ISBN/UID")]
-    [Optional]
+    [CsvColumn("ISBN/UID", Optional = true)]
     public string? Isbn { get; set; }
 
     /// <summary>Binding, not medium: "digital", "paperback", "hardcover", "audio".</summary>
-    [Name("Format")]
-    [Optional]
+    [CsvColumn("Format", Optional = true)]
     public string? Format { get; set; }
 
     /// <summary>"read", "currently-reading", "to-read", "did-not-finish".</summary>
-    [Name("Read Status")]
-    [Optional]
+    [CsvColumn("Read Status", Optional = true)]
     public string? ReadStatus { get; set; }
 
-    [Name("Last Date Read")]
-    [Optional]
+    [CsvColumn("Last Date Read", Optional = true)]
     public string? LastDateRead { get; set; }
 
     /// <summary>Possibly several dates; the latest is the one that matters.</summary>
-    [Name("Dates Read")]
-    [Optional]
+    [CsvColumn("Dates Read", Optional = true)]
     public string? DatesRead { get; set; }
 
     /// <summary>"Yes" or "No" — and in a real export, very often "No" throughout.</summary>
-    [Name("Owned?")]
-    [Optional]
+    [CsvColumn("Owned?", Optional = true)]
     public string? Owned { get; set; }
 }

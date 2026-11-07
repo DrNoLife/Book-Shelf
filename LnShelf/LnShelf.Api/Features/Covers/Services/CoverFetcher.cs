@@ -39,12 +39,21 @@ public sealed class CoverFetcher(
                 return objectKey;
             }
 
+            // One deadline over the headers and the body together. HttpClient.Timeout stops
+            // at the headers once ResponseHeadersRead hands the response back, and a socket has
+            // no read timeout of its own, so a CDN that answers 200 and then stops sending
+            // would otherwise hold the whole sync (and its user's sync gate) until the host
+            // stops — the stalled body PoliteRateLimitHandler bounds for the metadata sources.
+            // Started after the exists check, so a slow store does not eat the fetch's time.
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(options.Value.FetchTimeout);
+
             // Headers first, so a declared size or type that is refused costs no body.
             using var response = await httpClient.GetAsync(
-                sourceUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                sourceUri, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
             response.EnsureSuccessStatusCode();
 
-            var content = await ReadImageAsync(response.Content, what, cancellationToken);
+            var content = await ReadImageAsync(response.Content, what, deadline.Token);
             if (content is null)
             {
                 return null;
@@ -72,9 +81,9 @@ public sealed class CoverFetcher(
 
             return objectKey;
         }
-        // The caller's cancellation only. HttpClient.Timeout surfaces as a cancelled task
-        // nobody asked for, and a CDN slow to hand over one image is exactly the hiccup the
-        // catch below exists for.
+        // The caller's cancellation only. The fetch deadline (and HttpClient.Timeout behind
+        // it) surfaces as a cancelled task nobody asked for, and a CDN slow to hand over one
+        // image, headers or body, is exactly the hiccup the catch below exists for.
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;

@@ -20,7 +20,7 @@ public sealed class VerificationVolumeCountResolverTests
             .Returns(new ReleaseSourceMatch { Outcome = ReleaseMatchOutcome.NoCandidate, Explanation = "nothing found" });
 
         var catalogueSource = Substitute.For<IVolumeCatalogueSource>();
-        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
+        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
             .Returns(AppleBooksFixtures.LoadCatalogue(AppleBooksFixtures.EightySixSearch));
 
         var resolver = new VerificationVolumeCountResolver(

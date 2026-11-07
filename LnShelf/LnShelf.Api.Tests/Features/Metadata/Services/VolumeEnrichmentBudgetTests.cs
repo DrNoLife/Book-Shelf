@@ -50,7 +50,7 @@ public sealed class VolumeEnrichmentBudgetTests
             series, Run(Today), Today, new EnrichmentBudget(0, 8), expectedBonusVolumes: 0, CancellationToken.None);
 
         await catalogueSource.DidNotReceive()
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
         await enrichmentSource.Received(8).GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -65,7 +65,7 @@ public sealed class VolumeEnrichmentBudgetTests
             series, Run(Today), Today, new EnrichmentBudget(5, 0), expectedBonusVolumes: 0, CancellationToken.None);
 
         await catalogueSource.Received()
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
         await enrichmentSource.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 

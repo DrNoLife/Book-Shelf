@@ -15,6 +15,11 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // shape each wanted out of it, and that is still two mappings. The wire response is what is
 // cached, which keeps it the single thing both map from. It travels between two services of
 // this slice and no further; nothing outside Features/Metadata sees it.
+//
+// The two readers want different lengths of list (MangaUpdatesOptions.SearchResultLimit for the
+// matcher, FallbackSearchResultLimit for a person's search). Rather than split the key again,
+// the one request asks for the longer page and each reader takes its own prefix: a page of 5 is
+// the first 5 of a page of 20, so the matcher sees exactly the candidates it always did.
 public sealed class MangaUpdatesSearchCache(
     MangaUpdatesClient client,
     HybridCache cache,
@@ -59,7 +64,7 @@ public sealed class MangaUpdatesSearchCache(
             {
                 Search = title,
                 Type = [.. MangaUpdatesFormats.ToSourceTypes(format)],
-                Perpage = options.Value.SearchResultLimit,
+                Perpage = Math.Max(options.Value.SearchResultLimit, options.Value.FallbackSearchResultLimit),
             },
             cancellationToken);
 

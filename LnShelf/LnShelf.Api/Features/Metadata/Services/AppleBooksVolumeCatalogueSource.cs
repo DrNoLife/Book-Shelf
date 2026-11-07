@@ -21,9 +21,11 @@ public sealed class AppleBooksVolumeCatalogueSource(
     public async Task<IReadOnlyList<CatalogueVolume>> GetVolumesAsync(
         string seriesTitle,
         Format format,
+        LookupBudget budget,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(seriesTitle);
+        ArgumentNullException.ThrowIfNull(budget);
 
         // Keyed on the normalised title, so the punctuation variants of one series' name
         // ("86―EIGHTY-SIX" and "86--EIGHTY-SIX") cannot cost two requests for one answer.
@@ -34,8 +36,8 @@ public sealed class AppleBooksVolumeCatalogueSource(
 
         return await cache.GetOrCreateAsync(
             cacheKey,
-            (Source: this, SeriesTitle: seriesTitle, Format: format),
-            static (state, token) => state.Source.FetchAsync(state.SeriesTitle, state.Format, token),
+            (Source: this, SeriesTitle: seriesTitle, Format: format, Budget: budget),
+            static (state, token) => state.Source.FetchAsync(state.SeriesTitle, state.Format, state.Budget, token),
             _cacheOptions,
             cancellationToken: cancellationToken);
     }
@@ -43,8 +45,13 @@ public sealed class AppleBooksVolumeCatalogueSource(
     private async ValueTask<IReadOnlyList<CatalogueVolume>> FetchAsync(
         string seriesTitle,
         Format format,
+        LookupBudget budget,
         CancellationToken cancellationToken)
     {
+        // Here, on a cache miss only, because this is the one place a request goes out.
+        // Spent before it is sent, so a request that fails still counts: it reached the store.
+        budget.Spend(1);
+
         var response = await client.SearchAsync(seriesTitle, format, cancellationToken);
 
         if (response is null)

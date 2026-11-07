@@ -27,6 +27,16 @@ public interface ICommunityCoverCommandService
         string? contentHash,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Brings the external ids on the user's published rows for a series in step with the
+    /// series, in the change tracker only: the caller's own SaveChanges writes them with the
+    /// change of link.
+    /// </summary>
+    // The rows snapshot the ids so readers match without reading another user's series, so a
+    // relinked series must refresh them: a stale MangaUpdates id offers the cover to readers of
+    // the record the series was wrongly linked to.
+    Task RefreshSeriesIdsAsync(Series series, CancellationToken cancellationToken);
+
     /// <summary>Stops offering the user a shared cover. Hiding twice is the same as once.</summary>
     // The user's own cover is left alone, even when it is this very image.
     Task HideAsync(string contentHash, CancellationToken cancellationToken);

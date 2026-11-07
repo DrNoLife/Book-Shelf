@@ -48,6 +48,31 @@ public sealed class CommunityCoverCommandServiceTests
     }
 
     [Fact]
+    public async Task RefreshSeriesIdsAsync_ARelinkedSeries_UpdatesOnlyTheCallersRowsForThatSeries()
+    {
+        var database = CommunityCoverShelf.NewDatabase();
+        var store = new InMemoryCoverStore();
+        var relinkedVolume = await CommunityCoverShelf.SeedVolumeAsync(database, Owner, mangaUpdatesId: 1);
+        var otherSeriesVolume = await CommunityCoverShelf.SeedVolumeAsync(database, Owner, number: 2, mangaUpdatesId: 1);
+        var own = await PublishForAsync(database, Owner, relinkedVolume);
+        var ownOnAnotherSeries = await PublishForAsync(database, Owner, otherSeriesVolume);
+        var someoneElses = await CommunityCoverShelf.PublishAsync(
+            database, Other, store, FirstImage, DateTimeOffset.UtcNow, mangaUpdatesId: 1);
+
+        await using var dbContext = CommunityCoverShelf.CreateDbContext(database, Owner);
+        var series = await dbContext.Series.SingleAsync(candidate => candidate.Volumes.Any(volume => volume.Id == relinkedVolume));
+        series.MangaUpdatesId = 2;
+        await CommunityCoverShelf.Commands(dbContext, Owner, store).RefreshSeriesIdsAsync(series, CancellationToken.None);
+        await dbContext.SaveChangesAsync();
+
+        await using var saved = CommunityCoverShelf.CreateDbContext(database, Owner);
+        var rows = await saved.CommunityCovers.AsNoTracking().ToDictionaryAsync(cover => cover.Id);
+        rows[own].MangaUpdatesId.ShouldBe(2);
+        rows[ownOnAnotherSeries].MangaUpdatesId.ShouldBe(1);
+        rows[someoneElses.Id].MangaUpdatesId.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task SetSharingAsync_OnAgain_KeepsTheOriginalConsentTimestamp()
     {
         var database = CommunityCoverShelf.NewDatabase();
@@ -162,5 +187,28 @@ public sealed class CommunityCoverCommandServiceTests
 
         withdrawn.ShouldBe(2);
         (await dbContext.CommunityCovers.SingleAsync()).ContentHash.ShouldBe(CoverContentHash.Compute(SecondImage));
+    }
+
+    /// <summary>A published row for one of the user's own volumes, carrying the old id 1.</summary>
+    private static async Task<Guid> PublishForAsync(string database, Guid uploaderId, Guid sourceVolumeId)
+    {
+        await using var dbContext = CommunityCoverShelf.CreateDbContext(database, uploaderId);
+        var cover = new CommunityCover
+        {
+            Id = Guid.CreateVersion7(),
+            UploaderUserId = uploaderId,
+            SourceVolumeId = sourceVolumeId,
+            AniListId = 94846,
+            MangaUpdatesId = 1,
+            Format = Format.LightNovel,
+            Number = 1,
+            ContentHash = CoverContentHash.Compute(FirstImage),
+            ObjectKey = CoverObjectKey.ForVolumeOverride(sourceVolumeId, Guid.CreateVersion7(), ".webp"),
+            PublishedAt = DateTimeOffset.UtcNow,
+        };
+        dbContext.CommunityCovers.Add(cover);
+        await dbContext.SaveChangesAsync();
+
+        return cover.Id;
     }
 }

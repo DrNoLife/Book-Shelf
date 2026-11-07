@@ -23,22 +23,26 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // be asked about every night forever. The cost is that a synopsis somebody adds to AniList
 // later does not arrive on its own; clearing the column to null asks again. Every reader
 // treats blank as absent (SeriesDetailProjection's NullIfBlank), so nothing displays it.
-public sealed class SeriesDescriptionHealer(
-    ISeriesMetadataSource metadataSource,
-    ILogger<SeriesDescriptionHealer> logger)
+//
+// The record arrives through a SeriesMetadataLookup rather than the source itself, so a series
+// that also lacks its cover costs one request between this and SeriesCoverHealer, not two.
+public sealed class SeriesDescriptionHealer(ILogger<SeriesDescriptionHealer> logger)
 {
-    public async Task HealAsync(Series series, CancellationToken cancellationToken)
+    /// <param name="aniList">The series' AniList record; null when the series has no AniList id.</param>
+    public async Task HealAsync(Series series, SeriesMetadataLookup? aniList, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(series);
 
-        if (series.Description is not null || series.AniListId is not { } aniListId)
+        if (series.Description is not null || aniList is null)
         {
             return;
         }
 
+        var aniListId = aniList.AniListId;
+
         try
         {
-            var metadata = await metadataSource.GetSeriesAsync(aniListId, cancellationToken);
+            var metadata = await aniList.GetAsync(cancellationToken);
 
             if (metadata?.Description is not { } description)
             {

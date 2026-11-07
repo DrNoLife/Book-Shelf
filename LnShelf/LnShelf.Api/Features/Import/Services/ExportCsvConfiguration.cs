@@ -1,4 +1,4 @@
-using CsvHelper.Configuration;
+using CsvHelper;
 
 namespace LnShelf.Api.Features.Import.Services;
 
@@ -15,15 +15,19 @@ namespace LnShelf.Api.Features.Import.Services;
 // same question.
 internal static class ExportCsvConfiguration
 {
-    public static readonly CsvConfiguration Forgiving = new(CultureInfo.InvariantCulture)
+    public static readonly CsvReaderOptions Forgiving = new()
     {
-        HeaderValidated = null,
-        MissingFieldFound = null,
-        BadDataFound = null,
-        DetectDelimiter = false,
+        // Pinned rather than detected: the default sniffs comma, semicolon, tab or bar from
+        // the start of the input, and a title row full of semicolons must not change the answer.
+        Separator = ',',
 
         // The StoryGraph export really does contain "オーバーロード1 不死者の王 " — a
         // trailing space inside the quotes.
-        TrimOptions = TrimOptions.Trim | TrimOptions.InsideQuotes,
+        TrimWhitespace = true,
+        TrimInsideQuotes = true,
+
+        // For CsvReader.LineNumber: the import log and the review panel name the line in
+        // the file, and quoted reviews with line breaks make that differ from the row count.
+        TrackLineNumbers = true,
     };
 }

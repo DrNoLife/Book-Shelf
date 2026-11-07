@@ -20,6 +20,38 @@ public static class ChangelogCatalog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
     [
+        new("0.33.1", new DateOnly(2026, 11, 7), "Fixes and a faster nightly sync",
+            Features: [],
+            Improvements: [
+                "The nightly sync no longer spends its store allowance on answers it already has, asks MangaUpdates " +
+                    "once instead of several times per series, and starts at a different series each night, so the " +
+                    "end of a long shelf is no longer always the part left waiting.",
+                "A series whose cover failed to download gets it on a later sync instead of keeping the placeholder.",
+                "Adding a series finds more MangaUpdates matches when AniList has nothing: up to 20 instead of 5.",
+                "When AniList or MangaUpdates is busy, the app says so and when to try again, instead of " +
+                    "\"Unexpected failure\".",
+                "The source disagreements on a series page load faster on a shelf with a long sync history.",
+            ],
+            Fixes: [
+                "A sync could hang for good on a cover download that stalled halfway.",
+                "Importing an export with full-width digits in a title (\"Vol. １２\") failed the whole upload. Titles " +
+                    "with \"Vol. 10.5\", a volume range or a \" - subtitle\" are now read, and the line numbers in the " +
+                    "import log match the file's own lines.",
+                "The store could add more bonus volumes (like Vol 7.5) than the publisher's note allows, or add them " +
+                    "under a volume count you chose yourself.",
+                "Switching to another series while a change was still saving could leave the page stuck on " +
+                    "\"Loading the series…\".",
+                "Tapping \"+1 chapter\", \"Mark Vol N read\" or \"I bought Vol N\" twice quickly repeated the first " +
+                    "tap instead of moving on to the next chapter or volume.",
+                "A slow search could show its results after you had already typed something else.",
+                "The summary of a finished import stayed on screen after opening or uploading another one.",
+                "Marking a volume read or owned for the first time on two devices at once could fail on one of them.",
+                "A cover you shared kept pointing at the old series after you re-linked that series to another " +
+                    "MangaUpdates entry.",
+                "A cover upload that failed halfway left its file behind, and a malformed cover address answered " +
+                    "with a server error instead of \"not found\".",
+            ]
+        ),
         new("0.33.0", new DateOnly(2026, 10, 18), "Community covers",
             Features: [
                 "Community covers: on a volume of a catalogued series, \"Community covers…\" lists the covers " +

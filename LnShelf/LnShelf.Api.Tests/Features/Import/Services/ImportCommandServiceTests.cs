@@ -233,6 +233,47 @@ public sealed class ImportCommandServiceTests
         (await dbContext.ImportBatches.SingleAsync()).CommittedAt.ShouldBeNull();
     }
 
+    // An omnibus or bonus volume parses to the clean series name with no number. With no
+    // numbered sibling it used to pass the check and be written onto volume 1.
+    [Fact]
+    public async Task CommitAsync_OnlyOmnibusAndBonusVolumes_IsRefusedAndWritesNothing()
+    {
+        await using var dbContext = CreateDbContext();
+        var batch = await SeedBatchAsync(dbContext);
+        var group = batch.Groups.Single();
+        foreach (var row in group.Rows.ToList())
+        {
+            dbContext.Remove(row);
+        }
+
+        group.Rows.Clear();
+        foreach (var rawTitle in new[] { "Overlord, Vols. 1-2", "Overlord, Vol. 10.5" })
+        {
+            group.Rows.Add(new ImportRow
+            {
+                Id = Guid.CreateVersion7(),
+                LineNumber = group.Rows.Count + 2,
+                RawTitle = rawTitle,
+                VolumeNumber = null,
+                ReadStatus = ReadStatus.Read,
+                OwnedInExport = true,
+            });
+        }
+
+        group.Status = ImportGroupStatus.AutoMatched;
+        group.Reason = ImportReviewReason.None;
+        group.MatchedAniListId = NovelAniListId;
+        await dbContext.SaveChangesAsync();
+
+        var act = async () => await CreateService(dbContext).CommitAsync(batch.Id, CancellationToken.None);
+
+        var exception = await act.ShouldThrowAsync<ConflictException>();
+        exception.Message.ShouldContain("Overlord, Vols. 1-2");
+        exception.Message.ShouldContain("Overlord, Vol. 10.5");
+        (await dbContext.Series.CountAsync()).ShouldBe(0);
+        (await dbContext.ImportBatches.SingleAsync()).CommittedAt.ShouldBeNull();
+    }
+
     [Fact]
     public async Task CommitAsync_ASkippedGroup_WritesNothingForIt()
     {

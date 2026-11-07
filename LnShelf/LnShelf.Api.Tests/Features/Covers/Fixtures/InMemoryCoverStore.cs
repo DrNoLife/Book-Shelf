@@ -7,11 +7,19 @@ namespace LnShelf.Api.Tests.Features.Covers.Fixtures;
 internal sealed class InMemoryCoverStore : ICoverStore
 {
     private readonly Dictionary<string, CoverContent> _objects = [];
+    private readonly Dictionary<string, DateTimeOffset> _lastModified = [];
 
     public IReadOnlyCollection<string> Keys => _objects.Keys;
 
-    public void Put(string objectKey, byte[] content, string contentType = "image/webp") =>
+    public void Put(string objectKey, byte[] content, string contentType = "image/webp")
+    {
         _objects[objectKey] = new CoverContent(content, contentType);
+        _lastModified[objectKey] = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Backdates an object, for a test about how old a file has to be.</summary>
+    public void SetLastModified(string objectKey, DateTimeOffset lastModified) =>
+        _lastModified[objectKey] = lastModified;
 
     public Task<bool> ExistsAsync(string objectKey, CancellationToken cancellationToken) =>
         Task.FromResult(_objects.ContainsKey(objectKey));
@@ -32,6 +40,7 @@ internal sealed class InMemoryCoverStore : ICoverStore
     public Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
     {
         _objects.Remove(objectKey);
+        _lastModified.Remove(objectKey);
         return Task.CompletedTask;
     }
 
@@ -46,4 +55,8 @@ internal sealed class InMemoryCoverStore : ICoverStore
 
         await Task.CompletedTask;
     }
+
+    public Task<DateTimeOffset?> GetLastModifiedAsync(string objectKey, CancellationToken cancellationToken) =>
+        Task.FromResult<DateTimeOffset?>(
+            _lastModified.TryGetValue(objectKey, out var lastModified) ? lastModified : null);
 }

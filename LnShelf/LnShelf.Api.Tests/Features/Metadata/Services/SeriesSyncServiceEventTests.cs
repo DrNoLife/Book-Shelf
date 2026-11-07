@@ -170,7 +170,9 @@ public sealed class SeriesSyncServiceEventTests
         var refresher = new SeriesRefresher(
             Substitute.For<IReleaseSourceMatcher>(),
             releaseSource,
-            new SeriesDescriptionHealer(metadata, NullLogger<SeriesDescriptionHealer>.Instance),
+            metadata,
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(NoCatalogue(), enrichmentSource, NoCandidates(), VolumeEnrichmentPipeline.Writer()),

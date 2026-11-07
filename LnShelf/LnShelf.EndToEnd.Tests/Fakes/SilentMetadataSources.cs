@@ -38,6 +38,7 @@ public sealed class SilentVolumeCatalogueSource : IVolumeCatalogueSource
     public Task<IReadOnlyList<CatalogueVolume>> GetVolumesAsync(
         string seriesTitle,
         Format format,
+        LookupBudget budget,
         CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<CatalogueVolume>>([]);
 }

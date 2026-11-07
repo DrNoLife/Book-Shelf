@@ -326,7 +326,7 @@ public sealed class VolumeEnrichmentServiceTests
         budget.ByIsbn.Remaining.ShouldBe(10);
         await source.DidNotReceive().GetByIsbnAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await catalogueSource.DidNotReceive().GetVolumesAsync(
-            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

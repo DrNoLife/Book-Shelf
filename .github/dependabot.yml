@@ -40,6 +40,11 @@ updates:
     groups:
       docker-minor-and-patch:
         update-types: [minor, patch]
+    # nginx's odd minors (1.31, 1.33) are its mainline, not its stable line; Dockerfile.client
+    # stays on the stable minor, which moves by hand when nginx cuts the next even one.
+    ignore:
+      - dependency-name: nginxinc/nginx-unprivileged
+        update-types: [version-update:semver-minor]
 
   # The image pins in the compose files: the production stack, and the tunnel and Uptime Kuma
   # projects that run beside it on the server.

@@ -42,12 +42,15 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         string mangaUpdatesFixture,
         MangaDexCaptures? mangaDex = null,
         WikimediaCaptures? wikimedia = null,
-        IReadOnlyDictionary<string, string?>? settings = null)
+        IReadOnlyDictionary<string, string?>? settings = null,
+        Func<string, string>? editAppleBooks = null,
+        TimeProvider? timeProvider = null)
     {
         CoverRoot = Path.Combine(Path.GetTempPath(), $"lnshelf-sync-pipeline-{Guid.CreateVersion7()}");
         Directory.CreateDirectory(CoverRoot);
 
-        var appleBooks = Fixture(appleBooksFixture);
+        // A captured answer with rows added to it, for a case the capture does not show.
+        var appleBooks = (editAppleBooks ?? (json => json))(Fixture(appleBooksFixture));
         var mangaUpdates = Fixture(mangaUpdatesFixture);
         var mangaDexAnswers = new MangaDexAnswers(
             mangaDex is null ? EmptyMangaDexSearch : Fixture(mangaDex.Search),
@@ -70,6 +73,13 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         services.AddDbContext<LnShelfDbContext>(options =>
             options.UseInMemoryDatabase(_databaseName, _databaseRoot));
 
+        // A test about the day (the sweep's rotation) fixes the clock; the rest keep the app's.
+        if (timeProvider is not null)
+        {
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton(timeProvider);
+        }
+
         // Every typed client's innermost handler, under the app's own politeness handlers.
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(
             () => new FixtureHandler(request => Answer(request, appleBooks, mangaUpdates, mangaDexAnswers, wikimedia ?? new()))));
@@ -78,6 +88,12 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
     }
 
     public string CoverRoot { get; }
+
+    /// <summary>Every Apple Books search, so a test can count what the store was really sent.</summary>
+    public ConcurrentQueue<Uri> AppleBooksRequests { get; } = new();
+
+    /// <summary>Every MangaUpdates <c>series/{id}</c> request.</summary>
+    public ConcurrentQueue<Uri> MangaUpdatesSeriesRequests { get; } = new();
 
     /// <summary>Every MangaDex request, so a test can tell a search from an aggregate.</summary>
     public ConcurrentQueue<Uri> MangaDexRequests { get; } = new();
@@ -91,9 +107,9 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
     /// <summary>Every image fetched, so a test can tell a fresh fetch from a kept file.</summary>
     public ConcurrentQueue<Uri> ImageRequests { get; } = new();
 
-    public async Task SeedAsync(Series series)
+    public async Task SeedAsync(Series series, Guid? ownerId = null)
     {
-        await using var scope = Scope();
+        await using var scope = Scope(ownerId);
         var dbContext = scope.ServiceProvider.GetRequiredService<LnShelfDbContext>();
         dbContext.Series.Add(series);
         await dbContext.SaveChangesAsync();
@@ -107,10 +123,21 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
             .RunAsync(CancellationToken.None);
     }
 
-    /// <summary>The series as saved, read through a fresh context.</summary>
-    public async Task<Series> LoadAsync(Guid seriesId)
+    /// <summary>
+    /// One user's sweep drawing on a budget the caller holds, the way the nightly loop shares
+    /// one allowance across every user's shelf.
+    /// </summary>
+    public async Task<SyncRun> SyncAsync(EnrichmentBudget budget, Guid? userId = null)
     {
-        await using var scope = Scope();
+        await using var scope = Scope(userId);
+        return await scope.ServiceProvider.GetRequiredService<ISeriesSyncService>()
+            .RunAsync(budget, CancellationToken.None);
+    }
+
+    /// <summary>The series as saved, read through a fresh context.</summary>
+    public async Task<Series> LoadAsync(Guid seriesId, Guid? ownerId = null)
+    {
+        await using var scope = Scope(ownerId);
         return await scope.ServiceProvider.GetRequiredService<LnShelfDbContext>().Series
             .Include(series => series.Volumes)
             .ThenInclude(volume => volume.UserState)
@@ -141,10 +168,16 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
         }
     }
 
-    private AsyncServiceScope Scope()
+    private AsyncServiceScope Scope(Guid? userId = null) => ScopeAs(userId ?? TestUsers.Owner);
+
+    /// <summary>
+    /// A request scope acting as one user, for a test that drives a service other than the
+    /// sync through the same wiring, or reads as a second user.
+    /// </summary>
+    public AsyncServiceScope ScopeAs(Guid userId)
     {
         var scope = _provider.CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(TestUsers.Owner);
+        scope.ServiceProvider.GetRequiredService<ICurrentUser>().ActAs(userId);
         return scope;
     }
 
@@ -159,6 +192,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
 
         if (uri.Host == "itunes.apple.com")
         {
+            AppleBooksRequests.Enqueue(uri);
+
             // The store's own content type, which is not JSON (AppleBooksClient says why).
             return Respond(new StringContent(appleBooks, Encoding.UTF8, "text/javascript"));
         }
@@ -169,6 +204,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
             && uri.Segments[^2] == "series/"
             && long.TryParse(uri.Segments[^1], CultureInfo.InvariantCulture, out _))
         {
+            MangaUpdatesSeriesRequests.Enqueue(uri);
+
             return Respond(new StringContent(mangaUpdates, Encoding.UTF8, "application/json"));
         }
 
@@ -186,7 +223,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
             return Respond(new StringContent(wikimedia.For(uri), Encoding.UTF8, "application/json"));
         }
 
-        if (uri.Host.EndsWith("mzstatic.com", StringComparison.Ordinal))
+        // The store's volume art, and MangaUpdates' series art for the series cover heal.
+        if (uri.Host.EndsWith("mzstatic.com", StringComparison.Ordinal) || uri.Host == "cdn.mangaupdates.com")
         {
             ImageRequests.Enqueue(uri);
             var content = new ByteArrayContent(_cover);

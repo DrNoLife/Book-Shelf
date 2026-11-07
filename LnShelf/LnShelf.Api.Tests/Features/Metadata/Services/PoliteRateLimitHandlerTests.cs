@@ -235,6 +235,26 @@ public sealed class PoliteRateLimitHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_TheQueueFull_ThrowsTheThrottlingExceptionWithoutReachingTheSource()
+    {
+        using var upstream = new StubHandler(HttpStatusCode.OK);
+        using var client = CreateClient(upstream, requestsPerMinute: 1, queuedRequestLimit: 0);
+
+        using var first = await client.GetAsync(new Uri("http://source/series"), CancellationToken.None);
+
+        var thrown = await Should.ThrowAsync<HttpRequestException>(
+            () => client.GetAsync(new Uri("http://source/series"), CancellationToken.None));
+
+        // A 429 rather than an InvalidOperationException: this app's own spent budget is the
+        // same "slow down" as the source's, so it keeps out of the search fallback and reaches
+        // the caller as a 503 with a Retry-After instead of a 500 (audit 2026-10-09, #20).
+        thrown.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        MetadataSourceFailure.WarrantsFallback(thrown, CancellationToken.None).ShouldBeFalse();
+        ProblemDetailsExceptionHandler.Describe(thrown).StatusCode.ShouldBe(503);
+        upstream.Calls.ShouldBe(1);
+    }
+
+    [Fact]
     public void AniList_ThePolicy_BoundsEachRequestItself()
     {
         var options = new AniListOptions { RequestTimeout = TimeSpan.FromSeconds(17) };
@@ -292,13 +312,15 @@ public sealed class PoliteRateLimitHandlerTests
         HttpMessageHandler upstream,
         TimeSpan? maximumRetryDelay = null,
         TimeSpan? requestTimeout = null,
-        bool treatsForbiddenAsRateLimited = false)
+        bool treatsForbiddenAsRateLimited = false,
+        int requestsPerMinute = 600,
+        int queuedRequestLimit = 16)
     {
         var policy = new SourceRateLimitPolicy
         {
             SourceName = "TestSource",
-            RequestsPerMinute = 600,
-            QueuedRequestLimit = 16,
+            RequestsPerMinute = requestsPerMinute,
+            QueuedRequestLimit = queuedRequestLimit,
             MaximumRetryDelay = maximumRetryDelay ?? TimeSpan.FromMilliseconds(20),
             RequestTimeout = requestTimeout,
             TreatsForbiddenAsRateLimited = treatsForbiddenAsRateLimited,

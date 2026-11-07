@@ -29,12 +29,21 @@ public interface IVolumeCatalogueSource
     /// <summary>The source's name, for logs, discrepancies, and the cover key prefix.</summary>
     string SourceName { get; }
 
+    /// <param name="budget">
+    /// The store's allowance. The implementation spends one from it for each request it
+    /// actually sends, and nothing for an answer it already holds.
+    /// </param>
     /// <returns>
     /// Every volume-ish record the store returned, unfiltered and in the store's own
     /// order. Empty when the store has nothing — a normal answer, not a failure.
     /// </returns>
+    // The budget is handed in rather than spent by the caller because only the
+    // implementation knows whether an answer cost a request: a cached one does not, and
+    // charging it anyway let later users in a night's shared allowance run short of
+    // requests that were never sent.
     Task<IReadOnlyList<CatalogueVolume>> GetVolumesAsync(
         string seriesTitle,
         Format format,
+        LookupBudget budget,
         CancellationToken cancellationToken);
 }

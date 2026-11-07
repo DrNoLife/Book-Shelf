@@ -455,6 +455,43 @@ public sealed class SeriesSyncServiceTests
         (await dbContext.ShelfEvents.AsNoTracking().CountAsync()).ShouldBe(0);
     }
 
+    [Fact]
+    public async Task RunAsync_ThreeNightsRunning_StartsEachSeriesFirstOnce()
+    {
+        // The night's allowance goes to whoever is asked first. In fixed title order that was
+        // the same series every night, and permanent gaps early in the alphabet could starve
+        // the rest of the shelf for good.
+        await using var dbContext = CreateDbContext();
+        await SeedSeriesAsync(dbContext, volumeCount: 1, titleEnglish: "Ascendance of a Bookworm", aniListId: 1);
+        await SeedSeriesAsync(dbContext, volumeCount: 1, titleEnglish: "Berserk", aniListId: 2);
+        await SeedSeriesAsync(dbContext, volumeCount: 1, titleEnglish: "Classroom of the Elite", aniListId: 3);
+
+        var firstEachNight = new List<string>();
+
+        foreach (var night in Enumerable.Range(0, 3))
+        {
+            var askedInOrder = new List<string>();
+            var matcher = Substitute.For<IReleaseSourceMatcher>();
+            matcher.MatchAsync(Arg.Any<Series>(), Arg.Any<IReadOnlySet<long>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    askedInOrder.Add(call.Arg<Series>().TitleEnglish);
+                    return new ReleaseSourceMatch { Outcome = ReleaseMatchOutcome.NoCandidate, Explanation = "Nothing found." };
+                });
+            var clock = new FixedTimeProvider(new DateTimeOffset(2026, 11, 7 + night, 4, 0, 0, TimeSpan.Zero));
+
+            await CreateService(dbContext, matcher, timeProvider: clock).RunAsync(CancellationToken.None);
+
+            // Every series is still swept each night; only where the sweep starts moves.
+            askedInOrder.Count.ShouldBe(3);
+            firstEachNight.Add(askedInOrder[0]);
+        }
+
+        firstEachNight.ShouldBe(
+            ["Ascendance of a Bookworm", "Berserk", "Classroom of the Elite"],
+            ignoreOrder: true);
+    }
+
     private static Series IsTitled(string titleEnglish) =>
         Arg.Is<Series>(series => series.TitleEnglish == titleEnglish);
 
@@ -486,8 +523,11 @@ public sealed class SeriesSyncServiceTests
     internal static SeriesSyncService CreateService(
         LnShelfDbContext dbContext,
         IReleaseSourceMatcher matcher,
-        IVolumeEnrichmentSource? enrichmentSource = null)
+        IVolumeEnrichmentSource? enrichmentSource = null,
+        TimeProvider? timeProvider = null)
     {
+        timeProvider ??= TimeProvider.System;
+
         var releaseSource = Substitute.For<IReleaseSource>();
         releaseSource.SourceName.Returns("MangaUpdates");
 
@@ -510,7 +550,9 @@ public sealed class SeriesSyncServiceTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
-            new SeriesDescriptionHealer(NoMetadata(), NullLogger<SeriesDescriptionHealer>.Instance),
+            NoMetadata(),
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -519,7 +561,7 @@ public sealed class SeriesSyncServiceTests
                 NoCandidates(),
                 VolumeEnrichmentPipeline.Writer()),
             ChapterMapPipeline.NoSources(),
-            TimeProvider.System);
+            timeProvider);
 
         return new SeriesSyncService(
             dbContext,
@@ -528,7 +570,7 @@ public sealed class SeriesSyncServiceTests
             NoCatalogue(),
             enrichmentSource,
             new EnrichmentBudgetSizes(enrichmentOptions, Options.Create(new AppleBooksOptions())),
-            TimeProvider.System,
+            timeProvider,
             NullLogger<SeriesSyncService>.Instance);
     }
 
@@ -580,6 +622,13 @@ public sealed class SeriesSyncServiceTests
             .Returns((SeriesMetadata?)null);
 
         return source;
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
     }
 
     private static LnShelfDbContext CreateDbContext(string? databaseName = null) =>

@@ -72,8 +72,58 @@ public sealed class FallbackSeriesSearchServiceTests
         // unavailable" would be half the story, and the reader's situation is that searching
         // does not work at all. The handler turns this into a 503.
         thrown.SourceName.ShouldBe("Series search");
-        thrown.UpstreamMessage.ShouldContain("AniList");
-        thrown.UpstreamMessage.ShouldContain("MangaUpdates is down too");
+
+        // AniList's own words are meant for a reader and travel; MangaUpdates' exception
+        // message is not, so it is replaced by this app's sentence.
+        thrown.UpstreamMessage.ShouldContain("The AniList API has been temporarily disabled");
+        thrown.UpstreamMessage.ShouldContain($"MangaUpdates: {ReleaseSourceUnavailable.DidNotAnswer}");
+    }
+
+    [Fact]
+    public async Task SearchAsync_BothSourcesFailing_KeepsRawExceptionMessagesOffTheWire()
+    {
+        // A DNS failure on both: the handler sends UpstreamMessage verbatim, and a host name
+        // or a deadline is for the log, not the browser.
+        var fallback = Substitute.For<IMangaUpdatesSeriesQueryService>();
+        fallback.SearchAsync(Query, Format.LightNovel, Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<SeriesSearchResult>>>(_ =>
+                throw new HttpRequestException("No such host is known. (api.mangaupdates.com:443)"));
+
+        var act = () => CreateService(
+                SourceThrowing(new TimeoutException("AniList did not answer within 20s.")), fallback)
+            .SearchAsync(Query, Format.LightNovel, CancellationToken.None);
+
+        var thrown = await act.ShouldThrowAsync<MetadataSourceUnavailableException>();
+
+        thrown.UpstreamMessage.ShouldNotContain("api.mangaupdates.com");
+        thrown.UpstreamMessage.ShouldNotContain("No such host");
+        thrown.UpstreamMessage.ShouldNotContain("20s");
+        thrown.UpstreamMessage.ShouldBe(
+            $"Neither AniList nor MangaUpdates could answer. AniList: {ReleaseSourceUnavailable.DidNotAnswer} "
+            + $"MangaUpdates: {ReleaseSourceUnavailable.DidNotAnswer}");
+    }
+
+    [Fact]
+    public async Task SearchAsync_AniListDownAndMangaUpdatesThrottling_SaysBusyAndAnswersWithRetryAfter()
+    {
+        var fallback = Substitute.For<IMangaUpdatesSeriesQueryService>();
+        fallback.SearchAsync(Query, Format.LightNovel, Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<SeriesSearchResult>>>(_ =>
+                throw new HttpRequestException(
+                    "The MangaUpdates request queue is full; no permit could be acquired.",
+                    null,
+                    HttpStatusCode.TooManyRequests));
+
+        var act = () => CreateService(SourceThrowing(Unavailable()), fallback)
+            .SearchAsync(Query, Format.LightNovel, CancellationToken.None);
+
+        var thrown = await act.ShouldThrowAsync<MetadataSourceUnavailableException>();
+
+        thrown.UpstreamMessage.ShouldContain($"MangaUpdates: {ReleaseSourceUnavailable.AskingToSlowDown}");
+        thrown.UpstreamMessage.ShouldNotContain("queue");
+
+        // The wait is known (the throttle's one-minute window), so the caller is told it.
+        ProblemDetailsExceptionHandler.RetryAfter(thrown).ShouldBe(TimeSpan.FromMinutes(1));
     }
 
     /// <summary>
@@ -116,8 +166,10 @@ public sealed class FallbackSeriesSearchServiceTests
         new HttpRequestException(
             "Too many requests", null, HttpStatusCode.TooManyRequests),
 
-        // Our own limiter refusing a permit — machinery, not an outage.
-        new InvalidOperationException("The AniList request queue is full; no permit could be acquired."),
+        // Our own limiter refusing a permit — machinery, not an outage. Thrown as the 429 it
+        // amounts to, so it shares the throttling rule above.
+        new HttpRequestException(
+            "The AniList request queue is full; no permit could be acquired.", null, HttpStatusCode.TooManyRequests),
 
         // A GraphQL-level rejection on a 200: the query is wrong, which is this app's defect.
         new InvalidOperationException("AniList rejected SeriesSearch: Unknown field 'volumez'"),

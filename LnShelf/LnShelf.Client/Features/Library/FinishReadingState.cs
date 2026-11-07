@@ -42,23 +42,24 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
             _ => throw new ArgumentOutOfRangeException(nameof(entry), entry.GetType().Name, "Not a Continue reading entry."),
         };
 
-        var answer = finished switch
+        await RunAsync(async () =>
         {
-            FinishedVolume volume => await WriteVolumeAsync(volume.VolumeId, ReadStatus.Read, cancellationToken),
-            FinishedChapter chapter => await WriteChapterAsync(chapter.SeriesId, chapter.Chapter, cancellationToken),
-            _ => WriteAnswer.Failed,
-        };
+            var answer = finished switch
+            {
+                FinishedVolume volume => await WriteVolumeAsync(volume.VolumeId, ReadStatus.Read, cancellationToken),
+                FinishedChapter chapter => await WriteChapterAsync(chapter.SeriesId, chapter.Chapter, cancellationToken),
+                _ => WriteAnswer.Failed,
+            };
 
-        if (answer.Written)
-        {
-            LastFinished = finished;
-            Offer = finished is FinishedChapter && answer.Detail?.VolumesFinishedByChapter is { Count: > 0 } volumes
-                ? new VolumeReadOffer(finished.SeriesTitle, volumes)
-                : null;
-            await libraryState.LoadAsync(cancellationToken);
-        }
-
-        Changed?.Invoke();
+            if (answer.Written)
+            {
+                LastFinished = finished;
+                Offer = finished is FinishedChapter && answer.Detail?.VolumesFinishedByChapter is { Count: > 0 } volumes
+                    ? new VolumeReadOffer(finished.SeriesTitle, volumes)
+                    : null;
+                await libraryState.LoadAsync(cancellationToken);
+            }
+        });
     }
 
     /// <summary>Marks the offered volumes read, one by one; the receipt that follows undoes them all.</summary>
@@ -69,28 +70,29 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
             return;
         }
 
-        var marked = new List<FinishedVolume>();
-
-        // In order, stopping at a refusal: the volumes before it stay marked and the receipt
-        // names exactly those, so Undo puts back what was written and nothing else.
-        foreach (var volume in offer.Volumes)
+        await RunAsync(async () =>
         {
-            if (!(await WriteVolumeAsync(volume.VolumeId, ReadStatus.Read, cancellationToken)).Written)
+            var marked = new List<FinishedVolume>();
+
+            // In order, stopping at a refusal: the volumes before it stay marked and the receipt
+            // names exactly those, so Undo puts back what was written and nothing else.
+            foreach (var volume in offer.Volumes)
             {
-                break;
+                if (!(await WriteVolumeAsync(volume.VolumeId, ReadStatus.Read, cancellationToken)).Written)
+                {
+                    break;
+                }
+
+                marked.Add(new FinishedVolume(volume.VolumeId, volume.Number, offer.SeriesTitle, volume.ReadStatus));
             }
 
-            marked.Add(new FinishedVolume(volume.VolumeId, volume.Number, offer.SeriesTitle, volume.ReadStatus));
-        }
-
-        if (marked.Count > 0)
-        {
-            Offer = null;
-            LastFinished = new FinishedVolumes(marked, offer.SeriesTitle);
-            await libraryState.LoadAsync(cancellationToken);
-        }
-
-        Changed?.Invoke();
+            if (marked.Count > 0)
+            {
+                Offer = null;
+                LastFinished = new FinishedVolumes(marked, offer.SeriesTitle);
+                await libraryState.LoadAsync(cancellationToken);
+            }
+        });
     }
 
     /// <summary>Puts the last finished volume, chapter or offered volumes back the way they were.</summary>
@@ -101,22 +103,23 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
             return;
         }
 
-        var written = finished switch
+        await RunAsync(async () =>
         {
-            FinishedVolume volume => (await WriteVolumeAsync(volume.VolumeId, volume.PreviousStatus, cancellationToken)).Written,
-            FinishedChapter chapter => (await WriteChapterAsync(chapter.SeriesId, chapter.PreviousChapter, cancellationToken)).Written,
-            FinishedVolumes volumes => await RestoreAsync(volumes, cancellationToken),
-            _ => false,
-        };
+            var written = finished switch
+            {
+                FinishedVolume volume => (await WriteVolumeAsync(volume.VolumeId, volume.PreviousStatus, cancellationToken)).Written,
+                FinishedChapter chapter => (await WriteChapterAsync(chapter.SeriesId, chapter.PreviousChapter, cancellationToken)).Written,
+                FinishedVolumes volumes => await RestoreAsync(volumes, cancellationToken),
+                _ => false,
+            };
 
-        if (written)
-        {
-            LastFinished = null;
-            Offer = null;
-            await libraryState.LoadAsync(cancellationToken);
-        }
-
-        Changed?.Invoke();
+            if (written)
+            {
+                LastFinished = null;
+                Offer = null;
+                await libraryState.LoadAsync(cancellationToken);
+            }
+        });
     }
 
     /// <summary>Withdraws the undo offer: the toast timed out or was dismissed.</summary>
@@ -131,6 +134,35 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
         Offer = null;
         Message = null;
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// The busy flag around a whole operation: the writes and the library re-read after them.
+    /// </summary>
+    // Not around each write alone. The re-read raises Changed before it fetches, so a flag
+    // cleared after the PUT put the button back while the card still showed the old next
+    // chapter, and a second tap wrote the same chapter again instead of the one after it.
+    private async Task RunAsync(Func<Task> operation)
+    {
+        // Two taps can both arrive before the first one's disabled button is rendered.
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Message = null;
+        Changed?.Invoke();
+
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            IsBusy = false;
+            Changed?.Invoke();
+        }
     }
 
     private async Task<bool> RestoreAsync(FinishedVolumes finished, CancellationToken cancellationToken)
@@ -157,10 +189,6 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
 
     private async Task<WriteAnswer> PutAsync<TRequest>(string uri, TRequest request, CancellationToken cancellationToken)
     {
-        IsBusy = true;
-        Message = null;
-        Changed?.Invoke();
-
         try
         {
             using var response = await httpClient.PutAsJsonAsync(uri, request, cancellationToken);
@@ -179,10 +207,6 @@ public sealed class FinishReadingState(HttpClient httpClient, LibraryState libra
             // Rendering the failure is handling it; the shelf is unchanged.
             Message = "Could not reach the API. Nothing was changed.";
             return WriteAnswer.Failed;
-        }
-        finally
-        {
-            IsBusy = false;
         }
     }
 

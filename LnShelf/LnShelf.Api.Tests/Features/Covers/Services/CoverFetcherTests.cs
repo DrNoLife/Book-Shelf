@@ -68,11 +68,48 @@ public sealed class CoverFetcherTests
             Arg.Any<string>(), Arg.Any<ReadOnlyMemory<byte>>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task EnsureCachedAsync_HeadersArriveButTheBodyStalls_GivesUpAtTheDeadlineAndReturnsNull()
+    {
+        var store = Substitute.For<ICoverStore>();
+        var fetcher = CreateFetcher(store, new StallingContent(), fetchTimeout: TimeSpan.FromMilliseconds(200));
+
+        // Bounded here too, so a regression fails the test instead of hanging the test run the
+        // way it hung the sync: nothing but the fetcher's own deadline ends the stalled read.
+        var key = await fetcher
+            .EnsureCachedAsync(ObjectKey, SourceUri, "a stalled cover", CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        // A failed fetch like any other, not a cancellation of the caller's work.
+        key.ShouldBeNull();
+        await store.DidNotReceive().SaveAsync(
+            Arg.Any<string>(), Arg.Any<ReadOnlyMemory<byte>>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EnsureCachedAsync_TheCallerCancelsDuringAStalledBody_StillThrows()
+    {
+        var store = Substitute.For<ICoverStore>();
+        var fetcher = CreateFetcher(store, new StallingContent(), fetchTimeout: TimeSpan.FromMinutes(1));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        // The deadline is linked to the caller's token, not a replacement for it: a run that is
+        // stopping must stop, not log a cover warning and carry on.
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => fetcher
+                .EnsureCachedAsync(ObjectKey, SourceUri, "a stalled cover", cancellation.Token)
+                .WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
     private const int MaximumBytes = 64 * 1024;
 
-    private static CoverFetcher CreateFetcher(ICoverStore store, HttpContent content)
+    private static CoverFetcher CreateFetcher(ICoverStore store, HttpContent content, TimeSpan? fetchTimeout = null)
     {
-        var options = Options.Create(new CoverImageOptions { MaximumUploadBytes = MaximumBytes });
+        var options = Options.Create(new CoverImageOptions
+        {
+            MaximumUploadBytes = MaximumBytes,
+            FetchTimeout = fetchTimeout ?? TimeSpan.FromSeconds(20),
+        });
 
         return new CoverFetcher(
             store,
@@ -105,6 +142,65 @@ public sealed class CoverFetcherTests
             HttpRequestMessage request,
             CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+    }
+
+    /// <summary>
+    /// An image response whose headers arrived and whose body never does: every read waits
+    /// until it is cancelled, as a socket on a silent CDN connection does.
+    /// </summary>
+    private sealed class StallingContent : HttpContent
+    {
+        public StallingContent() => Headers.ContentType = new MediaTypeHeaderValue("image/png");
+
+        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new StallingStream());
+
+        protected override Task<Stream> CreateContentReadStreamAsync() =>
+            CreateContentReadStreamAsync(CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            Task.Delay(Timeout.InfiniteTimeSpan);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
+
+    private sealed class StallingStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return 0;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>A body that declares no length, as a chunked response does.</summary>

@@ -97,6 +97,29 @@ public sealed class CommunityCoverCommandService(
         Upsert(existing, userId, series, volume, objectKey, contentHash);
     }
 
+    public async Task RefreshSeriesIdsAsync(Series series, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+
+        var userId = currentUser.Id;
+
+        // Loaded and changed rather than ExecuteUpdate, so the ids land in the same save as the
+        // link (feature-spec §4.3). The volume ids come through the owner-filtered Volumes set.
+        var published = await dbContext.CommunityCovers
+            .Where(cover => cover.UploaderUserId == userId
+                && dbContext.Volumes
+                    .Where(volume => volume.SeriesId == series.Id)
+                    .Select(volume => volume.Id)
+                    .Contains(cover.SourceVolumeId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var cover in published)
+        {
+            cover.AniListId = series.AniListId;
+            cover.MangaUpdatesId = series.MangaUpdatesId;
+        }
+    }
+
     public async Task HideAsync(string contentHash, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(contentHash);

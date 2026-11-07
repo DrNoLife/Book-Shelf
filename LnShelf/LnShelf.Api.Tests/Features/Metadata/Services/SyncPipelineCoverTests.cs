@@ -85,6 +85,28 @@ public sealed class SyncPipelineCoverTests
         ShouldEachShowTheirOwnCover(host, await host.LoadAsync(series.Id));
     }
 
+    [Fact]
+    public async Task RunAsync_ASeriesWhoseCoverFailedToCacheWhenAdded_GetsItFromOneSync()
+    {
+        await using var host = Host();
+
+        // Added through the MangaUpdates fallback while the store was down: linked, but with no
+        // series cover and no AniList id. Before the heal, no later sync ever asked again.
+        var series = SoloLeveling(volume => { });
+        series.AniListId = null;
+        series.CoverObjectKey = null;
+        await host.SeedAsync(series);
+
+        var run = await host.SyncAsync();
+
+        var saved = await host.LoadAsync(series.Id);
+        run.Failures.ShouldBe(0);
+        host.UnexpectedRequests.ShouldBeEmpty();
+        saved.CoverObjectKey.ShouldBe(CoverObjectKey.ForSeriesSource(
+            MetadataSourceName.MangaUpdates, MangaUpdatesFixtures.SoloLevelingSeriesId, ".jpg"));
+        host.StoreHolds(saved.CoverObjectKey!).ShouldBeTrue();
+    }
+
     /// <summary>
     /// What a tile shows: the projection's key, which must be the volume's own and on disk.
     /// </summary>
