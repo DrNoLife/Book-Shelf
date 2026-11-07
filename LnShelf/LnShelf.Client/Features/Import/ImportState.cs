@@ -107,6 +107,9 @@ public sealed class ImportState(HttpClient httpClient)
 
         IsMatching = true;
 
+        // The last commit's summary belongs to the batch it committed, not to this one.
+        CommitResult = null;
+
         // In a finally: anything RunAsync does not handle would otherwise leave the page
         // saying "matching" for good.
         try
@@ -141,8 +144,13 @@ public sealed class ImportState(HttpClient httpClient)
         }
     }
 
-    public Task OpenBatchAsync(Guid batchId, CancellationToken cancellationToken = default) =>
-        RunAsync(() => OpenBatchInternalAsync(batchId, cancellationToken));
+    // Cleared here and not in OpenBatchInternalAsync: CommitAsync re-reads its own batch
+    // through that one right after setting the summary it should keep showing.
+    public Task OpenBatchAsync(Guid batchId, CancellationToken cancellationToken = default)
+    {
+        CommitResult = null;
+        return RunAsync(() => OpenBatchInternalAsync(batchId, cancellationToken));
+    }
 
     /// <summary>One decision about one series: this candidate, or skip it.</summary>
     public Task ResolveAsync(

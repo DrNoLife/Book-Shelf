@@ -7,14 +7,16 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
 {
     private const string SeriesTitle = "The Saga of Tanya the Evil";
 
+    // Both the single-volume and the select-mode write end in it.
+    private const string ReadDatePath = "/read-date";
+
     [Fact]
     public async Task ReadVolume_ChangeItsReadDate_NewDateShowsAfterReload()
     {
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await EnterReadDateAsync("2024-03-14");
-        await WaitForSaveAsync();
+        await SaveReadDateAsync("2024-03-14");
         await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
 
         await Page.ReloadAsync();
@@ -30,10 +32,10 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await EnterReadDateAsync("2024-03-14");
-        await WaitForSaveAsync();
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Clear date" }).ClickAsync();
-        await WaitForSaveAsync();
+        await SaveReadDateAsync("2024-03-14");
+        await Page.RunAndWaitForSaveAsync(
+            () => Page.GetByRole(AriaRole.Button, new() { Name = "Clear date" }).ClickAsync(),
+            ReadDatePath);
 
         await Page.ReloadAsync();
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
@@ -63,13 +65,12 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await EnterReadDateAsync("2024-03-14");
-        await WaitForSaveAsync();
+        await SaveReadDateAsync("2024-03-14");
 
+        // No save is expected here, so there is no PUT to wait for; the input is the evidence.
         await ReadDateInput().FocusAsync();
         await Page.Keyboard.PressAsync("Backspace");
         await ReadDateInput().BlurAsync();
-        await WaitForSaveAsync();
 
         await Assertions.Expect(ReadDateInput()).ToHaveValueAsync("2024-03-14");
 
@@ -94,8 +95,7 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await Assertions.Expect(ReadDateInput()).ToBeFocusedAsync();
         await Assertions.Expect(Page.GetByRole(AriaRole.Alert)).ToHaveCountAsync(0);
 
-        await Page.Keyboard.PressAsync("Enter");
-        await WaitForSaveAsync();
+        await Page.RunAndWaitForSaveAsync(() => Page.Keyboard.PressAsync("Enter"), ReadDatePath);
 
         await Page.ReloadAsync();
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
@@ -112,8 +112,7 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await OpenSeriesAsync();
 
         await Volume(1).ClickAsync();
-        await EnterReadDateAsync("2024-03-14");
-        await WaitForSaveAsync();
+        await SaveReadDateAsync("2024-03-14");
 
         var future = DateOnly.FromDateTime(DateTime.Now).AddYears(1).ToString("yyyy-MM-dd");
         await EnterReadDateAsync(future);
@@ -134,8 +133,9 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await Page.GetByRole(AriaRole.Button, new() { Name = "Set read date…" }).ClickAsync();
 
         await Page.GetByLabel("Read date for the selected volumes").FillAsync("2023-11-05");
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Apply", Exact = true }).ClickAsync();
-        await WaitForSaveAsync();
+        await Page.RunAndWaitForSaveAsync(
+            () => Page.GetByRole(AriaRole.Button, new() { Name = "Apply", Exact = true }).ClickAsync(),
+            ReadDatePath);
 
         await Page.ReloadAsync();
         await Assertions.Expect(Volume(1)).ToBeVisibleAsync();
@@ -176,6 +176,9 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
         await ReadDateInput().PressAsync("Enter");
     }
 
+    private Task SaveReadDateAsync(string date) =>
+        Page.RunAndWaitForSaveAsync(() => EnterReadDateAsync(date), ReadDatePath);
+
     // The open volume's date input; the select-mode panel has its own, with a longer name.
     private ILocator ReadDateInput() => Page.GetByLabel("Read date", new() { Exact = true });
 
@@ -184,8 +187,4 @@ public sealed class ReadDateTests(EndToEndFixture fixture) : JourneyTest(fixture
             .GetByRole(AriaRole.Button, new() { Name = name, Exact = true });
 
     private ILocator Volume(int number) => Page.Locator($"button[data-volume='{number}']");
-
-    // A write is done when nothing on the page is marked busy any more.
-    private Task WaitForSaveAsync() =>
-        Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 }
