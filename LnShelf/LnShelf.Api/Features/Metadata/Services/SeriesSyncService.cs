@@ -71,10 +71,30 @@ public sealed class SeriesSyncService(
         // about the volumes it failed on, because the catalogue grows — which makes an
         // uncapped run able to spend an hour against somebody else's donated API. The
         // caller sizes it: a run's own, or the night's, shared across users.
-        foreach (var candidate in series)
+        //
+        // Started at a different series each day, for fairness rather than randomness: in a
+        // fixed title order, the series early in the alphabet spent the allowance first every
+        // night (permanent gaps are re-asked nightly), and the ones late in it could go
+        // without forever. Rotated by the day, each series gets first claim once every
+        // series.Count nights, with no column to store. On-demand refreshes are one series
+        // and are not affected.
+        foreach (var candidate in RotatedForToday(series))
         {
             await RefreshOneAsync(candidate, run, linkedExternalIds, budget, cancellationToken);
         }
+    }
+
+    /// <summary>The sweep order, title order started at today's offset and wrapped round.</summary>
+    private List<Series> RotatedForToday(List<Series> series)
+    {
+        if (series.Count is 0)
+        {
+            return series;
+        }
+
+        var offset = timeProvider.Today().DayNumber % series.Count;
+
+        return [.. series.Skip(offset), .. series.Take(offset)];
     }
 
     public async Task<SyncRun?> RunForSeriesAsync(Guid seriesId, CancellationToken cancellationToken)

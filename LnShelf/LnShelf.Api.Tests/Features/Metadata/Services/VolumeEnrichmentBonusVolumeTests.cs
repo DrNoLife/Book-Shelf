@@ -63,7 +63,7 @@ public sealed class VolumeEnrichmentBonusVolumeTests
             .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 0, CancellationToken.None);
 
         series.Volumes.ShouldNotContain(volume => volume.Number == 7.5m);
-        await catalogue.DidNotReceiveWithAnyArgs().GetVolumesAsync(default!, default, default);
+        await catalogue.DidNotReceiveWithAnyArgs().GetVolumesAsync(default!, default, default!, default);
     }
 
     [Fact]
@@ -108,6 +108,74 @@ public sealed class VolumeEnrichmentBonusVolumeTests
 
         series.Volumes.ShouldNotContain(volume => volume.Number == 7.5m);
     }
+
+    [Fact]
+    public async Task EnrichAsync_TheOneExtraAlreadyTrackedAndTheStoreListingAnother_CreatesNothing()
+    {
+        // "9 Volumes + 1 Extra" with Vol. 7.5 on the shelf has no place left, however many
+        // other "Vol. N.5" rows the store carries (a short-story collection, a mislabelled record).
+        var series = Series([.. Enumerable.Range(1, 9).Select(number => Volume(number)), BonusVolume(7.5m)]);
+        series.ReleaseSourceVolumeCount = 9;
+        var run = Run();
+
+        await CreateService(Catalogue(
+                Record("Vol. 3.5 (light novel)", new DateOnly(2019, 6, 1), "second"),
+                Record("Vol. 7.5 (light novel)", new DateOnly(2022, 1, 11), "bonus")))
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 1, CancellationToken.None);
+
+        series.Volumes.ShouldNotContain(volume => volume.Number == 3.5m);
+        series.Volumes.Count.ShouldBe(10);
+        run.NewVolumes.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_TwoUntrackedBonusVolumesUnderOneExtra_CreatesOnlyTheLowest()
+    {
+        var series = Series(Enumerable.Range(1, 9).Select(number => Volume(number)).ToArray());
+        series.ReleaseSourceVolumeCount = 9;
+        var run = Run();
+
+        await CreateService(Catalogue(
+                Record("Vol. 7 (light novel)", new DateOnly(2021, 4, 27), "real"),
+                Record("Vol. 7.5 (light novel)", new DateOnly(2022, 1, 11), "bonus"),
+                Record("Vol. 3.5 (light novel)", new DateOnly(2019, 6, 1), "second")))
+            .EnrichAsync(series, run, Today, Budget(10), expectedBonusVolumes: 1, CancellationToken.None);
+
+        series.Volumes.Where(volume => volume.Number.IsBonusVolume)
+            .Select(volume => volume.Number)
+            .ShouldBe([3.5m]);
+        run.NewVolumes.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_UnderAVolumeCountChoice_CreatesNoBonusVolume()
+    {
+        // The user settled the count by hand; the store does not get to add to it.
+        var series = Series(Enumerable.Range(1, 9).Select(number => Volume(number)).ToArray());
+        series.ReleaseSourceVolumeCount = 9;
+        series.SourceChoices.Add(new SourceChoice
+        {
+            Id = Guid.CreateVersion7(),
+            SeriesId = series.Id,
+            Field = SyncDiscrepancyField.VolumeCount,
+            Source = MetadataSourceName.AniList,
+            ChosenAt = DateTimeOffset.UnixEpoch,
+        });
+
+        await CreateService(Catalogue(
+                Record("Vol. 7 (light novel)", new DateOnly(2021, 4, 27), "real"),
+                Record("Vol. 7.5 (light novel)", new DateOnly(2022, 1, 11), "bonus")))
+            .EnrichAsync(series, Run(), Today, Budget(10), expectedBonusVolumes: 1, CancellationToken.None);
+
+        series.Volumes.ShouldNotContain(volume => volume.Number == 7.5m);
+    }
+
+    private static Volume BonusVolume(decimal number) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        Number = number,
+        IsReleased = true,
+    };
 
     private static Volume Enriched(Volume volume)
     {

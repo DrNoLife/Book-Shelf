@@ -7,19 +7,34 @@ namespace LnShelf.Api.Features.Metadata.Services;
 // One of the two places sync creates a volume from a store rather than from a count (the
 // other is WholeExtraVolumeWriter), and the exception is narrow on purpose (CLAUDE.md — conflicting sources): only a fractional
 // number, only one the matcher confirmed as this series and medium, only within the main
-// volumes already tracked. The release source still owns how many main volumes there are.
+// volumes already tracked. The release source still owns how many main volumes there are,
+// and it also owns how many extras there are, which bounds this writer the same way it
+// bounds WholeExtraVolumeWriter:
+// - only up to the extras the release source counts, the bonus and whole extras already
+//   tracked included, so "9 Volumes + 1 Extra" with Vol. 7.5 on the shelf grants nothing
+//   more, however many other "Vol. N.5" rows the store lists;
+// - never under a volume-count source choice, where the user has settled the count by hand.
+// Lowest numbers first when the store lists more than there are places for: no rule says
+// which one is the real extra, and a stable choice beats a different one every night.
 public sealed class BonusVolumeWriter(ILogger<BonusVolumeWriter> logger)
 {
+    /// <param name="extraCount">The extras the release source counts beside its main volumes.</param>
     /// <returns>The volumes created, so the caller can write their facts in the same pass.</returns>
-    public IReadOnlyList<Volume> Create(Series series, CatalogueMatch match, SyncRun run)
+    public IReadOnlyList<Volume> Create(Series series, CatalogueMatch match, int extraCount, SyncRun run)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(run);
 
+        if (extraCount <= 0 || series.ChoiceFor(SyncDiscrepancyField.VolumeCount) is not null)
+        {
+            return [];
+        }
+
+        var placesLeft = Math.Max(extraCount - ExtraVolumes.CountTracked(series, extraCount), 0);
         var created = new List<Volume>();
 
-        foreach (var number in match.BonusVolumes.Keys.Order())
+        foreach (var number in match.BonusVolumes.Keys.Order().Take(placesLeft))
         {
             var volume = new Volume
             {

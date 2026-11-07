@@ -46,7 +46,14 @@ public sealed class SyncDiscrepancyConfiguration : IEntityTypeConfiguration<Sync
         // Deliberately no foreign key to Series: a discrepancy outlives the series
         // it was recorded against, and cascading it away with a deleted series would
         // erase the record of why the shelf looked the way it did.
-        builder.HasIndex(discrepancy => discrepancy.SeriesId);
+        //
+        // The whole key a disagreement is looked up by, not the series alone: the history is
+        // kept, and a standing disagreement is recorded again on every run, so a series'
+        // rows grow by the night. SyncRunQueries.NewestDisagreementAsync asks for one
+        // (series, field, volume) on every series-page load, and on SeriesId alone that was
+        // a scan of everything the series ever disagreed about. SeriesId still leads, so a
+        // query by series alone uses this index as it used the old one.
+        builder.HasIndex(discrepancy => new { discrepancy.SeriesId, discrepancy.Field, discrepancy.VolumeNumber });
 
         builder.HasMany(discrepancy => discrepancy.Values)
             .WithOne()

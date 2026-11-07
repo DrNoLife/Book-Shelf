@@ -200,7 +200,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         // null-means-unknown column alone would have this shelf re-asking the store about
         // every one of their volumes for as long as it exists.
         await catalogueSource.DidNotReceive().GetVolumesAsync(
-            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -339,8 +339,13 @@ public sealed class VolumeEnrichmentCatalogueTests
 
         var catalogueSource = Substitute.For<IVolumeCatalogueSource>();
         catalogueSource.SourceName.Returns("AppleBooks");
-        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>())
-            .Returns<Task<IReadOnlyList<CatalogueVolume>>>(_ => throw new HttpRequestException("Apple is down"));
+        catalogueSource.GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<CatalogueVolume>>>(call =>
+            {
+                // Sent, and failed: the real source has spent the request by then.
+                VolumeEnrichmentTestContext.SpendOne(call);
+                throw new HttpRequestException("Apple is down");
+            });
 
         var enrichmentSource = EnrichmentSource(new VolumeEnrichment
         {
@@ -445,7 +450,7 @@ public sealed class VolumeEnrichmentCatalogueTests
         // reason enough to make it — and none missing anything is reason not to.
         budget.Catalogue.Remaining.ShouldBe(10);
         await catalogueSource.DidNotReceive().GetVolumesAsync(
-            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

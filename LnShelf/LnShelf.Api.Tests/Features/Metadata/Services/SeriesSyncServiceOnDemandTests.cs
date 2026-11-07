@@ -137,7 +137,7 @@ public sealed class SeriesSyncServiceOnDemandTests
             .RunForSeriesAsync(seriesId, CancellationToken.None);
 
         await catalogueSource.Received(3)
-            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<CancellationToken>());
+            .GetVolumesAsync(Arg.Any<string>(), Arg.Any<Format>(), Arg.Any<LookupBudget>(), Arg.Any<CancellationToken>());
     }
 
     private const int OnDemandBudget = 8;
