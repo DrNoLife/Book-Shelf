@@ -170,6 +170,7 @@ public sealed class BookTitleParserTests
         { "Overlord, Vol. 3 — The Bloody Valkyrie", "Overlord", 3, "The Bloody Valkyrie" },
         { "Overlord, Vol. 10.5", "Overlord", null, null },
         { "Overlord, Vol. 10.5: The Side Stories", "Overlord", null, null },
+        { "Overlord, Vol. 10.5 - The Side Stories", "Overlord", null, null },
         { "Overlord, Vols. 1-2", "Overlord", null, null },
         { "Overlord, Volumes 1–3 (light novel)", "Overlord", null, null },
 
@@ -215,6 +216,23 @@ public sealed class BookTitleParserTests
 
         parsed.SeriesTitle.ShouldBe(rawTitle);
         parsed.VolumeNumber.ShouldBeNull();
+    }
+
+    // A bonus or omnibus volume has to be recognisable from the raw title alone: it is all
+    // a staged row keeps, and Goodreads' binding marker is still on it.
+    [Theory]
+    [InlineData("Overlord, Vol. 10.5", true)]
+    [InlineData("Overlord, Vol. 10.5 - The Side Stories", true)]
+    [InlineData("Overlord, Vols. 1-2", true)]
+    [InlineData("Overlord, Volumes 1–3 (light novel)", true)]
+    [InlineData("Overlord, Vol. 10.5 (paperback)", true)]
+    [InlineData("Overlord, Vol. ３", false)]
+    [InlineData("Overlord, Vol. 3 - 100 Days", false)]
+    [InlineData("Overlord", false)]
+    [InlineData("Catch 22", false)]
+    public void HasUnnumberableVolume_RawTitle_IsTrueOnlyForABonusOrOmnibusVolume(string rawTitle, bool expected)
+    {
+        BookTitleParser.HasUnnumberableVolume(rawTitle).ShouldBe(expected);
     }
 
     [Fact]

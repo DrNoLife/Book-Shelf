@@ -12,9 +12,7 @@ public static partial class BookTitleParser
 {
     public static ParsedBookTitle Parse(string? rawTitle)
     {
-        // NFKC folds the full-width digits Japanese editions are often written with
-        // ("転生したらスライムだった件１３") into ASCII, so they parse as the volume they are.
-        var title = StripTrailingBracket(rawTitle?.Normalize(NormalizationForm.FormKC).Trim() ?? string.Empty).Trim();
+        var title = Normalize(rawTitle);
 
         // "Overlord, Vol. 1 (light novel)" and "Mushoku Tensei (Light Novel) Vol. 3": the
         // publisher's format tag is not part of the series' name, and wherever it sits it
@@ -83,6 +81,30 @@ public static partial class BookTitleParser
         return new ParsedBookTitle { SeriesTitle = title };
     }
 
+    /// <summary>
+    /// Whether the title names a bonus or omnibus volume ("Vol. 10.5", "Vols. 1-2"): one
+    /// that belongs to a series but to no whole volume of it.
+    /// </summary>
+    // Parse gives such a title the clean series name and no number, and a missing number
+    // otherwise means "the series in one volume". Read from the raw title, so a staged
+    // row can be checked without a stored flag. Every parenthetical goes first, not only
+    // the format tags Parse knows: the raw title is kept verbatim, and Goodreads' binding
+    // markers ("(paperback)") are only stripped by its mapper before parsing. A
+    // parenthetical never supplies a volume marker, so dropping it cannot invent one.
+    public static bool HasUnnumberableVolume(string? rawTitle)
+    {
+        var title = AnyParentheticalPattern().Replace(Normalize(rawTitle), string.Empty).Trim();
+
+        return UnnumberableVolumePattern().IsMatch(title);
+    }
+
+    /// <summary>
+    /// NFKC folds the full-width digits Japanese editions are often written with
+    /// ("転生したらスライムだった件１３") into ASCII, so they parse as the volume they are.
+    /// </summary>
+    private static string Normalize(string? rawTitle) =>
+        StripTrailingBracket(rawTitle?.Normalize(NormalizationForm.FormKC).Trim() ?? string.Empty).Trim();
+
     private static ParsedBookTitle FromMatch(Match match) => new()
     {
         SeriesTitle = match.Groups["series"].Value.Trim(),
@@ -114,13 +136,16 @@ public static partial class BookTitleParser
     [GeneratedRegex(@"\s*\((?:light\s+novel|novel|manga)\)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex FormatTagPattern();
 
-    // A decimal ("Vol. 10.5") or a range ("Vols. 1-2", "Volumes 1–3"), optionally followed
-    // by a colon subtitle. Only a range that ends there counts, so "Vol. 3 - 100 Days" is
-    // still volume 3 with a subtitle.
+    // A decimal ("Vol. 10.5") or a range ("Vols. 1-2", "Volumes 1–3"). A decimal may take
+    // either subtitle separator VolumeMarkerPattern accepts; a range only a colon, so
+    // "Vol. 3 - 100 Days" is still volume 3 with a subtitle, not volumes 3 to 100.
     [GeneratedRegex(
-        @"^(?<series>.+?)(?:,\s*|\s+)Vol(?:ume)?s?\.?\s*[0-9]{1,3}(?:\.[0-9]+|\s*[-–]\s*[0-9]{1,3})(?:\s*:\s*.+)?$",
+        @"^(?<series>.+?)(?:,\s*|\s+)Vol(?:ume)?s?\.?\s*[0-9]{1,3}(?:\.[0-9]+(?:(?:\s*:|\s+[-–—])\s*.+)?|\s*[-–]\s*[0-9]{1,3}(?:\s*:\s*.+)?)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex UnnumberableVolumePattern();
+
+    [GeneratedRegex(@"\s*\([^)]*\)", RegexOptions.CultureInvariant)]
+    private static partial Regex AnyParentheticalPattern();
 
     // Vol after a comma or a space, never inside a word: "Revolution 3" is not volume 3.
     // The subtitle follows a colon or a spaced dash ("Vol. 3 - The Bloody Valkyrie"); the
