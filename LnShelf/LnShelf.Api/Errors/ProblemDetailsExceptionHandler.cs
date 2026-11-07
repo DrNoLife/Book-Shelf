@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace LnShelf.Api.Errors;
@@ -52,9 +53,48 @@ public sealed class ProblemDetailsExceptionHandler(
                     ? "The upload is larger than the server accepts."
                     : "The request could not be read."),
 
+            // A source throttling this app after the rate-limit handler has already waited and
+            // retried once, or the handler's own queue being full. Neither is a defect, and both
+            // pass with time, so they are a 503 and say "wait" (audit 2026-10-09, #20). The
+            // titles stay generic: covers and avatars throw the same exceptions as the
+            // metadata sources do.
+            HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests } => (
+                StatusCodes.Status503ServiceUnavailable,
+                "A source is busy",
+                "It is asking this app to slow down. Try again in a minute."),
+
+            // The rate-limit handler's per-attempt deadline, and an exchange that never
+            // happened (DNS, a refused connection) or an upstream 5xx: the same "having a bad
+            // minute" ReleaseSourceUnavailable already answers with a 503, on every other
+            // request path too. Any other 4xx stays a 500 below: a 400 or 401 from a source
+            // means this app asked wrongly.
+            TimeoutException
+                or HttpRequestException { StatusCode: null }
+                or HttpRequestException { StatusCode: >= HttpStatusCode.InternalServerError } => (
+                StatusCodes.Status503ServiceUnavailable,
+                "A source did not answer",
+                "It did not answer just now. Try again in a moment."),
+
             // The message could be anything, so it stays in the log.
             _ => (StatusCodes.Status500InternalServerError, "Unexpected failure", null),
         };
+    }
+
+    /// <summary>
+    /// How long the caller should wait before asking again, when that is known; null otherwise.
+    /// </summary>
+    // Only throttling has a known answer. Every source's budget is a one-minute sliding window
+    // (SourceRateLimiter), so a minute is when permits are free again; the upstream's own
+    // Retry-After is gone by the time the exception gets here, and the handler has already
+    // waited it out once. A timeout or an outage says nothing about when it ends, so it gets
+    // no header rather than an invented one.
+    public static TimeSpan? RetryAfter(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        return exception is HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests }
+            ? TimeSpan.FromMinutes(1)
+            : null;
     }
 
     public async ValueTask<bool> TryHandleAsync(
@@ -67,6 +107,12 @@ public sealed class ProblemDetailsExceptionHandler(
         Log(httpContext, exception, statusCode);
 
         httpContext.Response.StatusCode = statusCode;
+
+        if (RetryAfter(exception) is { } retryAfter)
+        {
+            httpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {

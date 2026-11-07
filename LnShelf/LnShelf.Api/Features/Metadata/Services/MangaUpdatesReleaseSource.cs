@@ -4,6 +4,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class MangaUpdatesReleaseSource(
     MangaUpdatesClient client,
     MangaUpdatesSearchCache searchCache,
+    IOptions<MangaUpdatesOptions> options,
     ILogger<MangaUpdatesReleaseSource> logger) : IReleaseSource
 {
     public string SourceName => "MangaUpdates";
@@ -23,7 +24,9 @@ public sealed class MangaUpdatesReleaseSource(
         // the same endpoint the same question. Only the mapping below is this class's own.
         var response = await searchCache.SearchAsync(trimmedTitle, format, cancellationToken);
 
-        var records = response.Results ?? [];
+        // The shared page is the longer of the two lists (MangaUpdatesSearchCache); the matcher
+        // fetches every candidate it is handed, so it takes only its own number of them.
+        var records = (response.Results ?? []).Take(options.Value.SearchResultLimit).ToList();
         var candidates = new List<ReleaseSeriesCandidate>(records.Count);
 
         foreach (var result in records)

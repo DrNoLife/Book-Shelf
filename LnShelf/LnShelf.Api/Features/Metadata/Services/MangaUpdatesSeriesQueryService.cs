@@ -7,6 +7,7 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class MangaUpdatesSeriesQueryService(
     MangaUpdatesClient client,
     MangaUpdatesSearchCache searchCache,
+    IOptions<MangaUpdatesOptions> options,
     ILogger<MangaUpdatesSeriesQueryService> logger) : IMangaUpdatesSeriesQueryService
 {
     /// <summary>Same floor as the AniList search, for the same reason.</summary>
@@ -36,7 +37,7 @@ public sealed class MangaUpdatesSeriesQueryService(
         // class's own.
         var response = await searchCache.SearchAsync(trimmedQuery, format, cancellationToken);
 
-        var records = response.Results ?? [];
+        var records = (response.Results ?? []).Take(options.Value.FallbackSearchResultLimit).ToList();
         var results = new List<SeriesSearchResult>(records.Count);
 
         foreach (var entry in records)

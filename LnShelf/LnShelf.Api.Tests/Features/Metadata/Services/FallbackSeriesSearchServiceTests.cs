@@ -116,8 +116,10 @@ public sealed class FallbackSeriesSearchServiceTests
         new HttpRequestException(
             "Too many requests", null, HttpStatusCode.TooManyRequests),
 
-        // Our own limiter refusing a permit — machinery, not an outage.
-        new InvalidOperationException("The AniList request queue is full; no permit could be acquired."),
+        // Our own limiter refusing a permit — machinery, not an outage. Thrown as the 429 it
+        // amounts to, so it shares the throttling rule above.
+        new HttpRequestException(
+            "The AniList request queue is full; no permit could be acquired.", null, HttpStatusCode.TooManyRequests),
 
         // A GraphQL-level rejection on a 200: the query is wrong, which is this app's defect.
         new InvalidOperationException("AniList rejected SeriesSearch: Unknown field 'volumez'"),

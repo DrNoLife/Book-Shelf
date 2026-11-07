@@ -1,3 +1,4 @@
+using System.Net;
 using LnShelf.Api.Tests.Data.Fixtures;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -104,6 +105,98 @@ public sealed class ProblemDetailsExceptionHandlerTests
         detail.ShouldBeNull();
     }
 
+    /// <summary>
+    /// An upstream throttling this app or not answering in time, on a request somebody is
+    /// waiting on (audit 2026-10-09, #20).
+    /// </summary>
+    public static TheoryData<Exception> UpstreamHavingABadMinute =>
+    [
+        // AniList's second 429, after the rate-limit handler already waited and retried once.
+        new HttpRequestException("Too many requests", null, HttpStatusCode.TooManyRequests),
+
+        // The rate-limit handler's own queue being full, which it throws as the same 429.
+        new HttpRequestException("The AniList request queue is full", null, HttpStatusCode.TooManyRequests),
+
+        // The handler's per-attempt deadline: adding a series while AniList hangs.
+        new TimeoutException("AniList did not answer within 20s."),
+
+        // MangaUpdates answering 5xx on the add flow, which no service translates.
+        new HttpRequestException("Bad gateway", null, HttpStatusCode.BadGateway),
+
+        // No exchange at all: DNS, a refused connection.
+        new HttpRequestException("No such host is known."),
+    ];
+
+    [Theory]
+    [MemberData(nameof(UpstreamHavingABadMinute))]
+    public void Describe_AnUpstreamThrottlingOrNotAnswering_Is503AndSaysToTryAgain(Exception exception)
+    {
+        var (statusCode, title, detail) = ProblemDetailsExceptionHandler.Describe(exception);
+
+        // Not "Unexpected failure": nothing here is broken, and it passes with time.
+        statusCode.ShouldBe(503);
+        title.ShouldStartWith("A source");
+
+        // Our sentence, never the exception's: an upstream's message or a host name is not
+        // for the wire.
+        detail.ShouldNotBeNull().ShouldContain("Try again");
+        detail.ShouldNotContain(exception.Message);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public void Describe_AnyOtherUpstream4xx_StaysA500(HttpStatusCode upstreamStatus)
+    {
+        // A source refusing what this app sent is a defect here, not a bad minute there, and
+        // must not be dressed up as "try again".
+        ProblemDetailsExceptionHandler.Describe(new HttpRequestException("x", null, upstreamStatus))
+            .StatusCode.ShouldBe(500);
+    }
+
+    [Fact]
+    public void RetryAfter_Throttling_IsTheOneMinuteWindowEverySourceBudgetsIn() =>
+        ProblemDetailsExceptionHandler.RetryAfter(
+                new HttpRequestException("x", null, HttpStatusCode.TooManyRequests))
+            .ShouldBe(TimeSpan.FromMinutes(1));
+
+    [Fact]
+    public void RetryAfter_ATimeout_IsUnknownRatherThanInvented() =>
+        ProblemDetailsExceptionHandler.RetryAfter(new TimeoutException("x")).ShouldBeNull();
+
+    [Fact]
+    public async Task TryHandleAsync_Throttling_Answers503WithRetryAfterAndLogsAWarning()
+    {
+        var logger = new CapturingLogger();
+        var httpContext = FailedRequest("api/search", "/api/search");
+
+        await HandlerLoggingTo(logger).TryHandleAsync(
+            httpContext,
+            new HttpRequestException("Too many requests", null, HttpStatusCode.TooManyRequests),
+            CancellationToken.None);
+
+        httpContext.Response.StatusCode.ShouldBe(503);
+        httpContext.Response.Headers.RetryAfter.ToString().ShouldBe("60");
+
+        // A warning, not an error: worth noticing, not worth paging anyone over.
+        logger.Levels.ShouldHaveSingleItem().ShouldBe(LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_ATimeout_Answers503WithNoRetryAfter()
+    {
+        var logger = new CapturingLogger();
+        var httpContext = FailedRequest("api/series", "/api/series");
+
+        await HandlerLoggingTo(logger).TryHandleAsync(
+            httpContext, new TimeoutException("AniList did not answer within 20s."), CancellationToken.None);
+
+        httpContext.Response.StatusCode.ShouldBe(503);
+        httpContext.Response.Headers.ContainsKey("Retry-After").ShouldBeFalse();
+        logger.Levels.ShouldHaveSingleItem().ShouldBe(LogLevel.Warning);
+    }
+
     [Theory]
     [InlineData(413, "Too large")]
     [InlineData(400, "Bad request")]
@@ -182,6 +275,8 @@ public sealed class ProblemDetailsExceptionHandlerTests
     {
         public List<string> Messages { get; } = [];
 
+        public List<LogLevel> Levels { get; } = [];
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         public bool IsEnabled(LogLevel logLevel) => true;
@@ -191,7 +286,10 @@ public sealed class ProblemDetailsExceptionHandlerTests
             EventId eventId,
             TState state,
             Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
+            Func<TState, Exception?, string> formatter)
+        {
             Messages.Add(formatter(state, exception));
+            Levels.Add(logLevel);
+        }
     }
 }
