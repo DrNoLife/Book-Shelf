@@ -184,6 +184,55 @@ public sealed class ProblemDetailsExceptionHandlerTests
     }
 
     [Fact]
+    public async Task TryHandleAsync_AReleaseSourceThrottlingWrappedByItsRequestPath_SaysBusyWithRetryAfter()
+    {
+        // The release-link paths rethrow MangaUpdates' 429 (or the full request queue's) as the
+        // typed 503; the wait is still the one-minute window, and the reader hears "busy".
+        var logger = new CapturingLogger();
+        var httpContext = FailedRequest("api/series/{id}/release-links", "/api/series/1/release-links");
+        var exception = ReleaseSourceUnavailable.From(
+            "MangaUpdates", new HttpRequestException("x", null, HttpStatusCode.TooManyRequests));
+
+        await HandlerLoggingTo(logger).TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        httpContext.Response.StatusCode.ShouldBe(503);
+        httpContext.Response.Headers.RetryAfter.ToString().ShouldBe("60");
+        logger.Levels.ShouldHaveSingleItem().ShouldBe(LogLevel.Warning);
+
+        var (_, title, detail) = ProblemDetailsExceptionHandler.Describe(exception);
+        title.ShouldBe("MangaUpdates is busy");
+        detail.ShouldBe(ReleaseSourceUnavailable.AskingToSlowDown);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_AReleaseSourceOutage_HasNoRetryAfter()
+    {
+        var httpContext = FailedRequest("api/series/{id}/release-links", "/api/series/1/release-links");
+        var exception = ReleaseSourceUnavailable.From(
+            "MangaUpdates", new HttpRequestException("x", null, HttpStatusCode.BadGateway));
+
+        await HandlerLoggingTo(new CapturingLogger()).TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        httpContext.Response.StatusCode.ShouldBe(503);
+        httpContext.Response.Headers.ContainsKey("Retry-After").ShouldBeFalse();
+        ProblemDetailsExceptionHandler.Describe(exception).Detail.ShouldBe(ReleaseSourceUnavailable.DidNotAnswer);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_ADefectWrappingA429_StaysA500WithNoRetryAfter()
+    {
+        // "Retry in a minute" on a bug would be a promise nobody can keep.
+        var httpContext = FailedRequest("api/series", "/api/series");
+        var exception = new InvalidOperationException(
+            "mapping failed", new HttpRequestException("x", null, HttpStatusCode.TooManyRequests));
+
+        await HandlerLoggingTo(new CapturingLogger()).TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        httpContext.Response.StatusCode.ShouldBe(500);
+        httpContext.Response.Headers.ContainsKey("Retry-After").ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task TryHandleAsync_ATimeout_Answers503WithNoRetryAfter()
     {
         var logger = new CapturingLogger();

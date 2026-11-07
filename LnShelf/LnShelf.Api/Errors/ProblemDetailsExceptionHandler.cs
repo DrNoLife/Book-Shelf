@@ -35,6 +35,12 @@ public sealed class ProblemDetailsExceptionHandler(
                 "Changed at the same time",
                 "This was changed at the same time somewhere else. Reload and try again."),
 
+            // A request path that wraps a throttled source (release links): busy, not down.
+            MetadataSourceUnavailableException { UpstreamStatusCode: StatusCodes.Status429TooManyRequests } busy => (
+                StatusCodes.Status503ServiceUnavailable,
+                $"{busy.SourceName} is busy",
+                busy.UpstreamMessage),
+
             // The upstream's own words as the detail, rather than this app's wrapper
             // sentence: "The AniList API has been temporarily disabled due to severe
             // stability issues" is the only part a person can act on.
@@ -87,15 +93,21 @@ public sealed class ProblemDetailsExceptionHandler(
     // (SourceRateLimiter), so a minute is when permits are free again; the upstream's own
     // Retry-After is gone by the time the exception gets here, and the handler has already
     // waited it out once. A timeout or an outage says nothing about when it ends, so it gets
-    // no header rather than an invented one.
+    // no header rather than an invented one. The cause chain is walked because request paths
+    // wrap the 429 before it gets here: release links rethrow it as a
+    // MetadataSourceUnavailableException carrying the status, and the search fallback wraps
+    // MangaUpdates throttling it after AniList was already down.
     public static TimeSpan? RetryAfter(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return exception is HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests }
-            ? TimeSpan.FromMinutes(1)
-            : null;
+        return IsThrottling(exception) ? TimeSpan.FromMinutes(1) : null;
     }
+
+    private static bool IsThrottling(Exception exception) =>
+        exception is HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests }
+            or MetadataSourceUnavailableException { UpstreamStatusCode: StatusCodes.Status429TooManyRequests }
+        || (exception.InnerException is { } inner && IsThrottling(inner));
 
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -108,7 +120,9 @@ public sealed class ProblemDetailsExceptionHandler(
 
         httpContext.Response.StatusCode = statusCode;
 
-        if (RetryAfter(exception) is { } retryAfter)
+        // Only on a 503: a defect that happens to wrap a 429 is still a 500, and "retry in a
+        // minute" would be a promise about a bug.
+        if (statusCode is StatusCodes.Status503ServiceUnavailable && RetryAfter(exception) is { } retryAfter)
         {
             httpContext.Response.Headers.RetryAfter =
                 ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
