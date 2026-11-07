@@ -136,11 +136,12 @@ internal static class CommunityCoverShelf
         LnShelfDbContext dbContext,
         Guid userId,
         ICoverStore store,
-        UserLimits? userLimits = null) =>
+        UserLimits? userLimits = null,
+        ICommunityCoverCommandService? communityCommands = null) =>
         new(dbContext,
             store,
             new CoverNormalizer(Options.Create(new CoverImageOptions()), NullLogger<CoverNormalizer>.Instance),
-            Commands(dbContext, userId, store),
+            communityCommands ?? Commands(dbContext, userId, store),
             new CommunityCoverQueryService(dbContext, store, TestUsers.As(userId)),
             TimeProvider.System,
             userLimits ?? TestUsers.Limits(dbContext),

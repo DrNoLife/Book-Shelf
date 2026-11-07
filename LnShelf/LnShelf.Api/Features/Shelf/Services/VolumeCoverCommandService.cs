@@ -40,19 +40,21 @@ public sealed class VolumeCoverCommandService(
 
         var objectKey = CoverObjectKey.ForVolumeOverride(
             volume.Id, Guid.CreateVersion7(), CoverNormalizer.Extension);
-        await coverStore.SaveAsync(objectKey, normalized, CoverNormalizer.ContentType, cancellationToken);
-
         // The key lands on user state, not on the volume: it is user data, and sync
         // writes the volume but never the state (CLAUDE.md).
         var state = EnsureState(volume);
         var replacedObjectKey = state.CoverOverrideObjectKey;
         state.CoverOverrideObjectKey = objectKey;
+        var contentHash = CoverContentHash.Compute(normalized);
 
-        // Staged before the save so the shared row changes in the same write as the override.
-        await communityCoverCommand.StageForVolumeAsync(
-            series, volume, objectKey, CoverContentHash.Compute(normalized), cancellationToken);
+        await DiscardOnFailureAsync(objectKey, async () =>
+        {
+            await coverStore.SaveAsync(objectKey, normalized, CoverNormalizer.ContentType, cancellationToken);
 
-        await SaveOrDiscardAsync(objectKey, cancellationToken);
+            // Staged before the save so the shared row changes in the same write as the override.
+            await communityCoverCommand.StageForVolumeAsync(series, volume, objectKey, contentHash, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        });
 
         // Only once the new key is saved: until then the old object is still what the
         // shelf points at.
@@ -97,16 +99,17 @@ public sealed class VolumeCoverCommandService(
         // this as the same cover.
         var objectKey = CoverObjectKey.ForVolumeOverride(
             volume.Id, Guid.CreateVersion7(), CoverNormalizer.Extension);
-        await coverStore.SaveAsync(objectKey, candidate.Content, candidate.ContentType, cancellationToken);
-
         var state = EnsureState(volume);
         var replacedObjectKey = state.CoverOverrideObjectKey;
         state.CoverOverrideObjectKey = objectKey;
+        var copiedContentHash = CoverContentHash.Compute(candidate.Content);
 
-        await communityCoverCommand.StageForVolumeAsync(
-            series, volume, objectKey, CoverContentHash.Compute(candidate.Content), cancellationToken);
-
-        await SaveOrDiscardAsync(objectKey, cancellationToken);
+        await DiscardOnFailureAsync(objectKey, async () =>
+        {
+            await coverStore.SaveAsync(objectKey, candidate.Content, candidate.ContentType, cancellationToken);
+            await communityCoverCommand.StageForVolumeAsync(series, volume, objectKey, copiedContentHash, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        });
 
         await DeleteReplacedOverrideAsync(replacedObjectKey, cancellationToken);
 
@@ -147,22 +150,35 @@ public sealed class VolumeCoverCommandService(
     }
 
     /// <summary>
-    /// Saves the change that points the volume at a freshly stored object, deleting that
-    /// object again when the save fails.
+    /// Runs everything from writing a fresh override object through saving the row that
+    /// names it, deleting that object again when any step fails.
     /// </summary>
-    // The file is written before the row that names it, so a failed or cancelled save (two
-    // first uploads for one volume racing on its user-state row, a client that hung up) would
-    // otherwise leave it behind, unreferenced. The delete ignores the request's token: a
-    // cancelled request is one of the ways to get here.
-    private async Task SaveOrDiscardAsync(string objectKey, CancellationToken cancellationToken)
+    // The file is written before the row that names it, and every step in between can fail or
+    // be cancelled (staging the shared row reads the database; two first uploads race on the
+    // volume's user-state row; a client hangs up). Any of those would otherwise leave the file
+    // behind, unreferenced. The delete ignores the request's token, since a cancelled request
+    // is one of the ways to get here, and a failed delete is only logged so it never hides the
+    // exception that explains the failure; cover-orphan-sweep takes that leftover later.
+    private async Task DiscardOnFailureAsync(string objectKey, Func<Task> storeAndSave)
     {
         try
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await storeAndSave();
         }
         catch
         {
-            await coverStore.DeleteAsync(objectKey, CancellationToken.None);
+            try
+            {
+                await coverStore.DeleteAsync(objectKey, CancellationToken.None);
+            }
+            catch (Exception deleteException)
+            {
+                logger.LogWarning(
+                    deleteException,
+                    "Could not delete the cover object {ObjectKey} after its save failed; it is orphaned but unreferenced",
+                    objectKey);
+            }
+
             throw;
         }
     }

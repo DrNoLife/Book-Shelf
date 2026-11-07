@@ -340,6 +340,51 @@ public sealed class VolumeCoverCommandServiceTests
         store.Keys.ShouldBe([published.ObjectKey]);
     }
 
+    // Staging the shared row reads the database with the request's token after the file is
+    // written, so a client hanging up there must not leave the file behind either.
+    [Fact]
+    public async Task SetCoverAsync_StagingTheSharedRowIsCancelled_DeletesTheFileItJustWrote()
+    {
+        var database = CommunityCoverShelf.NewDatabase();
+        var store = new InMemoryCoverStore();
+        var volumeId = await CommunityCoverShelf.SeedVolumeAsync(database, Owner);
+
+        await using var dbContext = CommunityCoverShelf.CreateDbContext(database, Owner);
+        var act = async () => await CommunityCoverShelf.CoverCommands(dbContext, Owner, store, communityCommands: CancelledStaging())
+            .SetCoverAsync(volumeId, CommunityCoverShelf.CreatePng(400, 600), CancellationToken.None);
+
+        await act.ShouldThrowAsync<OperationCanceledException>();
+        store.Keys.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task PickCommunityAsync_StagingTheSharedRowIsCancelled_DeletesTheCopyItJustWrote()
+    {
+        var database = CommunityCoverShelf.NewDatabase();
+        var store = new InMemoryCoverStore();
+        var volumeId = await CommunityCoverShelf.SeedVolumeAsync(database, Owner);
+        var published = await CommunityCoverShelf.PublishAsync(database, Other, store, [9, 8, 7], DateTimeOffset.UtcNow);
+
+        await using var dbContext = CommunityCoverShelf.CreateDbContext(database, Owner);
+        var act = async () => await CommunityCoverShelf.CoverCommands(dbContext, Owner, store, communityCommands: CancelledStaging())
+            .PickCommunityAsync(volumeId, published.ContentHash, CancellationToken.None);
+
+        await act.ShouldThrowAsync<OperationCanceledException>();
+        store.Keys.ShouldBe([published.ObjectKey]);
+    }
+
+    /// <summary>A community cover command whose staging read is cancelled, as when the client hangs up.</summary>
+    private static ICommunityCoverCommandService CancelledStaging()
+    {
+        var communityCommands = Substitute.For<ICommunityCoverCommandService>();
+        communityCommands
+            .StageForVolumeAsync(
+                Arg.Any<Series>(), Arg.Any<Volume>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new OperationCanceledException()));
+
+        return communityCommands;
+    }
+
     /// <summary>The owner's context on a database, with every save refused the way Postgres would.</summary>
     private static LnShelfDbContext RefusingDbContext(string database) =>
         new(new DbContextOptionsBuilder<LnShelfDbContext>()

@@ -86,6 +86,13 @@ public sealed class FileSystemCoverStore(CoverStoreRoot root) : ICoverStore
         {
             return null;
         }
+        catch (UnauthorizedAccessException) when (Directory.Exists(path))
+        {
+            // A key that names a folder ("anilist", "override/volume/<id>") is well formed but
+            // is no cover. Reading a folder throws this, which would otherwise be a server error
+            // any signed-in user can cause through the cover route.
+            return null;
+        }
     }
 
     public Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
