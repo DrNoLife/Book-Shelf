@@ -186,7 +186,8 @@ internal sealed class SyncPipelineHost : IAsyncDisposable
             return Respond(new StringContent(wikimedia.For(uri), Encoding.UTF8, "application/json"));
         }
 
-        if (uri.Host.EndsWith("mzstatic.com", StringComparison.Ordinal))
+        // The store's volume art, and MangaUpdates' series art for the series cover heal.
+        if (uri.Host.EndsWith("mzstatic.com", StringComparison.Ordinal) || uri.Host == "cdn.mangaupdates.com")
         {
             ImageRequests.Enqueue(uri);
             var content = new ByteArrayContent(_cover);

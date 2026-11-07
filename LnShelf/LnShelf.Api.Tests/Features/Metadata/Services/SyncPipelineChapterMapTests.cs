@@ -260,8 +260,10 @@ public sealed class SyncPipelineChapterMapTests
             TitleEnglish = title,
             PublicationStatus = PublicationStatus.Ongoing,
 
-            // Set, so the description healer has no reason to ask AniList.
+            // Both set, so neither the description healer nor the cover healer has a reason to
+            // ask AniList.
             Description = "A series.",
+            CoverObjectKey = $"anilist/{aniListId}.jpg",
             LastSyncedAt = DateTimeOffset.UtcNow.AddDays(-1),
         };
 

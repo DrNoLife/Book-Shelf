@@ -106,7 +106,9 @@ public sealed class AddSeriesEventsTests
         var refresher = new SeriesRefresher(
             matcher,
             releaseSource,
-            new SeriesDescriptionHealer(metadataSource, NullLogger<SeriesDescriptionHealer>.Instance),
+            metadataSource,
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(NoCatalogue(), enrichmentSource, NoCandidates(), VolumeEnrichmentPipeline.Writer()),

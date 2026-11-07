@@ -338,6 +338,7 @@ public static class MetadataFeatureExtensions
             // runs when a series is added (feature-spec §4.2 — "same code path").
             services.AddScoped<SeriesRefresher>();
             services.AddScoped<SeriesDescriptionHealer>();
+            services.AddScoped<SeriesCoverHealer>();
 
             // A singleton because NightlySyncBackgroundService, a hosted singleton, takes it.
             services.AddSingleton<EnrichmentBudgetSizes>();
