@@ -52,7 +52,7 @@ public sealed class VolumeCoverCommandService(
         await communityCoverCommand.StageForVolumeAsync(
             series, volume, objectKey, CoverContentHash.Compute(normalized), cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(objectKey, cancellationToken);
 
         // Only once the new key is saved: until then the old object is still what the
         // shelf points at.
@@ -106,7 +106,7 @@ public sealed class VolumeCoverCommandService(
         await communityCoverCommand.StageForVolumeAsync(
             series, volume, objectKey, CoverContentHash.Compute(candidate.Content), cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(objectKey, cancellationToken);
 
         await DeleteReplacedOverrideAsync(replacedObjectKey, cancellationToken);
 
@@ -147,11 +147,33 @@ public sealed class VolumeCoverCommandService(
     }
 
     /// <summary>
+    /// Saves the change that points the volume at a freshly stored object, deleting that
+    /// object again when the save fails.
+    /// </summary>
+    // The file is written before the row that names it, so a failed or cancelled save (two
+    // first uploads for one volume racing on its user-state row, a client that hung up) would
+    // otherwise leave it behind, unreferenced. The delete ignores the request's token: a
+    // cancelled request is one of the ways to get here.
+    private async Task SaveOrDiscardAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            await coverStore.DeleteAsync(objectKey, CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Removes an override object the shelf no longer points at.
     /// </summary>
     // Never fatal. The user's change is already saved by the time this runs, and failing
     // the request over an orphaned 100 KB object would report a write that succeeded as
-    // one that did not. The orphan is harmless: nothing references it.
+    // one that did not. Nothing references the leftover, and cover-orphan-sweep removes it
+    // once it is past the sweep's grace period.
     private async Task DeleteReplacedOverrideAsync(string? objectKey, CancellationToken cancellationToken)
     {
         if (objectKey is null)

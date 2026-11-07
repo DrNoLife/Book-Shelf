@@ -102,8 +102,8 @@ public sealed class VolumeMergeCommandService(
         }
         catch when (copiedCoverKey is not null)
         {
-            // Nothing points at the copy if the save failed, and the orphan sweep would never
-            // find it: its key names the target, which is still alive.
+            // Nothing points at the copy if the save failed. The orphan sweep would find it in
+            // the end, but it is the user's image, and the merge knows now that it is unwanted.
             await coverStore.DeleteAsync(copiedCoverKey, CancellationToken.None);
             throw;
         }
@@ -139,7 +139,9 @@ public sealed class VolumeMergeCommandService(
     }
 
     // Best effort, as when a cover is replaced through the API: the merge is saved, and an
-    // object left behind is unreferenced and will be found by cover-orphan-sweep.
+    // object left behind is unreferenced, and cover-orphan-sweep removes it once it is past
+    // the sweep's grace period (it still sits under the live target volume, so only the
+    // reference check finds it, not the volume check).
     private async Task DeleteReplacedCoverAsync(string objectKey, CancellationToken cancellationToken)
     {
         try

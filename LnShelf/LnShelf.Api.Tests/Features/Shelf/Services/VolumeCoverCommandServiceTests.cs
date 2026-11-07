@@ -1,3 +1,4 @@
+using LnShelf.Api.Tests.Data.Fixtures;
 using LnShelf.Api.Tests.Features.Covers.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
@@ -304,6 +305,47 @@ public sealed class VolumeCoverCommandServiceTests
 
         await act.ShouldThrowAsync<ConflictException>();
     }
+
+    // The file is written before the row that names it. A save that fails (two first uploads
+    // racing on the volume's user-state row) must not leave the file behind with nothing
+    // pointing at it.
+    [Fact]
+    public async Task SetCoverAsync_TheSaveFails_DeletesTheFileItJustWrote()
+    {
+        var database = CommunityCoverShelf.NewDatabase();
+        var store = new InMemoryCoverStore();
+        var volumeId = await CommunityCoverShelf.SeedVolumeAsync(database, Owner);
+
+        await using var dbContext = RefusingDbContext(database);
+        var act = async () => await CommunityCoverShelf.CoverCommands(dbContext, Owner, store)
+            .SetCoverAsync(volumeId, CommunityCoverShelf.CreatePng(400, 600), CancellationToken.None);
+
+        await act.ShouldThrowAsync<DbUpdateException>();
+        store.Keys.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task PickCommunityAsync_TheSaveFails_DeletesTheCopyItJustWrote()
+    {
+        var database = CommunityCoverShelf.NewDatabase();
+        var store = new InMemoryCoverStore();
+        var volumeId = await CommunityCoverShelf.SeedVolumeAsync(database, Owner);
+        var published = await CommunityCoverShelf.PublishAsync(database, Other, store, [9, 8, 7], DateTimeOffset.UtcNow);
+
+        await using var dbContext = RefusingDbContext(database);
+        var act = async () => await CommunityCoverShelf.CoverCommands(dbContext, Owner, store)
+            .PickCommunityAsync(volumeId, published.ContentHash, CancellationToken.None);
+
+        await act.ShouldThrowAsync<DbUpdateException>();
+        store.Keys.ShouldBe([published.ObjectKey]);
+    }
+
+    /// <summary>The owner's context on a database, with every save refused the way Postgres would.</summary>
+    private static LnShelfDbContext RefusingDbContext(string database) =>
+        new(new DbContextOptionsBuilder<LnShelfDbContext>()
+            .UseInMemoryDatabase(database)
+            .AddInterceptors(new RefusingSaveInterceptor(_ => true, RefusingSaveInterceptor.UniqueViolation))
+            .Options, TestUsers.As(Owner));
 
     /// <summary>
     /// The volume a write was about, read back out of the series it answers with.

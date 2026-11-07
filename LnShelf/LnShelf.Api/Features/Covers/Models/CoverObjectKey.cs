@@ -134,6 +134,10 @@ public static class CoverObjectKey
     // The cover route is a catch-all, so the key is untrusted input. Anything that
     // could climb out of the prefix is refused outright rather than normalised —
     // normalising attacker input is how traversal bugs survive.
+    //
+    // The segment rule is the store's own (FileSystemCoverStore.PathFor refuses an empty or
+    // dot-leading segment). Without it a key like "anilist/.x.jpg" passed here and the store
+    // threw, so the route answered a 500 and logged a server fault for a malformed request.
     public static bool IsWellFormed(string? objectKey) =>
         !string.IsNullOrWhiteSpace(objectKey)
         && objectKey.Length <= 300
@@ -141,5 +145,6 @@ public static class CoverObjectKey
         && !objectKey.StartsWith('/')
         && !objectKey.Contains('\\', StringComparison.Ordinal)
         && objectKey.All(character =>
-            char.IsAsciiLetterOrDigit(character) || character is '/' or '-' or '_' or '.');
+            char.IsAsciiLetterOrDigit(character) || character is '/' or '-' or '_' or '.')
+        && objectKey.Split('/').All(segment => segment.Length > 0 && !segment.StartsWith('.'));
 }

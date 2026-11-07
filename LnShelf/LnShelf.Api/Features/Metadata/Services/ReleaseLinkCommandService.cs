@@ -11,6 +11,7 @@ public sealed class ReleaseLinkCommandService(
     SyncRunGate syncRunGate,
     ICurrentUser currentUser,
     ISeriesDetailQueryService seriesDetailQueryService,
+    ICommunityCoverCommandService communityCoverCommand,
     ILogger<ReleaseLinkCommandService> logger) : IReleaseLinkCommandService
 {
     public async Task<ReleaseLinkResponse?> LinkAsync(
@@ -38,12 +39,22 @@ public sealed class ReleaseLinkCommandService(
         // with volumes it never flagged as released (or with what the old record said), and
         // every volume above that would read as news (a push, a "since your last visit" line,
         // a New badge). Treated as a first refresh instead.
-        if (series.MangaUpdatesId != request.MangaUpdatesId)
+        var linkChanged = series.MangaUpdatesId != request.MangaUpdatesId;
+        if (linkChanged)
         {
             series.LastSyncedAt = null;
         }
 
         series.MangaUpdatesId = request.MangaUpdatesId;
+
+        // In the same save as the link: the covers this user shares for the series still carry
+        // the old id, and would keep being offered to readers of the record it was wrongly
+        // linked to.
+        if (linkChanged)
+        {
+            await communityCoverCommand.RefreshSeriesIdsAsync(series, cancellationToken);
+        }
+
         await ResolveLinkQuestionsAsync(seriesId, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

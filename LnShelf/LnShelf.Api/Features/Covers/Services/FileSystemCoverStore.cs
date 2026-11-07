@@ -104,6 +104,17 @@ public sealed class FileSystemCoverStore(CoverStoreRoot root) : ICoverStore
         return Task.CompletedTask;
     }
 
+    public Task<DateTimeOffset?> GetLastModifiedAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // The rename in SaveAsync keeps the staged file's write time, which is the moment the
+        // bytes were written: exactly the time the sweep's grace window is measured from.
+        var file = new FileInfo(PathFor(objectKey));
+
+        return Task.FromResult<DateTimeOffset?>(file.Exists ? new DateTimeOffset(file.LastWriteTimeUtc) : null);
+    }
+
     /// <remarks>
     /// The prefix is a plain string prefix, as in S3: <c>override/vol</c> matches
     /// <c>override/volume/…</c>. A key cannot be both a file and a folder (<c>a/b</c> and
