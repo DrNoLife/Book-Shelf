@@ -165,7 +165,9 @@ public sealed class SeriesRefresherDescriptionTests
         return new SeriesRefresher(
             matcher,
             releaseSource,
-            new SeriesDescriptionHealer(metadataSource, NullLogger<SeriesDescriptionHealer>.Instance),
+            metadataSource,
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(
@@ -217,6 +219,10 @@ public sealed class SeriesRefresherDescriptionTests
             TitleEnglish = "Mushoku Tensei: Jobless Reincarnation",
             Format = Format.LightNovel,
             PublicationStatus = PublicationStatus.Completed,
+
+            // Cached already, so the cover heal never asks AniList and every request counted
+            // here is the description heal's own (SeriesRefresherCoverTests covers the sharing).
+            CoverObjectKey = $"anilist/{AniListId}.jpg",
         };
 
         foreach (var number in Enumerable.Range(1, 3))

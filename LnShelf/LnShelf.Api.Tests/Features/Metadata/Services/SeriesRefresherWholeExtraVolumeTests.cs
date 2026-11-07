@@ -132,7 +132,9 @@ public sealed class SeriesRefresherWholeExtraVolumeTests
         return new SeriesRefresher(
             Substitute.For<IReleaseSourceMatcher>(),
             releaseSource,
-            new SeriesDescriptionHealer(Substitute.For<ISeriesMetadataSource>(), NullLogger<SeriesDescriptionHealer>.Instance),
+            Substitute.For<ISeriesMetadataSource>(),
+            new SeriesDescriptionHealer(NullLogger<SeriesDescriptionHealer>.Instance),
+            new SeriesCoverHealer(Substitute.For<IMangaUpdatesSeriesQueryService>(), Substitute.For<ISeriesCoverCache>(), NullLogger<SeriesCoverHealer>.Instance),
             new ReleaseCountWriter(releaseSource, NullLogger<ReleaseCountWriter>.Instance),
             new PublicationStatusWriter(releaseSource, NullLogger<PublicationStatusWriter>.Instance),
             VolumeEnrichmentPipeline.Create(

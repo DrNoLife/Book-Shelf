@@ -14,7 +14,9 @@ namespace LnShelf.Api.Features.Metadata.Services;
 public sealed class SeriesRefresher(
     IReleaseSourceMatcher releaseSourceMatcher,
     IReleaseSource releaseSource,
+    ISeriesMetadataSource metadataSource,
     SeriesDescriptionHealer descriptionHealer,
+    SeriesCoverHealer coverHealer,
     ReleaseCountWriter releaseCountWriter,
     PublicationStatusWriter publicationStatusWriter,
     VolumeEnrichmentService volumeEnrichment,
@@ -74,9 +76,15 @@ public sealed class SeriesRefresher(
         var nextVolumes = await EnrichVolumesAsync(
             series, run, today, budget, info?.ExtraVolumeCount ?? 0, cancellationToken);
 
-        // Also unconditional, and for the same reason: whether this series has a synopsis
-        // has nothing to do with whether the release source recognised it.
-        await descriptionHealer.HealAsync(series, cancellationToken);
+        // Also unconditional, and for the same reason: whether this series has a synopsis or
+        // a cover has nothing to do with whether the release source recognised it. One lookup
+        // for both, so a series missing both costs one AniList request.
+        var aniList = series.AniListId is { } aniListId
+            ? new SeriesMetadataLookup(metadataSource, aniListId)
+            : null;
+
+        await descriptionHealer.HealAsync(series, aniList, cancellationToken);
+        await coverHealer.HealAsync(series, aniList, cancellationToken);
 
         // After the count and the enrichment, so it judges a map against the volumes and the
         // latest chapter as this run left them. It isolates its own failures.
