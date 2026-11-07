@@ -159,6 +159,64 @@ public sealed class BookTitleParserTests
         parsed.VolumeNumber.ShouldBeNull();
     }
 
+    /// <summary>
+    /// Publisher spellings the first export did not contain (audit 2026-10-09, #10). A
+    /// decimal or a range is not a whole volume, so the number is left out rather than
+    /// guessed; the series name must still be clean.
+    /// </summary>
+    public static TheoryData<string, string, int?, string?> OtherPublisherSpellings => new()
+    {
+        { "Overlord, Vol. 3 - The Bloody Valkyrie", "Overlord", 3, "The Bloody Valkyrie" },
+        { "Overlord, Vol. 3 — The Bloody Valkyrie", "Overlord", 3, "The Bloody Valkyrie" },
+        { "Overlord, Vol. 10.5", "Overlord", null, null },
+        { "Overlord, Vol. 10.5: The Side Stories", "Overlord", null, null },
+        { "Overlord, Vols. 1-2", "Overlord", null, null },
+        { "Overlord, Volumes 1–3 (light novel)", "Overlord", null, null },
+
+        // A dash that starts a numbered subtitle is not a range.
+        { "Overlord, Vol. 3 - 100 Days", "Overlord", 3, "100 Days" },
+    };
+
+    [Theory]
+    [MemberData(nameof(OtherPublisherSpellings))]
+    public void Parse_OtherPublisherSpelling_FindsTheSeriesAndOnlyAWholeVolume(
+        string rawTitle, string expectedSeriesTitle, int? expectedVolumeNumber, string? expectedSubtitle)
+    {
+        var parsed = BookTitleParser.Parse(rawTitle);
+
+        parsed.SeriesTitle.ShouldBe(expectedSeriesTitle);
+        parsed.VolumeNumber.ShouldBe(expectedVolumeNumber);
+        parsed.Subtitle.ShouldBe(expectedSubtitle);
+    }
+
+    // Japanese editions often write the volume in full-width digits. Those used to match
+    // \d and then throw in int.Parse, which failed the whole upload with a 500.
+    [Theory]
+    [InlineData("転生したらスライムだった件１３", "転生したらスライムだった件", 13)]
+    [InlineData("オーバーロード１１ 山小人の工匠", "オーバーロード", 11)]
+    [InlineData("Overlord, Vol. ３", "Overlord", 3)]
+    [InlineData("Ascendance of a Bookworm: Part ２ Volume ３", "Ascendance of a Bookworm: Part 2", 3)]
+    [InlineData("Sword Art Online ４ (light novel)", "Sword Art Online", 4)]
+    public void Parse_FullWidthDigits_ReadAsTheVolume(string rawTitle, string expectedSeriesTitle, int expectedVolumeNumber)
+    {
+        var parsed = BookTitleParser.Parse(rawTitle);
+
+        parsed.SeriesTitle.ShouldBe(expectedSeriesTitle);
+        parsed.VolumeNumber.ShouldBe(expectedVolumeNumber);
+    }
+
+    // Digits NFKC does not fold (here Arabic-Indic) must leave the title whole, not throw.
+    [Theory]
+    [InlineData("Overlord, Vol. ٣")]
+    [InlineData("転生したらスライムだった件١٣")]
+    public void Parse_DigitsNormalisationDoesNotFold_StayWholeRatherThanThrowing(string rawTitle)
+    {
+        var parsed = BookTitleParser.Parse(rawTitle);
+
+        parsed.SeriesTitle.ShouldBe(rawTitle);
+        parsed.VolumeNumber.ShouldBeNull();
+    }
+
     [Fact]
     public void Parse_VolumeSubtitle_IsKeptForDisplay()
     {
